@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session
+from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session, url_for
 from waitress import serve
 import os
 import json
@@ -132,7 +132,8 @@ def process_message() -> tuple[Dict[str, Any], int]:
         
         return jsonify({
             'id': message.id,
-            'processed_content': processed_content
+            'processed_content': processed_content,
+            'view_url': url_for('get_message', message_id=message.id)
         }), 201
         
     except Exception as e:
@@ -166,6 +167,41 @@ def get_message(message_id: int):
         'processed_content': message.processed_content,
         'created_at': message.created_at.isoformat()
     })
+
+@app.route('/messages/<int:message_id>/reprocess', methods=['POST'])
+@require_auth
+def reprocess_message(message_id: int):
+    """Reprocess an existing message's content."""
+    try:
+        session = Session()
+        message = session.query(Email).filter(Email.id == message_id).first()
+        
+        if not message:
+            return jsonify({'error': 'Message not found'}), 404
+            
+        message.processed_content = color_processor.process_content(message.content)
+        session.commit()
+        
+        logger.info(f"Reprocessed message {message_id}")
+        
+        if request.headers.get('Accept', '').startswith('text/html'):
+            return render_template(
+                'message.html',
+                message=message,
+                created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            )
+            
+        return jsonify({
+            'id': message.id,
+            'processed_content': message.processed_content
+        })
+        
+    except Exception as e:
+        logger.error(f"Error reprocessing message: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+        
+    finally:
+        session.close()
 
 @app.route('/recent')
 def recent_message():
@@ -240,7 +276,8 @@ def submit_form():
             session.add(message)
             session.commit()
             
-            return render_template('submit.html', success=True)
+            view_url = url_for('get_message', message_id=message.id)
+            return render_template('submit.html', success=True, view_url=view_url)
             
         except Exception as e:
             logger.error(f"Error processing form submission: {str(e)}")
