@@ -23,17 +23,6 @@ def setup_logging(log_level: str = 'INFO') -> None:
         ]
     )
 
-def run_mail_server(host: str = '0.0.0.0', port: int = 587) -> None:
-    """
-    Launch the mail server component.
-    
-    :param host: Host address to bind to
-    :param port: Port number to listen on
-    """
-    from mailserv.mail_server import MailServer
-    server = MailServer(host=host, port=port)
-    server.run()
-
 def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """
     Launch the web server component.
@@ -45,8 +34,8 @@ def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     run_server(host=host, port=port)
 
 def main() -> None:
-    """Main entry point for the Atacama email processing system."""
-    parser = argparse.ArgumentParser(description='Atacama Email Processing System')
+    """Main entry point for the Atacama system."""
+    parser = argparse.ArgumentParser(description='Atacama System')
     parser.add_argument('--mode', choices=['mail', 'web'], required=True,
                        help='Server mode to run (mail or web)')
     parser.add_argument('--host', default='0.0.0.0',
@@ -64,9 +53,7 @@ def main() -> None:
         logger = logging.getLogger(__name__)
         
         if args.mode == 'mail':
-            port = args.port or 587
-            logger.info(f'Starting mail server on {args.host}:{port}')
-            run_mail_server(args.host, port)
+            raise Exception("Mail is not enabled.")
         else:  # web mode
             port = args.port or 5000
             logger.info(f'Starting web server on {args.host}:{port}')

@@ -227,6 +227,17 @@ def landing_page():
     )
 
 
+@app.route('/css/<path:filename>')
+def serve_css(filename: str):
+    """
+    Serve CSS files from the css directory.
+
+    :param filename: Name of the CSS file to serve
+    :return: CSS file response
+    """
+    css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
+    return send_from_directory(css_dir, filename)
+
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
     if not db_success:
