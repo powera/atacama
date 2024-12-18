@@ -136,38 +136,38 @@ class MailServer:
         except KeyboardInterrupt:
             controller.stop()
 
-def add_user(self, username: str, password: str) -> bool:
-    """
-    Add a new mail user to the system.
-    
-    :param username: Username for the new mail user
-    :param password: Password for the new mail user
-    :return: True if user was added successfully, False otherwise
-    """
-    try:
-        session = Session()
+    def add_user(self, username: str, password: str) -> bool:
+        """
+        Add a new mail user to the system.
         
-        # Check if user already exists
-        existing_user = session.query(MailUser).filter_by(username=username).first()
-        if existing_user:
-            logger.warning(f"User {username} already exists")
+        :param username: Username for the new mail user
+        :param password: Password for the new mail user
+        :return: True if user was added successfully, False otherwise
+        """
+        try:
+            session = Session()
+            
+            # Check if user already exists
+            existing_user = session.query(MailUser).filter_by(username=username).first()
+            if existing_user:
+                logger.warning(f"User {username} already exists")
+                return False
+                
+            # Create new user with hashed password
+            user = MailUser(
+                username=username,
+                password_hash=MailUser.hash_password(password),
+                active=True
+            )
+            
+            session.add(user)
+            session.commit()
+            logger.info(f"Added new mail user: {username}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error adding mail user {username}: {str(e)}")
             return False
             
-        # Create new user with hashed password
-        user = MailUser(
-            username=username,
-            password_hash=MailUser.hash_password(password),
-            active=True
-        )
-        
-        session.add(user)
-        session.commit()
-        logger.info(f"Added new mail user: {username}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error adding mail user {username}: {str(e)}")
-        return False
-        
-    finally:
-        session.close()
+        finally:
+            session.close()
