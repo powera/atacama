@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import re
 from typing import Dict, List
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 import logging
 from waitress import serve
 import imaplib
@@ -278,6 +278,103 @@ class EmailFetcherDaemon(threading.Thread):
     def stop(self):
         """Stop the daemon gracefully."""
         self.running = False
+
+# HTML template for landing page
+LANDING_PAGE_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atacama Email Processor</title>
+    <link rel="stylesheet" href="/css/landing.css">
+</head>
+<body>
+    <h1>Atacama Email Processor</h1>
+    
+    <div class="status">
+        <h2>Service Status</h2>
+        <p>Server is running and processing emails with custom color formatting.</p>
+        <p>Database Status: {{ db_status }}</p>
+    </div>
+
+    <div class="endpoints">
+        <h2>Available Endpoints</h2>
+        <ul>
+            <li><code>POST /process</code> - Process and store new emails</li>
+            <li><code>GET /emails/{id}</code> - Retrieve processed email by ID</li>
+        </ul>
+    </div>
+
+    <h2>Recent Emails</h2>
+    {% if emails %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Preview</th>
+                <th>Received</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr>
+                <td>{{ email.id }}</td>
+                <td>
+                    <a href="/emails/{{ email.id }}" class="email-link">
+                        {{ email.subject or '(No Subject)' }}
+                    </a>
+                </td>
+                <td class="email-preview">{{ email.content[:100] }}...</td>
+                <td class="timestamp">{{ email.created_at_formatted }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-emails">
+        No emails processed yet
+    </div>
+    {% endif %}
+</body>
+</html>
+"""
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    """Serve CSS files from the css directory."""
+    css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
+    return send_from_directory(css_dir, filename)
+
+@app.route('/')
+def landing_page():
+    """Serve the landing page with basic service information and email list."""
+    try:
+        session = Session()
+        
+        # Test database connection
+        session.execute('SELECT 1')
+        db_status = "Connected"
+        
+        # Fetch recent emails
+        emails = session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
+        
+        # Format timestamps
+        for email in emails:
+            email.created_at_formatted = email.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        
+    except Exception as e:
+        db_status = f"Error: {str(e)}"
+        emails = []
+    finally:
+        session.close()
+    
+    return render_template_string(
+        LANDING_PAGE_TEMPLATE,
+        db_status=db_status,
+        emails=emails
+    )
 
 def run_server():
     """Run the server and start the email fetcher daemon."""
