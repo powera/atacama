@@ -5,16 +5,16 @@ class ColorScheme:
     """Color scheme definitions and processing for email content."""
     
     COLORS = {
-        'xantham': ('⌘', 'xantham'),  # sarcastic, overconfident
-        'red': ('⚡', 'red'),          # forceful, certain
-        'orange': ('⚔', 'orange'),    # counterpoint
-        'yellow': ('⚜', 'yellow'),    # quotes
-        'green': ('⚙', 'green'),      # technical explanations
-        'teal': ('⚛', 'teal'),       # LLM output
-        'blue': ('✧', 'blue'),       # voice from beyond
-        'violet': ('⚶', 'violet'),    # serious
-        'mogue': ('⚯', 'mogue'),      # actions taken
-        'gray': ('◊', 'gray')        # past stories
+        'xantham': ('🔥', 'xantham'),  # sarcastic, overconfident
+        'red': ('💡', 'red'),          # forceful, certain
+        'orange': ('⚔️', 'orange'),    # counterpoint
+        'yellow': ('💬', 'yellow'),    # quotes
+        'green': ('⚙️', 'green'),      # technical explanations
+        'teal': ('🤖', 'teal'),       # LLM output
+        'blue': ('✨', 'blue'),       # voice from beyond
+        'violet': ('📣', 'violet'),    # serious
+        'mogue': ('🌎', 'mogue'),      # actions taken
+        'gray': ('💭', 'gray')        # past stories
     }
     
     def __init__(self):
@@ -31,8 +31,9 @@ class ColorScheme:
             for color in self.COLORS.keys()
         }
         
-        # Pattern for << >> literal blocks
+        # Pattern for << >> literal blocks and section breaks
         self.literal_pattern = re.compile(r'<<(.*?)>>')
+        self.section_break_pattern = re.compile(r'^[ \t]*<<[ \t]*-+[ \t]*>>[ \t]*$', re.MULTILINE)
     
     def process_content(self, content: str) -> str:
         """
@@ -43,12 +44,17 @@ class ColorScheme:
         """
         processed = content
         
-        # First process paragraph-starting color tags
+        # First process section breaks
+        matches = self.section_break_pattern.finditer(processed)
+        for match in matches:
+            processed = processed.replace(match.group(0), '<hr class="section-break">')
+        
+        # Then process paragraph-starting color tags
         for color, (sigil, class_name) in self.COLORS.items():
             matches = self.para_patterns[color].finditer(processed)
             for match in matches:
                 text = match.group(1)
-                replacement = f'<p class="color-{class_name}">{sigil} {text}</p>'
+                replacement = f'<p class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</p>'
                 processed = processed.replace(match.group(0), replacement)
         
         # Then process remaining (inline) color tags
@@ -63,13 +69,15 @@ class ColorScheme:
                 # Skip if this match corresponds to a paragraph start
                 if not any(pm.start() == match.start() for pm in para_matches):
                     text = match.group(1)
-                    replacement = f'<span class="color-{class_name}">{sigil} {text}</span>'
+                    replacement = f'<span class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</span>'
                     processed = processed.replace(match.group(0), replacement)
         
-        # Finally process literal blocks
+        # Finally process remaining literal blocks (not section breaks)
         matches = self.literal_pattern.finditer(processed)
         for match in matches:
             text = match.group(1)
+            if not text.strip('-'):  # Skip if it's just hyphens
+                continue
             replacement = f'<span class="literal-text">{text}</span>'
             processed = processed.replace(match.group(0), replacement)
         

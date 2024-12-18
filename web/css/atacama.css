@@ -1,6 +1,43 @@
+/* Base page layout */
+body {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+}
+
+/* Message container */
+.message {
+    background: white;
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.metadata {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+/* Section break */
+.section-break {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 2em 0;
+}
+
+/* Sigil styling */
+.sigil {
+    font-size: 1.2em;
+    margin-right: 0.3em;
+    vertical-align: middle;
+}
+
 /* Base color scheme classes */
 p[class^="color-"] {
-    margin: 1em 0;  /* spacing for paragraph-style color blocks */
+    margin: 1em 0;
 }
 
 /* Color-specific classes */
