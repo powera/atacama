@@ -32,8 +32,8 @@ class ColorScheme:
         }
         
         # Pattern for section breaks (exactly 4 hyphens on a line)
-        self.section_break_pattern = re.compile(r'^[ \t]*----[ \t]*$', re.MULTILINE)
-        
+        self.section_break_pattern = re.compile(r'^[ \t]*----[ \t]*\r?\n', re.MULTILINE)
+
         # Pattern for URLs
         self.url_pattern = re.compile(
             r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*'
@@ -47,26 +47,27 @@ class ColorScheme:
     def process_nested_colors(self, text: str) -> str:
         """
         Process nested color tags within parentheses.
-        
+
         :param text: Text that may contain nested color tags
-        :return: Processed text with nested color spans
+        :return: Processed text with nested color spans and styled parentheses
         """
         while True:
             match = self.nested_color_pattern.search(text)
             if not match:
                 break
-                
+
             color = match.group(1)
             inner_text = match.group(2)
             if color in self.COLORS:
                 sigil, class_name = self.COLORS[color]
+                # Include styled parentheses in the color span
                 replacement = (
                     f'<span class="color-{class_name}">'
-                    f'<span class="sigil">{sigil}</span> {inner_text}'
+                    f'(<span class="sigil">{sigil}</span> {inner_text})'
                     f'</span>'
                 )
                 text = text.replace(match.group(0), replacement)
-            
+
         return text
 
     def process_urls(self, text: str) -> str:
@@ -97,17 +98,14 @@ class ColorScheme:
     def process_content(self, content: str) -> str:
         """
         Process text content and wrap color tags in HTML/CSS with sigils.
-        
+
         :param content: Raw email content with color tags
         :return: Processed content with HTML/CSS styling
         """
         # First sanitize any HTML tags except our color tags
         processed = self.sanitize_html(content)
-        
-        # Process section breaks (exactly 4 hyphens on a line)
-        processed = self.section_break_pattern.sub('<hr>', processed)
-        
-        # Then process paragraph-starting color tags
+
+        # Process paragraph-starting color tags
         for color, (sigil, class_name) in self.COLORS.items():
             matches = self.para_patterns[color].finditer(processed)
             for match in matches:
@@ -118,14 +116,14 @@ class ColorScheme:
                 text = self.process_urls(text)
                 replacement = f'<p class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</p>'
                 processed = processed.replace(match.group(0), replacement)
-        
+
         # Then process remaining (inline) color tags
         for color, (sigil, class_name) in self.COLORS.items():
             # Find all matches
             all_matches = list(self.all_patterns[color].finditer(processed))
             # Find paragraph matches that were already processed
             para_matches = list(self.para_patterns[color].finditer(content))
-            
+
             # Process only the matches that weren't paragraph starts
             for match in all_matches:
                 # Skip if this match corresponds to a paragraph start
@@ -137,7 +135,10 @@ class ColorScheme:
                     text = self.process_urls(text)
                     replacement = f'<span class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</span>'
                     processed = processed.replace(match.group(0), replacement)
-        
+
+        # Process section breaks after color processing
+        processed = self.section_break_pattern.sub('<hr>\n', processed)
+
         # Clean up line breaks and spacing
         # Split on any sequence of 2 or more newlines
         paragraphs = re.split(r'\n\n+', processed)
@@ -153,8 +154,8 @@ class ColorScheme:
                 lines = para.split('\n')
                 processed_lines = '<br>'.join(line for line in lines if line.strip())
                 processed_paragraphs.append(f'<p>{processed_lines}</p>')
-        
+
         # Join with single newlines
         processed = '\n'.join(processed_paragraphs)
-        
+
         return processed
