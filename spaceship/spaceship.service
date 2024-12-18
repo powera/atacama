@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 User=atacama
 Group=atacama
-WorkingDirectory=/home/atacama
-Environment=PYTHONPATH=/home/atacama
-ExecStart=/usr/bin/python3 /home/atacama/launch.py --mode spaceship
+WorkingDirectory=/home/atacama/atacama
+Environment=PYTHONPATH=/home/atacama/atacama
+ExecStart=/usr/bin/python3 /home/atacama/atacama/launch.py --mode spaceship
 Restart=always
 RestartSec=10
 
