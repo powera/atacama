@@ -1,4 +1,3 @@
-# spaceship/server.py
 from flask import Flask, send_file, render_template_string
 import subprocess
 import os
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configuration
-BASE_DIR = '/home/atacama/spaceship'
+BASE_DIR = '/home/atacama/atacama/spaceship'
 IMAGE_PATH = os.path.join(BASE_DIR, 'current.png')
 TEMP_PATH = os.path.join(BASE_DIR, 'temp.png')
 UPDATE_INTERVAL = 300  # 5 minutes
@@ -36,7 +35,6 @@ class XPlanetGenerator(threading.Thread):
         self.temp_path = temp_path
         self.running = True
         
-# In spaceship/server.py, update generate_image():
 def generate_image(self) -> bool:
     """
     Generate a new XPlanet image.
@@ -57,7 +55,7 @@ def generate_image(self) -> bool:
             '-fromspace', '1.5',      # Distance in Earth radii
             '-geometry', '1024x1024',
             '-markers',               # Show city markers
-            '-config', '/home/atacama/spaceship/xplanet.conf'
+            '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
         ], check=True)
         
         # Atomically move to final location
