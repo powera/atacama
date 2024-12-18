@@ -19,15 +19,15 @@ class ColorScheme:
     
     def __init__(self):
         """Initialize color patterns for processing."""
-        # Pattern for color tags starting a line (new paragraph)
+        # Pattern for color tags at the start of a line
         self.para_patterns: Dict[str, Pattern] = {
-            color: re.compile(f'(?m)^[ \t]*<{color}>(.*?)(?:</{ color }>|$)', re.DOTALL)
+            color: re.compile(f'^[ \t]*<{color}>(.*?)(?:</{ color }>|$)', re.MULTILINE | re.DOTALL)
             for color in self.COLORS.keys()
         }
         
-        # Pattern for inline color tags
-        self.inline_patterns: Dict[str, Pattern] = {
-            color: re.compile(f'(?m)(?<!^[ \t]*)<{color}>(.*?)(?:</{ color }>|$)', re.DOTALL)
+        # Pattern for all color tags (used with para_patterns to identify inline)
+        self.all_patterns: Dict[str, Pattern] = {
+            color: re.compile(f'<{color}>(.*?)(?:</{ color }>|$)', re.DOTALL)
             for color in self.COLORS.keys()
         }
         
@@ -43,7 +43,7 @@ class ColorScheme:
         """
         processed = content
         
-        # Process paragraph-starting color tags
+        # First process paragraph-starting color tags
         for color, (sigil, class_name) in self.COLORS.items():
             matches = self.para_patterns[color].finditer(processed)
             for match in matches:
@@ -51,15 +51,22 @@ class ColorScheme:
                 replacement = f'<p class="color-{class_name}">{sigil} {text}</p>'
                 processed = processed.replace(match.group(0), replacement)
         
-        # Process inline color tags
+        # Then process remaining (inline) color tags
         for color, (sigil, class_name) in self.COLORS.items():
-            matches = self.inline_patterns[color].finditer(processed)
-            for match in matches:
-                text = match.group(1)
-                replacement = f'<span class="color-{class_name}">{sigil} {text}</span>'
-                processed = processed.replace(match.group(0), replacement)
+            # Find all matches
+            all_matches = list(self.all_patterns[color].finditer(processed))
+            # Find paragraph matches that were already processed
+            para_matches = list(self.para_patterns[color].finditer(content))
+            
+            # Process only the matches that weren't paragraph starts
+            for match in all_matches:
+                # Skip if this match corresponds to a paragraph start
+                if not any(pm.start() == match.start() for pm in para_matches):
+                    text = match.group(1)
+                    replacement = f'<span class="color-{class_name}">{sigil} {text}</span>'
+                    processed = processed.replace(match.group(0), replacement)
         
-        # Process literal blocks
+        # Finally process literal blocks
         matches = self.literal_pattern.finditer(processed)
         for match in matches:
             text = match.group(1)
