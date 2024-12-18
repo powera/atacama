@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atacama Email Processor</title>
+    <title>Atacama Message Processor</title>
     <link rel="stylesheet" href="/css/landing.css">
 </head>
 <body>
-    <h1>Atacama Email Processor</h1>
+    <h1>Atacama Message Processor</h1>
     
     <div class="status">
         <h2>Service Status</h2>
-        <p>Server is running and processing emails with custom color formatting.</p>
+        <p>Server is running and processing messages with custom color formatting.</p>
         <p>Database Status: {{ db_status }}</p>
     </div>
 
     <div class="endpoints">
         <h2>Available Endpoints</h2>
         <ul>
-            <li><code>POST /process</code> - Process and store new emails</li>
-            <li><code>GET /emails/{id}</code> - Retrieve processed email by ID</li>
+            <li><code>POST /process</code> - Process and store new messages</li>
+            <li><code>GET /messages/{id}</code> - Retrieve processed message by ID</li>
         </ul>
     </div>
 
-    <h2>Recent Emails</h2>
-    {% if emails %}
+    <h2>Recent Messages</h2>
+    {% if messages %}
     <table>
         <thead>
             <tr>
@@ -35,23 +35,23 @@
             </tr>
         </thead>
         <tbody>
-            {% for email in emails %}
+            {% for message in messages %}
             <tr>
-                <td>{{ email.id }}</td>
+                <td>{{ message.id }}</td>
                 <td>
-                    <a href="/emails/{{ email.id }}" class="email-link">
-                        {{ email.subject or '(No Subject)' }}
+                    <a href="/messages/{{ message.id }}" class="message-link">
+                        {{ message.subject or '(No Subject)' }}
                     </a>
                 </td>
-                <td class="email-preview">{{ email.content[:100] }}...</td>
-                <td class="timestamp">{{ email.created_at_formatted }}</td>
+                <td class="message-preview">{{ message.content[:100] }}...</td>
+                <td class="timestamp">{{ message.created_at_formatted }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <div class="no-emails">
-        No emails processed yet
+    <div class="no-messages">
+        No messages processed yet
     </div>
     {% endif %}
 </body>
