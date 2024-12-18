@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Pattern, Tuple, List
+from typing import Dict, Pattern, Tuple
 
 class ColorScheme:
     """Color scheme definitions and processing for email content."""
@@ -21,19 +21,18 @@ class ColorScheme:
         """Initialize color patterns for processing."""
         # Pattern for color tags at the start of a line
         self.para_patterns: Dict[str, Pattern] = {
-            color: re.compile(f'^[ \t]*<{color}>(.*?)(?:</{ color }>|$)', re.MULTILINE | re.DOTALL)
+            color: re.compile(f'^[ \t]*<{color}>(.*?)$', re.MULTILINE | re.DOTALL)
             for color in self.COLORS.keys()
         }
         
-        # Pattern for all color tags (used with para_patterns to identify inline)
+        # Pattern for all color tags
         self.all_patterns: Dict[str, Pattern] = {
-            color: re.compile(f'<{color}>(.*?)(?:</{ color }>|$)', re.DOTALL)
+            color: re.compile(f'<{color}>(.*?)$', re.DOTALL)
             for color in self.COLORS.keys()
         }
         
-        # Pattern for << >> literal blocks and section breaks
-        self.literal_pattern = re.compile(r'<<(.*?)>>')
-        self.section_break_pattern = re.compile(r'^[ \t]*-{4,}[ \t]*$', re.MULTILINE)
+        # Pattern for section breaks (exactly 4 hyphens on a line)
+        self.section_break_pattern = re.compile(r'^[ \t]*----[ \t]*$', re.MULTILINE)
         
         # Pattern for URLs
         self.url_pattern = re.compile(
@@ -42,7 +41,7 @@ class ColorScheme:
         
         # Pattern for nested colors using parentheses
         self.nested_color_pattern = re.compile(
-            r'\([ \t]*<(\w+)>(.*?)</\1>[ \t]*\)'
+            r'\([ \t]*<(\w+)>(.*?)[ \t]*\)'
         )
 
     def process_nested_colors(self, text: str) -> str:
@@ -83,6 +82,18 @@ class ColorScheme:
             
         return self.url_pattern.sub(replace_url, text)
 
+    def sanitize_html(self, text: str) -> str:
+        """
+        Sanitize HTML tags except for our color tags.
+        
+        :param text: Text that may contain HTML tags
+        :return: Text with HTML tags escaped except for color tags
+        """
+        # Escape < and > that aren't part of our color tags
+        safe_words = list(self.COLORS.keys())
+        pattern = r'<(?!/?(?:' + '|'.join(safe_words) + r')\b)[^>]*>'
+        return re.sub(pattern, lambda m: m.group().replace('<', '&lt;').replace('>', '&gt;'), text)
+
     def process_content(self, content: str) -> str:
         """
         Process text content and wrap color tags in HTML/CSS with sigils.
@@ -90,9 +101,10 @@ class ColorScheme:
         :param content: Raw email content with color tags
         :return: Processed content with HTML/CSS styling
         """
-        processed = content
+        # First sanitize any HTML tags except our color tags
+        processed = self.sanitize_html(content)
         
-        # First process section breaks (plain dashes)
+        # Process section breaks (exactly 4 hyphens on a line)
         processed = self.section_break_pattern.sub('<hr>', processed)
         
         # Then process paragraph-starting color tags
@@ -126,15 +138,9 @@ class ColorScheme:
                     replacement = f'<span class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</span>'
                     processed = processed.replace(match.group(0), replacement)
         
-        # Finally process remaining literal blocks (not section breaks)
-        matches = self.literal_pattern.finditer(processed)
-        for match in matches:
-            text = match.group(1)
-            replacement = f'<span class="literal-text">{text}</span>'
-            processed = processed.replace(match.group(0), replacement)
-        
-        # Convert remaining line breaks to HTML paragraphs/breaks
-        paragraphs = processed.split('\n\n')
+        # Clean up line breaks and spacing
+        # Split on any sequence of 2 or more newlines
+        paragraphs = re.split(r'\n\n+', processed)
         processed_paragraphs = []
         for para in paragraphs:
             if not para.strip():
@@ -148,6 +154,7 @@ class ColorScheme:
                 processed_lines = '<br>'.join(line for line in lines if line.strip())
                 processed_paragraphs.append(f'<p>{processed_lines}</p>')
         
+        # Join with single newlines
         processed = '\n'.join(processed_paragraphs)
         
         return processed
