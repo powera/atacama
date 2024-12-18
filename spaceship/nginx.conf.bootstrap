@@ -1,0 +1,42 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name spaceship.computer;
+    
+    # root for serving static files directly
+    root /home/atacama/atacama/spaceship;
+
+    # logging
+    access_log /var/log/nginx/spaceship.access.log;
+    error_log /var/log/nginx/spaceship.error.log;
+
+    # Let's Encrypt validation
+    location /.well-known/acme-challenge/ {
+        alias /var/www/letsencrypt/.well-known/acme-challenge/;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8998;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Serve the image file directly for better performance
+    location /earth.png {
+        alias /home/atacama/atacama/spaceship/current.png;
+        add_header Cache-Control "public, no-cache";
+        expires 5m;
+        try_files $uri =404;
+    }
+
+    # Basic security headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header X-XSS-Protection "1; mode=block";
+}
