@@ -1,149 +1,60 @@
 from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory
 from waitress import serve
-import imaplib
-import email
-import threading
-import time
 import os
 import json
 import logging
-from email.header import decode_header
 from sqlalchemy import text
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Dict, Any
+from functools import wraps
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 from common.database import setup_database
 from common.models import Email
 from common.colorscheme import ColorScheme
+from web.email_fetcher import EmailFetcherDaemon
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
 color_processor = ColorScheme()
 
-class EmailFetcher:
-    def __init__(self, host: str = 'localhost', port: int = 143, username: Optional[str] = None, password: Optional[str] = None):
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        
-    def connect(self) -> bool:
-        """Establish IMAP connection."""
-        try:
-            self.imap = imaplib.IMAP4(self.host, self.port)
-            if self.username and self.password:
-                self.imap.login(self.username, self.password)
-            return True
-        except Exception as e:
-            logger.error(f"IMAP connection failed: {str(e)}")
-            return False
-
-    def fetch_emails(self, session) -> None:
-        """Fetch and process new emails."""
-        try:
-            if not self.connect():
-                return
+def require_auth(f):
+    """Decorator to require Google authentication."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'error': 'No authorization header'}), 401
             
-            self.imap.select('INBOX')
-            _, messages = self.imap.search(None, 'UNSEEN')
-            
-            for msg_num in messages[0].split():
-                try:
-                    _, msg_data = self.imap.fetch(msg_num, '(RFC822)')
-                    email_body = msg_data[0][1]
-                    msg = email.message_from_bytes(email_body)
-                    
-                    subject = decode_header(msg['subject'])[0][0]
-                    if isinstance(subject, bytes):
-                        subject = subject.decode()
-                    
-                    content = ""
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            if part.get_content_type() == "text/plain":
-                                content += part.get_payload(decode=True).decode()
-                    else:
-                        content = msg.get_payload(decode=True).decode()
-                    
-                    processed_content = color_processor.process_content(content)
-                    email_obj = Email(
-                        subject=subject,
-                        content=content,
-                        processed_content=processed_content
-                    )
-                    
-                    session.add(email_obj)
-                    session.commit()
-                    
-                    logger.info(f"Processed incoming email: {subject}")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing message {msg_num}: {str(e)}")
-                    continue
-                    
-        except Exception as e:
-            logger.error(f"Error in fetch_emails: {str(e)}")
-        
-        finally:
-            try:
-                self.imap.close()
-                self.imap.logout()
-            except:
-                pass
-
-class EmailFetcherDaemon(threading.Thread):
-    def __init__(self, config_path: str = 'email_config.json'):
-        super().__init__(daemon=True)
-        self.config_path = config_path
-        self.running = True
-        self.load_config()
-        
-    def load_config(self) -> None:
-        """Load IMAP configuration from file."""
         try:
-            with open(self.config_path) as f:
-                config = json.load(f)
-            self.interval = config.get('fetch_interval', 300)  # default 5 minutes
-            self.imap_config = {
-                'host': config.get('host', 'localhost'),
-                'port': config.get('port', 143),
-                'username': config.get('username'),
-                'password': config.get('password')
+            # Verify the ID token
+            token = auth_header.split(' ')[1]
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                requests.Request(),
+                os.getenv('GOOGLE_CLIENT_ID')
+            )
+            
+            # Token is valid, store user info in request
+            request.user = {
+                'email': idinfo['email'],
+                'name': idinfo.get('name', ''),
+                'picture': idinfo.get('picture', '')
             }
-        except Exception as e:
-            logger.error(f"Error loading config: {str(e)}")
-            self.interval = 300
-            self.imap_config = {
-                'host': 'localhost',
-                'port': 143,
-                'username': None,
-                'password': None
-            }
-
-    def run(self) -> None:
-        """Run the email fetcher daemon."""
-        logger.info("Starting email fetcher daemon...")
-        fetcher = EmailFetcher(**self.imap_config)
-        
-        while self.running:
-            session = Session()
-            try:
-                fetcher.fetch_emails(session)
-            except Exception as e:
-                logger.error(f"Error in fetcher daemon: {str(e)}")
-            finally:
-                session.close()
+            return f(*args, **kwargs)
             
-            time.sleep(self.interval)
-    
-    def stop(self) -> None:
-        """Stop the daemon gracefully."""
-        self.running = False
+        except Exception as e:
+            logger.error(f"Auth error: {str(e)}")
+            return jsonify({'error': 'Invalid token'}), 401
+            
+    return decorated_function
 
 @app.route('/process', methods=['POST'])
-def process_email() -> tuple[Dict[str, Any], int]:
-    """API endpoint to process and store emails."""
+@require_auth
+def process_message() -> tuple[Dict[str, Any], int]:
+    """API endpoint to process and store messages."""
     try:
         data = request.get_json()
         
@@ -153,53 +64,55 @@ def process_email() -> tuple[Dict[str, Any], int]:
         session = Session()
         processed_content = color_processor.process_content(data['content'])
         
-        email = Email(
+        message = Email(
             subject=data['subject'],
             content=data['content'],
             processed_content=processed_content
         )
         
-        session.add(email)
+        session.add(message)
         session.commit()
         
-        logger.info(f"Processed email with subject: {data['subject']}")
+        logger.info(f"Processed message with subject: {data['subject']}")
         
         return jsonify({
-            'id': email.id,
+            'id': message.id,
             'processed_content': processed_content
         }), 201
         
     except Exception as e:
-        logger.error(f"Error processing email: {str(e)}")
+        logger.error(f"Error processing message: {str(e)}")
         return jsonify({'error': str(e)}), 500
     
     finally:
         session.close()
 
-@app.route('/emails/<int:email_id>', methods=['GET'])
-def get_email(email_id: int) -> tuple[Dict[str, Any], int]:
-    """Retrieve a processed email by ID."""
+@app.route('/messages/<int:message_id>', methods=['GET'])
+@require_auth
+def get_message(message_id: int) -> tuple[Dict[str, Any], int]:
+    """Retrieve a processed message by ID."""
     try:
         session = Session()
-        email = session.query(Email).filter(Email.id == email_id).first()
+        message = session.query(Email).filter(Email.id == message_id).first()
         
-        if not email:
-            return jsonify({'error': 'Email not found'}), 404
+        if not message:
+            return jsonify({'error': 'Message not found'}), 404
             
         return jsonify({
-            'id': email.id,
-            'subject': email.subject,
-            'content': email.content,
-            'processed_content': email.processed_content,
-            'created_at': email.created_at.isoformat()
+            'id': message.id,
+            'subject': message.subject,
+            'content': message.content,
+            'processed_content': message.processed_content,
+            'created_at': message.created_at.isoformat()
         })
         
     finally:
         session.close()
 
 @app.route('/')
+@require_auth
 def landing_page():
-    """Serve the landing page with basic service information and email list."""
+    """Serve the landing page with basic service information and message list."""
     try:
         session = Session()
         
@@ -207,25 +120,60 @@ def landing_page():
         session.execute(text('SELECT 1'))
         db_status = "Connected"
         
-        # Fetch recent emails
-        emails = session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
+        # Fetch recent messages
+        messages = session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
         
         # Format timestamps
-        for email in emails:
-            email.created_at_formatted = email.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        for message in messages:
+            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
         
     except Exception as e:
         db_status = f"Error: {str(e)}"
-        emails = []
+        messages = []
     finally:
         session.close()
     
-    return render_template(
+    return render_template_string(
         'landing.html',
         db_status=db_status,
-        emails=emails
+        messages=messages,
+        user=request.user
     )
 
+@app.route('/submit', methods=['GET', 'POST'])
+@require_auth
+def submit_form():
+    """Handle message submission via HTML form."""
+    if request.method == 'POST':
+        try:
+            subject = request.form.get('subject', '')
+            content = request.form.get('content', '')
+            
+            if not subject or not content:
+                return render_template('submit.html', error='Subject and content are required')
+                
+            session = Session()
+            processed_content = color_processor.process_content(content)
+            
+            message = Email(
+                subject=subject,
+                content=content,
+                processed_content=processed_content
+            )
+            
+            session.add(message)
+            session.commit()
+            
+            return render_template('submit.html', success=True)
+            
+        except Exception as e:
+            logger.error(f"Error processing form submission: {str(e)}")
+            return render_template('submit.html', error=str(e))
+            
+        finally:
+            session.close()
+            
+    return render_template('submit.html')
 
 @app.route('/css/<path:filename>')
 def serve_css(filename: str):
@@ -247,7 +195,7 @@ def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     fetcher_daemon = EmailFetcherDaemon()
     fetcher_daemon.start()
     
-    logger.info(f"Starting email processor server on {host}:{port}")
+    logger.info(f"Starting message processor server on {host}:{port}")
     try:
         serve(app, host=host, port=port)
     finally:
