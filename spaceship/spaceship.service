@@ -1,0 +1,16 @@
+[Unit]
+Description=Spaceship XPlanet Server
+After=network.target
+
+[Service]
+Type=simple
+User=atacama
+Group=atacama
+WorkingDirectory=/home/atacama
+Environment=PYTHONPATH=/home/atacama
+ExecStart=/usr/bin/python3 /home/atacama/launch.py --mode spaceship
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

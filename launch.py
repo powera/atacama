@@ -36,8 +36,8 @@ def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
 def main() -> None:
     """Main entry point for the Atacama system."""
     parser = argparse.ArgumentParser(description='Atacama System')
-    parser.add_argument('--mode', choices=['mail', 'web'], required=True,
-                       help='Server mode to run (mail or web)')
+    parser.add_argument('--mode', choices=['mail', 'web', 'spaceship'], required=True,
+                       help='Server mode to run (mail, web, or spaceship)')
     parser.add_argument('--host', default='0.0.0.0',
                        help='Host address to bind to')
     parser.add_argument('--port', type=int,
@@ -54,6 +54,11 @@ def main() -> None:
         
         if args.mode == 'mail':
             raise Exception("Mail is not enabled.")
+        elif args.mode == 'spaceship':
+            from spaceship.server import run_server
+            port = args.port or 8998
+            logger.info(f'Starting spaceship server on {args.host}:{port}')
+            run_server(args.host, port)
         else:  # web mode
             port = args.port or 5000
             logger.info(f'Starting web server on {args.host}:{port}')
