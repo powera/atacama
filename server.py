@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -354,7 +354,7 @@ def landing_page():
         session = Session()
         
         # Test database connection
-        session.execute('SELECT 1')
+        session.execute(text('SELECT 1'))
         db_status = "Connected"
         
         # Fetch recent emails
