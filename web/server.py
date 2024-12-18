@@ -220,7 +220,7 @@ def landing_page():
     finally:
         session.close()
     
-    return render_template_string(
+    return render_template(
         'landing.html',
         db_status=db_status,
         emails=emails
