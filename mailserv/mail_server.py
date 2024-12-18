@@ -1,5 +1,3 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.orm import relationship
 import asyncio
 import logging
 import ssl
@@ -7,28 +5,21 @@ from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import SMTP, AuthResult, LoginPassword
 from email.message import EmailMessage
 from email.utils import formatdate
-import bcrypt
 from typing import Optional
 
-class MailUser(Base):
-    __tablename__ = 'mail_users'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    active = Column(Boolean, default=True)
-    
-    def verify_password(self, password: str) -> bool:
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-    
-    @staticmethod
-    def hash_password(password: str) -> str:
-        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+from common.database import setup_database
+from common.models import Email, MailUser
+from common.colorscheme import ColorScheme
+
+logger = logging.getLogger(__name__)
+Session, db_success = setup_database()
 
 class AuthenticatedSMTP(SMTP):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.session = Session()
+        self.authenticated = False
+        self.authenticated_user = None
         
     async def smtp_AUTH(self, arg):
         if not arg:
@@ -53,13 +44,13 @@ class AuthenticatedSMTP(SMTP):
             if user and user.verify_password(password):
                 return AuthResult(success=True, auth_data=username)
         except Exception as e:
-            logging.error(f"Authentication error: {str(e)}")
+            logger.error(f"Authentication error: {str(e)}")
         return AuthResult(success=False)
 
 class MailHandler:
     def __init__(self):
         self.session = Session()
-        self.processor = EmailProcessor()
+        self.color_processor = ColorScheme()
     
     async def handle_MAIL(self, server, session, envelope, address, mail_options):
         if not server.authenticated:
@@ -84,11 +75,13 @@ class MailHandler:
             message['Date'] = formatdate(localtime=True)
             message.set_content(envelope.content.decode('utf-8'))
             
-            # Process the email using existing Atacama infrastructure
+            content = message.get_content()
+            processed_content = self.color_processor.process_content(content)
+            
             email_obj = Email(
                 subject=message.get('subject', 'No Subject'),
-                content=message.get_content(),
-                processed_content=self.processor.process_email(message.get_content())
+                content=content,
+                processed_content=processed_content
             )
             
             self.session.add(email_obj)
@@ -97,25 +90,37 @@ class MailHandler:
             return '250 Message accepted for delivery'
             
         except Exception as e:
-            logging.error(f"Error processing mail: {str(e)}")
+            logger.error(f"Error processing mail: {str(e)}")
             return '554 5.3.0 Transaction failed'
         
         finally:
             self.session.close()
 
 class MailServer:
-    def __init__(self, host='0.0.0.0', port=587):
+    def __init__(self, host: str = '0.0.0.0', port: int = 587):
+        """
+        Initialize mail server.
+        
+        :param host: Host address to bind to
+        :param port: Port to listen on
+        """
         self.host = host
         self.port = port
         self.handler = MailHandler()
         self.ssl_context = self._create_ssl_context()
         
     def _create_ssl_context(self) -> ssl.SSLContext:
+        """Create SSL context for secure connections."""
         context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         context.load_cert_chain('/etc/atacama/mail/cert.pem', '/etc/atacama/mail/key.pem')
         return context
     
-    def run(self):
+    def run(self) -> None:
+        """Run the mail server."""
+        if not db_success:
+            logger.error("Database initialization failed, cannot start mail server")
+            return
+            
         controller = Controller(
             handler=self.handler,
             hostname=self.host,
@@ -126,7 +131,7 @@ class MailServer:
         
         try:
             controller.start()
-            logging.info(f"Mail server running on {self.host}:{self.port}")
+            logger.info(f"Mail server running on {self.host}:{self.port}")
             asyncio.get_event_loop().run_forever()
         except KeyboardInterrupt:
             controller.stop()

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atacama Email Processor</title>
+    <link rel="stylesheet" href="/css/landing.css">
+</head>
+<body>
+    <h1>Atacama Email Processor</h1>
+    
+    <div class="status">
+        <h2>Service Status</h2>
+        <p>Server is running and processing emails with custom color formatting.</p>
+        <p>Database Status: {{ db_status }}</p>
+    </div>
+
+    <div class="endpoints">
+        <h2>Available Endpoints</h2>
+        <ul>
+            <li><code>POST /process</code> - Process and store new emails</li>
+            <li><code>GET /emails/{id}</code> - Retrieve processed email by ID</li>
+        </ul>
+    </div>
+
+    <h2>Recent Emails</h2>
+    {% if emails %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Preview</th>
+                <th>Received</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr>
+                <td>{{ email.id }}</td>
+                <td>
+                    <a href="/emails/{{ email.id }}" class="email-link">
+                        {{ email.subject or '(No Subject)' }}
+                    </a>
+                </td>
+                <td class="email-preview">{{ email.content[:100] }}...</td>
+                <td class="timestamp">{{ email.created_at_formatted }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-emails">
+        No emails processed yet
+    </div>
+    {% endif %}
+</body>
+</html>
