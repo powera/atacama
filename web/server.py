@@ -222,6 +222,7 @@ def recent_message():
     finally:
         session.close()
 
+
 @app.route('/')
 def landing_page():
     """Serve the landing page with basic service information and message list."""
@@ -245,12 +246,21 @@ def landing_page():
     finally:
         session.close()
     
+    # Check if user is authenticated via dev auth
+    user = None
+    if session.get('dev_authenticated'):
+        user = {'name': 'Developer'}
+    # Or via Google auth (set in require_auth decorator)
+    elif hasattr(request, 'user'):
+        user = request.user
+    
     return render_template(
         'landing.html',
         db_status=db_status,
         messages=messages,
-        user=request.user if hasattr(request, 'user') else None
+        user=user
     )
+
 
 @app.route('/submit', methods=['GET', 'POST'])
 @require_auth
