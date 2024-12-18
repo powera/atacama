@@ -4,7 +4,7 @@
 set -e
 
 # Change to atacama user's home directory
-cd /home/atacama
+cd /home/atacama/atacama/
 
 # Pull latest changes from git
 git pull
