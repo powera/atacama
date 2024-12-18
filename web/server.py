@@ -110,7 +110,6 @@ def get_message(message_id: int) -> tuple[Dict[str, Any], int]:
         session.close()
 
 @app.route('/')
-@require_auth
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     try:
@@ -137,11 +136,10 @@ def landing_page():
         'landing.html',
         db_status=db_status,
         messages=messages,
-        user=request.user
+        user=request.user if hasattr(request, 'user') else None
     )
 
 @app.route('/submit', methods=['GET', 'POST'])
-@require_auth
 def submit_form():
     """Handle message submission via HTML form."""
     if request.method == 'POST':
