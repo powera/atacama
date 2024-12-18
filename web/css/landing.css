@@ -83,3 +83,13 @@ tr:hover {
     color: #666;
     font-style: italic;
 }
+
+.reprocess-link {
+    background: none;
+    border: none;
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+}

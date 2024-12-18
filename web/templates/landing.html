@@ -53,7 +53,9 @@
                 <td class="timestamp">{{ message.created_at_formatted }}</td>
                 {% if user %}
                 <td>
-                    <a href="/messages/{{ message.id }}/reprocess" class="reprocess-link">Reprocess</a>
+                    <form method="POST" action="/messages/{{ message.id }}/reprocess" style="display: inline;">
+                        <button type="submit" class="reprocess-link">Reprocess</button>
+                    </form>
                 </td>
                 {% endif %}
             </tr>
