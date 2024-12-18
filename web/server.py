@@ -249,7 +249,7 @@ def landing_page():
 
     # Check if user is authenticated via dev auth
     user = None
-    if flask.session.get('dev_authenticated'):
+    if session.get('dev_authenticated'):
         user = {'name': 'Developer'}
     # Or via Google auth (set in require_auth decorator)
     elif hasattr(request, 'user'):
