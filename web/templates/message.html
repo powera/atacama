@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ message.subject if message else 'Message' }}</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% elif message %}
+        <div class="message">
+            <h1>{{ message.subject }}</h1>
+            <div class="metadata">
+                Received: {{ created_at }}
+            </div>
+            <div class="content">
+                {{ message.processed_content | safe }}
+            </div>
+        </div>
+    {% endif %}
+</body>
+</html>

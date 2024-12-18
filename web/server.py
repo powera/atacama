@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session
 from waitress import serve
 import os
 import json
 import logging
 from sqlalchemy import text
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from functools import wraps
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from pathlib import Path
 
 from common.database import setup_database
 from common.models import Email
@@ -16,20 +17,46 @@ from common.colorscheme import ColorScheme
 from web.email_fetcher import EmailFetcherDaemon
 
 app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
 logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
 color_processor = ColorScheme()
 
+# Auth configuration
+DEV_AUTH_PATH = os.getenv('DEV_AUTH_PATH', '/.dev-auth')
+DEFAULT_SECRET_PATH = os.path.expanduser('~/.atacama_secret')
+
+def read_auth_code() -> str:
+    """
+    Read authentication code from secret file.
+    
+    :return: Authentication code from file or default if file not found
+    """
+    secret_path = os.getenv('ATACAMA_SECRET_PATH', DEFAULT_SECRET_PATH)
+    try:
+        with open(secret_path, 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        logger.warning(f"Secret file not found at {secret_path}, using default")
+        return 'atacama-dev'
+    except Exception as e:
+        logger.error(f"Error reading secret file: {str(e)}")
+        return 'atacama-dev'
+
 def require_auth(f):
-    """Decorator to require Google authentication."""
+    """Decorator to require either Google or dev authentication."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Check for dev auth first
+        if session.get('dev_authenticated'):
+            return f(*args, **kwargs)
+
+        # Then check Google auth
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return jsonify({'error': 'No authorization header'}), 401
+            return jsonify({'error': 'Authentication required'}), 401
             
         try:
-            # Verify the ID token
             token = auth_header.split(' ')[1]
             idinfo = id_token.verify_oauth2_token(
                 token,
@@ -37,7 +64,6 @@ def require_auth(f):
                 os.getenv('GOOGLE_CLIENT_ID')
             )
             
-            # Token is valid, store user info in request
             request.user = {
                 'email': idinfo['email'],
                 'name': idinfo.get('name', ''),
@@ -47,9 +73,38 @@ def require_auth(f):
             
         except Exception as e:
             logger.error(f"Auth error: {str(e)}")
-            return jsonify({'error': 'Invalid token'}), 401
+            return jsonify({'error': 'Invalid authentication'}), 401
             
     return decorated_function
+
+@app.route(DEV_AUTH_PATH, methods=['GET', 'POST'])
+def dev_auth():
+    """Development authentication endpoint."""
+    if request.method == 'POST':
+        if request.form.get('passcode') == read_auth_code():
+            session['dev_authenticated'] = True
+            return jsonify({'status': 'authenticated'})
+        return jsonify({'error': 'Invalid passcode'}), 401
+
+    return '''
+        <form method="post">
+            <input type="password" name="passcode" placeholder="Enter passcode">
+            <input type="submit" value="Authenticate">
+        </form>
+    '''
+
+def get_message_by_id(message_id: int) -> Optional[Email]:
+    """
+    Helper function to retrieve a message by ID.
+    
+    :param message_id: ID of the message to retrieve
+    :return: Email object if found, None otherwise
+    """
+    try:
+        session = Session()
+        return session.query(Email).filter(Email.id == message_id).first()
+    finally:
+        session.close()
 
 @app.route('/process', methods=['POST'])
 @require_auth
@@ -88,23 +143,45 @@ def process_message() -> tuple[Dict[str, Any], int]:
         session.close()
 
 @app.route('/messages/<int:message_id>', methods=['GET'])
-@require_auth
-def get_message(message_id: int) -> tuple[Dict[str, Any], int]:
+def get_message(message_id: int):
     """Retrieve a processed message by ID."""
+    message = get_message_by_id(message_id)
+    
+    if not message:
+        return jsonify({'error': 'Message not found'}), 404
+    
+    # Return HTML if requested
+    if request.headers.get('Accept', '').startswith('text/html'):
+        return render_template(
+            'message.html',
+            message=message,
+            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        )
+            
+    # Otherwise return JSON
+    return jsonify({
+        'id': message.id,
+        'subject': message.subject,
+        'content': message.content,
+        'processed_content': message.processed_content,
+        'created_at': message.created_at.isoformat()
+    })
+
+@app.route('/recent')
+def recent_message():
+    """Show the most recent message."""
     try:
         session = Session()
-        message = session.query(Email).filter(Email.id == message_id).first()
+        message = session.query(Email).order_by(Email.created_at.desc()).first()
         
         if not message:
-            return jsonify({'error': 'Message not found'}), 404
+            return render_template('message.html', error="No messages found")
             
-        return jsonify({
-            'id': message.id,
-            'subject': message.subject,
-            'content': message.content,
-            'processed_content': message.processed_content,
-            'created_at': message.created_at.isoformat()
-        })
+        return render_template(
+            'message.html',
+            message=message,
+            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        )
         
     finally:
         session.close()
@@ -140,6 +217,7 @@ def landing_page():
     )
 
 @app.route('/submit', methods=['GET', 'POST'])
+@require_auth
 def submit_form():
     """Handle message submission via HTML form."""
     if request.method == 'POST':
