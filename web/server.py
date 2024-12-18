@@ -223,37 +223,38 @@ def recent_message():
         session.close()
 
 
+# In server.py
 @app.route('/')
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     try:
-        session = Session()
-        
+        db_session = Session()
+
         # Test database connection
-        session.execute(text('SELECT 1'))
+        db_session.execute(text('SELECT 1'))
         db_status = "Connected"
-        
+
         # Fetch recent messages
-        messages = session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
-        
+        messages = db_session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
+
         # Format timestamps
         for message in messages:
             message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        
+
     except Exception as e:
         db_status = f"Error: {str(e)}"
         messages = []
     finally:
-        session.close()
-    
+        db_session.close()
+
     # Check if user is authenticated via dev auth
     user = None
-    if session.get('dev_authenticated'):
+    if flask.session.get('dev_authenticated'):
         user = {'name': 'Developer'}
     # Or via Google auth (set in require_auth decorator)
     elif hasattr(request, 'user'):
         user = request.user
-    
+
     return render_template(
         'landing.html',
         db_status=db_status,
