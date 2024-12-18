@@ -105,6 +105,9 @@ class ColorScheme:
         # First sanitize any HTML tags except our color tags
         processed = self.sanitize_html(content)
 
+        # Process URLs after sanitization but before color processing
+        processed = self.process_urls(processed)
+
         # Process paragraph-starting color tags
         for color, (sigil, class_name) in self.COLORS.items():
             matches = self.para_patterns[color].finditer(processed)
@@ -112,8 +115,6 @@ class ColorScheme:
                 text = match.group(1)
                 # Process nested colors first
                 text = self.process_nested_colors(text)
-                # Process URLs
-                text = self.process_urls(text)
                 replacement = f'<p class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</p>'
                 processed = processed.replace(match.group(0), replacement)
 
@@ -131,18 +132,16 @@ class ColorScheme:
                     text = match.group(1)
                     # Process nested colors
                     text = self.process_nested_colors(text)
-                    # Process URLs
-                    text = self.process_urls(text)
                     replacement = f'<span class="color-{class_name}"><span class="sigil">{sigil}</span> {text}</span>'
                     processed = processed.replace(match.group(0), replacement)
 
         # Process section breaks after color processing
         processed = self.section_break_pattern.sub('<hr>\n', processed)
 
-        # Clean up line breaks and spacing
-        # Split on any sequence of 2 or more newlines
-        paragraphs = re.split(r'\n\n+', processed)
+        # Process paragraphs - split on any sequence of newlines
+        paragraphs = re.split(r'\n+', processed)
         processed_paragraphs = []
+
         for para in paragraphs:
             if not para.strip():
                 continue
@@ -150,10 +149,8 @@ class ColorScheme:
             if para.strip().startswith('<') and para.strip().endswith('>'):
                 processed_paragraphs.append(para)
             else:
-                # Convert single line breaks to <br> within paragraphs
-                lines = para.split('\n')
-                processed_lines = '<br>'.join(line for line in lines if line.strip())
-                processed_paragraphs.append(f'<p>{processed_lines}</p>')
+                # Wrap non-HTML content in paragraph tags
+                processed_paragraphs.append(f'<p>{para.strip()}</p>')
 
         # Join with single newlines
         processed = '\n'.join(processed_paragraphs)
