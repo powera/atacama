@@ -1,0 +1,61 @@
+/* Color scheme classes */
+.color-xantham { 
+    color: #8B0000;  /* Dark red for "infrared" */
+    font-style: italic;  /* Since it's sarcastic */
+}
+
+.color-red { 
+    color: red;
+    font-weight: bold;  /* For forceful statements */
+}
+
+.color-orange { 
+    color: orange;
+    border-left: 2px solid orange;  /* Visual indicator for counterpoints */
+    padding-left: 10px;
+}
+
+.color-yellow { 
+    color: yellow;
+    background-color: rgba(255, 255, 0, 0.1);  /* Subtle highlight for quotes */
+    font-style: italic;
+}
+
+.color-green { 
+    color: green;
+    font-family: "Courier New", Courier, monospace;
+    background-color: rgba(0, 255, 0, 0.05);  /* Light background for technical content */
+}
+
+.color-teal { 
+    color: teal;
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    border: 1px solid teal;  /* Box around LLM output */
+    padding: 5px;
+    margin: 5px 0;
+}
+
+.color-blue { 
+    color: blue;
+    font-style: italic;
+    opacity: 0.9;  /* Slight fade for "voice from beyond" */
+}
+
+.color-violet { 
+    color: violet;
+    font-weight: 500;  /* Slightly bold for serious content */
+    letter-spacing: 0.02em;  /* Subtle spacing for readability */
+}
+
+.color-mogue { 
+    color: #9400D3;  /* Dark violet for "ultraviolet" */
+    text-transform: lowercase;  /* Style choice for action descriptions */
+}
+
+.color-gray { 
+    color: gray;
+    font-style: italic;
+    border-left: 1px solid #ccc;  /* Subtle indent for past stories */
+    padding-left: 15px;
+    margin: 10px 0;
+}

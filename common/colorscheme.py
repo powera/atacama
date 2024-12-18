@@ -5,7 +5,7 @@ class ColorScheme:
     """Color scheme definitions and processing for email content."""
     
     COLORS = {
-        'xantham': 'infrared',  # sarcastic, overconfident
+        'xantham': 'xantham',  # sarcastic, overconfident
         'red': 'red',          # forceful, certain
         'orange': 'orange',    # counterpoint
         'yellow': 'yellow',    # quotes
@@ -13,7 +13,7 @@ class ColorScheme:
         'teal': 'teal',       # LLM output
         'blue': 'blue',       # voice from beyond
         'violet': 'violet',    # serious
-        'mogue': 'ultraviolet', # actions taken
+        'mogue': 'mogue',      # actions taken
         'gray': 'gray'        # past stories
     }
     
@@ -37,10 +37,7 @@ class ColorScheme:
             matches = pattern.finditer(content)
             for match in matches:
                 text = match.group(1)
-                if color == 'teal':
-                    replacement = f'<span style="color: {self.COLORS[color]}; font-family: Comic Sans MS;">{text}</span>'
-                else:
-                    replacement = f'<span style="color: {self.COLORS[color]};">{text}</span>'
+                replacement = f'<span class="color-{color}">{text}</span>'
                 processed = processed.replace(match.group(0), replacement)
                 
         return processed
