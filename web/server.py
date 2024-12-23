@@ -262,8 +262,12 @@ def reprocess_message(message_id: int):
         if not message:
             return jsonify({'error': 'Message not found'}), 404
         
-        # Get any updated annotations from request
-        data = request.get_json() or {}
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json() or {}
+        else:
+            data = {}
+        
         chinese_annotations = data.get('chinese_annotations', 
             json.loads(message.chinese_annotations or '{}'))
         llm_annotations = data.get('llm_annotations',
