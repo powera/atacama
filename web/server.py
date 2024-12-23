@@ -286,7 +286,9 @@ def reprocess_message(message_id: int):
             message.llm_annotations = json.dumps(llm_annotations)
         
         # Re-process quotes
-        session.query(Quote).filter(Quote.emails.contains(message)).delete()
+        for quote in message.quotes:
+            session.delete(quote)
+        message.quotes = []
         quotes = extract_quotes(message.content)
         save_quotes(quotes, message, session)
         
