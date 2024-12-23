@@ -1,141 +1,91 @@
-# Atacama Email Processor
+# Atacama Message Processor
 
-Atacama is an email processing system that applies custom color-based formatting to emails based on semantic meaning. It processes emails containing special color tags and converts them into HTML with appropriate styling.
+Atacama is a message processing system that applies custom color-based formatting to text based on semantic meaning. It processes messages containing special color tags and converts them into HTML with appropriate styling.
 
 ## Features
 
-- Processes emails with custom color tags representing different semantic meanings
-- Converts color tags to HTML/CSS styling
-- Stores original and processed emails in SQLite database
-- Provides REST API endpoints for email processing
-- Includes automatic email fetching daemon for IMAP servers
-- Special handling for different content types (e.g., Comic Sans for LLM outputs)
+- **Color Tag Processing**: Converts semantic color tags to styled HTML/CSS
+- **Web Interface**: Submit and view messages through a clean web UI
+- **REST API**: Process messages programmatically via HTTP endpoints
+- **Message Threading**: Support for message chains and parent/child relationships
+- **Chinese Annotations**: Hover-based annotations for Chinese characters
+- **Quote Extraction**: Automatic extraction and indexing of quotes and aphorisms
+- **LLM Annotations**: Support for large language model output annotation
+- **Email Integration**: Optional IMAP-based email processing daemon
 
-## Color Scheme
+## Color Tags
 
-The system recognizes the following color tags and their semantic meanings:
+Messages can include the following semantic color tags:
 
-- `<xantham>` (infrared) - Sarcastic or overconfident content
-- `<red>` - Forceful statements and informed opinions
-- `<orange>` - Counterpoints (often starting with "well, actually")
-- `<yellow>` - Direct quotes and snowclones
-- `<green>` - Technical explanations and meta-commentary
-- `<teal>` - LLM model outputs (rendered in Comic Sans)
+- `<xantham>` - Sarcastic or overconfident content
+- `<red>` - Forceful statements and informed opinions  
+- `<orange>` - Counterpoints and alternate views
+- `<yellow>` - Quotes and referenced content
+- `<green>` - Technical explanations and commentary
+- `<teal>` - LLM/AI generated content
 - `<blue>` - Voice from beyond
 - `<violet>` - Serious content
-- `<mogue>` (ultraviolet) - Descriptions of actions taken
-- `<gray>` - Past stories and historical quotes
-
-## Setup
-
-1. Install dependencies:
-```bash
-pip install flask sqlalchemy waitress
-```
-
-2. Configure email settings (optional):
-Create `email_config.json`:
-```json
-{
-    "host": "your.imap.server",
-    "port": 143,
-    "username": "your_username",
-    "password": "your_password",
-    "fetch_interval": 300
-}
-```
-
-3. Initialize the database:
-The system will automatically create an SQLite database (`emails.db`) on first run.
+- `<mogue>` - Actions taken and changes made
+- `<gray>` - Past stories and historical context
 
 ## Usage
 
-### Running the Server
+### Web Interface
 
-```bash
-python server.py
-```
-
-This will start:
-- The Flask web server on port 5000
-- The email fetcher daemon (if configured)
+The main web interface provides:
+- Message submission form with color tag preview
+- Recent message listing and threading view
+- Individual message view with formatting
+- Print-optimized message display
+- Optional authentication for message submission
 
 ### API Endpoints
 
-#### Process Email
+#### Process Message
 ```http
 POST /process
 Content-Type: application/json
 
 {
-    "subject": "Email Subject",
-    "content": "Email content with <red>color tags</red>"
+    "subject": "Message Subject",
+    "content": "Content with <red>color tags</red>",
+    "parent_id": 123  # Optional, for message threading
 }
 ```
 
-#### Retrieve Email
+#### Retrieve Message
 ```http
-GET /emails/<email_id>
+GET /messages/<message_id>
+Accept: text/html  # Optional, for HTML formatted version
 ```
 
-### Example Usage
-
-```python
-import requests
-
-email_content = """
-<red>Important notice:</red>
-<green>This is a technical explanation.</green>
-<teal>This is AI-generated content.</teal>
-"""
-
-response = requests.post('http://localhost:5000/process', 
-    json={
-        'subject': 'Test Email',
-        'content': email_content
-    }
-)
-
-processed_email = response.json()
+#### Submit via Form
+```http
+GET/POST /submit
 ```
 
-## Database Schema
+## Development Status
 
-The system uses SQLAlchemy with the following schema:
+The project is currently in pre-release testing at earlyversion.com. It consists of several components:
 
-- `emails`
-  - `id`: Integer (Primary Key)
-  - `subject`: String(255)
-  - `content`: Text (Original content)
-  - `processed_content`: Text (HTML/CSS formatted content)
-  - `created_at`: DateTime
+- Web server (port 5000)
+- Email processor (separate service)
+- Systemd service configurations
+- Nginx reverse proxy setup
+
+Each server instance runs under its own user account with appropriate service isolation.
 
 ## Logging
 
-Logs are written to `email_processor.log` and include:
-- Server start/stop events
-- Email processing status
-- Error messages
-- IMAP connection status (if enabled)
+All components log to `atacama.log` with configurable log levels:
+- Server events and message processing
+- Database operations
+- Email fetching status (when enabled)
+- Authentication events
 
-## Error Handling
+## Security
 
-The system includes comprehensive error handling for:
-- Invalid email formats
-- Database connection issues
-- IMAP connection failures
-- Missing or malformed color tags
-
-## Security Notes
-
-- Ensure proper access controls for the API endpoints
-- Store email credentials securely
-- Review processed content for potentially harmful HTML/CSS
-
-## Contributing
-
-When contributing to this project:
-1. Follow the existing code style
-2. Add tests for new features
-3. Update documentation as needed
-4. Ensure all tests pass before submitting changes
+- Google OAuth2 integration for authenticated endpoints
+- Development authentication fallback available
+- HTML sanitization for message content
+- Rate limiting on API endpoints
