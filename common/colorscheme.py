@@ -79,6 +79,45 @@ class ColorScheme:
         
         return text
 
+    def process_nested_colors(self, text: str) -> str:
+        """
+        Process nested color tags within parentheses.
+
+        :param text: Text that may contain nested color tags
+        :return: Processed text with nested color spans and styled parentheses
+        """
+        while True:
+            match = self.nested_color_pattern.search(text)
+            if not match:
+                break
+
+            color = match.group(1)
+            inner_text = match.group(2)
+            if color in self.COLORS:
+                sigil, class_name = self.COLORS[color]
+                # Include styled parentheses in the color span
+                replacement = (
+                    f'<span class="color-{class_name}">'
+                    f'(<span class="sigil">{sigil}</span> {inner_text})'
+                    f'</span>'
+                )
+                text = text.replace(match.group(0), replacement)
+
+        return text
+
+    def process_urls(self, text: str) -> str:
+        """
+        Convert URLs to clickable links.
+        
+        :param text: Text that may contain URLs
+        :return: Text with URLs converted to HTML links
+        """
+        def replace_url(match):
+            url = match.group(0)
+            return f'<a href="{url}" target="_blank">{url}</a>'
+            
+        return self.url_pattern.sub(replace_url, text)
+
     def process_lists(self, text: str) -> str:
         """Process list markers and create HTML lists."""
         def replace_list(match: Match) -> str:
