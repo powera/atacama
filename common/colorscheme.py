@@ -218,9 +218,6 @@ class ColorScheme:
         # First process annotations (before any HTML escaping)
         processed = self.process_annotations(content, chinese_annotations, llm_annotations)
         
-        # Then process wikilinks
-        processed = self.process_wikilinks(processed)
-        
         # Process lists
         processed = self.process_lists(processed)
         
@@ -229,6 +226,8 @@ class ColorScheme:
         
         # Process URLs
         processed = self.process_urls(processed)
+        # Then process wikilinks
+        processed = self.process_wikilinks(processed)
         
         # Process nested colors
         processed = self.process_nested_colors(processed)

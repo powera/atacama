@@ -120,14 +120,6 @@ p[class^="color-"] {
     color: #A0522D;  /* Lighter brown-red */
     font-style: italic;
 }
-.color-xantham::after {
-    content: "xantham";
-    font-size: 0.8em;
-    position: absolute;
-    right: -4em;
-    top: 0;
-    color: #999;
-}
 
 .color-red { 
     color: #FF4136;
