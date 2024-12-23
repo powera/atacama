@@ -115,7 +115,6 @@ def save_quotes(quotes: List[Dict[str, str]], email: Email, session) -> None:
     for quote_data in quotes:
         quote = Quote(
             text=quote_data['text'],
-            quote_type=quote_data['type']
         )
         email.quotes.append(quote)
         session.add(quote)
