@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Dict
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer
+from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 
 from sqlalchemy.orm import DeclarativeBase
