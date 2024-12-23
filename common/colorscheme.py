@@ -118,6 +118,26 @@ class ColorScheme:
             
         return self.url_pattern.sub(replace_url, text)
 
+    def extract_color_content(self, content: str, color: str) -> list[str]:
+        """
+        Extract content wrapped in specified color tags.
+        
+        :param content: Text content to process
+        :param color: Color tag name to extract (e.g. 'yellow', 'blue')
+        :return: List of text content found within the specified color tags
+        """
+        # Create pattern for both inline and paragraph color tags
+        pattern = re.compile(
+            f'<{color}>(.*?)(?:\r?\n|$)',  # Matches till newline or end of string
+            re.MULTILINE | re.DOTALL
+        )
+        
+        # Find all matches and extract content
+        matches = pattern.finditer(content)
+        extracted = [match.group(1).strip() for match in matches]
+        
+        return [text for text in extracted if text]  # Filter out empty strings
+
     def process_lists(self, text: str) -> str:
         """Process list markers and create HTML lists."""
         def replace_list(match: Match) -> str:
