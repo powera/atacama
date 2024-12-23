@@ -21,8 +21,82 @@ body {
     font-size: 0.9em;
 }
 
+/* Annotations */
+.annotated-chinese {
+    position: relative;
+    cursor: help;
+}
+
+.annotated-chinese:hover::after {
+    content: attr(data-pinyin) " - " attr(data-definition);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.llm-annotation {
+    text-decoration: underline dotted;
+    cursor: help;
+}
+
+.llm-annotation:hover::after {
+    content: attr(data-type);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+    z-index: 100;
+}
+
+/* Lists */
+.bullet-list, .number-list, .arrow-list {
+    margin: 0.5em 0;
+    padding-left: 2em;
+}
+
+.bullet-list::before {
+    content: "•";
+    margin-right: 0.5em;
+}
+
+.number-list::before {
+    content: counter(list-item) ".";
+    margin-right: 0.5em;
+}
+
+.arrow-list::before {
+    content: "→";
+    margin-right: 0.5em;
+}
+
+/* Wikilinks */
+.wikilink {
+    color: #0645ad;
+    text-decoration: none;
+    border-bottom: 1px dotted #0645ad;
+}
+
+.wikilink:hover {
+    text-decoration: none;
+    background: #eaf3ff;
+}
+
 /* Section break */
-.section-break {
+hr {
     border: none;
     border-top: 1px solid #ddd;
     margin: 2em 0;
@@ -38,22 +112,31 @@ body {
 /* Base color scheme classes */
 p[class^="color-"] {
     margin: 1em 0;
+    position: relative;
 }
 
-/* Color-specific classes */
+/* Updated color-specific classes */
 .color-xantham { 
-    color: #8B0000;
+    color: #A0522D;  /* Lighter brown-red */
     font-style: italic;
+}
+.color-xantham::after {
+    content: "xantham";
+    font-size: 0.8em;
+    position: absolute;
+    right: -4em;
+    top: 0;
+    color: #999;
 }
 
 .color-red { 
-    color: red;
+    color: #FF4136;
     font-weight: bold;
 }
 
 .color-orange { 
-    color: orange;
-    border-left: 2px solid orange;
+    color: #FF851B;
+    border-left: 2px solid #FF851B;
     padding-left: 10px;
 }
 
@@ -64,42 +147,55 @@ p[class^="color-"] {
 }
 
 .color-green { 
-    color: green;
+    color: #2ECC40;
     font-family: "Courier New", Courier, monospace;
     background-color: rgba(0, 255, 0, 0.05);
 }
 
 .color-teal { 
-    color: teal;
-    font-family: "Comic Sans MS", "Comic Sans", cursive;
-    border: 1px solid teal;
+    color: #39CCCC;
+    font-family: "Courier New", Courier, monospace;
+    border: 1px solid #39CCCC;
     padding: 5px;
     margin: 5px 0;
 }
 
 .color-blue { 
-    color: blue;
+    color: #0074D9;
     font-style: italic;
-    opacity: 0.9;
+    text-shadow: 0 0 1px rgba(0,116,217,0.2);
+    letter-spacing: 0.02em;
 }
 
 .color-violet { 
-    color: #9400D3;
+    color: #673AB7;
     font-weight: 500;
-    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.95em;
 }
 
 .color-mogue { 
     color: #4A006A;
     text-transform: lowercase;
+    background: linear-gradient(45deg, rgba(74,0,106,0.05) 0%, rgba(74,0,106,0) 100%);
+    padding: 2px 5px;
 }
 
 .color-gray { 
-    color: gray;
+    color: #666;
     font-style: italic;
-    border-left: 1px solid #ccc;
+    background: linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0));
+    padding: 2px 5px;
+    border-left: 1px solid #ddd;
     padding-left: 15px;
     margin: 10px 0;
+}
+
+.color-hazel {
+    color: #8B4513;  /* Saddle brown */
+    font-style: italic;
+    background: rgba(139,69,19,0.05);
 }
 
 /* Literal text blocks */
@@ -108,4 +204,51 @@ p[class^="color-"] {
     background-color: rgba(0, 0, 0, 0.05);
     padding: 0 0.3em;
     border-radius: 2px;
+}
+
+/* Print styles */
+@media print {
+    body {
+        max-width: none;
+        margin: 0;
+        padding: 0.5in;
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+
+    .message {
+        box-shadow: none;
+        padding: 0;
+    }
+
+    /* Ensure annotations print their content */
+    .annotated-chinese::after {
+        content: " (" attr(data-pinyin) ")";
+        font-size: 0.9em;
+    }
+
+    .llm-annotation::after {
+        content: " [" attr(data-type) "]";
+        font-size: 0.9em;
+    }
+
+    /* Adjust colors for better print contrast */
+    .color-xantham, .color-red, .color-orange, .color-violet, .color-mogue {
+        color: black;
+    }
+
+    .color-blue, .color-teal, .color-green {
+        color: #333;
+    }
+
+    /* Print backgrounds for mogue and gray */
+    .color-mogue, .color-gray {
+        background: #f8f8f8;
+    }
+
+    /* Ensure URLs print */
+    .wikilink::after {
+        content: " (" attr(href) ")";
+        font-size: 0.9em;
+    }
 }

@@ -2,21 +2,164 @@
 <html>
 <head>
     <title>{{ message.subject if message else 'Message' }}</title>
+    <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/atacama.css">
+    <script>
+        // Handle tooltip positioning
+        document.addEventListener('DOMContentLoaded', function() {
+            const tooltipContainer = document.createElement('div');
+            tooltipContainer.className = 'tooltip';
+            document.body.appendChild(tooltipContainer);
+
+            // Handle Chinese annotations
+            document.querySelectorAll('.annotated-chinese').forEach(el => {
+                el.addEventListener('mouseover', e => {
+                    const pinyin = e.target.getAttribute('data-pinyin');
+                    const definition = e.target.getAttribute('data-definition');
+                    tooltipContainer.textContent = `${pinyin} - ${definition}`;
+                    tooltipContainer.classList.add('visible');
+                    
+                    // Position tooltip
+                    const rect = e.target.getBoundingClientRect();
+                    tooltipContainer.style.left = rect.left + 'px';
+                    tooltipContainer.style.top = (rect.top - tooltipContainer.offsetHeight - 5) + 'px';
+                });
+                
+                el.addEventListener('mouseout', () => {
+                    tooltipContainer.classList.remove('visible');
+                });
+            });
+
+            // Handle LLM annotations
+            document.querySelectorAll('.llm-annotation').forEach(el => {
+                el.addEventListener('mouseover', e => {
+                    tooltipContainer.textContent = e.target.getAttribute('data-type');
+                    tooltipContainer.classList.add('visible');
+                    
+                    const rect = e.target.getBoundingClientRect();
+                    tooltipContainer.style.left = rect.left + 'px';
+                    tooltipContainer.style.top = (rect.top - tooltipContainer.offsetHeight - 5) + 'px';
+                });
+                
+                el.addEventListener('mouseout', () => {
+                    tooltipContainer.classList.remove('visible');
+                });
+            });
+        });
+
+        // Handle print mode
+        function preparePrint() {
+            window.print();
+        }
+    </script>
 </head>
 <body>
     {% if error %}
         <div class="error">{{ error }}</div>
     {% elif message %}
         <div class="message">
-            <h1>{{ message.subject }}</h1>
-            <div class="metadata">
-                Received: {{ created_at }}
-            </div>
+            <header class="message-header">
+                <h1>{{ message.subject }}</h1>
+                <div class="metadata">
+                    Received: {{ created_at }}
+                    {% if message.parent %}
+                        <br>
+                        In reply to: <a href="/messages/{{ message.parent.id }}">{{ message.parent.subject }}</a>
+                    {% endif %}
+                </div>
+                <div class="message-actions">
+                    <button onclick="preparePrint()" class="print-button">Print</button>
+                    {% if message.children %}
+                        <div class="replies">
+                            Replies:
+                            <ul>
+                            {% for child in message.children %}
+                                <li><a href="/messages/{{ child.id }}">{{ child.subject }}</a></li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </header>
+
             <div class="content">
                 {{ message.processed_content | safe }}
             </div>
+
+            {% if message.quotes %}
+                <footer class="message-footer">
+                    <div class="quotes-section">
+                        <h3>Quoted Sources</h3>
+                        <ul class="quote-list">
+                        {% for quote in message.quotes %}
+                            <li class="quote-item">
+                                <div class="quote-text">"{{ quote.text }}"</div>
+                                {% if quote.author %}
+                                    <div class="quote-author">— {{ quote.author }}</div>
+                                {% endif %}
+                                {% if quote.source %}
+                                    <div class="quote-source">{{ quote.source }}</div>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </footer>
+            {% endif %}
         </div>
     {% endif %}
+
+    <style>
+        /* Additional styles specific to message view */
+        .message-header {
+            margin-bottom: 2em;
+        }
+        
+        .message-actions {
+            margin: 1em 0;
+        }
+        
+        .replies {
+            margin-top: 1em;
+        }
+        
+        .replies ul {
+            list-style: none;
+            padding-left: 1em;
+        }
+        
+        .quote-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .quote-item {
+            margin: 1em 0;
+            padding: 1em;
+            background: #f9f9f9;
+            border-left: 3px solid #ddd;
+        }
+        
+        .quote-author {
+            margin-top: 0.5em;
+            font-style: italic;
+        }
+        
+        .quote-source {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        @media print {
+            .message-actions {
+                display: none;
+            }
+            
+            .quote-item {
+                background: none;
+                border-left: 1px solid #999;
+            }
+        }
+    </style>
 </body>
 </html>

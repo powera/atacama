@@ -59,6 +59,13 @@ textarea {
     font-size: 16px;
     border: 2px solid #ccc;
     border-radius: 4px;
+    transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    border-color: #4CAF50;
+    outline: none;
 }
 
 /* Buttons and links */
@@ -73,6 +80,7 @@ button,
     cursor: pointer;
     text-decoration: none;
     display: inline-block;
+    transition: background-color 0.2s ease;
 }
 
 button:hover,
@@ -86,4 +94,95 @@ button:hover,
     padding: 20px;
     background-color: #f9f9f9;
     border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+/* New: Annotation base styles */
+.annotated-chinese,
+.llm-annotation {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dotted #666;
+}
+
+/* New: List base styles */
+.bullet-list,
+.number-list,
+.arrow-list {
+    padding-left: 20px;
+    margin: 8px 0;
+    list-style-position: outside;
+}
+
+/* New: Wiki link base styles */
+.wikilink {
+    color: #2c3e50;
+    text-decoration: none;
+    border-bottom: 1px dotted #2c3e50;
+    transition: all 0.2s ease;
+}
+
+.wikilink:hover {
+    background-color: #f0f0f0;
+}
+
+/* New: Preview pane styles */
+.preview-pane {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+    background: white;
+}
+
+.preview-pane-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #666;
+}
+
+/* New: Tooltip base styles */
+.tooltip {
+    position: absolute;
+    z-index: 1000;
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 14px;
+    max-width: 300px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.tooltip.visible {
+    opacity: 1;
+}
+
+/* Print styles */
+@media print {
+    .container {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    button,
+    .button {
+        display: none;
+    }
+
+    .info-box {
+        border: none;
+        padding: 10px 0;
+    }
+
+    .preview-pane {
+        border: none;
+        padding: 0;
+    }
 }
