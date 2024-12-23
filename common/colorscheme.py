@@ -53,6 +53,32 @@ class ColorScheme:
         # Pattern for Chinese characters with potential annotations
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
 
+    def sanitize_html(self, text: str) -> str:
+        """
+        Basic HTML sanitization to prevent XSS while preserving our custom tags.
+        
+        :param text: Text to sanitize
+        :return: Sanitized text
+        """
+        # First escape any existing HTML
+        text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        
+        # Then restore our custom color tags
+        for color in self.COLORS.keys():
+            text = text.replace(f'&lt;{color}&gt;', f'<{color}>')
+        
+        # Restore approved HTML tags used by our processor
+        approved_tags = ['p', 'span', 'hr', 'li', 'ul', 'ol', 'a']
+        for tag in approved_tags:
+            text = text.replace(f'&lt;{tag}', f'<{tag}')
+            text = text.replace(f'&lt;/{tag}&gt;', f'</{tag}>')
+            
+        # Restore class attributes
+        text = text.replace('&lt;p class=', '<p class=')
+        text = text.replace('&lt;span class=', '<span class=')
+        
+        return text
+
     def process_lists(self, text: str) -> str:
         """Process list markers and create HTML lists."""
         def replace_list(match: Match) -> str:
