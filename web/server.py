@@ -4,15 +4,16 @@ import os
 import json
 import logging
 from sqlalchemy import text
+from sqlalchemy.orm import joinedload
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 from functools import wraps
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from pathlib import Path
 
 from common.database import setup_database
-from common.models import Email
+from common.models import Email, Quote
 from common.colorscheme import ColorScheme
 from web.email_fetcher import EmailFetcherDaemon
 
@@ -77,6 +78,48 @@ def require_auth(f):
             
     return decorated_function
 
+def extract_quotes(content: str) -> List[Dict[str, str]]:
+    """
+    Extract quotes from content using yellow and blue color tags.
+    
+    :param content: Message content
+    :return: List of extracted quotes with metadata
+    """
+    quotes = []
+    # Extract yellow-tagged quotes
+    yellow_quotes = color_processor.extract_color_content(content, 'yellow')
+    for quote in yellow_quotes:
+        quotes.append({
+            'text': quote,
+            'type': 'quote'
+        })
+    
+    # Extract blue-tagged aphorisms
+    blue_quotes = color_processor.extract_color_content(content, 'blue')
+    for quote in blue_quotes:
+        quotes.append({
+            'text': quote,
+            'type': 'aphorism'
+        })
+    
+    return quotes
+
+def save_quotes(quotes: List[Dict[str, str]], email: Email, session) -> None:
+    """
+    Save extracted quotes to the database.
+    
+    :param quotes: List of extracted quotes
+    :param email: Associated Email object
+    :param session: Database session
+    """
+    for quote_data in quotes:
+        quote = Quote(
+            text=quote_data['text'],
+            quote_type=quote_data['type']
+        )
+        email.quotes.append(quote)
+        session.add(quote)
+
 @app.route(DEV_AUTH_PATH, methods=['GET', 'POST'])
 def dev_auth():
     """Development authentication endpoint."""
@@ -100,9 +143,17 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
     :param message_id: ID of the message to retrieve
     :return: Email object if found, None otherwise
     """
+    session = Session()
     try:
-        session = Session()
-        return session.query(Email).filter(Email.id == message_id).first()
+        # Load the message and its relationships in one query
+        return session.query(Email).options(
+            joinedload(Email.parent),
+            joinedload(Email.children),
+            joinedload(Email.quotes)
+        ).filter(Email.id == message_id).first()
+    except Exception as e:
+        logger.error(f"Error retrieving message {message_id}: {str(e)}")
+        return None
     finally:
         session.close()
 
@@ -117,13 +168,32 @@ def process_message() -> tuple[Dict[str, Any], int]:
             return jsonify({'error': 'Missing required fields'}), 400
         
         session = Session()
-        processed_content = color_processor.process_content(data['content'])
         
+        # Process content with enhanced features
+        processed_content = color_processor.process_content(
+            data['content'],
+            chinese_annotations=data.get('chinese_annotations'),
+            llm_annotations=data.get('llm_annotations')
+        )
+        
+        # Create message object
         message = Email(
             subject=data['subject'],
             content=data['content'],
-            processed_content=processed_content
+            processed_content=processed_content,
+            chinese_annotations=json.dumps(data.get('chinese_annotations', {})),
+            llm_annotations=json.dumps(data.get('llm_annotations', {}))
         )
+        
+        # Handle message chain if parent_id is provided
+        if 'parent_id' in data:
+            parent = session.query(Email).get(data['parent_id'])
+            if parent:
+                message.parent = parent
+        
+        # Extract and save quotes
+        quotes = extract_quotes(data['content'])
+        save_quotes(quotes, message, session)
         
         session.add(message)
         session.commit()
@@ -151,12 +221,19 @@ def get_message(message_id: int):
     if not message:
         return jsonify({'error': 'Message not found'}), 404
     
+    # Get print mode from query params
+    print_mode = request.args.get('print', '').lower() == 'true'
+    
     # Return HTML if requested
     if request.headers.get('Accept', '').startswith('text/html'):
+        template = 'message_print.html' if print_mode else 'message.html'
         return render_template(
-            'message.html',
+            template,
             message=message,
-            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            raw_content=message.content,  # For two-screen editing
+            chinese_annotations=json.loads(message.chinese_annotations or '{}'),
+            quotes=message.quotes
         )
             
     # Otherwise return JSON
@@ -165,7 +242,11 @@ def get_message(message_id: int):
         'subject': message.subject,
         'content': message.content,
         'processed_content': message.processed_content,
-        'created_at': message.created_at.isoformat()
+        'created_at': message.created_at.isoformat(),
+        'parent_id': message.parent_id,
+        'chinese_annotations': json.loads(message.chinese_annotations or '{}'),
+        'llm_annotations': json.loads(message.llm_annotations or '{}'),
+        'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
     })
 
 @app.route('/messages/<int:message_id>/reprocess', methods=['POST'])
@@ -174,26 +255,61 @@ def reprocess_message(message_id: int):
     """Reprocess an existing message's content."""
     try:
         session = Session()
-        message = session.query(Email).filter(Email.id == message_id).first()
+        message = session.query(Email).options(
+            joinedload(Email.quotes)
+        ).filter(Email.id == message_id).first()
         
         if not message:
             return jsonify({'error': 'Message not found'}), 404
+        
+        # Get any updated annotations from request
+        data = request.get_json() or {}
+        chinese_annotations = data.get('chinese_annotations', 
+            json.loads(message.chinese_annotations or '{}'))
+        llm_annotations = data.get('llm_annotations',
+            json.loads(message.llm_annotations or '{}'))
             
-        message.processed_content = color_processor.process_content(message.content)
+        message.processed_content = color_processor.process_content(
+            message.content,
+            chinese_annotations=chinese_annotations,
+            llm_annotations=llm_annotations
+        )
+        
+        # Update annotations if provided
+        if 'chinese_annotations' in data:
+            message.chinese_annotations = json.dumps(chinese_annotations)
+        if 'llm_annotations' in data:
+            message.llm_annotations = json.dumps(llm_annotations)
+        
+        # Re-process quotes
+        session.query(Quote).filter(Quote.emails.contains(message)).delete()
+        quotes = extract_quotes(message.content)
+        save_quotes(quotes, message, session)
+        
         session.commit()
         
         logger.info(f"Reprocessed message {message_id}")
         
+        # Get print mode from query params
+        print_mode = request.args.get('print', '').lower() == 'true'
+        
         if request.headers.get('Accept', '').startswith('text/html'):
+            template = 'message_print.html' if print_mode else 'message.html'
             return render_template(
-                'message.html',
+                template,
                 message=message,
-                created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                raw_content=message.content,
+                chinese_annotations=chinese_annotations,
+                quotes=message.quotes
             )
             
         return jsonify({
             'id': message.id,
-            'processed_content': message.processed_content
+            'processed_content': message.processed_content,
+            'chinese_annotations': chinese_annotations,
+            'llm_annotations': llm_annotations,
+            'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
         })
         
     except Exception as e:
@@ -216,14 +332,14 @@ def recent_message():
         return render_template(
             'message.html',
             message=message,
-            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            raw_content=message.content,
+            chinese_annotations=json.loads(message.chinese_annotations or '{}')
         )
         
     finally:
         session.close()
 
-
-# In server.py
 @app.route('/')
 def landing_page():
     """Serve the landing page with basic service information and message list."""
@@ -234,8 +350,12 @@ def landing_page():
         db_session.execute(text('SELECT 1'))
         db_status = "Connected"
 
-        # Fetch recent messages
-        messages = db_session.query(Email).order_by(Email.created_at.desc()).limit(50).all()
+        # Fetch recent messages with their relationships
+        messages = db_session.query(Email).options(
+            joinedload(Email.parent),
+            joinedload(Email.children),
+            joinedload(Email.quotes)
+        ).order_by(Email.created_at.desc()).limit(50).all()
 
         # Format timestamps
         for message in messages:
@@ -262,7 +382,6 @@ def landing_page():
         user=user
     )
 
-
 @app.route('/submit', methods=['GET', 'POST'])
 @require_auth
 def submit_form():
@@ -271,18 +390,34 @@ def submit_form():
         try:
             subject = request.form.get('subject', '')
             content = request.form.get('content', '')
+            parent_id = request.form.get('parent_id')
+            chinese_annotations = json.loads(request.form.get('chinese_annotations', '{}'))
             
             if not subject or not content:
                 return render_template('submit.html', error='Subject and content are required')
                 
             session = Session()
-            processed_content = color_processor.process_content(content)
+            processed_content = color_processor.process_content(
+                content,
+                chinese_annotations=chinese_annotations
+            )
             
             message = Email(
                 subject=subject,
                 content=content,
-                processed_content=processed_content
+                processed_content=processed_content,
+                chinese_annotations=json.dumps(chinese_annotations)
             )
+            
+            # Handle message chain if parent_id is provided
+            if parent_id:
+                parent = session.query(Email).get(parent_id)
+                if parent:
+                    message.parent = parent
+            
+            # Extract and save quotes
+            quotes = extract_quotes(content)
+            save_quotes(quotes, message, session)
             
             session.add(message)
             session.commit()
