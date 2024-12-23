@@ -37,7 +37,7 @@ class Email(Base):
     children: Mapped[List["Email"]] = relationship(
         'Email',
         cascade="all, delete-orphan",
-        backref=relationship.backref('parent', remote_side=[id])
+        backref=backref('parent', remote_side=[id])
     )
     
     # Annotation storage as JSON
