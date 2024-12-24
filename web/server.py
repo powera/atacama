@@ -179,7 +179,6 @@ def process_message() -> tuple[Dict[str, Any], int]:
             subject=data['subject'],
             content=data['content'],
             processed_content=processed_content,
-            chinese_annotations=json.dumps(data.get('chinese_annotations', {})),
             llm_annotations=json.dumps(data.get('llm_annotations', {}))
         )
         
@@ -230,7 +229,6 @@ def get_message(message_id: int):
             message=message,
             created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             raw_content=message.content,  # For two-screen editing
-            chinese_annotations=json.loads(message.chinese_annotations or '{}'),
             quotes=message.quotes
         )
             
@@ -242,7 +240,6 @@ def get_message(message_id: int):
         'processed_content': message.processed_content,
         'created_at': message.created_at.isoformat(),
         'parent_id': message.parent_id,
-        'chinese_annotations': json.loads(message.chinese_annotations or '{}'),
         'llm_annotations': json.loads(message.llm_annotations or '{}'),
         'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
     })
@@ -275,8 +272,6 @@ def reprocess_message(message_id: int):
         )
         
         # Update annotations if provided
-        if 'chinese_annotations' in data:
-            message.chinese_annotations = json.dumps(chinese_annotations)
         if 'llm_annotations' in data:
             message.llm_annotations = json.dumps(llm_annotations)
         
@@ -301,14 +296,12 @@ def reprocess_message(message_id: int):
                 message=message,
                 created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 raw_content=message.content,
-                chinese_annotations=chinese_annotations,
                 quotes=message.quotes
             )
             
         return jsonify({
             'id': message.id,
             'processed_content': message.processed_content,
-            'chinese_annotations': chinese_annotations,
             'llm_annotations': llm_annotations,
             'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
         })
@@ -335,7 +328,6 @@ def recent_message():
             message=message,
             created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             raw_content=message.content,
-            chinese_annotations=json.loads(message.chinese_annotations or '{}')
         )
         
     finally:
@@ -405,7 +397,6 @@ def submit_form():
                 subject=subject,
                 content=content,
                 processed_content=processed_content,
-                chinese_annotations=json.dumps(chinese_annotations)
             )
             
             # Handle message chain if parent_id is provided
