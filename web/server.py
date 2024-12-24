@@ -13,7 +13,7 @@ from google.auth.transport import requests
 from pathlib import Path
 
 from common.database import setup_database
-from common.models import Email, Quote
+from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
 from web.email_fetcher import EmailFetcherDaemon
 
