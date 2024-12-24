@@ -46,13 +46,13 @@ class ColorScheme:
             r'\([ \t]*<(\w+)>(.*?)[ \t]*\)'
         )
         
-        # Pattern for lists (updated for better matching)
+        # Simplified list pattern - just handle markdown-style lists
         self.list_pattern = re.compile(
-            r'^[ \t]*(?:<<[ \t]*([*#>])[ \t]*(.+?)[ \t]*>>|[-*][ \t]+(.+?))[ \t]*$',
+            r'^[ \t]*[-*][ \t]+(.+?)[ \t]*$',
             re.MULTILINE
         )
         self.list_block_pattern = re.compile(
-            r'((?:^[ \t]*(?:<<[ \t]*[*#>][ \t]*|[-*][ \t]+).+?[ \t]*(?:>>)?[ \t]*$\n?)+)',
+            r'((?:^[ \t]*[-*][ \t]+.+?[ \t]*$\n?)+)',
             re.MULTILINE
         )
         
@@ -62,8 +62,8 @@ class ColorScheme:
         # Pattern for Chinese characters with potential annotations
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
         
-        # Pattern for paragraphs and line breaks
-        self.paragraph_pattern = re.compile(r'\n\n+')
+        # Pattern for paragraphs - modified to reduce extra blank lines
+        self.paragraph_pattern = re.compile(r'\n\s*\n+')
         self.linebreak_pattern = re.compile(r'\n')
 
     def sanitize_html(self, text: str) -> str:
@@ -73,23 +73,53 @@ class ColorScheme:
         :param text: Text to sanitize
         :return: Sanitized text
         """
-        # First escape any existing HTML
+        # Define special tags we want to preserve
+        preserve_tags = [
+            (r'<span class="annotated-chinese"[^>]*>', '</span>'),
+            (r'<span class="llm-annotation"[^>]*>', '</span>'),
+            (r'<span class="color-[^"]*">', '</span>'),
+            (r'<span class="sigil">', '</span>'),
+            (r'<p class="color-[^"]*">', '</p>'),
+            ('<p>', '</p>'),
+            ('<br>', ''),
+            ('<ul>', '</ul>'),
+            ('<li>', '</li>'),
+            ('<hr>', ''),
+            (r'<a\s+[^>]*>', '</a>')
+        ]
+        
+        # Save preserved tags by replacing with unique markers
+        preserved = []
+        for start_pattern, end_tag in preserve_tags:
+            # Find all matching tag pairs
+            start_matches = list(re.finditer(start_pattern, text))
+            for i, start_match in enumerate(start_matches):
+                marker = f'__PRESERVED_{len(preserved)}__'
+                start_pos = start_match.start()
+                # Find corresponding end tag
+                stack = 1
+                pos = start_match.end()
+                while stack > 0 and pos < len(text):
+                    if re.match(start_pattern, text[pos:]):
+                        stack += 1
+                        pos = re.match(start_pattern, text[pos:]).end() + pos
+                    elif text[pos:].startswith(end_tag):
+                        stack -= 1
+                        if stack == 0:
+                            end_pos = pos + len(end_tag)
+                            preserved.append(text[start_pos:end_pos])
+                            text = text[:start_pos] + marker + text[end_pos:]
+                            break
+                        pos += len(end_tag)
+                    else:
+                        pos += 1
+        
+        # Perform basic HTML escaping
         text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         
-        # Then restore our custom color tags
-        for color in self.COLORS.keys():
-            text = text.replace(f'&lt;{color}&gt;', f'<{color}>')
-        
-        # Restore approved HTML tags used by our processor
-        approved_tags = ['p', 'span', 'hr', 'li', 'ul', 'ol', 'a', 'br', 'div']
-        for tag in approved_tags:
-            text = text.replace(f'&lt;{tag}', f'<{tag}')
-            text = text.replace(f'&lt;/{tag}&gt;', f'</{tag}>')
-            
-        # Restore class attributes
-        text = text.replace('&lt;p class=', '<p class=')
-        text = text.replace('&lt;span class=', '<span class=')
-        text = text.replace('&lt;div class=', '<div class=')
+        # Restore preserved tags
+        for i, content in enumerate(preserved):
+            text = text.replace(f'__PRESERVED_{i}__', content)
         
         return text
 
@@ -142,35 +172,19 @@ class ColorScheme:
             block = match.group(1)
             lines = block.strip().split('\n')
             
-            # Determine list type from first item
-            first_line = lines[0]
-            list_type = 'ul'
-            list_class = 'bullet-list'
-            
-            if '<<#' in first_line:
-                list_type = 'ol'
-                list_class = 'number-list'
-            elif '<<>' in first_line:
-                list_class = 'arrow-list'
-            
             # Process individual items
             items = []
             for line in lines:
-                # Handle both << >> syntax and standard markdown
-                content = ''
-                if '<<' in line:
-                    marker_match = self.list_pattern.match(line)
-                    if marker_match:
-                        content = marker_match.group(2) or marker_match.group(3)
-                else:
-                    marker_match = self.list_pattern.match(line)
-                    if marker_match:
-                        content = marker_match.group(3)
-                
-                if content:
-                    items.append(f'<li class="{list_class}">{content}</li>')
+                # Match markdown-style list items
+                marker_match = self.list_pattern.match(line)
+                if marker_match:
+                    content = marker_match.group(1)
+                    if content:
+                        items.append(f'<li>{content}</li>')
             
-            return f'<{list_type} class="list-container">\n{"".join(items)}\n</{list_type}>'
+            if items:
+                return f'<ul>\n{"".join(items)}\n</ul>'
+            return block
         
         # Process list blocks
         return self.list_block_pattern.sub(process_list_block, text)
@@ -192,12 +206,16 @@ class ColorScheme:
                 hanzi = match.group(0)
                 if hanzi in chinese_annotations:
                     ann = chinese_annotations[hanzi]
+                    # Ensure proper escaping of attribute values
+                    pinyin = ann["pinyin"].replace('"', '&quot;')
+                    definition = ann["definition"].replace('"', '&quot;')
                     return (f'<span class="annotated-chinese" '
-                           f'data-pinyin="{ann["pinyin"]}" '
-                           f'data-definition="{ann["definition"]}">'
+                           f'data-pinyin="{pinyin}" '
+                           f'data-definition="{definition}">'
                            f'{hanzi}</span>')
                 return hanzi
             
+            # Process Chinese annotations first
             text = self.chinese_pattern.sub(add_chinese_annotation, text)
         
         if llm_annotations:
@@ -215,7 +233,8 @@ class ColorScheme:
             
             # Insert tags
             for pos, tag in annotations:
-                text = text[:pos] + tag + text[pos:]
+                if pos <= len(text):
+                    text = text[:pos] + tag + text[pos:]
         
         return text
 
@@ -226,26 +245,23 @@ class ColorScheme:
         :param text: Raw text content
         :return: Text with HTML paragraphs and line breaks
         """
-        # First split into paragraphs
-        paragraphs = self.paragraph_pattern.split(text)
+        # Split into paragraphs but maintain single newlines
+        paragraphs = [p.strip() for p in self.paragraph_pattern.split(text) if p.strip()]
         
         # Process each paragraph
         processed_paragraphs = []
         for para in paragraphs:
-            if not para.strip():
-                continue
-                
             # Handle line breaks within paragraphs
-            para = self.linebreak_pattern.sub('<br>\n', para.strip())
+            para = self.linebreak_pattern.sub('<br>\n', para)
             
             # Don't wrap already-wrapped content
-            if not (para.startswith('<p') or para.startswith('<div') or 
-                   para.startswith('<ul') or para.startswith('<ol')):
+            if not (para.startswith('<') and para.endswith('>')):
                 para = f'<p>{para}</p>'
                 
             processed_paragraphs.append(para)
         
-        return '\n\n'.join(processed_paragraphs)
+        # Join with single newline to reduce spacing
+        return '\n'.join(processed_paragraphs)
 
     def process_content(self, content: str, chinese_annotations: Optional[Dict] = None,
                        llm_annotations: Optional[Dict] = None) -> str:
@@ -253,14 +269,11 @@ class ColorScheme:
         if not content:
             return ""
             
-        # First process annotations (before any HTML escaping)
+        # First process annotations
         processed = self.process_annotations(content, chinese_annotations, llm_annotations)
         
-        # Process lists (before general HTML processing)
+        # Process lists before HTML processing
         processed = self.process_lists(processed)
-        
-        # Sanitize HTML (but preserve our processed tags)
-        processed = self.sanitize_html(processed)
         
         # Process URLs and wikilinks
         processed = self.process_urls(processed)
@@ -287,6 +300,9 @@ class ColorScheme:
         
         # Process section breaks
         processed = self.section_break_pattern.sub('<hr>\n', processed)
+        
+        # Sanitize HTML while preserving our special tags
+        processed = self.sanitize_html(processed)
         
         # Finally, process paragraphs and line breaks
         processed = self.process_paragraphs(processed)
