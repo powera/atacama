@@ -98,10 +98,6 @@ body {
 }
 
 /* Lists */
-ul {
-    padding-inline-start: 12px;
-}
-
 .bullet-list, .number-list, .arrow-list {
     margin: 0.5em 0;
     padding-left: 1em;
