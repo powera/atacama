@@ -398,9 +398,7 @@ def submit_form():
                 return render_template('submit.html', error='Subject and content are required')
                 
             session = Session()
-            processed_content = color_processor.process_content(
-                content,
-            )
+            processed_content = color_processor.process_content(content)
             
             message = Email(
                 subject=subject,
@@ -409,10 +407,16 @@ def submit_form():
             )
             
             # Handle message chain if parent_id is provided
-            if parent_id:
-                parent = session.query(Email).get(parent_id)
-                if parent:
-                    message.parent = parent
+            if parent_id and parent_id.strip():
+                try:
+                    parent_id = int(parent_id)
+                    parent = session.query(Email).get(parent_id)
+                    if parent:
+                        message.parent = parent
+                    else:
+                        logger.warning(f"Parent message {parent_id} not found")
+                except ValueError:
+                    logger.warning(f"Invalid parent_id format: {parent_id}")
             
             # Extract and save quotes
             quotes = extract_quotes(content)
@@ -430,7 +434,19 @@ def submit_form():
             
         finally:
             session.close()
+        # END of processing submission of message by POST
             
+    # Get recent messages for the dropdown
+    session = Session()
+    try:
+        recent_messages = session.query(Email).order_by(
+            Email.created_at.desc()
+        ).limit(50).all()
+    except Exception as e:
+        logger.error(f"Error fetching recent messages: {str(e)}")
+        recent_messages = []
+    finally:
+        session.close()
     return render_template('submit.html')
 
 @app.route('/css/<path:filename>')
