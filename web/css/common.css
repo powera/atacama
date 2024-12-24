@@ -105,15 +105,6 @@ button:hover,
     border-bottom: 1px dotted #666;
 }
 
-/* New: List base styles */
-.bullet-list,
-.number-list,
-.arrow-list {
-    padding-left: 20px;
-    margin: 8px 0;
-    list-style-position: outside;
-}
-
 /* New: Wiki link base styles */
 .wikilink {
     color: #2c3e50;
