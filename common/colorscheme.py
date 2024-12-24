@@ -187,28 +187,32 @@ class ColorScheme:
             return f'<a href="https://en.wikipedia.org/wiki/{url}" class="wikilink" target="_blank">{target}</a>'
         return self.wikilink_pattern.sub(replacer, text)
 
-    def process_content(self, content: str, chinese_annotations: Optional[Dict] = None,
+    def process_content(self, content: str,
                        llm_annotations: Optional[Dict] = None) -> str:
         """
         Process text content with all features.
         
         :param content: Raw text content to process
-        :param chinese_annotations: Optional Chinese character annotations
         :param llm_annotations: Optional LLM annotations
         :return: Fully processed HTML content
         """
+
         if not content:
             return ""
 
-        # Then sanitize HTML to prevent XSS
+        # The first step is to sanitize HTML, to prevent XSS.
+        #
+        # This must be the first step.  We do not want to have our own
+        # <span> tags touched by this function, which needs to prevent
+        # user-submitted <span> tags from rendering.
         content = self.sanitize_html(content)
         
-        # First process URLs and wikilinks (before HTML escaping)
+        # Process URLs and wikilinks
         content = self.process_urls(content)
         content = self.process_wikilinks(content)
         
         # Process Chinese annotations
-        content = self.wrap_chinese(content, chinese_annotations)
+        content = self.wrap_chinese(content)
         
         # Process LLM annotations if provided
         if llm_annotations:
@@ -226,7 +230,7 @@ class ColorScheme:
         
         # Wrap remaining content in paragraphs
         paragraphs = []
-        for para in content.split('\n\n'):
+        for para in content.split('\n'):
             if para.strip():
                 if not (para.strip().startswith('<') and (
                     para.strip().startswith('<p') or 

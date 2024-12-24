@@ -82,21 +82,6 @@ class TestChineseProcessing(unittest.TestCase):
         processed = self.processor.process_content(content)
         self.assertIn('<span class="annotated-chinese">你好</span>', processed)
 
-    def test_chinese_with_annotations(self):
-        """Test Chinese characters with annotations."""
-        content = "The word 你好 means hello"
-        annotations = {
-            "你好": {
-                "pinyin": "ni3 hao3",
-                "definition": "hello"
-            }
-        }
-        processed = self.processor.process_content(content, chinese_annotations=annotations)
-        self.assertIn('data-pinyin="ni3 hao3"', processed)
-        self.assertIn('data-definition="hello"', processed)
-
-    def test_chinese_without_annotations(self):
-        """Test Chinese characters without annotations."""
         content = "Some chinese: 测试"
         processed = self.processor.process_content(content)
         self.assertIn('<span class="annotated-chinese">测试</span>', processed)
@@ -104,15 +89,7 @@ class TestChineseProcessing(unittest.TestCase):
     def test_chinese_with_html_escaping(self):
         """Test Chinese annotations with characters needing HTML escaping."""
         content = "Test 测试"
-        annotations = {
-            "测试": {
-                "pinyin": 'ce"shi',  # Contains quotes
-                "definition": 'test & verify'  # Contains ampersand
-            }
-        }
-        processed = self.processor.process_content(content, chinese_annotations=annotations)
-        self.assertIn('&quot;', processed)  # Quotes should be escaped
-        self.assertIn('&amp;', processed)   # Ampersand should be escaped
+        processed = self.processor.process_content(content)
 
 class TestColorProcessing(unittest.TestCase):
     """Test color tag processing."""
