@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Quote - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Edit Quote</h1>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Quote Text:</label>
+                <div class="quote-display">{{ quote.text }}</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="quote_type">Quote Type:</label>
+                <select id="quote_type" name="quote_type" required>
+                    {% for type in quote_types %}
+                    <option value="{{ type }}" {% if quote.quote_type == type %}selected{% endif %}>
+                        {{ type }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="author">Author:</label>
+                <input type="text" id="author" name="author" value="{{ quote.author or '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="source">Source:</label>
+                <input type="text" id="source" name="source" value="{{ quote.source or '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="commentary">Commentary:</label>
+                <textarea id="commentary" name="commentary" rows="4">{{ quote.commentary or '' }}</textarea>
+                <small class="help-text">
+                    For snowclones, explain the original quote and variation.
+                    For personal quotes, add interpretation if desired.
+                </small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit">Save Changes</button>
+                <a href="{{ url_for('list_quotes') }}" class="button secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

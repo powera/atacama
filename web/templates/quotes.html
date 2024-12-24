@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quote Management - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <style>
+        .quote-list {
+            margin: 20px 0;
+        }
+        .quote-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .quote-text {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .quote-metadata {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .quote-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+        .type-yellow-quote { background: #fff3cd; }
+        .type-yellow-snowclone { background: #fff3cd; border: 1px dashed #856404; }
+        .type-blue-quote { background: #cce5ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quote Management</h1>
+        
+        <div class="quote-list">
+            {% for quote in quotes %}
+            <div class="quote-item">
+                <div class="quote-text">"{{ quote.text }}"</div>
+                <div class="quote-metadata">
+                    <span class="quote-type type-{{ quote.quote_type }}">
+                        {{ quote.quote_type }}
+                    </span>
+                    {% if quote.author %}
+                    <span>by {{ quote.author }}</span>
+                    {% endif %}
+                    {% if quote.source %}
+                    <span>from {{ quote.source }}</span>
+                    {% endif %}
+                </div>
+                {% if quote.commentary %}
+                <div class="quote-commentary">
+                    <em>{{ quote.commentary }}</em>
+                </div>
+                {% endif %}
+                <div class="quote-actions">
+                    <a href="{{ url_for('edit_quote', quote_id=quote.id) }}" class="button">Edit</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

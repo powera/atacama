@@ -1,9 +1,9 @@
-from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session, url_for
+from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session, url_for, redirect
 from waitress import serve
 import os
 import json
 import logging
-from sqlalchemy import text
+from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
@@ -91,7 +91,7 @@ def extract_quotes(content: str) -> List[Dict[str, str]]:
     for quote in yellow_quotes:
         quotes.append({
             'text': quote,
-            'type': 'quote'
+            'quote_type': QuoteType.YELLOW_QUOTE
         })
     
     # Extract blue-tagged aphorisms
@@ -99,7 +99,7 @@ def extract_quotes(content: str) -> List[Dict[str, str]]:
     for quote in blue_quotes:
         quotes.append({
             'text': quote,
-            'type': 'aphorism'
+            'quote_type': QuoteType.BLUE_QUOTE
         })
     
     return quotes
@@ -108,16 +108,29 @@ def save_quotes(quotes: List[Dict[str, str]], email: Email, session) -> None:
     """
     Save extracted quotes to the database.
     
-    :param quotes: List of extracted quotes
-    :param email: Associated Email object
-    :param session: Database session
+    Args:
+        quotes: List of extracted quotes with metadata
+        email: Associated Email object
+        session: Database session
     """
     for quote_data in quotes:
-        quote = Quote(
-            text=quote_data['text'],
-        )
-        email.quotes.append(quote)
-        session.add(quote)
+        # Check if this quote already exists
+        existing_quote = session.execute(
+            select(Quote)
+            .where(Quote.text == quote_data['text'])
+        ).scalar_one_or_none()
+        
+        if existing_quote:
+            # Link existing quote to this email
+            email.quotes.append(existing_quote)
+        else:
+            # Create new quote
+            quote = Quote(
+                text=quote_data['text'],
+                quote_type=quote_data['quote_type']
+            )
+            email.quotes.append(quote)
+            session.add(quote)
 
 @app.route(DEV_AUTH_PATH, methods=['GET', 'POST'])
 def dev_auth():
@@ -339,6 +352,52 @@ def recent_message():
             raw_content=message.content,
         )
         
+    finally:
+        session.close()
+
+@app.route('/quotes')
+@require_auth
+def list_quotes():
+    """Display all tracked quotes with their metadata."""
+    session = Session()
+    try:
+        quotes = session.execute(
+            select(Quote)
+            .order_by(Quote.created_at.desc())
+        ).scalars().all()
+        
+        return render_template(
+            'quotes.html',
+            quotes=quotes,
+            quote_types=QuoteType
+        )
+    finally:
+        session.close()
+
+@app.route('/quotes/<int:quote_id>/edit', methods=['GET', 'POST'])
+@require_auth
+def edit_quote(quote_id):
+    """Edit a specific quote's metadata."""
+    session = Session()
+    try:
+        quote = session.get(Quote, quote_id)
+        if not quote:
+            return "Quote not found", 404
+            
+        if request.method == 'POST':
+            quote.author = request.form.get('author')
+            quote.source = request.form.get('source')
+            quote.commentary = request.form.get('commentary')
+            quote.quote_type = QuoteType(request.form.get('quote_type'))
+            
+            session.commit()
+            return redirect(url_for('list_quotes'))
+            
+        return render_template(
+            'edit_quote.html',
+            quote=quote,
+            quote_types=QuoteType
+        )
     finally:
         session.close()
 

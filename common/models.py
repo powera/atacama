@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Dict
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column
+from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 
 from sqlalchemy.orm import DeclarativeBase
@@ -8,15 +8,22 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
+class QuoteType(str, Enum):
+    YELLOW_QUOTE = "yellow-quote"
+    YELLOW_SNOWCLONE = "yellow-snowclone"
+    BLUE_QUOTE = "blue-quote"
+
 class Quote(Base):
     """Stores tracked quotes and their metadata."""
     __tablename__ = 'quotes'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    quote_type: Mapped[QuoteType] = mapped_column(Enum(QuoteType), nullable=False)
     author: Mapped[Optional[str]] = mapped_column(String)
     date: Mapped[Optional[str]] = mapped_column(String)  # Flexible format for historical dates
     source: Mapped[Optional[str]] = mapped_column(Text)
+    commentary: Mapped[Optional[str]] = mapped_column(Text)  # For snowclone explanations or personal meanings
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     # Many-to-many relationship with emails where the quote appears
