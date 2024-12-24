@@ -39,6 +39,7 @@ class TestLists(unittest.TestCase):
         self.assertIn('<li class="number-list">Number item</li>', processed)
         self.assertIn('<li class="arrow-list">Arrow item</li>', processed)
 
+
 class TestHtmlSanitization(unittest.TestCase):
     """Test HTML sanitization and preservation."""
     
@@ -156,6 +157,10 @@ class TestParagraphProcessing(unittest.TestCase):
     def test_section_breaks(self):
         """Test section break processing."""
         content = "Section 1\n----\nSection 2"
+        processed = self.processor.process_content(content)
+        self.assertIn('<hr>', processed)
+
+        content = "Section 1\n ---- \nSection with space"
         processed = self.processor.process_content(content)
         self.assertIn('<hr>', processed)
 
