@@ -45,43 +45,30 @@ class ColorScheme:
 
     def sanitize_html(self, text: str) -> str:
         """
-        Basic HTML sanitization to prevent XSS. Only preserves the minimal set of tags
-        needed for rendering our content.
+        Sanitize HTML while preserving our special color tags for later processing.
         
         :param text: Text to sanitize
-        :return: Sanitized text
+        :return: Text with HTML escaped but color tags preserved
         """
-        # Define essential tags to preserve - only what we generate in our processing
-        preserve_tags = [
-            # Link tags
-            (r'<a href="[^"]*"[^>]*>', '</a>'),
-            # List tags
-            (r'<ul>', '</ul>'),
-            (r'<li class="[^"]*">', '</li>'),
-            # Basic structure
-            (r'<p>', '</p>'),
-            (r'<hr/?>', ''),
-            # Span tags for annotations and colors
-            (r'<span class="[^"]*"[^>]*>', '</span>')
-        ]
-
-        # First escape everything
+        # First preserve our special color tags by replacing them with unique tokens
+        preserved = {}
+        counter = 0
+        
+        # Save color tags with a unique token
+        for color in self.COLORS.keys():
+            # Find all instances of <color> tags
+            for match in re.finditer(f'<{color}>', text):
+                token = f'__PRESERVED_COLOR_{counter}__'
+                preserved[token] = match.group(0)
+                text = text.replace(match.group(0), token)
+                counter += 1
+        
+        # Now escape all HTML
         text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         
-        # Then restore preserved tags
-        for start_pattern, end_tag in preserve_tags:
-            parts = []
-            last_end = 0
-            for match in re.finditer(start_pattern.replace('&lt;', '<').replace('&gt;', '>'), text):
-                start_pos = match.start()
-                end_tag_pos = text.find(end_tag.replace('&lt;', '<').replace('&gt;', '>'), start_pos)
-                if end_tag_pos != -1:
-                    parts.append(text[last_end:start_pos])
-                    content = text[start_pos:end_tag_pos + len(end_tag)]
-                    parts.append(content.replace('&lt;', '<').replace('&gt;', '>'))
-                    last_end = end_tag_pos + len(end_tag)
-            parts.append(text[last_end:])
-            text = ''.join(parts)
+        # Restore our preserved color tags
+        for token, original in preserved.items():
+            text = text.replace(token, original)
         
         return text
 
