@@ -8,18 +8,13 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
-class QuoteType(str, Enum):
-    YELLOW_QUOTE = "yellow-quote"
-    YELLOW_SNOWCLONE = "yellow-snowclone"
-    BLUE_QUOTE = "blue-quote"
-
 class Quote(Base):
     """Stores tracked quotes and their metadata."""
     __tablename__ = 'quotes'
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
-    quote_type: Mapped[QuoteType] = mapped_column(Enum(QuoteType), nullable=False)
+    quote_type: Mapped[str] = mapped_column(String, nullable=False)
     author: Mapped[Optional[str]] = mapped_column(String)
     date: Mapped[Optional[str]] = mapped_column(String)  # Flexible format for historical dates
     source: Mapped[Optional[str]] = mapped_column(Text)

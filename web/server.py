@@ -22,6 +22,7 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in pr
 logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
 color_processor = ColorScheme()
+QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
 
 # Auth configuration
 DEV_AUTH_PATH = os.getenv('DEV_AUTH_PATH', '/.dev-auth')
@@ -91,7 +92,7 @@ def extract_quotes(content: str) -> List[Dict[str, str]]:
     for quote in yellow_quotes:
         quotes.append({
             'text': quote,
-            'quote_type': QuoteType.YELLOW_QUOTE
+            'quote_type': 'yellow-quote'
         })
     
     # Extract blue-tagged aphorisms
@@ -99,7 +100,7 @@ def extract_quotes(content: str) -> List[Dict[str, str]]:
     for quote in blue_quotes:
         quotes.append({
             'text': quote,
-            'quote_type': QuoteType.BLUE_QUOTE
+            'quote_type': 'blue-quote'
         })
     
     return quotes
@@ -369,7 +370,7 @@ def list_quotes():
         return render_template(
             'quotes.html',
             quotes=quotes,
-            quote_types=QuoteType
+            quote_types=QUOTE_TYPES
         )
     finally:
         session.close()
@@ -388,7 +389,7 @@ def edit_quote(quote_id):
             quote.author = request.form.get('author')
             quote.source = request.form.get('source')
             quote.commentary = request.form.get('commentary')
-            quote.quote_type = QuoteType(request.form.get('quote_type'))
+            quote.quote_type = request.form.get('quote_type')
             
             session.commit()
             return redirect(url_for('list_quotes'))
@@ -396,7 +397,7 @@ def edit_quote(quote_id):
         return render_template(
             'edit_quote.html',
             quote=quote,
-            quote_types=QuoteType
+            quote_types=QUOTE_TYPES
         )
     finally:
         session.close()
