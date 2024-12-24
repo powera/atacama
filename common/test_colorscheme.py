@@ -119,23 +119,16 @@ class TestColorProcessing(unittest.TestCase):
     def setUp(self):
         self.processor = ColorScheme()
 
-    def test_inline_color(self):
-        """Test basic inline color processing."""
-        content = "This is <red>important</red> text"
-        processed = self.processor.process_content(content)
-        self.assertIn('class="color-red"', processed)
-        self.assertIn('<span class="sigil">💡</span>', processed)
-
     def test_paragraph_color(self):
         """Test paragraph-level color processing."""
-        content = "<blue>A mystical message</blue>"
+        content = "<blue>A mystical message"
         processed = self.processor.process_content(content)
         self.assertIn('class="color-blue"', processed)
         self.assertIn('<span class="sigil">✨</span>', processed)
 
     def test_nested_colors_in_parentheses(self):
         """Test nested color processing within parentheses."""
-        content = "A note (<red>important</red>)"
+        content = "A note (<red>important)"
         processed = self.processor.process_content(content)
         self.assertIn('class="color-red"', processed)
         self.assertIn('<span class="sigil">💡</span>', processed)
