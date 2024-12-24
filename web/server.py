@@ -171,7 +171,6 @@ def process_message() -> tuple[Dict[str, Any], int]:
         # Process content with enhanced features
         processed_content = color_processor.process_content(
             data['content'],
-            chinese_annotations=data.get('chinese_annotations'),
             llm_annotations=data.get('llm_annotations')
         )
         
@@ -267,14 +266,11 @@ def reprocess_message(message_id: int):
         else:
             data = {}
         
-        chinese_annotations = data.get('chinese_annotations', 
-            json.loads(message.chinese_annotations or '{}'))
         llm_annotations = data.get('llm_annotations',
             json.loads(message.llm_annotations or '{}'))
             
         message.processed_content = color_processor.process_content(
             message.content,
-            chinese_annotations=chinese_annotations,
             llm_annotations=llm_annotations
         )
         
@@ -396,7 +392,6 @@ def submit_form():
             subject = request.form.get('subject', '')
             content = request.form.get('content', '')
             parent_id = request.form.get('parent_id')
-            chinese_annotations = json.loads(request.form.get('chinese_annotations', '{}'))
             
             if not subject or not content:
                 return render_template('submit.html', error='Subject and content are required')
@@ -404,7 +399,6 @@ def submit_form():
             session = Session()
             processed_content = color_processor.process_content(
                 content,
-                chinese_annotations=chinese_annotations
             )
             
             message = Email(
