@@ -4,68 +4,109 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atacama Message Processor</title>
+    <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/landing.css">
 </head>
 <body>
-    <h1>Atacama Message Processor</h1>
-    
-    <div class="status">
-        <h2>Service Status</h2>
-        <p>Server is running and processing messages with custom color formatting.</p>
-        <p>Database Status: {{ db_status }}</p>
+    <div class="container">
+        <header>
+            <h1>Atacama Message Processor</h1>
+            
+            {% if user %}
+            <nav class="user-navigation">
+                <a href="/submit" class="button">Submit Message</a>
+                <a href="/quotes" class="button">View Quotes</a>
+            </nav>
+            {% endif %}
+        </header>
+
+        <section class="status">
+            <h2>Service Status</h2>
+            <div class="status-details">
+                <p>Server is running and processing messages with custom color formatting.</p>
+                <p>Database Status: <span class="status-indicator">{{ db_status }}</span></p>
+            </div>
+        </section>
+
+        {% if user %}
+        <section class="endpoints">
+            <h2>Available Endpoints</h2>
+            <ul class="endpoint-list">
+                <li><code>POST /process</code> - Process and store new messages via API</li>
+                <li><code>GET /messages/{id}</code> - Retrieve processed message by ID</li>
+                <li><code>GET/POST /submit</code> - Submit new messages via web form</li>
+                <li><code>GET /quotes</code> - View and manage collected quotes</li>
+            </ul>
+        </section>
+        {% endif %}
+
+        <section class="messages">
+            <h2>Recent Messages</h2>
+            {% if messages %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject</th>
+                            <th>Preview</th>
+                            <th>Received</th>
+                            {% if user %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for message in messages %}
+                        <tr>
+                            <td data-label="ID">{{ message.id }}</td>
+                            <td data-label="Subject">
+                                <a href="/messages/{{ message.id }}" class="message-link">
+                                    {{ message.subject or '(No Subject)' }}
+                                </a>
+                            </td>
+                            <td data-label="Preview" class="message-preview">
+                                {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
+                            </td>
+                            <td data-label="Received" class="timestamp">
+                                {{ message.created_at_formatted }}
+                            </td>
+                            {% if user %}
+                            <td data-label="Actions">
+                                <form method="POST" action="/messages/{{ message.id }}/reprocess" class="inline-form">
+                                    <button type="submit" class="reprocess-button">Reprocess</button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="no-messages">
+                <p>No messages processed yet</p>
+            </div>
+            {% endif %}
+        </section>
+
+        {% if not user %}
+        <section class="login-prompt">
+            <p>Please log in to access additional features and submit messages.</p>
+        </section>
+        {% endif %}
     </div>
 
-    {% if user %}
-    <div class="endpoints">
-        <h2>Available Endpoints</h2>
-        <ul>
-            <li><code>POST /process</code> - Process and store new messages via API</li>
-            <li><code>GET /messages/{id}</code> - Retrieve processed message by ID</li>
-            <li><code>GET/POST <a href="/submit">/submit</a></code> - Submit new messages via web form</li>
-        </ul>
-    </div>
-    {% endif %}
-
-    <h2>Recent Messages</h2>
-    {% if messages %}
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Subject</th>
-                <th>Preview</th>
-                <th>Received</th>
-                {% if user %}
-                <th>Actions</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for message in messages %}
-            <tr>
-                <td>{{ message.id }}</td>
-                <td>
-                    <a href="/messages/{{ message.id }}" class="message-link">
-                        {{ message.subject or '(No Subject)' }}
-                    </a>
-                </td>
-                <td class="message-preview">{{ message.content[:100] }}...</td>
-                <td class="timestamp">{{ message.created_at_formatted }}</td>
-                {% if user %}
-                <td>
-                    <form method="POST" action="/messages/{{ message.id }}/reprocess" style="display: inline;">
-                        <button type="submit" class="reprocess-link">Reprocess</button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="no-messages">
-        No messages processed yet
-    </div>
-    {% endif %}
+    <script>
+        // Add touch feedback for mobile devices
+        document.querySelectorAll('.message-link, .button').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
+            });
+            element.addEventListener('touchend', function() {
+                this.style.opacity = '1';
+            });
+        });
+    </script>
 </body>
 </html>
