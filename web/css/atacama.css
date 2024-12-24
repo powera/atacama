@@ -25,40 +25,57 @@ body {
 .annotated-chinese {
     position: relative;
     cursor: help;
+    /* Add containing block for better positioning context */
+    transform: translateZ(0);
+    /* Ensure proper layering context */
+    isolation: isolate;
 }
 
-.annotated-chinese:hover::before {
-    content: attr(data-pinyin);
+.annotated-chinese::before,
+.annotated-chinese::after {
+    /* Initial state - invisible */
+    opacity: 0;
+    visibility: hidden;
+    /* Add transition for smooth appearance/disappearance */
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    /* Force hardware acceleration */
+    transform: translateX(-50%) translateZ(0);
+    /* Prevent any pointer events on tooltips */
+    pointer-events: none;
+    /* Ensure proper compositing */
+    will-change: opacity, visibility;
     position: absolute;
-    bottom: calc(100% + 1.6em);  /* Position above the definition */
     left: 50%;
-    transform: translateX(-50%);
-    padding: 4px 8px;
     background: #fff;
     border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    white-space: nowrap;
+}
+
+.annotated-chinese::before {
+    content: attr(data-pinyin);
+    bottom: calc(100% + 1.6em);
+    padding: 4px 8px;
     border-radius: 4px 4px 0 0;
     font-size: 1.2em;
     font-weight: 500;
-    white-space: nowrap;
     z-index: 101;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.annotated-chinese:hover::after {
+.annotated-chinese::after {
     content: attr(data-definition);
-    position: absolute;
     bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
     padding: 4px 8px;
-    background: #fff;
-    border: 1px solid #ddd;
     border-radius: 0 0 4px 4px;
     font-size: 0.9em;
     color: #666;
-    white-space: nowrap;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.annotated-chinese:hover::before,
+.annotated-chinese:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 .llm-annotation {
