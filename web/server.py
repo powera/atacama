@@ -447,7 +447,7 @@ def submit_form():
         recent_messages = []
     finally:
         session.close()
-    return render_template('submit.html')
+    return render_template('submit.html', recent_messages=recent_messages)
 
 @app.route('/css/<path:filename>')
 def serve_css(filename: str):
