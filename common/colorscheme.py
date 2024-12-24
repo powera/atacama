@@ -37,7 +37,7 @@ class ColorScheme:
         )
         
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
-        self.section_break_pattern = re.compile(r'^[ \t]*----[ \t]*$', re.MULTILINE | re.DOTALL)
+        self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
         self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
         self.wikilink_pattern = re.compile(r'\[\[([^]]+)\]\]')
