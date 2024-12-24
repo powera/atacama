@@ -1,10 +1,23 @@
-from typing import Dict, Optional, List, Tuple
-import re
+"""
+Chinese text annotation system using CC-CEDICT dictionary with pypinyin fallback.
+
+This module provides functionality for annotating Chinese text with pinyin and English
+definitions. It primarily uses CC-CEDICT dictionary data, falling back to pypinyin
+for characters not found in the dictionary. The system supports both traditional
+and simplified Chinese characters.
+
+The module maintains both in-memory and disk caches for performance, with options
+for remote caching in future implementations.
+"""
+
+from dataclasses import dataclass
 from functools import lru_cache
 import logging
-from dataclasses import dataclass
-from pypinyin import pinyin, Style
+import re
+from typing import Dict, List, Optional, Tuple
+
 import jieba  # For word segmentation
+from pypinyin import pinyin, Style
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +35,17 @@ class PinyinProcessor:
         """
         Initialize the pinyin processor.
         
-        :param use_remote_cache: Whether to use remote database caching (not implemented)
+        Args:
+            use_remote_cache: Whether to use remote database caching (not implemented)
         """
         self.use_remote_cache = use_remote_cache
-        # Pattern to match Chinese characters
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
         
-        # Local cache configuration
+        # Dictionary to store both traditional and simplified forms
+        # Format: {character: (pinyin, definition)}
+        self.cedict: Dict[str, Tuple[str, str]] = {}
         self._local_cache: Dict[str, ChineseAnnotation] = {}
         
-        # Load CEDICT data if available
-        self.cedict = {}
         try:
             self._load_cedict()
         except Exception as e:
@@ -41,54 +54,70 @@ class PinyinProcessor:
     def _load_cedict(self) -> None:
         """
         Load CC-CEDICT dictionary data.
-        Assumes CEDICT file is in data/cedict.txt
+        Format: traditional simplified [pinyin] /definition/
+        Example: 下腳 下脚 [xia4 jiao3] /to get a footing/
         """
         try:
-            # TODO: is the filename meaningful?
             with open('data/cedict/cedict_1_0_ts_utf-8_mdbg.txt', 'r', encoding='utf-8') as f:
+                pattern = re.compile(r'^(\S+)\s+(\S+)\s+\[(.*?)\]\s+/(.*?)/')
+                
                 for line in f:
                     if line.startswith('#'):
                         continue
-                    parts = line.strip().split('/')
-                    if len(parts) < 2:
+                        
+                    match = pattern.match(line.strip())
+                    if not match:
                         continue
-                    hanzi = parts[0].split('[')[0].strip()
-                    definition = '/'.join(parts[1:-1])
-                    self.cedict[hanzi] = definition
+                        
+                    traditional, simplified, pin, definitions = match.groups()
+                    # Clean up definitions and convert to readable format
+                    clean_defs = definitions.strip('/').split('/')
+                    primary_def = clean_defs[0] if clean_defs else ""
+                    
+                    # Store both traditional and simplified forms
+                    self.cedict[traditional] = (pin, primary_def)
+                    self.cedict[simplified] = (pin, primary_def)
+                    
         except FileNotFoundError:
-            logger.warning("CEDICT file not found. Only pinyin will be available.")
+            logger.warning("CEDICT file not found. Falling back to pypinyin only.")
     
     def _get_pinyin_for_text(self, text: str) -> str:
         """
-        Generate pinyin for Chinese text.
+        Generate pinyin for Chinese text using pypinyin as fallback.
         
-        :param text: Chinese text to convert
-        :return: Pinyin with tone numbers
+        Args:
+            text: Chinese text to convert
+        Returns:
+            Pinyin with tone numbers
         """
-        # Get pinyin with tone numbers
+        # Try CEDICT first
+        if text in self.cedict:
+            return self.cedict[text][0]
+            
+        # Fall back to pypinyin
         pin = pinyin(text, style=Style.TONE3)
-        # Flatten the list and join with spaces
         return ' '.join([p[0] for p in pin])
     
     def _get_definition(self, text: str) -> str:
         """
         Get English definition for Chinese text.
         
-        :param text: Chinese text to look up
-        :return: Definition if found, otherwise empty string
+        Args:
+            text: Chinese text to look up
+        Returns:
+            Definition if found, otherwise empty string
         """
-        # First try direct lookup
+        # Direct dictionary lookup
         if text in self.cedict:
-            return self.cedict[text]
+            return self.cedict[text][1]
             
-        # If not found and text is longer than one character,
-        # try breaking it into words and looking up each
+        # For multi-character text not in dictionary, try word segmentation
         if len(text) > 1:
             words = jieba.cut(text)
             definitions = []
             for word in words:
                 if word in self.cedict:
-                    definitions.append(self.cedict[word])
+                    definitions.append(f"{word}: {self.cedict[word][1]}")
             if definitions:
                 return '; '.join(definitions)
                 
@@ -99,25 +128,22 @@ class PinyinProcessor:
         """
         Get annotation for Chinese characters.
         
-        :param hanzi: Chinese characters to look up
-        :return: ChineseAnnotation if found, None otherwise
+        Args:
+            hanzi: Chinese characters to look up
+        Returns:
+            ChineseAnnotation if found, None otherwise
         """
-        # First check local cache
+        # Check local cache first
         if hanzi in self._local_cache:
             return self._local_cache[hanzi]
             
-        # TODO: Implement remote cache lookup when use_remote_cache is True
-        if self.use_remote_cache:
-            logger.info("Remote cache lookup not yet implemented")
-            
-        # Generate pinyin
+        # Get pinyin (either from CEDICT or pypinyin fallback)
         pinyin_text = self._get_pinyin_for_text(hanzi)
         
         # Get definition
         definition = self._get_definition(hanzi)
         if not definition:
-            # If no definition found, at least return pinyin
-            definition = f"[No definition available]"
+            definition = "[No definition available]"
             
         annotation = ChineseAnnotation(
             hanzi=hanzi,
@@ -133,8 +159,10 @@ class PinyinProcessor:
         """
         Extract all Chinese character sequences from text.
         
-        :param text: Text to process
-        :return: List of Chinese character sequences
+        Args:
+            text: Text to process
+        Returns:
+            List of Chinese character sequences
         """
         return self.chinese_pattern.findall(text)
     
@@ -142,16 +170,14 @@ class PinyinProcessor:
         """
         Process text and return annotations in format expected by ColorScheme.
         
-        :param text: Text containing Chinese characters
-        :return: Dictionary mapping hanzi to annotation data
+        Args:
+            text: Text containing Chinese characters
+        Returns:
+            Dictionary mapping hanzi to annotation data
         """
         annotations = {}
         
-        # Extract all Chinese sequences
-        chinese_sequences = self.extract_chinese(text)
-        
-        # Get annotations for each sequence
-        for hanzi in chinese_sequences:
+        for hanzi in self.extract_chinese(text):
             annotation = self.get_annotation(hanzi)
             if annotation:
                 annotations[hanzi] = {
@@ -167,14 +193,14 @@ class PinyinProcessor:
         """
         Add an annotation to the local cache.
         
-        :param annotation: Annotation to cache
+        Args:
+            annotation: Annotation to cache
         """
         self._local_cache[annotation.hanzi] = annotation
         
     def clear_cache(self) -> None:
-        """Clear the local cache."""
+        """Clear the local cache and LRU cache."""
         self._local_cache.clear()
-        # Also clear the lru_cache for get_annotation
         self.get_annotation.cache_clear()
 
 # Global instance for convenience
@@ -184,7 +210,9 @@ def annotate_chinese(text: str) -> Dict[str, Dict[str, str]]:
     """
     Convenience function using default processor.
     
-    :param text: Text to annotate
-    :return: Annotation dictionary
+    Args:
+            text: Text to annotate
+    Returns:
+            Annotation dictionary
     """
     return default_processor.annotate_text(text)
