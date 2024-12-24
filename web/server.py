@@ -276,9 +276,18 @@ def reprocess_message(message_id: int):
             message.llm_annotations = json.dumps(llm_annotations)
         
         # Re-process quotes
-        for quote in message.quotes:
-            session.delete(quote)
-        message.quotes = []
+        existing_quotes = message.quotes[:]  # Make a copy of the list
+        message.quotes = []  # Delete quotes
+        session.flush()      # Sync removal of relationship
+
+        for quote in existing_quotes:
+            # Check if quote is used by other emails
+            if not session.query(email_quotes).filter(
+                email_quotes.c.quote_id == quote.id,
+                email_quotes.c.email_id != message_id
+            ).first():
+                session.delete(quote)
+
         quotes = extract_quotes(message.content)
         save_quotes(quotes, message, session)
         
