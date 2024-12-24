@@ -129,7 +129,7 @@ class TestParagraphProcessing(unittest.TestCase):
         """Test line break processing within paragraphs."""
         content = "Line one\nLine two"
         processed = self.processor.process_content(content)
-        self.assertIn('<br>', processed)
+        self.assertEqual('<p>Line one</p>\n<p>Line two</p>', processed)
 
     def test_section_breaks(self):
         """Test section break processing."""

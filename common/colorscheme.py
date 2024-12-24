@@ -232,11 +232,7 @@ class ColorScheme:
         paragraphs = []
         for para in content.split('\n'):
             if para.strip():
-                if not (para.strip().startswith('<') and (
-                    para.strip().startswith('<p') or 
-                    para.strip().startswith('<ul') or 
-                    para.strip().startswith('<hr')
-                )):
+                if not para.strip().startswith('<'):
                     para = f'<p>{para.strip()}</p>'
                 paragraphs.append(para.strip())
         
