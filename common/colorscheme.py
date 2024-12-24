@@ -3,7 +3,7 @@ from typing import Dict, Pattern, Tuple, Optional, Match
 import json
 from functools import lru_cache
 
-from common import pinyin
+import common.pinyin
 
 class ColorScheme:
     """Color scheme definitions and processing for email content."""
