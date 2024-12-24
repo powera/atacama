@@ -128,6 +128,31 @@ class ColorScheme:
                    
         return self.inline_color_pattern.sub(replace_inline, processed)
 
+    def process_literal_text(self, text: str) -> str:
+        """
+        Convert <<literal-text>> sections into styled spans.
+        
+        This processor runs after HTML sanitization, so it looks for
+        &lt;&lt;text&gt;&gt; patterns and converts them to
+        <span class="literal-text">text</span>.
+        
+        Args:
+            text: Text containing literal text sections marked with double angle brackets
+            
+        Returns:
+            Text with literal sections wrapped in styled spans
+        """
+        pattern = re.compile(
+            r'&lt;&lt;(.*?)&gt;&gt;',
+            re.MULTILINE | re.DOTALL
+        )
+        
+        def replacer(match: Match) -> str:
+            content = match.group(1).strip()
+            return f'<span class="literal-text">{content}</span>'
+            
+        return pattern.sub(replacer, text)
+
     def process_lists(self, text: str) -> str:
         """
         Convert list markers to HTML lists with appropriate classes.
@@ -229,6 +254,9 @@ class ColorScheme:
         
         # Process all color tags
         content = self.process_colors(content)
+        
+        # Process << literal-text >> sections
+        content = self.process_literal_text(content)
         
         # Process section breaks
         content = self.section_break_pattern.sub('<hr>', content)
