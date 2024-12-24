@@ -68,24 +68,33 @@
             </div>
 
             {% if message.quotes %}
-                <footer class="message-footer">
-                    <div class="quotes-section">
-                        <h3>Quoted Sources</h3>
-                        <ul class="quote-list">
-                        {% for quote in message.quotes %}
-                            <li class="quote-item">
-                                <div class="quote-text">"{{ quote.text }}"</div>
+                <div class="quote-section">
+                    <h2>Quotes</h2>
+                    {% for quote in message.quotes %}
+                        <div class="quote-card">
+                            <div class="quote-text">"{{ quote.text }}"</div>
+                            <div class="quote-metadata">
+                                {% if quote.quote_type %}
+                                    <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
+                                {% endif %}
                                 {% if quote.author %}
-                                    <div class="quote-author">— {{ quote.author }}</div>
+                                    <span class="quote-author">by {{ quote.author }}</span>
+                                {% endif %}
+                                {% if quote.date %}
+                                    <span class="quote-date">({{ quote.date }})</span>
                                 {% endif %}
                                 {% if quote.source %}
-                                    <div class="quote-source">{{ quote.source }}</div>
+                                    <span class="quote-source">from {{ quote.source }}</span>
                                 {% endif %}
-                            </li>
-                        {% endfor %}
-                        </ul>
-                    </div>
-                </footer>
+                            </div>
+                            {% if quote.commentary %}
+                                <div class="quote-commentary">
+                                    {{ quote.commentary }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         </div>
     {% endif %}
