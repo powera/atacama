@@ -44,7 +44,8 @@ class PinyinProcessor:
         Assumes CEDICT file is in data/cedict.txt
         """
         try:
-            with open('data/cedict.txt', 'r', encoding='utf-8') as f:
+            # TODO: is the filename meaningful?
+            with open('data/cedict/cedict_1_0_ts_utf-8_mdbg.txt', 'r', encoding='utf-8') as f:
                 for line in f:
                     if line.startswith('#'):
                         continue

@@ -3,6 +3,8 @@ from typing import Dict, Pattern, Tuple, Optional, Match
 import json
 from functools import lru_cache
 
+from common import pinyin
+
 class ColorScheme:
     """Color scheme definitions and processing for email content."""
     
@@ -62,6 +64,10 @@ class ColorScheme:
         :param annotations: Optional dictionary of annotations
         :return: Text with wrapped Chinese characters
         """
+        # If no annotations provided, generate them
+        if annotations is None:
+            annotations = common.pinyin.annotate_chinese(text)
+            
         def replacer(match: Match) -> str:
             hanzi = match.group(0)
             if annotations and hanzi in annotations:
