@@ -30,37 +30,30 @@ class ColorScheme:
         self.paragraph_pattern = re.compile(r'\n\s*\n+')
         self.linebreak_pattern = re.compile(r'\n')
         
-        # Pattern for nested colors using parentheses
-        self.nested_color_pattern = re.compile(
-            r'\([ \t]*<(\w+)>(.*?)[ \t]*\)'
+        # Pattern for all color processing
+        self.color_pattern = re.compile(
+            r'\([ \t]*<(\w+)>(.*?)[ \t]*\)|<(\w+)>(.*?)</\3>',
+            re.DOTALL
         )
-
-        # Color patterns
-        self.color_start_pattern = re.compile(r'<(\w+)>')
-        self.color_end_pattern = re.compile(r'</(\w+)>')
 
     def sanitize_html(self, text: str) -> str:
         """
-        Basic HTML sanitization to prevent XSS while preserving custom tags.
+        Basic HTML sanitization to prevent XSS. Only preserves the minimal set of tags
+        needed for rendering our content.
         
         :param text: Text to sanitize
         :return: Sanitized text
         """
-        # Define tags to preserve
+        # Define essential tags to preserve - only what we generate in our processing
         preserve_tags = [
-            # Color-related tags
-            (r'<span class="color-[^"]*"[^>]*>', '</span>'),
-            (r'<span class="sigil"[^>]*>', '</span>'),
-            # List tags
-            (r'<ul[^>]*>', '</ul>'),
-            (r'<li class="[^"]*"[^>]*>', '</li>'),
-            # Chinese annotation tags
-            (r'<span class="annotated-chinese"[^>]*>', '</span>'),
-            # Links and basic formatting
+            # Link tags
             (r'<a href="[^"]*"[^>]*>', '</a>'),
-            (r'<p[^>]*>', '</p>'),
-            (r'<hr[^>]*/?>', ''),
-            (r'<br[^>]*/?>', '')
+            # List tags
+            (r'<ul>', '</ul>'),
+            (r'<li class="[^"]*">', '</li>'),
+            # Basic structure
+            (r'<p>', '</p>'),
+            (r'<hr/?>', '')
         ]
 
         # First escape everything
@@ -68,16 +61,13 @@ class ColorScheme:
         
         # Then restore preserved tags
         for start_pattern, end_tag in preserve_tags:
-            # Find all preserved tags
             parts = []
             last_end = 0
             for match in re.finditer(start_pattern.replace('&lt;', '<').replace('&gt;', '>'), text):
                 start_pos = match.start()
                 end_tag_pos = text.find(end_tag.replace('&lt;', '<').replace('&gt;', '>'), start_pos)
                 if end_tag_pos != -1:
-                    # Add text before the tag
                     parts.append(text[last_end:start_pos])
-                    # Add the tag content without escaping
                     content = text[start_pos:end_tag_pos + len(end_tag)]
                     parts.append(content.replace('&lt;', '<').replace('&gt;', '>'))
                     last_end = end_tag_pos + len(end_tag)
@@ -102,30 +92,38 @@ class ColorScheme:
             
         return self.chinese_pattern.sub(replacer, text)
 
-    def process_nested_colors(self, text: str) -> str:
+    def process_colors(self, text: str) -> str:
         """
-        Process nested color tags within parentheses.
+        Process all color tags, including nested ones within parentheses.
         
-        :param text: Text that may contain nested color tags
-        :return: Processed text with nested color spans
+        :param text: Text that may contain color tags
+        :return: Processed text with color spans and sigils
         """
-        while True:
-            match = self.nested_color_pattern.search(text)
-            if not match:
-                break
-
-            color = match.group(1)
-            inner_text = match.group(2)
-            if color in self.COLORS:
-                sigil, class_name = self.COLORS[color]
-                replacement = (
-                    f'<span class="color-{class_name}">'
-                    f'(<span class="sigil">{sigil}</span> {inner_text})'
-                    f'</span>'
-                )
-                text = text.replace(match.group(0), replacement)
-
-        return text
+        def replace_color(match: Match) -> str:
+            # Extract matched groups - either nested or regular color tag
+            nested_color, nested_text, regular_color, regular_text = match.groups()
+            
+            # Determine which type matched and get the content
+            color = nested_color or regular_color
+            content = nested_text or regular_text
+            
+            if color not in self.COLORS:
+                return match.group(0)
+                
+            sigil, class_name = self.COLORS[color]
+            
+            # Handle nested colors (with parentheses)
+            if nested_color:
+                return (f'<span class="color-{class_name}">'
+                       f'(<span class="sigil">{sigil}</span> {content})'
+                       f'</span>')
+            
+            # Handle regular color tags
+            return (f'<span class="color-{class_name}">'
+                   f'<span class="sigil">{sigil}</span> {content}'
+                   f'</span>')
+                   
+        return self.color_pattern.sub(replace_color, text)
 
     def process_lists(self, text: str) -> str:
         """Convert list markers to HTML lists with appropriate classes."""
@@ -144,7 +142,6 @@ class ColorScheme:
                     '>': 'arrow-list'
                 }[marker]
                 
-                # Start new list if type changes
                 if list_type != current_type:
                     if current_list:
                         processed_lines.append('<ul>')
@@ -155,7 +152,6 @@ class ColorScheme:
                 
                 current_list.append(f'<li class="{current_type}">{content}</li>')
             else:
-                # Close current list if any
                 if current_list:
                     processed_lines.append('<ul>')
                     processed_lines.extend(current_list)
@@ -164,7 +160,6 @@ class ColorScheme:
                     list_type = None
                 processed_lines.append(line)
 
-        # Close final list if any
         if current_list:
             processed_lines.append('<ul>')
             processed_lines.extend(current_list)
@@ -176,7 +171,7 @@ class ColorScheme:
         """Convert URLs to clickable links."""
         def replacer(match: Match) -> str:
             url = match.group(0)
-            sanitized_url = url.replace('"', '%22')  # Escape quotes in URLs
+            sanitized_url = url.replace('"', '%22')
             return f'<a href="{sanitized_url}" target="_blank" rel="noopener noreferrer">{url}</a>'
         return self.url_pattern.sub(replacer, text)
 
@@ -188,51 +183,11 @@ class ColorScheme:
             return f'<a href="https://en.wikipedia.org/wiki/{url}" class="wikilink" target="_blank">{target}</a>'
         return self.wikilink_pattern.sub(replacer, text)
 
-    def process_colors(self, text: str) -> str:
-        """Process color tags with sigils."""
-        parts = []
-        pos = 0
-        nested_colors = []
-
-        while pos < len(text):
-            start_match = self.color_start_pattern.search(text, pos)
-            if not start_match:
-                parts.append(text[pos:])
-                break
-
-            color = start_match.group(1)
-            if color not in self.COLORS:
-                pos = start_match.end()
-                continue
-
-            # Add text before the tag
-            parts.append(text[pos:start_match.start()])
-            sigil, class_name = self.COLORS[color]
-
-            # Find matching end tag
-            end_pattern = f'</{color}>'
-            end_pos = text.find(end_pattern, start_match.end())
-            if end_pos == -1:
-                pos = start_match.end()
-                continue
-
-            # Extract content and process nested colors
-            content = text[start_match.end():end_pos]
-            
-            # Add color span with sigil
-            parts.append(f'<span class="color-{class_name}"><span class="sigil">{sigil}</span> {content}</span>')
-            
-            pos = end_pos + len(end_pattern)
-
-        return ''.join(parts)
-
     def process_annotations(self, text: str, chinese_annotations: Optional[Dict] = None,
                           llm_annotations: Optional[Dict] = None) -> str:
         """Process Chinese and LLM annotations into hoverable elements."""
-        # Process Chinese annotations
         text = self.wrap_chinese(text, chinese_annotations)
         
-        # Process LLM annotations (stub)
         if llm_annotations:
             for pos, annotation in llm_annotations.items():
                 text = text[:int(pos)] + "🔍✨💡" + text[int(pos):]
@@ -245,7 +200,6 @@ class ColorScheme:
         for line in text.split('\n\n'):
             if line.strip():
                 line = line.strip()
-                # Don't wrap content that's already in a block-level element
                 if not (line.startswith('<') and (
                     line.startswith('<p') or 
                     line.startswith('<ul') or 
@@ -262,8 +216,13 @@ class ColorScheme:
         if not content:
             return ""
 
-        # First process annotations
-        text = self.process_annotations(content, chinese_annotations, llm_annotations)
+        # First sanitize input text to prevent XSS
+        # This MUST be first since it protects against malicious HTML in the raw input
+        # We only preserve the minimal set of HTML tags we need for rendering
+        text = self.sanitize_html(content)
+        
+        # Then process annotations
+        text = self.process_annotations(text, chinese_annotations, llm_annotations)
         
         # Process lists
         text = self.process_lists(text)
@@ -272,17 +231,11 @@ class ColorScheme:
         text = self.process_urls(text)
         text = self.process_wikilinks(text)
         
-        # Process nested colors
-        text = self.process_nested_colors(text)
-        
-        # Process color tags
+        # Process all color tags
         text = self.process_colors(text)
         
         # Process section breaks
         text = self.section_break_pattern.sub('<hr>', text)
-        
-        # Sanitize HTML while preserving our tags
-        text = self.sanitize_html(text)
         
         # Finally wrap in paragraphs if needed
         text = self.wrap_paragraphs(text)
