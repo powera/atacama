@@ -47,15 +47,15 @@ class TestHtmlSanitization(unittest.TestCase):
 
     def test_preserve_color_tags(self):
         """Test that color tags are properly preserved."""
-        content = "<red>Important text</red>"
+        content = "<red>Important text"
         processed = self.processor.process_content(content)
         self.assertIn('class="color-red"', processed)
-        self.assertIn('>Important text</span>', processed)
+        self.assertIn('> Important text</p>', processed)
         self.assertNotIn('__PRESERVED', processed)
 
     def test_preserve_nested_tags(self):
         """Test preservation of nested color tags."""
-        content = "<red>Alert: <blue>Critical update</blue> required</red>"
+        content = "<red>Alert: (<blue>Critical update) required"
         processed = self.processor.process_content(content)
         self.assertIn('class="color-red"', processed)
         self.assertIn('class="color-blue"', processed)

@@ -25,20 +25,20 @@ class ColorScheme:
         # Basic color pattern, only matching specific color names at start of line or in parentheses
         color_names = '|'.join(self.COLORS.keys())
         self.color_pattern = re.compile(
-            fr'(?:^[ \t]*<({color_names})>(.+?)(?:\r?\n|$))|'  # Start of line
-            fr'\([ \t]*<({color_names})>(.*?)[ \t]*\)',  # In parentheses
+            fr'(?:^[ \t]*&lt;({color_names})&gt;(.+?)(?:\r?\n|$))|'  # Start of line
+            fr'\([ \t]*&lt;({color_names})&gt;(.*?)[ \t]*\)',  # In parentheses
             re.MULTILINE | re.DOTALL
         )
         
         # Pattern for inline color tags
         self.inline_color_pattern = re.compile(
-            fr'<({color_names})>(.+?)(?:\r?\n|$)',
+            fr'&lt;({color_names})&gt;(.+?)(?:\r?\n|$)',
             re.MULTILINE | re.DOTALL
         )
         
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
         self.section_break_pattern = re.compile(r'^[ \t]*----[ \t]*$', re.MULTILINE)
-        self.list_pattern = re.compile(r'^[ \t]*([*#>])[ \t]+(.+?)[ \t]*$', re.MULTILINE)
+        self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
         self.wikilink_pattern = re.compile(r'\[\[([^]]+)\]\]')
         self.paragraph_pattern = re.compile(r'\n\s*\n+')
@@ -50,25 +50,8 @@ class ColorScheme:
         :param text: Text to sanitize
         :return: Text with HTML escaped but color tags preserved
         """
-        # First preserve our special color tags by replacing them with unique tokens
-        preserved = {}
-        counter = 0
-        
-        # Save color tags with a unique token
-        for color in self.COLORS.keys():
-            # Find all instances of <color> tags
-            for match in re.finditer(f'<{color}>', text):
-                token = f'__PRESERVED_COLOR_{counter}__'
-                preserved[token] = match.group(0)
-                text = text.replace(match.group(0), token)
-                counter += 1
-        
-        # Now escape all HTML
+        # Escape all HTML
         text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        
-        # Restore our preserved color tags
-        for token, original in preserved.items():
-            text = text.replace(token, original)
         
         return text
 
@@ -159,7 +142,8 @@ class ColorScheme:
                 current_type = {
                     '*': 'bullet-list',
                     '#': 'number-list',
-                    '>': 'arrow-list'
+                    '>': 'arrow-list',
+                    '&gt;': 'arrow-list'
                 }[marker]
                 
                 if list_type != current_type:
