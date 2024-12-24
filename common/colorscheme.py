@@ -216,33 +216,33 @@ class ColorScheme:
         if not content:
             return ""
 
-        # First process URLs and wikilinks (before HTML escaping)
-        text = self.process_urls(content)
-        text = self.process_wikilinks(text)
-        
         # Then sanitize HTML to prevent XSS
-        text = self.sanitize_html(text)
+        content = self.sanitize_html(content)
+        
+        # First process URLs and wikilinks (before HTML escaping)
+        content = self.process_urls(content)
+        content = self.process_wikilinks(content)
         
         # Process Chinese annotations
-        text = self.wrap_chinese(text, chinese_annotations)
+        content = self.wrap_chinese(content, chinese_annotations)
         
         # Process LLM annotations if provided
         if llm_annotations:
             for pos, annotation in llm_annotations.items():
-                text = text[:int(pos)] + "🔍✨💡" + text[int(pos):]
+                content = content[:int(pos)] + "🔍✨💡" + content[int(pos):]
         
         # Process lists
-        text = self.process_lists(text)
+        content = self.process_lists(content)
         
         # Process all color tags
-        text = self.process_colors(text)
+        content = self.process_colors(content)
         
         # Process section breaks
-        text = self.section_break_pattern.sub('<hr>', text)
+        content = self.section_break_pattern.sub('<hr>', content)
         
         # Wrap remaining content in paragraphs
         paragraphs = []
-        for para in text.split('\n\n'):
+        for para in content.split('\n\n'):
             if para.strip():
                 if not (para.strip().startswith('<') and (
                     para.strip().startswith('<p') or 
