@@ -42,8 +42,8 @@ class PinyinFormatter:
     
     @staticmethod
     def _capitalize(syllable: str) -> str:
-        """Capitalize first letter of pinyin syllable."""
-        return syllable[0].upper() + syllable[1:] if syllable else ''
+        """Capitalize pinyin syllable."""
+        return syllable.upper() if syllable else ''
 
     @staticmethod
     def _get_first_vowel_index(syllable: str) -> Optional[int]:
