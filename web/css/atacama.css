@@ -1,6 +1,7 @@
 /* Message-specific variables */
 :root {
     /* Define emoji markers for different content types */
+    /* These are not currently used */
     --emoji-xantham: '🔥';
     --emoji-red: '💡';
     --emoji-orange: '⚔️';
@@ -157,18 +158,6 @@
 .sigil {
     margin-right: 0.3em;
 }
-
-.color-xantham .sigil::before { content: var(--emoji-xantham); }
-.color-red .sigil::before { content: var(--emoji-red); }
-.color-orange .sigil::before { content: var(--emoji-orange); }
-.color-yellow .sigil::before { content: var(--emoji-yellow); }
-.color-green .sigil::before { content: var(--emoji-green); }
-.color-teal .sigil::before { content: var(--emoji-teal); }
-.color-blue .sigil::before { content: var(--emoji-blue); }
-.color-violet .sigil::before { content: var(--emoji-violet); }
-.color-mogue .sigil::before { content: var(--emoji-mogue); }
-.color-gray .sigil::before { content: var(--emoji-gray); }
-.color-hazel .sigil::before { content: var(--emoji-hazel); }
 
 /* List styles */
 ul {
