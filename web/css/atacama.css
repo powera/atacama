@@ -187,6 +187,14 @@ li::before {
     margin-left: -1.5em;
 }
 
+/* Literal text blocks */
+.literal-text {
+    font-family: "Courier New", Courier, monospace;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0 0.3em;
+    border-radius: 2px;
+}
+
 /* Section breaks */
 hr {
     border: none;
