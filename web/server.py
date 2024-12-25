@@ -509,6 +509,17 @@ def submit_form():
         session.close()
     return render_template('submit.html', recent_messages=recent_messages)
 
+@app.route('/js/<path:filename>')
+def serve_js(filename: str):
+    """
+    Serve JS files from the js directory.
+
+    :param filename: Name of the JS file to serve
+    :return: JS file response
+    """
+    js_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'js')
+    return send_from_directory(js_dir, filename)
+
 @app.route('/css/<path:filename>')
 def serve_css(filename: str):
     """
