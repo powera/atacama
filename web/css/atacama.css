@@ -159,6 +159,11 @@
     margin-right: 0.3em;
 }
 
+/* Wikilink styles */
+.wikilink::before {
+    content: '📖';  /* Open book emoji */
+}
+
 /* List styles */
 ul {
     list-style: none;
