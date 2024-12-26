@@ -4,36 +4,9 @@
     <title>{{ message.subject if message else 'Message' }}</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/message.css">
     <script src="/js/annotation-handler.js"></script>
-    <script>
-        // Handle tooltip positioning
-        document.addEventListener('DOMContentLoaded', function() {
-            const tooltipContainer = document.createElement('div');
-            tooltipContainer.className = 'tooltip';
-            document.body.appendChild(tooltipContainer);
-
-            // Handle LLM annotations
-            document.querySelectorAll('.llm-annotation').forEach(el => {
-                el.addEventListener('mouseover', e => {
-                    tooltipContainer.textContent = e.target.getAttribute('data-type');
-                    tooltipContainer.classList.add('visible');
-                    
-                    const rect = e.target.getBoundingClientRect();
-                    tooltipContainer.style.left = rect.left + 'px';
-                    tooltipContainer.style.top = (rect.top - tooltipContainer.offsetHeight - 5) + 'px';
-                });
-                
-                el.addEventListener('mouseout', () => {
-                    tooltipContainer.classList.remove('visible');
-                });
-            });
-        });
-
-        // Handle print mode
-        function preparePrint() {
-            window.print();
-        }
-    </script>
+    <script src="/js/tooltip-handler.js"></script>
 </head>
 <body>
     {% if error %}
@@ -100,57 +73,5 @@
         </div>
     {% endif %}
 
-    <style>
-        /* Additional styles specific to message view */
-        .message-header {
-            margin-bottom: 2em;
-        }
-        
-        .message-actions {
-            margin: 1em 0;
-        }
-        
-        .replies {
-            margin-top: 1em;
-        }
-        
-        .replies ul {
-            list-style: none;
-            padding-left: 1em;
-        }
-        
-        .quote-list {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .quote-item {
-            margin: 1em 0;
-            padding: 1em;
-            background: #f9f9f9;
-            border-left: 3px solid #ddd;
-        }
-        
-        .quote-author {
-            margin-top: 0.5em;
-            font-style: italic;
-        }
-        
-        .quote-source {
-            font-size: 0.9em;
-            color: #666;
-        }
-        
-        @media print {
-            .message-actions {
-                display: none;
-            }
-            
-            .quote-item {
-                background: none;
-                border-left: 1px solid #999;
-            }
-        }
-    </style>
 </body>
 </html>

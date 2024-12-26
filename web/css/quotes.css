@@ -1,0 +1,40 @@
+.quote-list {
+    margin: 20px 0;
+}
+
+.quote-item {
+    border: 1px solid #ddd;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.quote-text {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.quote-metadata {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.quote-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 10px;
+}
+
+.type-yellow-quote { 
+    background: #fff3cd; 
+}
+
+.type-yellow-snowclone { 
+    background: #fff3cd; 
+    border: 1px dashed #856404; 
+}
+
+.type-blue-quote { 
+    background: #cce5ff; 
+}

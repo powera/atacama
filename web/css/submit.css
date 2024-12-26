@@ -1,0 +1,25 @@
+/* Submit page specific styles */
+.container {
+    max-width: 800px;
+}
+
+#content {
+    min-height: 300px;
+    font-family: inherit;
+}
+
+.success-container {
+    display: flex;
+    align-items: center;
+}
+
+.view-link {
+    display: inline-block;
+    margin-left: 10px;
+    color: #4CAF50;
+    text-decoration: none;
+}
+
+.view-link:hover {
+    text-decoration: underline;
+}
