@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        <div id="g_id_onload"
+             data-client_id="{{ client_id }}"
+             data-callback="handleCredentialResponse">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard">
+        </div>
+    </div>
+    
+    <script>
+        function handleCredentialResponse(response) {
+            // Send the ID token to your server
+            const token = response.credential;
+            
+            // Store the token in localStorage
+            localStorage.setItem('auth_token', token);
+            
+            // Redirect to the main page
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

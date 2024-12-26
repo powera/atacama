@@ -1,3 +1,7 @@
+#!/usr/bin/python3
+
+""" Web server for atacama. """
+
 from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session, url_for, redirect
 from waitress import serve
 import os
@@ -24,27 +28,6 @@ Session, db_success = setup_database()
 color_processor = ColorScheme()
 QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
 
-# Auth configuration
-DEV_AUTH_PATH = os.getenv('DEV_AUTH_PATH', '/.dev-auth')
-DEFAULT_SECRET_PATH = os.path.expanduser('~/.atacama_secret')
-
-def read_auth_code() -> str:
-    """
-    Read authentication code from secret file.
-    
-    :return: Authentication code from file or default if file not found
-    """
-    secret_path = os.getenv('ATACAMA_SECRET_PATH', DEFAULT_SECRET_PATH)
-    try:
-        with open(secret_path, 'r') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        logger.warning(f"Secret file not found at {secret_path}, using default")
-        return 'atacama-dev'
-    except Exception as e:
-        logger.error(f"Error reading secret file: {str(e)}")
-        return 'atacama-dev'
-
 def require_auth(f):
     """Decorator to require either Google or dev authentication."""
     @wraps(f)
@@ -56,6 +39,8 @@ def require_auth(f):
         # Then check Google auth
         auth_header = request.headers.get('Authorization')
         if not auth_header:
+            if request.headers.get('Accept', '').startswith('text/html'):
+                return redirect('/login')
             return jsonify({'error': 'Authentication required'}), 401
             
         try:
@@ -66,6 +51,12 @@ def require_auth(f):
                 os.getenv('GOOGLE_CLIENT_ID')
             )
             
+            # Verify the token is not expired and audience matches
+            if idinfo['aud'] != os.getenv('GOOGLE_CLIENT_ID'):
+                raise ValueError('Invalid audience')
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Invalid issuer')
+            
             request.user = {
                 'email': idinfo['email'],
                 'name': idinfo.get('name', ''),
@@ -75,9 +66,15 @@ def require_auth(f):
             
         except Exception as e:
             logger.error(f"Auth error: {str(e)}")
+            if request.headers.get('Accept', '').startswith('text/html'):
+                return redirect('/login')
             return jsonify({'error': 'Invalid authentication'}), 401
             
     return decorated_function
+
+# Google OAuth configuration
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
 def extract_quotes(content: str) -> List[Dict[str, str]]:
     """
@@ -530,6 +527,20 @@ def serve_css(filename: str):
     """
     css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
     return send_from_directory(css_dir, filename)
+
+@app.route('/login')
+def login():
+    """Serve the login page with Google Sign-In button."""
+    return render_template(
+        'login.html',
+        client_id=GOOGLE_CLIENT_ID
+    )
+
+@app.route('/logout')
+def logout():
+    """Clear the session and redirect to login."""
+    session.clear()
+    return redirect(url_for('login'))
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
