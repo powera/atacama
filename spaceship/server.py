@@ -35,42 +35,42 @@ class XPlanetGenerator(threading.Thread):
         self.temp_path = temp_path
         self.running = True
         
-def generate_image(self) -> bool:
-    """
-    Generate a new XPlanet image.
-    
-    :return: True if generation was successful, False otherwise
-    """
-    try:
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+    def generate_image(self) -> bool:
+        """
+        Generate a new XPlanet image.
         
-        # Generate new image to temp path
-        subprocess.run([
-            'xplanet',
-            '-output', self.temp_path,
-            '-wait', '30',
-            '-body', 'earth',
-            '-latitude', '0',         # View from equator
-            '-fromspace', '1.5',      # Distance in Earth radii
-            '-geometry', '1024x1024',
-            '-markers',               # Show city markers
-            '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
-        ], check=True)
-        
-        # Atomically move to final location
-        os.rename(self.temp_path, self.output_path)
-        
-        logger.info(f"Generated new XPlanet image at {datetime.now()}")
-        return True
-        
-    except subprocess.CalledProcessError as e:
-        logger.error(f"XPlanet generation failed: {str(e)}")
-        return False
-        
-    except Exception as e:
-        logger.error(f"Error generating image: {str(e)}")
-        return False
+        :return: True if generation was successful, False otherwise
+        """
+        try:
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+            
+            # Generate new image to temp path
+            subprocess.run([
+                'xplanet',
+                '-output', self.temp_path,
+                '-wait', '30',
+                '-body', 'earth',
+                '-latitude', '0',         # View from equator
+                '-fromspace', '1.5',      # Distance in Earth radii
+                '-geometry', '1024x1024',
+                '-markers',               # Show city markers
+                '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
+            ], check=True)
+            
+            # Atomically move to final location
+            os.rename(self.temp_path, self.output_path)
+            
+            logger.info(f"Generated new XPlanet image at {datetime.now()}")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"XPlanet generation failed: {str(e)}")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error generating image: {str(e)}")
+            return False
 
     def run(self) -> None:
         """Run the generator loop."""
