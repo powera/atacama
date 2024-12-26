@@ -49,12 +49,10 @@ class XPlanetGenerator(threading.Thread):
             subprocess.run([
                 'xplanet',
                 '-output', self.temp_path,
-                '-wait', '30',
                 '-num_times', '1',  # This function is run periodically.
-                '-body', 'earth',
                 '-target', 'earth',
                 '-origin', 'sun',
-                '-geometry', '1024x1024',
+                '-geometry', '768x768',
                 '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
             ], check=True)
             
