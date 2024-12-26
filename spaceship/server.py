@@ -51,8 +51,8 @@ class XPlanetGenerator(threading.Thread):
                 '-output', self.temp_path,
                 '-wait', '30',
                 '-body', 'earth',
-                '-latitude', '0',         # View from equator
-                '-fromspace', '1.5',      # Distance in Earth radii
+                '-target', 'earth',
+                '-origin', 'sun',
                 '-geometry', '1024x1024',
                 '-markers',               # Show city markers
                 '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
