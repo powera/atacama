@@ -130,22 +130,6 @@ def save_quotes(quotes: List[Dict[str, str]], email: Email, session) -> None:
             email.quotes.append(quote)
             session.add(quote)
 
-@app.route(DEV_AUTH_PATH, methods=['GET', 'POST'])
-def dev_auth():
-    """Development authentication endpoint."""
-    if request.method == 'POST':
-        if request.form.get('passcode') == read_auth_code():
-            session['dev_authenticated'] = True
-            return jsonify({'status': 'authenticated'})
-        return jsonify({'error': 'Invalid passcode'}), 401
-
-    return '''
-        <form method="post">
-            <input type="password" name="passcode" placeholder="Enter passcode">
-            <input type="submit" value="Authenticate">
-        </form>
-    '''
-
 def get_message_by_id(message_id: int) -> Optional[Email]:
     """
     Helper function to retrieve a message by ID.
@@ -426,12 +410,9 @@ def landing_page():
     finally:
         db_session.close()
 
-    # Check if user is authenticated via dev auth
+    # Check if user is authenticated via Google auth
     user = None
-    if session.get('dev_authenticated'):
-        user = {'name': 'Developer'}
-    # Or via Google auth (set in require_auth decorator)
-    elif hasattr(request, 'user'):
+    if hasattr(request, 'user'):
         user = request.user
 
     return render_template(
