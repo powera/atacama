@@ -1,154 +1,111 @@
-// Create and append the popup container once when the script loads
-const popupContainer = document.createElement('div');
-popupContainer.className = 'annotation-popup';
-document.body.appendChild(popupContainer);
+// annotation-handler.js
+class AnnotationHandler {
+    constructor() {
+        this.setupPopup();
+        this.bindEvents();
+        this.currentAnnotation = null;
+        this.touchStartY = 0;
+        this.currentTranslateY = 0;
+    }
 
-// Create internal popup structure
-const popupContent = `
-    <div class="pinyin"></div>
-    <div class="definition"></div>
-    <button class="close-button" aria-label="Close annotation">×</button>
-`;
-popupContainer.innerHTML = popupContent;
+    setupPopup() {
+        this.popup = document.createElement('div');
+        this.popup.className = 'annotation-popup';
+        this.popup.innerHTML = `
+            <div class="pinyin"></div>
+            <div class="definition"></div>
+            <button class="close-button" aria-label="Close annotation">×</button>
+        `;
+        document.body.appendChild(this.popup);
 
-// Get references to popup elements
-const pinyinElement = popupContainer.querySelector('.pinyin');
-const definitionElement = popupContainer.querySelector('.definition');
-const closeButton = popupContainer.querySelector('.close-button');
+        this.pinyinEl = this.popup.querySelector('.pinyin');
+        this.definitionEl = this.popup.querySelector('.definition');
+        this.closeButton = this.popup.querySelector('.close-button');
+    }
 
-// Track touch interaction state
-let touchStartY = 0;
-let currentTranslateY = 0;
-
-// Handle annotation displays
-function setupAnnotationSystem() {
-    const annotations = document.querySelectorAll('.annotated-chinese');
-    
-    annotations.forEach(annotation => {
-        // Handle both click and touch events
-        annotation.addEventListener('click', (event) => {
-            event.preventDefault();
-            showAnnotation(annotation);
+    bindEvents() {
+        // Annotation click handlers
+        document.addEventListener('click', (e) => {
+            const annotation = e.target.closest('.annotated-chinese');
+            if (annotation) {
+                e.preventDefault();
+                this.showAnnotation(annotation);
+            } else if (!e.target.closest('.annotation-popup')) {
+                this.hideAnnotation();
+            }
         });
-    });
 
-    // Close annotation when clicking outside
-    document.addEventListener('click', (event) => {
-        if (!event.target.closest('.annotated-chinese') && 
-            !event.target.closest('.annotation-popup')) {
-            hideAnnotation();
+        // Close button handler
+        this.closeButton.addEventListener('click', () => this.hideAnnotation());
+
+        // Touch events for swipe dismissal
+        this.popup.addEventListener('touchstart', (e) => {
+            this.touchStartY = e.touches[0].clientY;
+            this.popup.style.transition = 'none';
+        });
+
+        this.popup.addEventListener('touchmove', (e) => {
+            const deltaY = e.touches[0].clientY - this.touchStartY;
+            if (deltaY > 0) {
+                this.currentTranslateY = deltaY;
+                this.popup.style.transform = `translateY(${deltaY}px)`;
+            }
+        });
+
+        this.popup.addEventListener('touchend', () => {
+            this.popup.style.transition = 'transform 0.3s ease';
+            if (this.currentTranslateY > 100) {
+                this.hideAnnotation();
+            } else {
+                this.popup.style.transform = 'translateY(0)';
+            }
+            this.currentTranslateY = 0;
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideAnnotation();
+            }
+        });
+    }
+
+    showAnnotation(element) {
+        const pinyin = element.getAttribute('data-pinyin');
+        const definition = element.getAttribute('data-definition');
+
+        if (!pinyin || !definition) {
+            console.warn('Missing annotation data:', { pinyin, definition });
+            return;
         }
-    });
 
-    // Handle swipe to dismiss
-    popupContainer.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-        popupContainer.style.transition = 'none';
-    });
-
-    popupContainer.addEventListener('touchmove', (e) => {
-        const deltaY = e.touches[0].clientY - touchStartY;
-        if (deltaY > 0) { // Only allow downward swipe
-            currentTranslateY = deltaY;
-            popupContainer.style.transform = `translateY(${deltaY}px)`;
-        }
-    });
-
-    popupContainer.addEventListener('touchend', (e) => {
-        popupContainer.style.transition = 'transform 0.3s ease';
-        if (currentTranslateY > 100) { // Threshold for dismiss
-            hideAnnotation();
-        } else {
-            popupContainer.style.transform = 'translateY(0)';
-        }
-        currentTranslateY = 0;
-    });
-
-    // Close button handler
-    closeButton.addEventListener('click', hideAnnotation);
-}
-
-function showAnnotation(element) {
-    const pinyin = element.getAttribute('data-pinyin');
-    const definition = element.getAttribute('data-definition');
-
-    // Update popup content
-    pinyinElement.textContent = pinyin;
-    definitionElement.textContent = definition;
-
-    // Show popup with animation
-    popupContainer.style.transform = 'translateY(0)';
-    popupContainer.classList.add('active');
-
-    // Add class to currently active annotation
-    document.querySelector('.annotation-active')?.classList.remove('annotation-active');
-    element.classList.add('annotation-active');
-
-    // Handle keyboard navigation
-    closeButton.focus();
-}
-
-function hideAnnotation() {
-    popupContainer.classList.remove('active');
-    popupContainer.style.transform = 'translateY(100%)';
-    document.querySelector('.annotation-active')?.classList.remove('annotation-active');
-}
-
-// Handle keyboard navigation
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        hideAnnotation();
-    }
-});
-
-// Initialize the system when the DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupAnnotationSystem);
-} else {
-    setupAnnotationSystem();
-}
-
-// Add necessary styles dynamically
-const style = document.createElement('style');
-style.textContent = `
-    .close-button {
-        position: absolute;
-        top: var(--spacing-base);
-        right: var(--spacing-base);
-        width: 44px;
-        height: 44px;
-        border: none;
-        background: none;
-        font-size: 24px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #666;
-    }
-
-    .annotation-active {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: var(--border-radius);
-    }
-
-    .annotation-popup {
-        transform: translateY(100%);
-        transition: transform 0.3s ease;
-    }
-
-    @media (min-width: 769px) {
-        .annotation-popup {
-            left: 50%;
-            transform: translateX(-50%) translateY(100%);
-            max-width: 400px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        this.pinyinEl.textContent = pinyin;
+        this.definitionEl.textContent = definition;
+        
+        this.popup.classList.add('active');
+        
+        if (this.currentAnnotation) {
+            this.currentAnnotation.classList.remove('annotation-active');
         }
         
-        .annotation-popup.active {
-            transform: translateX(-50%) translateY(0);
+        element.classList.add('annotation-active');
+        this.currentAnnotation = element;
+        
+        this.closeButton.focus();
+    }
+
+    hideAnnotation() {
+        this.popup.classList.remove('active');
+        if (this.currentAnnotation) {
+            this.currentAnnotation.classList.remove('annotation-active');
+            this.currentAnnotation = null;
         }
     }
-`;
-document.head.appendChild(style);
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => new AnnotationHandler());
+} else {
+    new AnnotationHandler();
+}

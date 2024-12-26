@@ -37,46 +37,56 @@
 /* Annotation system */
 .annotated-chinese {
     position: relative;
+    display: inline-block;
     border-bottom: 1px dotted #666;
     cursor: pointer;
+    padding-right: 1.5em; /* Space for the marker */
 }
 
-/* Mobile-friendly annotation marker */
+/* Updated mobile-friendly annotation marker */
 .annotated-chinese::after {
     content: var(--emoji-annotation);
     position: absolute;
-    right: -1.5em;
+    right: 0;
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.8em;
+    color: #666;
+    line-height: 1;
 }
 
-/* Annotation popup */
+/* Enhanced annotation popup */
 .annotation-popup {
-    display: none;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     background: white;
-    padding: var(--spacing-large);
+    padding: 1.5rem;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-radius: 8px 8px 0 0;
     z-index: 1000;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: all 0.3s ease;
+    max-height: 50vh;
+    overflow-y: auto;
 }
 
 .annotation-popup.active {
-    display: block;
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .annotation-popup .pinyin {
-    font-size: var(--font-size-large);
+    font-size: 1.2rem;
     font-weight: 500;
-    margin-bottom: var(--spacing-base);
+    margin-bottom: 0.5rem;
 }
 
 .annotation-popup .definition {
     color: #666;
+    line-height: 1.4;
 }
 
 /* Color scheme classes */
