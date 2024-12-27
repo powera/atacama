@@ -67,7 +67,7 @@ def require_auth(f):
 
         # No valid auth found - redirect web users, return 401 for API
         if request.headers.get('Accept', '').startswith('text/html'):
-            return redirect(url_for('login'))
+            return redirect(url_for('login_page'))
         return jsonify({'error': 'Authentication required'}), 401
 
 
@@ -509,7 +509,7 @@ def serve_css(filename: str):
     return send_from_directory(css_dir, filename)
 
 @app.route('/login')
-def login():
+def login_page():
     """Serve the login page with Google Sign-In button."""
     # If user is already logged in, redirect to home
     if 'user' in session:
@@ -557,7 +557,7 @@ def google_auth():
 def logout():
     """Clear the session and redirect to login."""
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for('login_page'))
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
