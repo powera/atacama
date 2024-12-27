@@ -19,7 +19,6 @@ from pathlib import Path
 from common.database import setup_database
 from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
-from web.email_fetcher import EmailFetcherDaemon
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
@@ -540,9 +539,6 @@ def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
         logger.error("Database initialization failed, cannot start web server")
         return
         
-    fetcher_daemon = EmailFetcherDaemon()
-    fetcher_daemon.start()
-    
     logger.info(f"Starting message processor server on {host}:{port}")
     try:
         serve(app, host=host, port=port)
