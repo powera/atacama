@@ -32,45 +32,44 @@ def require_auth(f):
     """Decorator to require either Google or dev authentication."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check for dev auth first
-        if session.get('dev_authenticated'):
+        # First check session auth for web users
+        if 'user' in session:
+            request.user = session['user']
             return f(*args, **kwargs)
 
-        # Then check Google auth
+        # Then check Bearer token auth for API requests
         auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            if request.headers.get('Accept', '').startswith('text/html'):
-                return redirect('/login')
-            return jsonify({'error': 'Authentication required'}), 401
-            
-        try:
-            token = auth_header.split(' ')[1]
-            idinfo = id_token.verify_oauth2_token(
-                token,
-                requests.Request(),
-                os.getenv('GOOGLE_CLIENT_ID')
-            )
-            
-            # Verify the token is not expired and audience matches
-            if idinfo['aud'] != os.getenv('GOOGLE_CLIENT_ID'):
-                raise ValueError('Invalid audience')
-            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                raise ValueError('Invalid issuer')
-            
-            request.user = {
-                'email': idinfo['email'],
-                'name': idinfo.get('name', ''),
-                'picture': idinfo.get('picture', '')
-            }
-            return f(*args, **kwargs)
-            
-        except Exception as e:
-            logger.error(f"Auth error: {str(e)}")
-            if request.headers.get('Accept', '').startswith('text/html'):
-                return redirect('/login')
-            return jsonify({'error': 'Invalid authentication'}), 401
-            
-    return decorated_function
+        if auth_header and auth_header.startswith('Bearer '):
+            try:
+                token = auth_header.split(' ')[1]
+                idinfo = id_token.verify_oauth2_token(
+                    token,
+                    requests.Request(),
+                    os.getenv('GOOGLE_CLIENT_ID')
+                )
+                
+                # Verify the token is not expired and audience matches
+                if idinfo['aud'] != os.getenv('GOOGLE_CLIENT_ID'):
+                    raise ValueError('Invalid audience')
+                if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                    raise ValueError('Invalid issuer')
+                
+                request.user = {
+                    'email': idinfo['email'],
+                    'name': idinfo.get('name', ''),
+                    'picture': idinfo.get('picture', '')
+                }
+                return f(*args, **kwargs)
+                
+            except Exception as e:
+                logger.error(f"Auth error: {str(e)}")
+                return jsonify({'error': 'Invalid authentication'}), 401
+
+        # No valid auth found - redirect web users, return 401 for API
+        if request.headers.get('Accept', '').startswith('text/html'):
+            return redirect(url_for('login'))
+        return jsonify({'error': 'Authentication required'}), 401
+
 
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -512,10 +511,47 @@ def serve_css(filename: str):
 @app.route('/login')
 def login():
     """Serve the login page with Google Sign-In button."""
+    # If user is already logged in, redirect to home
+    if 'user' in session:
+        return redirect(url_for('landing_page'))
+        
     return render_template(
         'login.html',
         client_id=GOOGLE_CLIENT_ID
     )
+
+@app.route('/auth/google', methods=['POST'])
+def google_auth():
+    """Handle Google Sign-In callback."""
+    try:
+        token = request.json.get('credential')
+        if not token:
+            return jsonify({'error': 'No credential provided'}), 400
+            
+        idinfo = id_token.verify_oauth2_token(
+            token,
+            requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+        
+        if idinfo['aud'] != GOOGLE_CLIENT_ID:
+            return jsonify({'error': 'Invalid audience'}), 401
+            
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            return jsonify({'error': 'Invalid issuer'}), 401
+            
+        # Store user info in session
+        session['user'] = {
+            'email': idinfo['email'],
+            'name': idinfo.get('name', ''),
+            'picture': idinfo.get('picture', '')
+        }
+        
+        return jsonify({'success': True, 'redirect': url_for('landing_page')})
+        
+    except Exception as e:
+        logger.error(f"Google auth error: {str(e)}")
+        return jsonify({'error': 'Authentication failed'}), 401
 
 @app.route('/logout')
 def logout():
