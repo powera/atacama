@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Message Stream - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <style>
+        .stream-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-base);
+        }
+        
+        .stream-message {
+            margin: var(--spacing-large) 0;
+            padding: var(--spacing-base);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background: white;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--spacing-base);
+        }
+        
+        .message-title {
+            font-size: var(--font-size-large);
+            font-weight: 500;
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+        
+        .message-timestamp {
+            font-size: var(--font-size-small);
+            color: #666;
+        }
+        
+        .message-content {
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="stream-container">
+        <h1>Recent Messages</h1>
+        
+        {% for message in messages %}
+            <article class="stream-message">
+                <header class="message-header">
+                    <a href="{{ url_for('get_message', message_id=message.id) }}" class="message-title">
+                        {{ message.subject or '(No Subject)' }}
+                    </a>
+                    <span class="message-timestamp">{{ message.created_at_formatted }}</span>
+                </header>
+                <div class="message-content">
+                    {{ message.processed_content | safe }}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</body>
+</html>

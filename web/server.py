@@ -337,6 +337,27 @@ def recent_message():
     finally:
         session.close()
 
+@app.route('/stream')
+def message_stream():
+    """Show a stream of recent messages."""
+    try:
+        session = Session()
+        messages = session.query(Email).options(
+            joinedload(Email.quotes)
+        ).order_by(Email.created_at.desc()).limit(10).all()
+        
+        # Format timestamps
+        for message in messages:
+            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            
+        return render_template(
+            'stream.html',
+            messages=messages
+        )
+        
+    finally:
+        session.close()
+
 @app.route('/quotes')
 @require_auth
 def list_quotes():
@@ -509,19 +530,9 @@ def serve_css(filename: str):
     css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
     return send_from_directory(css_dir, filename)
 
-@app.route('/login')
-def login():
-    """Serve the login page with Google Sign-In button."""
-    return render_template(
-        'login.html',
-        client_id=GOOGLE_CLIENT_ID
-    )
-
-@app.route('/logout')
-def logout():
-    """Clear the session and redirect to login."""
-    session.clear()
-    return redirect(url_for('login'))
+# Login, logout, Google Auth callbacks
+from web.blueprints.auth import auth_bp
+app.register_blueprint(auth_bp)
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
