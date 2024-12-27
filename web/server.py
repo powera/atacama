@@ -150,60 +150,6 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
     finally:
         session.close()
 
-@app.route('/process', methods=['POST'])
-@require_auth
-def process_message() -> tuple[Dict[str, Any], int]:
-    """API endpoint to process and store messages."""
-    try:
-        data = request.get_json()
-        
-        if not data or 'subject' not in data or 'content' not in data:
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        session = Session()
-        
-        # Process content with enhanced features
-        processed_content = color_processor.process_content(
-            data['content'],
-            llm_annotations=data.get('llm_annotations')
-        )
-        
-        # Create message object
-        message = Email(
-            subject=data['subject'],
-            content=data['content'],
-            processed_content=processed_content,
-            llm_annotations=json.dumps(data.get('llm_annotations', {}))
-        )
-        
-        # Handle message chain if parent_id is provided
-        if 'parent_id' in data:
-            parent = session.query(Email).get(data['parent_id'])
-            if parent:
-                message.parent = parent
-        
-        # Extract and save quotes
-        quotes = extract_quotes(data['content'])
-        save_quotes(quotes, message, session)
-        
-        session.add(message)
-        session.commit()
-        
-        logger.info(f"Processed message with subject: {data['subject']}")
-        
-        return jsonify({
-            'id': message.id,
-            'processed_content': processed_content,
-            'view_url': url_for('get_message', message_id=message.id)
-        }), 201
-        
-    except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    
-    finally:
-        session.close()
-
 @app.route('/messages/<int:message_id>', methods=['GET'])
 def get_message(message_id: int):
     """Retrieve a processed message by ID."""
@@ -442,96 +388,17 @@ def landing_page():
         user=user
     )
 
-@app.route('/submit', methods=['GET', 'POST'])
-@require_auth
-def submit_form():
-    """Handle message submission via HTML form."""
-    if request.method == 'POST':
-        try:
-            subject = request.form.get('subject', '')
-            content = request.form.get('content', '')
-            parent_id = request.form.get('parent_id')
-            
-            if not subject or not content:
-                return render_template('submit.html', error='Subject and content are required')
-                
-            session = Session()
-            processed_content = color_processor.process_content(content)
-            
-            message = Email(
-                subject=subject,
-                content=content,
-                processed_content=processed_content,
-            )
-            
-            # Handle message chain if parent_id is provided
-            if parent_id and parent_id.strip():
-                try:
-                    parent_id = int(parent_id)
-                    parent = session.query(Email).get(parent_id)
-                    if parent:
-                        message.parent = parent
-                    else:
-                        logger.warning(f"Parent message {parent_id} not found")
-                except ValueError:
-                    logger.warning(f"Invalid parent_id format: {parent_id}")
-            
-            # Extract and save quotes
-            quotes = extract_quotes(content)
-            save_quotes(quotes, message, session)
-            
-            session.add(message)
-            session.commit()
-            
-            view_url = url_for('get_message', message_id=message.id)
-            return render_template('submit.html', success=True, view_url=view_url)
-            
-        except Exception as e:
-            logger.error(f"Error processing form submission: {str(e)}")
-            return render_template('submit.html', error=str(e))
-            
-        finally:
-            session.close()
-        # END of processing submission of message by POST
-            
-    # Get recent messages for the dropdown
-    session = Session()
-    try:
-        recent_messages = session.query(Email).order_by(
-            Email.created_at.desc()
-        ).limit(50).all()
-    except Exception as e:
-        logger.error(f"Error fetching recent messages: {str(e)}")
-        recent_messages = []
-    finally:
-        session.close()
-    return render_template('submit.html', recent_messages=recent_messages)
-
-@app.route('/js/<path:filename>')
-def serve_js(filename: str):
-    """
-    Serve JS files from the js directory.
-
-    :param filename: Name of the JS file to serve
-    :return: JS file response
-    """
-    js_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'js')
-    return send_from_directory(js_dir, filename)
-
-@app.route('/css/<path:filename>')
-def serve_css(filename: str):
-    """
-    Serve CSS files from the css directory.
-
-    :param filename: Name of the CSS file to serve
-    :return: CSS file response
-    """
-    css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
-    return send_from_directory(css_dir, filename)
+# Serve CSS, JS, etc.
+from web.blueprints.static import static_bp
+app.register_blueprint(static_bp)
 
 # Login, logout, Google Auth callbacks
 from web.blueprints.auth import auth_bp
 app.register_blueprint(auth_bp)
+
+# Submit message form
+from web.blueprints.submit import submit_bp
+app.register_blueprint(submit_bp)
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
