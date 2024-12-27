@@ -1,19 +1,6 @@
 /* Message-specific variables */
 :root {
-    /* Define emoji markers for different content types */
-    /* These are not currently used */
-    --emoji-xantham: '🔥';
-    --emoji-red: '💡';
-    --emoji-orange: '⚔️';
-    --emoji-yellow: '💬';
-    --emoji-green: '⚙️';
-    --emoji-teal: '🤖';
-    --emoji-blue: '✨';
-    --emoji-violet: '📣';
-    --emoji-mogue: '🌎';
-    --emoji-gray: '💭';
-    --emoji-hazel: '🎭';
-    --emoji-annotation: '🉑';
+    /* No emoji definitions needed - handled in HTML */
 }
 
 /* Base message layout */
@@ -23,7 +10,6 @@
     padding: var(--spacing-base);
 }
 
-/* Message header */
 .message-header {
     margin-bottom: var(--spacing-large);
 }
@@ -34,144 +20,104 @@
     font-size: var(--font-size-small);
 }
 
-/* Annotation system */
-.annotated-chinese {
-    position: relative;
-    display: inline-block;
-    border-bottom: 1px dotted #666;
+/* Color scheme classes */
+[class^="color-"] {
+    display: block;
+    margin: var(--spacing-base) 0;
+    padding: var(--spacing-base);
+    border-radius: var(--border-radius);
     cursor: pointer;
-    padding-right: 1.5em; /* Space for the marker */
+    transition: background-color 0.2s ease;
 }
 
-/* Updated mobile-friendly annotation marker */
+/* Color content container */
+.color-content {
+    display: block;
+    margin-top: var(--spacing-base);
+    padding-left: var(--spacing-base);
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity 0.3s ease-out, height 0.3s ease-out;
+}
+
+.color-content.expanded {
+    opacity: 1;
+    height: auto;
+    transition: opacity 0.3s ease-in, height 0.3s ease-in;
+}
+
+/* Sigil (emoji) styling */
+.sigil {
+    display: inline-block;
+    margin-right: 0.5em;
+    transition: transform 0.3s ease;
+}
+
+[class^="color-"].expanded .sigil {
+    transform: rotate(90deg);
+}
+
+/* Individual color styles */
+.color-xantham { color: #A0522D; font-style: italic; }
+.color-red { color: #FF4136; font-weight: bold; }
+.color-orange { color: #FF851B; border-left: 2px solid currentColor; }
+.color-yellow { color: #B8860B; background-color: rgba(255, 255, 0, 0.1); }
+.color-green { color: #2ECC40; font-family: monospace; background-color: rgba(0, 255, 0, 0.05); }
+.color-teal { color: #39CCCC; font-family: monospace; border: 1px solid currentColor; }
+.color-blue { color: #0074D9; font-style: italic; text-shadow: 0 0 1px rgba(0, 116, 217, 0.2); }
+.color-violet { color: #673AB7; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.color-mogue { color: #4A006A; background: linear-gradient(45deg, rgba(74, 0, 106, 0.05) 0%, transparent 100%); }
+.color-gray { color: #666; font-style: italic; background: linear-gradient(to right, rgba(0, 0, 0, 0.03), transparent); }
+.color-hazel { color: #8B4513; font-style: italic; background: rgba(139, 69, 19, 0.05); }
+
+/* Chinese annotation system */
+.annotated-chinese {
+    position: relative;
+    border-bottom: 1px dotted #666;
+    cursor: pointer;
+    padding-right: 1.5em;
+    display: inline-block;
+}
+
 .annotated-chinese::after {
-    content: var(--emoji-annotation);
+    content: '🉑';
     position: absolute;
     right: 0;
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.8em;
-    color: #666;
-    line-height: 1;
 }
 
-/* Enhanced annotation popup */
-.annotation-popup {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: white;
-    padding: 1.5rem;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-    border-radius: 8px 8px 0 0;
-    z-index: 1000;
+.annotation-inline {
+    display: block;
+    height: 0;
     opacity: 0;
-    transform: translateY(100%);
-    transition: all 0.3s ease;
-    max-height: 50vh;
-    overflow-y: auto;
-}
-
-.annotation-popup.active {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.annotation-popup .pinyin {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-}
-
-.annotation-popup .definition {
-    color: #666;
-    line-height: 1.4;
-}
-
-/* Color scheme classes */
-[class^="color-"] {
-    margin: var(--spacing-base) 0;
-    padding: var(--spacing-base);
+    overflow: hidden;
+    background: var(--color-background);
+    padding: 0 var(--spacing-base);
     border-radius: var(--border-radius);
+    margin: 0;
+    box-shadow: var(--box-shadow);
+    transition: opacity 0.3s ease-out, height 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out;
 }
 
-.color-xantham {
-    color: #A0522D;
-    font-style: italic;
-}
-
-.color-red {
-    color: #FF4136;
-    font-weight: bold;
-}
-
-.color-orange {
-    color: #FF851B;
-    border-left: 2px solid currentColor;
-    padding-left: var(--spacing-base);
-}
-
-.color-yellow {
-    color: #B8860B;
-    background-color: rgba(255, 255, 0, 0.1);
-    font-style: italic;
-}
-
-.color-green {
-    color: #2ECC40;
-    font-family: monospace;
-    background-color: rgba(0, 255, 0, 0.05);
+.annotation-inline.expanded {
+    height: auto;
+    opacity: 1;
     padding: var(--spacing-base);
+    margin: var(--spacing-base) 0;
+    transition: opacity 0.3s ease-in, height 0.3s ease-in, padding 0.3s ease-in, margin 0.3s ease-in;
 }
 
-.color-teal {
-    color: #39CCCC;
-    font-family: monospace;
-    border: 1px solid currentColor;
-    padding: var(--spacing-base);
-}
-
-.color-blue {
-    color: #0074D9;
-    font-style: italic;
-    text-shadow: 0 0 1px rgba(0, 116, 217, 0.2);
-}
-
-.color-violet {
-    color: #673AB7;
+.annotation-inline .pinyin {
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    margin-bottom: 0.3em;
 }
 
-.color-mogue {
-    color: #4A006A;
-    background: linear-gradient(45deg, rgba(74, 0, 106, 0.05) 0%, transparent 100%);
-    padding: var(--spacing-base);
-}
-
-.color-gray {
+.annotation-inline .definition {
     color: #666;
-    font-style: italic;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.03), transparent);
-    padding: var(--spacing-base);
-}
-
-.color-hazel {
-    color: #8B4513;
-    font-style: italic;
-    background: rgba(139, 69, 19, 0.05);
-}
-
-/* Emoji markers (sigils) */
-.sigil {
-    margin-right: 0.3em;
-}
-
-/* Wikilink styles */
-.wikilink::before {
-    content: '📖';  /* Open book emoji */
+    font-size: 0.9em;
 }
 
 /* List styles */
@@ -191,14 +137,6 @@ li::before {
     margin-left: -1.5em;
 }
 
-/* Literal text blocks */
-.literal-text {
-    font-family: "Courier New", Courier, monospace;
-    background-color: rgba(0, 0, 0, 0.05);
-    padding: 0 0.3em;
-    border-radius: 2px;
-}
-
 /* Section breaks */
 hr {
     border: none;
@@ -206,65 +144,20 @@ hr {
     margin: var(--spacing-large) 0;
 }
 
-/* Quotes section */
-.quotes-section {
-    margin-top: var(--spacing-large);
-    padding-top: var(--spacing-large);
-    border-top: 1px solid var(--color-border);
-}
-
-.quote-list {
-    padding: 0;
-}
-
-.quote-item {
-    margin: var(--spacing-base) 0;
-    padding: var(--spacing-base);
-    background: var(--color-background);
-    border-left: 3px solid var(--color-border);
-}
-
-.quote-text {
-    font-style: italic;
-    margin-bottom: var(--spacing-base);
-}
-
-.quote-author {
-    font-weight: 500;
-    margin-top: var(--spacing-base);
-}
-
-.quote-source {
-    color: #666;
-    font-size: var(--font-size-small);
-}
-
-/* Mobile-specific adjustments */
+/* Mobile adjustments */
 @media screen and (max-width: 768px) {
     .message {
         padding: var(--spacing-base);
     }
 
-    /* Adjust annotation display */
-    .annotation-popup {
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-
-    /* Improve touch targets */
-    .annotated-chinese {
-        padding-right: 2em;
-    }
-
-    /* Adjust color block spacing */
     [class^="color-"] {
         margin: var(--spacing-base) calc(-1 * var(--spacing-base));
         border-radius: 0;
     }
 
-    /* Enhance quote readability */
-    .quote-item {
+    .annotation-inline.expanded {
         margin: var(--spacing-base) calc(-1 * var(--spacing-base));
+        border-radius: 0;
     }
 }
 
@@ -274,25 +167,33 @@ hr {
         max-width: none;
     }
 
-    /* Show annotations inline */
-    .annotated-chinese::after {
-        content: " (" attr(data-pinyin) ": " attr(data-definition) ")";
-        position: static;
-        font-size: 0.9em;
-        color: #666;
+    .color-content {
+        height: auto;
+        opacity: 1;
+        padding: var(--spacing-base);
+        margin: var(--spacing-base) 0;
     }
 
-    /* Preserve color meanings without colors */
     [class^="color-"] {
-        border: none;
-        padding: 0;
+        cursor: default;
+        page-break-inside: avoid;
+    }
+
+    .annotated-chinese::after {
+        display: none;
+    }
+
+    .annotation-inline {
+        display: block;
+        height: auto;
+        opacity: 1;
+        padding: var(--spacing-base);
+        margin: var(--spacing-base) 0;
+        box-shadow: none;
+        border: 1px solid #ddd;
     }
 
     .sigil {
         display: none;
-    }
-
-    hr {
-        border-top: 1px solid #000;
     }
 }
