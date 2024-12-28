@@ -1,6 +1,8 @@
 from flask import Blueprint, send_from_directory
 import os
 
+import constants
+
 static_bp = Blueprint('static', __name__)
 @static_bp.route('/js/<path:filename>')
 def serve_js(filename: str):
@@ -10,7 +12,7 @@ def serve_js(filename: str):
     :param filename: Name of the JS file to serve
     :return: JS file response
     """
-    js_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'js')
+    js_dir = os.path.join(constants.WEB_DIR, 'js')
     return send_from_directory(js_dir, filename)
 
 @static_bp.route('/css/<path:filename>')
@@ -21,5 +23,5 @@ def serve_css(filename: str):
     :param filename: Name of the CSS file to serve
     :return: CSS file response
     """
-    css_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'css')
+    css_dir = os.path.join(constants.WEB_DIR, 'css')
     return send_from_directory(css_dir, filename)
