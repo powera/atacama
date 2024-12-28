@@ -69,27 +69,30 @@ class AtacamaLexer:
     
     def __init__(self):
         """Initialize the lexer with token patterns."""
+        # Define valid color names for use in multiple patterns
+        color_names = 'xantham|red|orange|yellow|green|teal|blue|violet|mogue|gray|hazel'
+        
         # Compile regular expressions for different token types
+        # Order matters - more specific patterns should come first
         self.patterns = [
-            # Section break pattern
-            (re.compile(r'^-{4,}$'), TokenType.SECTION_BREAK),
+            # URLs must be checked before other patterns to avoid partial matches
+            (re.compile(r'https?://[-\w.]+(?:/[-\w./?%&=]*)?'), TokenType.URL),
+            
+            # Section break pattern - exactly matches 4 or more hyphens on a line
+            (re.compile(r'^-{4,}\s*$'), TokenType.SECTION_BREAK),
             
             # List markers at start of line
             (re.compile(r'^\*\s+'), TokenType.BULLET_LIST_MARKER),
             (re.compile(r'^#\s+'), TokenType.NUMBER_LIST_MARKER),
             (re.compile(r'^(?:>|&gt;)\s+'), TokenType.ARROW_LIST_MARKER),
             
-            # Color blocks
-            (re.compile(r'<(xantham|red|orange|yellow|green|teal|blue|violet|mogue|gray|hazel)>'),
-             TokenType.COLOR_BLOCK_START),
-            (re.compile(r'</[a-z]+>'), TokenType.COLOR_BLOCK_END),
+            # Color blocks with specific color names
+            (re.compile(f'<({color_names})>'), TokenType.COLOR_BLOCK_START),
+            (re.compile(f'</(?:{color_names})>'), TokenType.COLOR_BLOCK_END),
             
-            # Inline color (in parentheses)
-            (re.compile(r'\(\s*<[a-z]+>'), TokenType.COLOR_INLINE_START),
-            (re.compile(r'>\s*\)'), TokenType.COLOR_INLINE_END),
-            
-            # URLs
-            (re.compile(r'https?://[^\s<>"]+'), TokenType.URL),
+            # Inline color (in parentheses) with specific color names
+            (re.compile(f'\(\s*<({color_names})>'), TokenType.COLOR_INLINE_START),
+            (re.compile(f'</(?:{color_names})>\s*\)'), TokenType.COLOR_INLINE_END),
             
             # Wikilinks
             (re.compile(r'\[\['), TokenType.WIKILINK_START),
@@ -106,8 +109,11 @@ class AtacamaLexer:
             (re.compile(r'\n'), TokenType.NEWLINE),
         ]
         
-        # Pattern for text (matches anything not matched by special patterns)
-        self.text_pattern = re.compile(r'[^<>\[\]\n\(\)]+')
+        # Pattern for text - excludes special characters and Chinese characters
+        self.text_pattern = re.compile(r'[^<>\[\]\n\(\)\u4e00-\u9fff]+')
+        
+        # Pattern for detecting invalid or unclosed tags
+        self.invalid_tag = re.compile(r'<([^>]+)')
         
         # Current position tracking
         self.text = ""
@@ -142,6 +148,13 @@ class AtacamaLexer:
         """Find and return the next token in the input stream."""
         current_text = self.text[self.pos:]
         
+        # Check for invalid tags before normal processing
+        if current_text.startswith('<'):
+            invalid_match = self.invalid_tag.match(current_text)
+            if invalid_match and not any(pattern[0].match(current_text) for pattern in self.patterns):
+                raise LexerError(f"Invalid or unclosed tag: {invalid_match.group(1)}", 
+                               self.line, self.column)
+        
         # Try each pattern in order
         for pattern, token_type in self.patterns:
             match = pattern.match(current_text)
@@ -168,7 +181,7 @@ class AtacamaLexer:
             self.column += len(value)
             return token
         
-        # If we get here, we couldn't match anything - skip a character
+        # Skip invalid characters
         self.pos += 1
         self.column += 1
         return None
@@ -183,6 +196,9 @@ def tokenize(text: str) -> List[Token]:
         
     Returns:
         List of Token objects
+    
+    Raises:
+        LexerError: If invalid or malformed input is encountered
     """
     lexer = AtacamaLexer()
     return list(lexer.tokenize(text))
