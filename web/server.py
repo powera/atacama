@@ -12,8 +12,6 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from functools import wraps
-from google.oauth2 import id_token
-from google.auth.transport import requests
 from pathlib import Path
 
 from common.database import setup_database
@@ -27,53 +25,7 @@ Session, db_success = setup_database()
 color_processor = ColorScheme()
 QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
 
-def require_auth(f):
-    """Decorator to require either Google or dev authentication."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Check for dev auth first
-        if session.get('dev_authenticated'):
-            return f(*args, **kwargs)
-
-        # Then check Google auth
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            if request.headers.get('Accept', '').startswith('text/html'):
-                return redirect('/login')
-            return jsonify({'error': 'Authentication required'}), 401
-            
-        try:
-            token = auth_header.split(' ')[1]
-            idinfo = id_token.verify_oauth2_token(
-                token,
-                requests.Request(),
-                os.getenv('GOOGLE_CLIENT_ID')
-            )
-            
-            # Verify the token is not expired and audience matches
-            if idinfo['aud'] != os.getenv('GOOGLE_CLIENT_ID'):
-                raise ValueError('Invalid audience')
-            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                raise ValueError('Invalid issuer')
-            
-            request.user = {
-                'email': idinfo['email'],
-                'name': idinfo.get('name', ''),
-                'picture': idinfo.get('picture', '')
-            }
-            return f(*args, **kwargs)
-            
-        except Exception as e:
-            logger.error(f"Auth error: {str(e)}")
-            if request.headers.get('Accept', '').startswith('text/html'):
-                return redirect('/login')
-            return jsonify({'error': 'Invalid authentication'}), 401
-            
-    return decorated_function
-
-# Google OAuth configuration
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+from web.blueprints.auth import require_auth
 
 def extract_quotes(content: str) -> List[Dict[str, str]]:
     """
