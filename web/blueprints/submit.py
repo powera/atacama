@@ -9,6 +9,7 @@ Session, db_success = setup_database()
 
 from common.models import Email
 from common.colorscheme import ColorScheme
+color_processor = ColorScheme()
 from .auth import require_auth
 
 submit_bp = Blueprint('submit', __name__)

@@ -17,12 +17,12 @@ from pathlib import Path
 from common.database import setup_database
 from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
+color_processor = ColorScheme()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
 logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
-color_processor = ColorScheme()
 
 from web.blueprints.auth import require_auth
 
