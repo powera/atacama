@@ -23,10 +23,10 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in pr
 logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
 color_processor = ColorScheme()
-QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
 
 from web.blueprints.auth import require_auth
 
+QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
 def extract_quotes(content: str) -> List[Dict[str, str]]:
     """
     Extract quotes from content using yellow and blue color tags.
@@ -255,51 +255,6 @@ def message_stream():
     finally:
         session.close()
 
-@app.route('/quotes')
-@require_auth
-def list_quotes():
-    """Display all tracked quotes with their metadata."""
-    session = Session()
-    try:
-        quotes = session.execute(
-            select(Quote)
-            .order_by(Quote.created_at.desc())
-        ).scalars().all()
-        
-        return render_template(
-            'quotes.html',
-            quotes=quotes,
-            quote_types=QUOTE_TYPES
-        )
-    finally:
-        session.close()
-
-@app.route('/quotes/<int:quote_id>/edit', methods=['GET', 'POST'])
-@require_auth
-def edit_quote(quote_id):
-    """Edit a specific quote's metadata."""
-    session = Session()
-    try:
-        quote = session.get(Quote, quote_id)
-        if not quote:
-            return "Quote not found", 404
-            
-        if request.method == 'POST':
-            quote.author = request.form.get('author')
-            quote.source = request.form.get('source')
-            quote.commentary = request.form.get('commentary')
-            quote.quote_type = request.form.get('quote_type')
-            
-            session.commit()
-            return redirect(url_for('list_quotes'))
-            
-        return render_template(
-            'edit_quote.html',
-            quote=quote,
-            quote_types=QUOTE_TYPES
-        )
-    finally:
-        session.close()
 
 @app.route('/')
 def landing_page():
@@ -339,6 +294,10 @@ def landing_page():
         messages=messages,
         user=user
     )
+
+# Serve Quotes HTML pages
+from web.blueprints.quotes import quotes_bp
+app.register_blueprint(quotes_bp)
 
 # Serve CSS, JS, etc.
 from web.blueprints.static import static_bp
