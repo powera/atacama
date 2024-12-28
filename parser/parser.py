@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Union, Iterator
 from enum import Enum, auto
 from .lexer import Token, TokenType, LexerError
@@ -18,28 +18,28 @@ class NodeType(Enum):
     TEXT = auto()        # Plain text content
     BREAK = auto()       # Section break
 
-@dataclass
+@dataclass(kw_only=True)
 class Node:
     """Base class for all AST nodes."""
     type: NodeType
-    children: List['Node']
+    children: List['Node'] = field(default_factory=list)
     token: Optional[Token] = None
     
     def __repr__(self):
         return f"{self.type.name}({len(self.children)} children)"
 
-@dataclass
+@dataclass(kw_only=True)
 class TextNode(Node):
     """Leaf node containing text content."""
     content: str
 
-@dataclass
+@dataclass(kw_only=True)
 class ColorNode(Node):
     """Node for colored content."""
     color: str
     is_block: bool  # True for block-level, False for inline
 
-@dataclass
+@dataclass(kw_only=True)
 class ListNode(Node):
     """Node representing a list structure."""
     list_type: str  # 'bullet', 'number', or 'arrow'
@@ -108,7 +108,7 @@ class AtacamaParser:
         :return: Root node of the AST
         :raises ParseError: If the input cannot be parsed
         """
-        root = Node(NodeType.MESSAGE, [])
+        root = Node(type=NodeType.MESSAGE)
         
         while self.peek():
             if node := self.parse_block():
@@ -124,7 +124,7 @@ class AtacamaParser:
             
         if token.type == TokenType.SECTION_BREAK:
             self.consume()
-            return Node(NodeType.BREAK, [])
+            return Node(type=NodeType.BREAK)
             
         if token.type in (TokenType.BULLET_LIST_MARKER, 
                          TokenType.NUMBER_LIST_MARKER,
@@ -146,13 +146,13 @@ class AtacamaParser:
         }
         
         list_type = list_types[token.type]
-        list_node = ListNode(NodeType.LIST, [], None, list_type)
+        list_node = ListNode(type=NodeType.LIST, list_type=list_type)
         
         while self.peek() and self.peek().type == token.type:
             self.consume()  # Consume the marker
             content = self.parse_inline_content()
             if content:
-                item = Node(NodeType.LIST_ITEM, [content])
+                item = Node(type=NodeType.LIST_ITEM, children=[content])
                 list_node.children.append(item)
         
         return list_node
@@ -162,7 +162,7 @@ class AtacamaParser:
         content = self.parse_inline_content()
         if not content:
             return None
-        return Node(NodeType.PARAGRAPH, [content])
+        return Node(type=NodeType.PARAGRAPH, children=[content])
     
     def parse_inline_content(self) -> Optional[Node]:
         """Parse inline content including text, colors, and special elements."""
@@ -193,7 +193,7 @@ class AtacamaParser:
         if not nodes:
             return None
             
-        return nodes[0] if len(nodes) == 1 else Node(NodeType.PARAGRAPH, nodes)
+        return nodes[0] if len(nodes) == 1 else Node(type=NodeType.PARAGRAPH, children=nodes)
     
     def parse_color_block(self) -> Node:
         """Parse a block-level color element."""
@@ -201,8 +201,13 @@ class AtacamaParser:
         color = start.value.strip('<>')
         content = self.parse_inline_content()
         self.expect(TokenType.COLOR_BLOCK_END)
-        return ColorNode(NodeType.COLOR_BLOCK, [content] if content else [], 
-                        start, color, True)
+        return ColorNode(
+            type=NodeType.COLOR_BLOCK,
+            children=[content] if content else [],
+            token=start,
+            color=color,
+            is_block=True
+        )
     
     def parse_color_inline(self) -> Node:
         """Parse an inline color element."""
@@ -210,37 +215,46 @@ class AtacamaParser:
         color = start.value.strip('(<>)')
         content = self.parse_inline_content()
         self.expect(TokenType.COLOR_INLINE_END)
-        return ColorNode(NodeType.COLOR_INLINE, [content] if content else [],
-                        start, color, False)
+        return ColorNode(
+            type=NodeType.COLOR_INLINE,
+            children=[content] if content else [],
+            token=start,
+            color=color,
+            is_block=False
+        )
     
     def parse_chinese(self) -> Node:
         """Parse Chinese text."""
         token = self.expect(TokenType.CHINESE_TEXT)
-        return Node(NodeType.CHINESE, [], token)
+        return Node(type=NodeType.CHINESE, token=token)
     
     def parse_url(self) -> Node:
         """Parse a URL."""
         token = self.expect(TokenType.URL)
-        return Node(NodeType.URL, [], token)
+        return Node(type=NodeType.URL, token=token)
     
     def parse_wikilink(self) -> Node:
         """Parse a wikilink."""
         self.expect(TokenType.WIKILINK_START)
         content = self.parse_text()
         self.expect(TokenType.WIKILINK_END)
-        return Node(NodeType.WIKILINK, [content])
+        return Node(type=NodeType.WIKILINK, children=[content])
     
     def parse_literal(self) -> Node:
         """Parse literal text."""
         self.expect(TokenType.LITERAL_START)
         content = self.parse_text()
         self.expect(TokenType.LITERAL_END)
-        return Node(NodeType.LITERAL, [content])
+        return Node(type=NodeType.LITERAL, children=[content])
     
     def parse_text(self) -> Node:
         """Parse plain text."""
         token = self.expect(TokenType.TEXT)
-        return TextNode(NodeType.TEXT, [], token, token.value)
+        return TextNode(
+            type=NodeType.TEXT,
+            content=token.value,
+            token=token
+        )
 
 def parse(tokens: Iterator[Token]) -> Node:
     """
