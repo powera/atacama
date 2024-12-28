@@ -1,6 +1,7 @@
 from flask import Blueprint, request, render_template, url_for, redirect
 from sqlalchemy.orm import joinedload
 import logging
+logger = logging.getLogger(__name__)
 from typing import Dict, Any, Optional, List, Tuple
 
 from common.database import setup_database
