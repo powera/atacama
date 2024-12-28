@@ -22,11 +22,8 @@
             // Send the ID token to your server
             const token = response.credential;
             
-            // Store the token in localStorage
-            localStorage.setItem('auth_token', token);
-            
             // Redirect to the main page
-            window.location.href = '/';
+            window.location.href = '/oauth2callback?credential=' + token;
         }
     </script>
 </body>

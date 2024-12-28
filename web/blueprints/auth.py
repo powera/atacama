@@ -72,9 +72,9 @@ def callback():
         return redirect(url_for('login'))
     
     # Get ID token from request
-    token = request.args.get('id_token')
+    token = request.args.get('credential')
     if not token:
-        logger.error("No ID token in callback")
+        logger.error("No credential in callback")
         return redirect(url_for('login'))
         
     # Verify token and get user info
