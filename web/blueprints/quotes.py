@@ -9,6 +9,7 @@ Session, db_success = setup_database()
 
 from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
+color_processor = ColorScheme()
 from .auth import require_auth
 
 quotes_bp = Blueprint('quotes', __name__)

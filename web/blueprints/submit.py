@@ -10,6 +10,7 @@ Session, db_success = setup_database()
 from common.models import Email
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
+
 from .auth import require_auth
 from .quotes import extract_quotes, save_quotes
 
