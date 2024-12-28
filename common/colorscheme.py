@@ -105,15 +105,15 @@ class ColorScheme:
             # Handle nested colors (with parentheses)
             if nested_color:
                 return (f'<span class="color-{class_name}">'
-                       f'(<span class="sigil">{sigil}</span>'
+                       f'<span class="sigil">{sigil}</span>'
                        f'<div class="colortext-content">({content})</div>'
                        f'</span>')
             
             # Handle paragraph-level colors
-            return (f'<p class="color-{class_name}">'
+            return (f'<span class="color-{class_name}">'
                    f'<span class="sigil">{sigil}</span>'
-                   f'<div class="colortext-content">({content})</div>'
-                   f'</p>')
+                   f'<div class="colortext-content">{content}</div>'
+                   f'</span>')
                    
         # First process paragraph and nested colors
         processed = self.color_pattern.sub(replace_color, text)
