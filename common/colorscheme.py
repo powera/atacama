@@ -106,13 +106,13 @@ class ColorScheme:
             if nested_color:
                 return (f'<span class="color-{class_name}">'
                        f'(<span class="sigil">{sigil}</span>'
-                       f'<div class="color-content">({content})</div>'
+                       f'<div class="colortext-content">({content})</div>'
                        f'</span>')
             
             # Handle paragraph-level colors
             return (f'<p class="color-{class_name}">'
                    f'<span class="sigil">{sigil}</span>'
-                   f'<div class="color-content">({content})</div>'
+                   f'<div class="colortext-content">({content})</div>'
                    f'</p>')
                    
         # First process paragraph and nested colors

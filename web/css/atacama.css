@@ -28,13 +28,13 @@
 }
 
 /* Color content container */
-.color-content {
+.colortext-content {
     display: none;
     overflow: hidden;
     transition: opacity 0.3s ease-out, height 0.3s ease-out;
 }
 
-.color-content.expanded {
+.colortext-content.expanded {
     opacity: 1;
     display: block;
     transition: opacity 0.3s ease-in, height 0.3s ease-in;
@@ -160,7 +160,7 @@ hr {
         max-width: none;
     }
 
-    .color-content {
+    .colortext-content {
         height: auto;
         opacity: 1;
         padding: var(--spacing-base);

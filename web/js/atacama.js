@@ -87,14 +87,15 @@ class AtacamaHandlers {
 
         // Handle color block expansions
         document.querySelectorAll('[class^="color-"]').forEach(block => {
-            const content = block.querySelector('.color-content');
+            const content = block.querySelector('.colortext-content');
+            const sigil = block.querySelector('.sigil');
             if (!content) return;
 
-            block.addEventListener('click', (e) => {
+            sigil.addEventListener('click', (e) => {
                 // Don't trigger if clicking on a link inside the content
                 if (e.target.tagName === 'A') return;
                 
-                content.style.display = "block";
+                content.classList.toggle('expanded');
             });
         });
 
@@ -134,7 +135,7 @@ class AtacamaHandlers {
             if (e.key === 'Escape') {
                 this.hideAnnotation();
                 // Close all expanded elements
-                document.querySelectorAll('.color-content.expanded, .annotation-inline.expanded')
+                document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
                     .forEach(el => el.classList.remove('expanded'));
             }
         });
