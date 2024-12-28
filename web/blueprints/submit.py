@@ -3,7 +3,9 @@ from sqlalchemy.orm import joinedload
 import logging
 from typing import List
 
-from common.database import Session
+from common.database import setup_database
+Session, db_success = setup_database
+
 from common.models import Email
 from common.colorscheme import ColorScheme
 from .auth import require_auth
