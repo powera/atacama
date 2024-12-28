@@ -26,60 +26,26 @@ Session, db_success = setup_database()
 
 from web.blueprints.auth import require_auth
 
-QUOTE_TYPES = ['yellow-quote', 'yellow-snowclone', 'blue-quote']
-def extract_quotes(content: str) -> List[Dict[str, str]]:
-    """
-    Extract quotes from content using yellow and blue color tags.
-    
-    :param content: Message content
-    :return: List of extracted quotes with metadata
-    """
-    quotes = []
-    # Extract yellow-tagged quotes
-    yellow_quotes = color_processor.extract_color_content(content, 'yellow')
-    for quote in yellow_quotes:
-        quotes.append({
-            'text': quote,
-            'quote_type': 'yellow-quote'
-        })
-    
-    # Extract blue-tagged aphorisms
-    blue_quotes = color_processor.extract_color_content(content, 'blue')
-    for quote in blue_quotes:
-        quotes.append({
-            'text': quote,
-            'quote_type': 'blue-quote'
-        })
-    
-    return quotes
+# Serve Quotes HTML pages
+from web.blueprints.quotes import quotes_bp, extract_quotes, save_quotes
+app.register_blueprint(quotes_bp)
 
-def save_quotes(quotes: List[Dict[str, str]], email: Email, session) -> None:
-    """
-    Save extracted quotes to the database.
-    
-    Args:
-        quotes: List of extracted quotes with metadata
-        email: Associated Email object
-        session: Database session
-    """
-    for quote_data in quotes:
-        # Check if this quote already exists
-        existing_quote = session.execute(
-            select(Quote)
-            .where(Quote.text == quote_data['text'])
-        ).scalar_one_or_none()
-        
-        if existing_quote:
-            # Link existing quote to this email
-            email.quotes.append(existing_quote)
-        else:
-            # Create new quote
-            quote = Quote(
-                text=quote_data['text'],
-                quote_type=quote_data['quote_type']
-            )
-            email.quotes.append(quote)
-            session.add(quote)
+# Serve CSS, JS, etc.
+from web.blueprints.static import static_bp
+app.register_blueprint(static_bp)
+
+# Login, logout, Google Auth callbacks
+from web.blueprints.auth import auth_bp
+app.register_blueprint(auth_bp)
+
+# Submit message form
+from web.blueprints.submit import submit_bp
+app.register_blueprint(submit_bp)
+
+# Debug handlers
+from web.blueprints.debug import debug_bp
+app.register_blueprint(debug_bp)
+
 
 def get_message_by_id(message_id: int) -> Optional[Email]:
     """
@@ -292,26 +258,6 @@ def landing_page():
         messages=messages,
         user=user
     )
-
-# Serve Quotes HTML pages
-from web.blueprints.quotes import quotes_bp
-app.register_blueprint(quotes_bp)
-
-# Serve CSS, JS, etc.
-from web.blueprints.static import static_bp
-app.register_blueprint(static_bp)
-
-# Login, logout, Google Auth callbacks
-from web.blueprints.auth import auth_bp
-app.register_blueprint(auth_bp)
-
-# Submit message form
-from web.blueprints.submit import submit_bp
-app.register_blueprint(submit_bp)
-
-# Debug handlers
-from web.blueprints.debug import debug_bp
-app.register_blueprint(debug_bp)
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
