@@ -22,11 +22,9 @@
 
 /* Color scheme classes */
 [class^="color-"] {
-    display: block;
+    display: inline-flex;
     margin-top: var(--spacing-base);
-    padding-left: var(--spacing-base);
     cursor: pointer;
-    transition: background-color 0.2s ease;
 }
 
 /* Color content container */
