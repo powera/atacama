@@ -125,7 +125,8 @@ class ColorScheme:
                 return match.group(0)
             sigil, class_name = self.COLORS[color]
             return (f'<span class="color-{class_name}">'
-                   f'<span class="sigil">{sigil}</span> {content}'
+                   f'<span class="sigil">{sigil}</span>'
+                   f'<span class="colortext-content">{content}</span>'
                    f'</span>')
                    
         return self.inline_color_pattern.sub(replace_inline, processed)
