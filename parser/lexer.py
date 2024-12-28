@@ -1,0 +1,188 @@
+from dataclasses import dataclass
+from enum import Enum, auto
+import re
+from typing import List, Generator, Optional
+
+class TokenType(Enum):
+    """Defines all possible token types in the Atacama formatting system."""
+    # Structural tokens
+    PARAGRAPH_START = auto()
+    PARAGRAPH_END = auto()
+    SECTION_BREAK = auto()
+    NEWLINE = auto()
+    
+    # List tokens
+    BULLET_LIST_MARKER = auto()
+    NUMBER_LIST_MARKER = auto()
+    ARROW_LIST_MARKER = auto()
+    
+    # Color tokens
+    COLOR_BLOCK_START = auto()
+    COLOR_BLOCK_END = auto()
+    COLOR_INLINE_START = auto()
+    COLOR_INLINE_END = auto()
+    
+    # Special content tokens
+    CHINESE_TEXT = auto()
+    URL = auto()
+    WIKILINK_START = auto()
+    WIKILINK_END = auto()
+    LITERAL_START = auto()
+    LITERAL_END = auto()
+    
+    # Basic content
+    TEXT = auto()
+
+@dataclass
+class Token:
+    """Represents a single token in the input stream."""
+    type: TokenType
+    value: str
+    line: int
+    column: int
+    
+    def __repr__(self):
+        """Provide a readable representation for debugging."""
+        return f"Token({self.type.name}, '{self.value}', line={self.line}, col={self.column})"
+
+class LexerError(Exception):
+    """Custom exception for lexer errors."""
+    def __init__(self, message: str, line: int, column: int):
+        self.message = message
+        self.line = line
+        self.column = column
+        super().__init__(f"{message} at line {line}, column {column}")
+
+class AtacamaLexer:
+    """
+    Lexical analyzer for Atacama message formatting.
+    
+    This lexer processes input text and generates a stream of tokens
+    according to Atacama's formatting rules. It handles:
+    - Color tags (block and inline)
+    - List markers
+    - Chinese text
+    - URLs and wikilinks
+    - Section breaks
+    - Literal text sections
+    """
+    
+    def __init__(self):
+        """Initialize the lexer with token patterns."""
+        # Compile regular expressions for different token types
+        self.patterns = [
+            # Section break pattern
+            (re.compile(r'^-{4,}$'), TokenType.SECTION_BREAK),
+            
+            # List markers at start of line
+            (re.compile(r'^\*\s+'), TokenType.BULLET_LIST_MARKER),
+            (re.compile(r'^#\s+'), TokenType.NUMBER_LIST_MARKER),
+            (re.compile(r'^(?:>|&gt;)\s+'), TokenType.ARROW_LIST_MARKER),
+            
+            # Color blocks
+            (re.compile(r'<(xantham|red|orange|yellow|green|teal|blue|violet|mogue|gray|hazel)>'),
+             TokenType.COLOR_BLOCK_START),
+            (re.compile(r'</[a-z]+>'), TokenType.COLOR_BLOCK_END),
+            
+            # Inline color (in parentheses)
+            (re.compile(r'\(\s*<[a-z]+>'), TokenType.COLOR_INLINE_START),
+            (re.compile(r'>\s*\)'), TokenType.COLOR_INLINE_END),
+            
+            # URLs
+            (re.compile(r'https?://[^\s<>"]+'), TokenType.URL),
+            
+            # Wikilinks
+            (re.compile(r'\[\['), TokenType.WIKILINK_START),
+            (re.compile(r'\]\]'), TokenType.WIKILINK_END),
+            
+            # Literal text markers
+            (re.compile(r'<<'), TokenType.LITERAL_START),
+            (re.compile(r'>>'), TokenType.LITERAL_END),
+            
+            # Chinese text (sequence of Chinese characters)
+            (re.compile(r'[\u4e00-\u9fff]+'), TokenType.CHINESE_TEXT),
+            
+            # Newlines (for paragraph detection)
+            (re.compile(r'\n'), TokenType.NEWLINE),
+        ]
+        
+        # Pattern for text (matches anything not matched by special patterns)
+        self.text_pattern = re.compile(r'[^<>\[\]\n\(\)]+')
+        
+        # Current position tracking
+        self.text = ""
+        self.pos = 0
+        self.line = 1
+        self.column = 1
+    
+    def tokenize(self, text: str) -> Generator[Token, None, None]:
+        """
+        Convert input text into a stream of tokens.
+        
+        Args:
+            text: Input text to tokenize
+            
+        Yields:
+            Token objects representing the lexical elements
+            
+        Raises:
+            LexerError: If invalid or malformed input is encountered
+        """
+        self.text = text
+        self.pos = 0
+        self.line = 1
+        self.column = 1
+        
+        while self.pos < len(self.text):
+            token = self._next_token()
+            if token:
+                yield token
+    
+    def _next_token(self) -> Optional[Token]:
+        """Find and return the next token in the input stream."""
+        current_text = self.text[self.pos:]
+        
+        # Try each pattern in order
+        for pattern, token_type in self.patterns:
+            match = pattern.match(current_text)
+            if match:
+                value = match.group(0)
+                token = Token(token_type, value, self.line, self.column)
+                
+                # Update position and line/column tracking
+                self.pos += len(value)
+                if token_type == TokenType.NEWLINE:
+                    self.line += 1
+                    self.column = 1
+                else:
+                    self.column += len(value)
+                
+                return token
+        
+        # If no special pattern matches, try to match text
+        match = self.text_pattern.match(current_text)
+        if match:
+            value = match.group(0)
+            token = Token(TokenType.TEXT, value, self.line, self.column)
+            self.pos += len(value)
+            self.column += len(value)
+            return token
+        
+        # If we get here, we couldn't match anything - skip a character
+        self.pos += 1
+        self.column += 1
+        return None
+
+# Helper function for easy tokenization
+def tokenize(text: str) -> List[Token]:
+    """
+    Convenience function to tokenize text and return a list of tokens.
+    
+    Args:
+        text: Input text to tokenize
+        
+    Returns:
+        List of Token objects
+    """
+    lexer = AtacamaLexer()
+    return list(lexer.tokenize(text))
