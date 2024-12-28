@@ -13,7 +13,8 @@ from datetime import datetime
 from functools import wraps
 from sqlalchemy import text
 
-from common.database import Session
+from common.database import setup_database
+Session, db_success = setup_database()
 from web.blueprints.auth import require_auth
 
 debug_bp = Blueprint('debug', __name__)
