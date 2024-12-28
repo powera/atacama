@@ -50,7 +50,7 @@ def edit_quote(quote_id):
             quote.quote_type = request.form.get('quote_type')
             
             db_session.commit()
-            return redirect(url_for('list_quotes'))
+            return redirect(url_for('quotes.list_quotes'))
             
         return render_template(
             'edit_quote.html',
