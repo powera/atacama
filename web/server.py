@@ -352,6 +352,10 @@ app.register_blueprint(auth_bp)
 from web.blueprints.submit import submit_bp
 app.register_blueprint(submit_bp)
 
+# Debug handlers
+from web.blueprints.debug import debug_bp
+app.register_blueprint(debug_bp)
+
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
     if not db_success:

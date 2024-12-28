@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Information - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .debug-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-base);
+        }
+        
+        .debug-section {
+            margin: var(--spacing-large) 0;
+            padding: var(--spacing-large);
+            background: var(--color-background);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .debug-section h2 {
+            margin-top: 0;
+            color: var(--color-primary);
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-large);
+            margin-top: var(--spacing-base);
+        }
+        
+        .metric-card {
+            padding: var(--spacing-base);
+            background: white;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--color-border);
+        }
+        
+        .metric-title {
+            font-size: var(--font-size-small);
+            color: #666;
+            margin-bottom: 0.5em;
+        }
+        
+        .metric-value {
+            font-size: var(--font-size-large);
+            font-weight: 500;
+        }
+        
+        .data-table {
+            width: 100%;
+            margin-top: var(--spacing-base);
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: var(--spacing-base);
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-table td {
+            padding: var(--spacing-base);
+            border-top: 1px solid var(--color-border);
+        }
+        
+        .auto-refresh {
+            margin-top: var(--spacing-large);
+            text-align: right;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .debug-section {
+                margin: var(--spacing-base) calc(-1 * var(--spacing-base));
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>System Debug Information</h1>
+        
+        <div class="debug-section">
+            <h2>System Status</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Server Uptime</div>
+                    <div class="metric-value">{{ uptime }}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">CPU Usage</div>
+                    <div class="metric-value">{{ system_stats.cpu_percent }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Memory Usage</div>
+                    <div class="metric-value">{{ system_stats.memory_percent }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Disk Usage</div>
+                    <div class="metric-value">{{ system_stats.disk_percent }}%</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Database Status</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Connection Status</div>
+                    <div class="metric-value">{{ db_stats.status }}</div>
+                </div>
+                {% for table, count in db_stats.table_stats.items() %}
+                <div class="metric-card">
+                    <div class="metric-title">{{ table|replace('_count', '')|title }}</div>
+                    <div class="metric-value">{{ count }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Session Data</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in session_data.items() %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Flask Configuration</h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in config.items()|sort %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="auto-refresh">
+            <label>
+                <input type="checkbox" id="auto-refresh"> Auto-refresh every 30 seconds
+            </label>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh functionality
+        let refreshInterval;
+        document.getElementById('auto-refresh').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                refreshInterval = setInterval(() => {
+                    window.location.reload();
+                }, 30000);
+            } else {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
