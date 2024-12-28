@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from common.database import setup_database
 Session, db_success = setup_database()
 
-from common.models import Email
+from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
 from .auth import require_auth
 
