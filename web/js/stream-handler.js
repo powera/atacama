@@ -2,14 +2,48 @@
 function setupColorBlocks() {
     document.querySelectorAll('[class^="color-"]').forEach(block => {
         const content = block.querySelector('.color-content');
+        const sigil = block.querySelector('.sigil');
         if (!content) return;
 
+        const toggleContent = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Close any other open color blocks
+            document.querySelectorAll('.color-content.expanded').forEach(other => {
+                if (other !== content) {
+                    other.classList.remove('expanded');
+                    other.style.display = 'none';
+                    other.parentElement.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle the clicked block
+            const isExpanding = !content.classList.contains('expanded');
+            content.style.display = isExpanding ? 'block' : 'none';
+            
+            // Use setTimeout to ensure display:block takes effect before transitions
+            if (isExpanding) {
+                setTimeout(() => {
+                    content.classList.add('expanded');
+                    block.classList.add('expanded');
+                }, 10);
+            } else {
+                content.classList.remove('expanded');
+                block.classList.remove('expanded');
+            }
+        };
+
+        // Add click handlers to both the sigil and the block
+        sigil?.addEventListener('click', toggleContent);
         block.addEventListener('click', (e) => {
             // Don't trigger if clicking on a link inside the content
             if (e.target.tagName === 'A') return;
-            
-            content.style.display = "block";
+            toggleContent(e);
         });
+        
+        // Initialize hidden state
+        content.style.display = 'none';
     });
 }
 

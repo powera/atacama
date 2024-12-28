@@ -35,8 +35,6 @@
     display: none;
     margin-top: var(--spacing-base);
     padding-left: var(--spacing-base);
-    opacity: 0;
-    height: 0;
     overflow: hidden;
     transition: opacity 0.3s ease-out, height 0.3s ease-out;
 }
