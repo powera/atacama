@@ -22,9 +22,11 @@
 
 /* Color scheme classes */
 [class^="color-"] {
-    display: inline-flex;
-    margin-top: var(--spacing-base);
+    display: inline-block;
+    margin: 2px;
     cursor: pointer;
+    border: 1px solid;
+    padding: 2px;
 }
 
 /* Color content container */
@@ -36,15 +38,17 @@
 
 .colortext-content.expanded {
     opacity: 1;
-    display: block;
+    display: inline;
     transition: opacity 0.3s ease-in, height 0.3s ease-in;
 }
 
 /* Sigil (emoji) styling */
 .sigil {
-    display: inline-block;
-    margin-right: 0.5em;
-    transition: transform 0.3s ease;
+    display: inline;
+    font-size: 1.8em;
+    line-height: 1.5;
+    vertical-align: middle;
+    position: relative;
 }
 
 [class^="color-"].expanded .sigil {
@@ -69,21 +73,17 @@
     position: relative;
     border-bottom: 1px dotted #666;
     cursor: pointer;
-    padding-right: 1.5em;
-    display: inline-block;
+    display: inline;
 }
 
 .annotated-chinese::after {
     content: '🉑';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    position: inline;
     font-size: 0.8em;
 }
 
 .annotation-inline {
-    display: block;
+    display: none; 
     height: 0;
     opacity: 0;
     overflow: hidden;
@@ -96,11 +96,11 @@
 }
 
 .annotation-inline.expanded {
+    display: inline-block;
     height: auto;
     opacity: 1;
-    padding: var(--spacing-base);
-    margin: var(--spacing-base) 0;
-    transition: opacity 0.3s ease-in, height 0.3s ease-in, padding 0.3s ease-in, margin 0.3s ease-in;
+    padding: 8px;
+    margin: 4px 0;
 }
 
 .annotation-inline .pinyin {
@@ -134,7 +134,7 @@ li::before {
 hr {
     border: none;
     border-top: 1px solid var(--color-border);
-    margin: var(--spacing-large) 0;
+    margin: var(--spacing-base) 0;
 }
 
 /* Mobile adjustments */

@@ -13,8 +13,8 @@ class AtacamaHandlers {
         this.popup = document.createElement('div');
         this.popup.className = 'annotation-popup';
         this.popup.innerHTML = `
-            <div class="pinyin"></div>
-            <div class="definition"></div>
+            <span class="pinyin"></span>
+            <span class="definition"></span>
             <button class="close-button" aria-label="Close annotation">×</button>
         `;
         document.body.appendChild(this.popup);
@@ -108,8 +108,8 @@ class AtacamaHandlers {
             const inlineAnnotation = document.createElement('div');
             inlineAnnotation.className = 'annotation-inline';
             inlineAnnotation.innerHTML = `
-                <div class="pinyin">${pinyin}</div>
-                <div class="definition">${definition}</div>
+                <span class="pinyin">${pinyin}</span>
+                <span class="definition">${definition}</span>
             `;
             
             // Insert after the annotation
