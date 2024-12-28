@@ -32,7 +32,7 @@
 
 /* Color content container */
 .color-content {
-    display: block;
+    display: none;
     margin-top: var(--spacing-base);
     padding-left: var(--spacing-base);
     opacity: 0;

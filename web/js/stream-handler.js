@@ -8,8 +8,7 @@ function setupColorBlocks() {
             // Don't trigger if clicking on a link inside the content
             if (e.target.tagName === 'A') return;
             
-            block.classList.toggle('expanded');
-            content.classList.toggle('expanded');
+            content.style.display = "block";
         });
     });
 }
