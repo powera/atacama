@@ -284,9 +284,7 @@ def landing_page():
         db_session.close()
 
     # Check if user is authenticated via Google auth
-    user = None
-    if hasattr(request, 'user'):
-        user = request.user
+    user = session.get('user')
 
     return render_template(
         'landing.html',
