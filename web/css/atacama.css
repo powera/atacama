@@ -23,9 +23,8 @@
 /* Color scheme classes */
 [class^="color-"] {
     display: block;
-    margin: var(--spacing-base) 0;
-    padding: var(--spacing-base);
-    border-radius: var(--border-radius);
+    margin-top: var(--spacing-base);
+    padding-left: var(--spacing-base);
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -33,15 +32,13 @@
 /* Color content container */
 .color-content {
     display: none;
-    margin-top: var(--spacing-base);
-    padding-left: var(--spacing-base);
     overflow: hidden;
     transition: opacity 0.3s ease-out, height 0.3s ease-out;
 }
 
 .color-content.expanded {
     opacity: 1;
-    height: auto;
+    display: block;
     transition: opacity 0.3s ease-in, height 0.3s ease-in;
 }
 
