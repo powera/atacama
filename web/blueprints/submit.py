@@ -12,17 +12,6 @@ from .auth import require_auth
 
 submit_bp = Blueprint('submit', __name__)
 
-@submit_bp.route('/submit', methods=['POST'])
-def submit_message():
-    data = request.get_json()
-    if not data or 'message' not in data:
-        return jsonify({'error': 'No message provided'}), 400
-
-    message = data['message']
-    # Process the message here
-    return jsonify({'status': 'Message received', 'message': message}), 200
-
-
 @submit_bp.route('/process', methods=['POST'])
 @require_auth
 def process_message() -> tuple[Dict[str, Any], int]:
