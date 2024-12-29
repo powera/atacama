@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-import re
 from typing import List, Generator, Optional
 
 class TokenType(Enum):
@@ -55,145 +54,229 @@ class LexerError(Exception):
 
 class AtacamaLexer:
     """
-    Lexical analyzer for Atacama message formatting.
-    
-    This lexer processes input text and generates a stream of tokens
-    according to Atacama's formatting rules. It handles:
-    - Color tags (block and inline)
-    - List markers
-    - Chinese text
-    - URLs and wikilinks
-    - Section breaks
-    - Literal text sections
+    Character-by-character lexical analyzer for Atacama message formatting.
     """
     
     def __init__(self):
-        """Initialize the lexer with token patterns."""
-        # Define valid color names for use in multiple patterns
-        color_names = 'xantham|red|orange|yellow|green|teal|blue|violet|mogue|gray|hazel'
-        
-        # Compile regular expressions for different token types
-        # Order matters - more specific patterns should come first
-        self.patterns = [
-            # Section break pattern - exactly matches 4 hyphens on a line
-            (re.compile(r'^\s*-{4}\s*$'), TokenType.SECTION_BREAK),
-
-            # URLs must be checked before other patterns to avoid partial matches
-            (re.compile(r'https?://[-\w.]+(?:/[-\w./?%&=]*)?'), TokenType.URL),
-            
-            # List markers at start of line
-            (re.compile(r'^\*\s+'), TokenType.BULLET_LIST_MARKER),
-            (re.compile(r'^#\s+'), TokenType.NUMBER_LIST_MARKER),
-            (re.compile(r'^(?:>|&gt;)\s+'), TokenType.ARROW_LIST_MARKER),
-            
-            # Color blocks with specific color names
-            (re.compile(f'<({color_names})>'), TokenType.COLOR_BLOCK_TAG),
-            
-            # Wikilinks
-            (re.compile(r'\[\['), TokenType.WIKILINK_START),
-            (re.compile(r'\]\]'), TokenType.WIKILINK_END),
-            
-            # Literal text markers
-            (re.compile(r'<<'), TokenType.LITERAL_START),
-            (re.compile(r'>>'), TokenType.LITERAL_END),
-            
-            # Parenthesis markers
-            (re.compile(r'('), TokenType.PARENTHESIS_START),
-            (re.compile(r')'), TokenType.PARENTHESIS_END),
-
-            # Asterisk (for formatting)
-            (re.compile(r'*'), TokenType.ASTERISK),
-
-            # Chinese text (sequence of Chinese characters)
-            (re.compile(r'[\u4e00-\u9fff]+'), TokenType.CHINESE_TEXT),
-            
-            # Newlines (for paragraph detection)
-            (re.compile(r'\n'), TokenType.NEWLINE),
-        ]
-        
-        # Pattern for text - excludes special characters and Chinese characters
-        self.text_pattern = re.compile(r'[^<>\[\]\n\(\)\u4e00-\u9fff]+')
-        
-        # Pattern for detecting invalid or unclosed tags
-        self.invalid_tag = re.compile(r'<([^>]+)')
-        
-        # Current position tracking
+        """Initialize the lexer state."""
         self.text = ""
         self.pos = 0
         self.line = 1
         self.column = 1
-    
-    def tokenize(self, text: str) -> Generator[Token, None, None]:
-        """
-        Convert input text into a stream of tokens.
+        self.current_char = None
         
-        Args:
-            text: Input text to tokenize
-            
-        Yields:
-            Token objects representing the lexical elements
-            
-        Raises:
-            LexerError: If invalid or malformed input is encountered
-        """
+        # Valid color names
+        self.colors = {
+            'xantham', 'red', 'orange', 'yellow', 'green',
+            'teal', 'blue', 'violet', 'mogue', 'gray', 'hazel'
+        }
+
+    def init(self, text: str) -> None:
+        """Initialize or reset the lexer with new input text."""
         self.text = text
         self.pos = 0
         self.line = 1
         self.column = 1
-        
-        while self.pos < len(self.text):
-            token = self._next_token()
-            if token:
-                yield token
-    
-    def _next_token(self) -> Optional[Token]:
-        """Find and return the next token in the input stream."""
-        current_text = self.text[self.pos:]
-        
-        # Try each pattern in order
-        for pattern, token_type in self.patterns:
-            match = pattern.match(current_text)
-            if match:
-                value = match.group(0)
-                token = Token(token_type, value, self.line, self.column)
-                
-                # Update position and line/column tracking
-                self.pos += len(value)
-                if token_type == TokenType.NEWLINE:
-                    self.line += 1
-                    self.column = 1
-                else:
-                    self.column += len(value)
-                
-                return token
-        
-        # If no special pattern matches, try to match text
-        match = self.text_pattern.match(current_text)
-        if match:
-            value = match.group(0)
-            token = Token(TokenType.TEXT, value, self.line, self.column)
-            self.pos += len(value)
-            self.column += len(value)
-            return token
-        
-        # Skip invalid characters
-        self.pos += 1
-        self.column += 1
+        self.advance()
+
+    def advance(self) -> None:
+        """Move to the next character in the input."""
+        if self.pos < len(self.text):
+            self.current_char = self.text[self.pos]
+            self.pos += 1
+            if self.current_char == '\n':
+                self.line += 1
+                self.column = 1
+            else:
+                self.column += 1
+        else:
+            self.current_char = None
+
+    def peek(self, offset: int = 1) -> Optional[str]:
+        """Look ahead in the input stream without advancing."""
+        peek_pos = self.pos - 1 + offset
+        if peek_pos < len(self.text):
+            return self.text[peek_pos]
         return None
 
-# Helper function for easy tokenization
-def tokenize(text: str) -> List[Token]:
-    """
-    Convenience function to tokenize text and return a list of tokens.
-    
-    Args:
-        text: Input text to tokenize
+    def skip_whitespace(self) -> None:
+        """Skip whitespace characters except newlines."""
+        while self.current_char and self.current_char.isspace() and self.current_char != '\n':
+            self.advance()
+
+    def collect_url(self) -> str:
+        """Collect characters that form a URL."""
+        url = []
+        # Handle http:// or https://
+        while self.current_char and self.current_char in 'https://':
+            url.append(self.current_char)
+            self.advance()
         
-    Returns:
-        List of Token objects
-    
-    Raises:
-        LexerError: If invalid or malformed input is encountered
-    """
+        # Collect domain and path
+        while self.current_char and (self.current_char.isalnum() or 
+              self.current_char in '-._/%&?=+#~'):
+            url.append(self.current_char)
+            self.advance()
+            
+        return ''.join(url)
+
+    def collect_chinese_text(self) -> str:
+        """Collect consecutive Chinese characters."""
+        chinese = []
+        while self.current_char and '\u4e00' <= self.current_char <= '\u9fff':
+            chinese.append(self.current_char)
+            self.advance()
+        return ''.join(chinese)
+
+    def collect_color_tag(self) -> str:
+        """Collect a color tag name."""
+        if self.current_char != '<':
+            return ''
+            
+        self.advance()  # Skip '<'
+        color = []
+        
+        while self.current_char and self.current_char != '>':
+            color.append(self.current_char)
+            self.advance()
+            
+        if self.current_char == '>':
+            self.advance()  # Skip '>'
+            color_name = ''.join(color)
+            if color_name in self.colors:
+                return f'<{color_name}>'
+                
+        return ''
+
+    def collect_text(self) -> str:
+        """Collect regular text characters."""
+        text = []
+        while self.current_char and not (
+            self.current_char.isspace() or
+            self.current_char in '(<[*>' or
+            '\u4e00' <= self.current_char <= '\u9fff' or
+            (self.current_char == 'h' and self.peek() == 't' and 
+             self.peek(2) == 't' and self.peek(3) == 'p')
+        ):
+            text.append(self.current_char)
+            self.advance()
+        return ''.join(text)
+
+    def get_next_token(self) -> Optional[Token]:
+        """
+        Get the next token from the input stream.
+        Returns None when input is exhausted.
+        """
+        while self.current_char is not None:
+            # Skip non-newline whitespace
+            if self.current_char.isspace() and self.current_char != '\n':
+                self.skip_whitespace()
+                continue
+
+            # Track position for error reporting
+            line, column = self.line, self.column
+
+            # Handle section breaks
+            if self.current_char == '-':
+                count = 1
+                self.advance()
+                while self.current_char == '-':
+                    count += 1
+                    self.advance()
+                if count == 4:
+                    return Token(TokenType.SECTION_BREAK, '----', line, column)
+                else:
+                    return Token(TokenType.TEXT, '-' * count, line, column)
+
+            # Handle newlines
+            if self.current_char == '\n':
+                self.advance()
+                return Token(TokenType.NEWLINE, '\n', line, column)
+
+            # Handle list markers at start of line
+            if self.pos == 1 or self.text[self.pos-2] == '\n':
+                if self.current_char == '*' and self.peek().isspace():
+                    self.advance()
+                    self.skip_whitespace()
+                    return Token(TokenType.BULLET_LIST_MARKER, '*', line, column)
+                elif self.current_char == '#' and self.peek().isspace():
+                    self.advance()
+                    self.skip_whitespace()
+                    return Token(TokenType.NUMBER_LIST_MARKER, '#', line, column)
+                elif self.current_char == '>' and self.peek().isspace():
+                    self.advance()
+                    self.skip_whitespace()
+                    return Token(TokenType.ARROW_LIST_MARKER, '>', line, column)
+
+            # Handle URLs
+            if self.current_char == 'h' and self.peek() == 't' and \
+               self.peek(2) == 't' and self.peek(3) == 'p':
+                url = self.collect_url()
+                if url:
+                    return Token(TokenType.URL, url, line, column)
+
+            # Handle color tags
+            if self.current_char == '<':
+                color_tag = self.collect_color_tag()
+                if color_tag:
+                    return Token(TokenType.COLOR_BLOCK_TAG, color_tag, line, column)
+
+            # Handle wikilinks
+            if self.current_char == '[' and self.peek() == '[':
+                self.advance()
+                self.advance()
+                return Token(TokenType.WIKILINK_START, '[[', line, column)
+            if self.current_char == ']' and self.peek() == ']':
+                self.advance()
+                self.advance()
+                return Token(TokenType.WIKILINK_END, ']]', line, column)
+
+            # Handle literal text markers
+            if self.current_char == '<' and self.peek() == '<':
+                self.advance()
+                self.advance()
+                return Token(TokenType.LITERAL_START, '<<', line, column)
+            if self.current_char == '>' and self.peek() == '>':
+                self.advance()
+                self.advance()
+                return Token(TokenType.LITERAL_END, '>>', line, column)
+
+            # Handle parentheses
+            if self.current_char == '(':
+                self.advance()
+                return Token(TokenType.PARENTHESIS_START, '(', line, column)
+            if self.current_char == ')':
+                self.advance()
+                return Token(TokenType.PARENTHESIS_END, ')', line, column)
+
+            # Handle asterisk not at start of line
+            if self.current_char == '*':
+                self.advance()
+                return Token(TokenType.ASTERISK, '*', line, column)
+
+            # Handle Chinese text
+            if '\u4e00' <= self.current_char <= '\u9fff':
+                chinese = self.collect_chinese_text()
+                return Token(TokenType.CHINESE_TEXT, chinese, line, column)
+
+            # Handle regular text
+            text = self.collect_text()
+            if text:
+                return Token(TokenType.TEXT, text, line, column)
+
+            # Skip unrecognized characters
+            self.advance()
+
+        return None
+
+    def tokenize(self, text: str) -> Generator[Token, None, None]:
+        """Convert input text into a stream of tokens."""
+        self.init(text)
+        
+        while token := self.get_next_token():
+            yield token
+
+def tokenize(text: str) -> List[Token]:
+    """Convenience function to tokenize text and return a list of tokens."""
     lexer = AtacamaLexer()
     return list(lexer.tokenize(text))
