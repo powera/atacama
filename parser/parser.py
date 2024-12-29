@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union, Iterator
 from enum import Enum, auto
-from .lexer import Token, TokenType, LexerError
+from .lexer import Token, TokenType
 
 class NodeType(Enum):
     """Defines the types of nodes in our Abstract Syntax Tree."""
@@ -167,34 +167,67 @@ class AtacamaParser:
     def parse_inline_content(self) -> Optional[Node]:
         """Parse inline content including text, colors, and special elements."""
         nodes = []
+        current_text = []
+        
+        def flush_text():
+            if current_text:
+                nodes.append(TextNode(
+                    type=NodeType.TEXT,
+                    content=''.join(current_text)
+                ))
+                current_text.clear()
         
         while token := self.peek():
             if token.type == TokenType.NEWLINE:
                 self.consume()
+                flush_text()
                 break
                 
-            if token.type == TokenType.COLOR_BLOCK_START:
-                nodes.append(self.parse_color_block())
+            elif token.type == TokenType.COLOR_BLOCK_START:
+                flush_text()
+                node = self.parse_color_block()
+                if node:
+                    nodes.append(node)
+                    
             elif token.type == TokenType.COLOR_INLINE_START:
-                nodes.append(self.parse_color_inline())
+                flush_text()
+                node = self.parse_color_inline()
+                if node:
+                    nodes.append(node)
+                    
             elif token.type == TokenType.CHINESE_TEXT:
+                flush_text()
                 nodes.append(self.parse_chinese())
+                
             elif token.type == TokenType.URL:
+                flush_text()
                 nodes.append(self.parse_url())
+                
             elif token.type == TokenType.WIKILINK_START:
-                nodes.append(self.parse_wikilink())
+                flush_text()
+                node = self.parse_wikilink()
+                if node:
+                    nodes.append(node)
+                    
             elif token.type == TokenType.LITERAL_START:
-                nodes.append(self.parse_literal())
+                flush_text()
+                node = self.parse_literal()
+                if node:
+                    nodes.append(node)
+                    
             elif token.type == TokenType.TEXT:
-                nodes.append(self.parse_text())
+                current_text.append(self.consume().value)
+                
             else:
                 break
+        
+        flush_text()
         
         if not nodes:
             return None
             
         return nodes[0] if len(nodes) == 1 else Node(type=NodeType.PARAGRAPH, children=nodes)
-    
+
     def parse_color_block(self) -> Node:
         """Parse a block-level color element."""
         start = self.expect(TokenType.COLOR_BLOCK_START)

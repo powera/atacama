@@ -15,6 +15,10 @@ class TokenType(Enum):
     BULLET_LIST_MARKER = auto()
     NUMBER_LIST_MARKER = auto()
     ARROW_LIST_MARKER = auto()
+
+    # Parentheses
+    PARENTHESIS_START = auto()
+    PARENTHESIS_END = auto()
     
     # Color tokens
     COLOR_BLOCK_START = auto()
@@ -75,11 +79,11 @@ class AtacamaLexer:
         # Compile regular expressions for different token types
         # Order matters - more specific patterns should come first
         self.patterns = [
+            # Section break pattern - exactly matches 4 hyphens on a line
+            (re.compile(r'^\s*-{4}\s*$'), TokenType.SECTION_BREAK),
+
             # URLs must be checked before other patterns to avoid partial matches
             (re.compile(r'https?://[-\w.]+(?:/[-\w./?%&=]*)?'), TokenType.URL),
-            
-            # Section break pattern - exactly matches 4 or more hyphens on a line
-            (re.compile(r'^-{4,}\s*$'), TokenType.SECTION_BREAK),
             
             # List markers at start of line
             (re.compile(r'^\*\s+'), TokenType.BULLET_LIST_MARKER),
@@ -88,11 +92,9 @@ class AtacamaLexer:
             
             # Color blocks with specific color names
             (re.compile(f'<({color_names})>'), TokenType.COLOR_BLOCK_START),
-            (re.compile(f'</(?:{color_names})>'), TokenType.COLOR_BLOCK_END),
             
             # Inline color (in parentheses) with specific color names
             (re.compile(f'\(\s*<({color_names})>'), TokenType.COLOR_INLINE_START),
-            (re.compile(f'</(?:{color_names})>\s*\)'), TokenType.COLOR_INLINE_END),
             
             # Wikilinks
             (re.compile(r'\[\['), TokenType.WIKILINK_START),
@@ -102,6 +104,10 @@ class AtacamaLexer:
             (re.compile(r'<<'), TokenType.LITERAL_START),
             (re.compile(r'>>'), TokenType.LITERAL_END),
             
+            # Parenthesis markers
+            (re.compile(r'('), TokenType.PARENTHESIS_START),
+            (re.compile(r')'), TokenType.PARENTHESIS_END),
+
             # Chinese text (sequence of Chinese characters)
             (re.compile(r'[\u4e00-\u9fff]+'), TokenType.CHINESE_TEXT),
             
@@ -147,13 +153,6 @@ class AtacamaLexer:
     def _next_token(self) -> Optional[Token]:
         """Find and return the next token in the input stream."""
         current_text = self.text[self.pos:]
-        
-        # Check for invalid tags before normal processing
-        if current_text.startswith('<'):
-            invalid_match = self.invalid_tag.match(current_text)
-            if invalid_match and not any(pattern[0].match(current_text) for pattern in self.patterns):
-                raise LexerError(f"Invalid or unclosed tag: {invalid_match.group(1)}", 
-                               self.line, self.column)
         
         # Try each pattern in order
         for pattern, token_type in self.patterns:

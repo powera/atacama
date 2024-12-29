@@ -88,10 +88,10 @@ class HTMLGenerator:
         emoji, desc = self.COLORS.get(node.color, ('❓', 'Unknown'))
         
         return (
-            f'<p class="color-{node.color}">'
+            f'<span class="color-{node.color}">'
             f'<span class="sigil" title="{desc}">{emoji}</span>'
-            f'<div class="color-content">{content}</div>'
-            f'</p>'
+            f'<span class="color-content">{content}</span>'
+            f'</span>'
         )
     
     def _generate_color_inline(self, node: ColorNode) -> str:
@@ -102,7 +102,7 @@ class HTMLGenerator:
         return (
             f'<span class="color-{node.color}">'
             f'(<span class="sigil" title="{desc}">{emoji}</span>'
-            f'<div class="color-content">({content})</div>'
+            f'<span class="color-content">({content})</span>'
             f'</span>'
         )
     
