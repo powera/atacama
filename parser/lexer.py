@@ -6,8 +6,6 @@ from typing import List, Generator, Optional
 class TokenType(Enum):
     """Defines all possible token types in the Atacama formatting system."""
     # Structural tokens
-    PARAGRAPH_START = auto()
-    PARAGRAPH_END = auto()
     SECTION_BREAK = auto()
     NEWLINE = auto()
     
@@ -21,10 +19,7 @@ class TokenType(Enum):
     PARENTHESIS_END = auto()
     
     # Color tokens
-    COLOR_BLOCK_START = auto()
-    COLOR_BLOCK_END = auto()
-    COLOR_INLINE_START = auto()
-    COLOR_INLINE_END = auto()
+    COLOR_BLOCK_TAG = auto()
     
     # Special content tokens
     CHINESE_TEXT = auto()
@@ -33,7 +28,8 @@ class TokenType(Enum):
     WIKILINK_END = auto()
     LITERAL_START = auto()
     LITERAL_END = auto()
-    
+    ASTERISK = auto()
+
     # Basic content
     TEXT = auto()
 
@@ -91,10 +87,7 @@ class AtacamaLexer:
             (re.compile(r'^(?:>|&gt;)\s+'), TokenType.ARROW_LIST_MARKER),
             
             # Color blocks with specific color names
-            (re.compile(f'<({color_names})>'), TokenType.COLOR_BLOCK_START),
-            
-            # Inline color (in parentheses) with specific color names
-            (re.compile(f'\(\s*<({color_names})>'), TokenType.COLOR_INLINE_START),
+            (re.compile(f'<({color_names})>'), TokenType.COLOR_BLOCK_TAG),
             
             # Wikilinks
             (re.compile(r'\[\['), TokenType.WIKILINK_START),
@@ -107,6 +100,9 @@ class AtacamaLexer:
             # Parenthesis markers
             (re.compile(r'('), TokenType.PARENTHESIS_START),
             (re.compile(r')'), TokenType.PARENTHESIS_END),
+
+            # Asterisk (for formatting)
+            (re.compile(r'*'), TokenType.ASTERISK),
 
             # Chinese text (sequence of Chinese characters)
             (re.compile(r'[\u4e00-\u9fff]+'), TokenType.CHINESE_TEXT),
