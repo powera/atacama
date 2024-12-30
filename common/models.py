@@ -65,7 +65,7 @@ class Email(Base):
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {type: str, content: str}}
     
     # Quote relationships
-    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes')
+    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes', lazy="selectin")
 
 # Association table for email-quote relationships
 email_quotes = Table('email_quotes', Base.metadata,

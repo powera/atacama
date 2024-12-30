@@ -50,8 +50,8 @@ def get_message_chain(message_id: int) -> List[Email]:
     try:
         # Get the target message with its relationships
         message = db_session.query(Email).options(
-            joinedload(Email.parent).joinedload(Email.quotes),
-            joinedload(Email.children).joinedload(Email.quotes),
+            joinedload(Email.parent),
+            joinedload(Email.children),
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
