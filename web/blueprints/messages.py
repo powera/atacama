@@ -159,7 +159,7 @@ def view_chain(message_id: int):
         } for msg in chain]
     })
 
-@app.route('/recent')
+@messages_bp.route('/recent')
 def recent_message():
     """Show the most recent message."""
     try:
