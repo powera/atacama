@@ -12,33 +12,7 @@
         <header>
             <h1>Atacama Message Processor</h1>
             
-            {% if user %}
-            <nav class="user-navigation">
-                <a href="/submit" class="button">Submit Message</a>
-                <a href="/quotes" class="button">View Quotes</a>
-            </nav>
-            {% endif %}
         </header>
-
-        <section class="status">
-            <h2>Service Status</h2>
-            <div class="status-details">
-                <p>Server is running and processing messages with custom color formatting.</p>
-                <p>Database Status: <span class="status-indicator">{{ db_status }}</span></p>
-            </div>
-        </section>
-
-        {% if user %}
-        <section class="endpoints">
-            <h2>Available Endpoints</h2>
-            <ul class="endpoint-list">
-                <li><code>POST /process</code> - Process and store new messages via API</li>
-                <li><code>GET /messages/{id}</code> - Retrieve processed message by ID</li>
-                <li><code>GET/POST /submit</code> - Submit new messages via web form</li>
-                <li><code>GET /quotes</code> - View and manage collected quotes</li>
-            </ul>
-        </section>
-        {% endif %}
 
         <section class="messages">
             <h2>Recent Messages</h2>
@@ -95,6 +69,12 @@
             <p>Please log in to access additional features and submit messages.</p>
         </section>
         {% endif %}
+            {% if user %}
+            <nav class="user-navigation">
+                <a href="/submit" class="button">Submit Message</a>
+                <a href="/quotes" class="button">View Quotes</a>
+            </nav>
+            {% endif %}
     </div>
 
     <script>
