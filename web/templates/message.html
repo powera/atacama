@@ -24,6 +24,8 @@
                     {% if message.parent %}
                         <br>
                         In reply to: <a href="/messages/{{ message.parent.id }}">{{ message.parent.subject }}</a>
+                        <br>
+                        <a href="/messages/{{ message.id }}/chain">View Chain</a>
                     {% endif %}
                 </div>
                 <div class="message-actions">
