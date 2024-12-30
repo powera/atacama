@@ -34,7 +34,7 @@ def process_message() -> tuple[Dict[str, Any], int]:
             llm_annotations=data.get('llm_annotations')
         )
         
-        user = session.get('user')
+        user = session['user']
         db_user = common.models.get_or_create_user(db_session, user)
 
         # Create message object
@@ -92,7 +92,7 @@ def submit_form():
             db_session = Session()
             processed_content = color_processor.process_content(content)
 
-            user = session.get('user')
+            user = session['user']
             db_user = common.models.get_or_create_user(db_session, user)
             
             message = common.models.Email(
