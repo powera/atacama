@@ -55,8 +55,6 @@ class RequestLogger:
 
             # Get IP address from NGINX
             forwarded_for = request.headers.get('X-Forwarded-For')
-            logging.info(forwarded_for)
-            logging.info(request.remote_addr)
             if forwarded_for and request.remote_addr in self.trusted_proxies:
                 ip_address = forwarded_for.split(',')[0].strip()
             else:
