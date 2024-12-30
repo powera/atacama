@@ -29,30 +29,6 @@ class AtacamaHandlers {
         // Close button handler
         this.closeButton.addEventListener('click', () => this.hideAnnotation());
 
-        // Touch events for swipe dismissal
-        this.popup.addEventListener('touchstart', (e) => {
-            this.touchStartY = e.touches[0].clientY;
-            this.popup.style.transition = 'none';
-        });
-
-        this.popup.addEventListener('touchmove', (e) => {
-            const deltaY = e.touches[0].clientY - this.touchStartY;
-            if (deltaY > 0) {
-                this.currentTranslateY = deltaY;
-                this.popup.style.transform = `translateY(${deltaY}px)`;
-            }
-        });
-
-        this.popup.addEventListener('touchend', () => {
-            this.popup.style.transition = 'transform 0.3s ease';
-            if (this.currentTranslateY > 100) {
-                this.hideAnnotation();
-            } else {
-                this.popup.style.transform = 'translateY(0)';
-            }
-            this.currentTranslateY = 0;
-        });
-
         // Handle LLM annotations
         document.querySelectorAll('.llm-annotation').forEach(el => {
             el.addEventListener('mouseover', e => {
@@ -123,38 +99,6 @@ class AtacamaHandlers {
                     .forEach(el => el.classList.remove('expanded'));
             }
         });
-    }
-
-    showAnnotation(element) {
-        const pinyin = element.getAttribute('data-pinyin');
-        const definition = element.getAttribute('data-definition');
-
-        if (!pinyin || !definition) {
-            console.warn('Missing annotation data:', { pinyin, definition });
-            return;
-        }
-
-        this.pinyinEl.textContent = pinyin;
-        this.definitionEl.textContent = definition;
-        
-        this.popup.classList.add('active');
-        
-        if (this.currentAnnotation) {
-            this.currentAnnotation.classList.remove('annotation-active');
-        }
-        
-        element.classList.add('annotation-active');
-        this.currentAnnotation = element;
-        
-        this.closeButton.focus();
-    }
-
-    hideAnnotation() {
-        this.popup.classList.remove('active');
-        if (this.currentAnnotation) {
-            this.currentAnnotation.classList.remove('annotation-active');
-            this.currentAnnotation = null;
-        }
     }
 }
 
