@@ -26,7 +26,7 @@ def process_message() -> tuple[Dict[str, Any], int]:
         if not data or 'subject' not in data or 'content' not in data:
             return jsonify({'error': 'Missing required fields'}), 400
         
-        session = Session()
+        db_session = Session()
         
         # Process content with enhanced features
         processed_content = color_processor.process_content(
@@ -34,10 +34,8 @@ def process_message() -> tuple[Dict[str, Any], int]:
             llm_annotations=data.get('llm_annotations')
         )
         
-        if 'user' not in request:
-            raise ValueError("user must be logged in.")
-
-        db_user = common.models.get_or_create_user(session, request.user)
+        user = session.get('user')
+        db_user = common.models.get_or_create_user(db_session, user)
 
         # Create message object
         message = common.models.Email(
@@ -50,16 +48,16 @@ def process_message() -> tuple[Dict[str, Any], int]:
         
         # Handle message chain if parent_id is provided
         if 'parent_id' in data:
-            parent = session.query(common.models.Email).get(data['parent_id'])
+            parent = db_session.query(common.models.Email).get(data['parent_id'])
             if parent:
                 message.parent = parent
         
         # Extract and save quotes
         quotes = extract_quotes(data['content'])
-        save_quotes(quotes, message, session)
+        save_quotes(quotes, message, db_session)
         
-        session.add(message)
-        session.commit()
+        db_session.add(message)
+        db_session.commit()
         
         logger.info(f"Processed message with subject: {data['subject']}")
         
@@ -74,7 +72,7 @@ def process_message() -> tuple[Dict[str, Any], int]:
         return jsonify({'error': str(e)}), 500
     
     finally:
-        session.close()
+        db_session.close()
 
 
 
@@ -91,9 +89,11 @@ def submit_form():
             if not subject or not content:
                 return render_template('submit.html', error='Subject and content are required')
                 
-            session = Session()
+            db_session = Session()
             processed_content = color_processor.process_content(content)
-            db_user = common.models.get_or_create_user(session, request.user)
+
+            user = session.get('user')
+            db_user = common.models.get_or_create_user(db_session, user)
             
             message = common.models.Email(
                 subject=subject,
@@ -106,7 +106,7 @@ def submit_form():
             if parent_id and parent_id.strip():
                 try:
                     parent_id = int(parent_id)
-                    parent = session.query(common.models.Email).get(parent_id)
+                    parent = db_session.query(common.models.Email).get(parent_id)
                     if parent:
                         message.parent = parent
                     else:
@@ -116,10 +116,10 @@ def submit_form():
             
             # Extract and save quotes
             quotes = extract_quotes(content)
-            save_quotes(quotes, message, session)
+            save_quotes(quotes, message, db_session)
             
-            session.add(message)
-            session.commit()
+            db_session.add(message)
+            db_session.commit()
             
             view_url = url_for('get_message', message_id=message.id)
             return render_template('submit.html', success=True, view_url=view_url)
@@ -129,19 +129,19 @@ def submit_form():
             return render_template('submit.html', error=str(e))
             
         finally:
-            session.close()
+            db_session.close()
         # END of processing submission of message by POST
             
     # Get recent messages for the dropdown
-    session = Session()
+    db_session = Session()
     try:
-        recent_messages = session.query(common.models.Email).order_by(
+        recent_messages = db_session.query(common.models.Email).order_by(
             common.models.Email.created_at.desc()
         ).limit(50).all()
     except Exception as e:
         logger.error(f"Error fetching recent messages: {str(e)}")
         recent_messages = []
     finally:
-        session.close()
+        db_session.close()
     return render_template('submit.html', recent_messages=recent_messages)
 
