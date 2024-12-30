@@ -4,7 +4,9 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
 
-from common.database import Session
+from common.database import setup_database
+Session, db_success = setup_database()
+
 from common.models import Email
 from .auth import require_auth
 
