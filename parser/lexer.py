@@ -221,11 +221,16 @@ class AtacamaLexer:
                 if self.current_char == '<':  # Check for the third '<'
                     self.advance()
                     return Token(TokenType.TRIPLE_LITERAL_START, '<<<', line, column)
-                return Token(TokenType.LITERAL_START, '<<', line, column)
+                else:
+                    return Token(TokenType.LITERAL_START, '<<', line, column)
             if self.current_char == '>' and self.peek() == '>':
                 self.advance()
                 self.advance()
-                return Token(TokenType.LITERAL_END, '>>', line, column)
+                if self.current_char == '>':  # Check for the third '>'
+                    self.advance()
+                    return Token(TokenType.TRIPLE_LITERAL_END, '>>>', line, column)
+                else:
+                    return Token(TokenType.LITERAL_END, '>>', line, column)
 
             # Handle parentheses
             if self.current_char == '(':
