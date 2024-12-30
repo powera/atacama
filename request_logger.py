@@ -10,6 +10,7 @@ from functools import wraps
 class RequestLogger:
     def __init__(self, app=None, log_dir: str = "logs"):
         self.log_dir = log_dir
+        self.trusted_proxies = ['127.0.0.1', '::1']
         if app:
             self.init_app(app)
 
@@ -52,6 +53,13 @@ class RequestLogger:
             user_info = session.get('user', {})
             user_email = user_info.get('email', 'anonymous')
 
+            # Get IP address from NGINX
+            forwarded_for = request.headers.get('X-Forwarded-For')
+            if forwarded_for and request.remote_addr in self.trusted_proxies:
+                ip_address = forwarded_for.split(',')[0].strip()
+            else:
+                ip_address = request.remote_addr
+
             # Build log entry
             log_entry = {
                 'timestamp': datetime.utcnow().isoformat(),
@@ -60,7 +68,7 @@ class RequestLogger:
                 'status_code': response.status_code,
                 'duration_ms': int(duration.total_seconds() * 1000),
                 'user_email': user_email,
-                'ip_address': request.remote_addr,
+                'ip_address': ip_address,
                 'user_agent': request.user_agent.string,
                 'referer': request.referrer,
                 'query_params': dict(request.args),
