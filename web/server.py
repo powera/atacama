@@ -54,10 +54,10 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
     :param message_id: ID of the message to retrieve
     :return: Email object if found, None otherwise
     """
-    session = Session()
+    db_session = Session()
     try:
         # Load the message and its relationships in one query
-        return session.query(Email).options(
+        return db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
             joinedload(Email.quotes)
@@ -66,7 +66,7 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
         logger.error(f"Error retrieving message {message_id}: {str(e)}")
         return None
     finally:
-        session.close()
+        db_session.close()
 
 @app.route('/messages/<int:message_id>', methods=['GET'])
 def get_message(message_id: int):
@@ -107,8 +107,8 @@ def get_message(message_id: int):
 def reprocess_message(message_id: int):
     """Reprocess an existing message's content."""
     try:
-        session = Session()
-        message = session.query(Email).options(
+        db_session = Session()
+        message = db_session.query(Email).options(
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
@@ -136,20 +136,20 @@ def reprocess_message(message_id: int):
         # Re-process quotes
         existing_quotes = message.quotes[:]  # Make a copy of the list
         message.quotes = []  # Delete quotes
-        session.flush()      # Sync removal of relationship
+        db_session.flush()      # Sync removal of relationship
 
         for quote in existing_quotes:
             # Check if quote is used by other emails
-            if not session.query(email_quotes).filter(
+            if not db_session.query(email_quotes).filter(
                 email_quotes.c.quote_id == quote.id,
                 email_quotes.c.email_id != message_id
             ).first():
-                session.delete(quote)
+                db_session.delete(quote)
 
         quotes = extract_quotes(message.content)
-        save_quotes(quotes, message, session)
+        save_quotes(quotes, message, db_session)
         
-        session.commit()
+        db_session.commit()
         
         logger.info(f"Reprocessed message {message_id}")
         
@@ -178,14 +178,14 @@ def reprocess_message(message_id: int):
         return jsonify({'error': str(e)}), 500
         
     finally:
-        session.close()
+        db_session.close()
 
 @app.route('/recent')
 def recent_message():
     """Show the most recent message."""
     try:
-        session = Session()
-        message = session.query(Email).order_by(Email.created_at.desc()).first()
+        db_session = Session()
+        message = db_session.query(Email).order_by(Email.created_at.desc()).first()
         
         if not message:
             return render_template('message.html', error="No messages found")
@@ -198,14 +198,14 @@ def recent_message():
         )
         
     finally:
-        session.close()
+        db_session.close()
 
 @app.route('/stream')
 def message_stream():
     """Show a stream of recent messages."""
     try:
-        session = Session()
-        messages = session.query(Email).options(
+        db_session = Session()
+        messages = db_session.query(Email).options(
             joinedload(Email.quotes)
         ).order_by(Email.created_at.desc()).limit(10).all()
         
@@ -219,7 +219,7 @@ def message_stream():
         )
         
     finally:
-        session.close()
+        db_session.close()
 
 
 @app.route('/')
