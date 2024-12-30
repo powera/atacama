@@ -47,61 +47,9 @@ app.register_blueprint(submit_bp)
 from web.blueprints.debug import debug_bp
 app.register_blueprint(debug_bp)
 
-
-def get_message_by_id(message_id: int) -> Optional[Email]:
-    """
-    Helper function to retrieve a message by ID.
-    
-    :param message_id: ID of the message to retrieve
-    :return: Email object if found, None otherwise
-    """
-    db_session = Session()
-    try:
-        # Load the message and its relationships in one query
-        return db_session.query(Email).options(
-            joinedload(Email.parent),
-            joinedload(Email.children),
-            joinedload(Email.quotes)
-        ).filter(Email.id == message_id).first()
-    except Exception as e:
-        logger.error(f"Error retrieving message {message_id}: {str(e)}")
-        return None
-    finally:
-        db_session.close()
-
-@app.route('/messages/<int:message_id>', methods=['GET'])
-def get_message(message_id: int):
-    """Retrieve a processed message by ID."""
-    message = get_message_by_id(message_id)
-    
-    if not message:
-        return jsonify({'error': 'Message not found'}), 404
-    
-    # Get print mode from query params
-    print_mode = request.args.get('print', '').lower() == 'true'
-    
-    # Return HTML if requested
-    if request.headers.get('Accept', '').startswith('text/html'):
-        template = 'message_print.html' if print_mode else 'message.html'
-        return render_template(
-            template,
-            message=message,
-            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            raw_content=message.content,  # For two-screen editing
-            quotes=message.quotes
-        )
-            
-    # Otherwise return JSON
-    return jsonify({
-        'id': message.id,
-        'subject': message.subject,
-        'content': message.content,
-        'processed_content': message.processed_content,
-        'created_at': message.created_at.isoformat(),
-        'parent_id': message.parent_id,
-        'llm_annotations': json.loads(message.llm_annotations or '{}'),
-        'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
-    })
+# Message display handlers
+from web.blueprints.messages import messages_bp
+app.register_blueprint(messages_bp)
 
 @app.route('/messages/<int:message_id>/reprocess', methods=['POST'])
 @require_auth
@@ -196,27 +144,6 @@ def recent_message():
             message=message,
             created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             raw_content=message.content,
-        )
-        
-    finally:
-        db_session.close()
-
-@app.route('/stream')
-def message_stream():
-    """Show a stream of recent messages."""
-    try:
-        db_session = Session()
-        messages = db_session.query(Email).options(
-            joinedload(Email.quotes)
-        ).order_by(Email.created_at.desc()).limit(10).all()
-        
-        # Format timestamps
-        for message in messages:
-            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
-            
-        return render_template(
-            'stream.html',
-            messages=messages
         )
         
     finally:

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Message Chain - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/message.css">
+    <script src="/js/atacama.js"></script>
+    <style>
+        .chain-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--spacing-base);
+        }
+        
+        .chain-message {
+            margin: var(--spacing-large) 0;
+            padding: var(--spacing-base);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background: white;
+            position: relative;
+        }
+        
+        .chain-message.target-message {
+            border: 2px solid var(--color-primary);
+            background: rgba(var(--color-primary-rgb), 0.05);
+        }
+        
+        .message-connector {
+            position: absolute;
+            left: 50%;
+            height: var(--spacing-large);
+            border-left: 2px dashed var(--color-border);
+            transform: translateX(-50%);
+        }
+        
+        .connector-top {
+            top: calc(-1 * var(--spacing-large));
+        }
+        
+        .connector-bottom {
+            bottom: calc(-1 * var(--spacing-large));
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: var(--spacing-base);
+        }
+        
+        .message-title {
+            font-size: var(--font-size-large);
+            font-weight: 500;
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+        
+        .message-timestamp {
+            font-size: var(--font-size-small);
+            color: #666;
+        }
+        
+        .message-content {
+            line-height: 1.6;
+        }
+        
+        .chain-navigation {
+            position: sticky;
+            top: var(--spacing-base);
+            z-index: 100;
+            background: white;
+            padding: var(--spacing-base);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: var(--spacing-large);
+        }
+        
+        .chain-overview {
+            display: flex;
+            gap: var(--spacing-base);
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        @media print {
+            .chain-navigation {
+                display: none;
+            }
+            
+            .message-connector {
+                border-left-style: solid;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% else %}
+        <div class="chain-container">
+            <div class="chain-navigation">
+                <div class="chain-overview">
+                    <h1>Message Chain</h1>
+                    <button onclick="preparePrint()" class="print-button">Print Chain</button>
+                </div>
+                <div class="chain-stats">
+                    {{ messages|length }} messages in chain
+                </div>
+            </div>
+            
+            {% for message in messages %}
+            <article class="chain-message {% if message.id == target_id %}target-message{% endif %}">
+                {% if not loop.first %}
+                <div class="message-connector connector-top"></div>
+                {% endif %}
+                {% if not loop.last %}
+                <div class="message-connector connector-bottom"></div>
+                {% endif %}
+                
+                <header class="message-header">
+                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                        {{ message.subject or '(No Subject)' }}
+                    </a>
+                    <span class="message-timestamp">{{ message.created_at_formatted }}</span>
+                </header>
+                
+                <div class="message-content">
+                    {{ message.processed_content | safe }}
+                </div>
+                
+                {% if message.quotes %}
+                <div class="quote-section">
+                    <h3>Quotes</h3>
+                    {% for quote in message.quotes %}
+                        <div class="quote-card">
+                            <div class="quote-text">"{{ quote.text }}"</div>
+                            <div class="quote-metadata">
+                                {% if quote.quote_type %}
+                                    <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
+                                {% endif %}
+                                {% if quote.author %}
+                                    <span class="quote-author">by {{ quote.author }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+</body>
+</html>
