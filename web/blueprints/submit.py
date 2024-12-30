@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from common.database import setup_database
 Session, db_success = setup_database()
 
-from common.models import Email
+import common.models
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
@@ -34,17 +34,23 @@ def process_message() -> tuple[Dict[str, Any], int]:
             llm_annotations=data.get('llm_annotations')
         )
         
+        if 'user' not in request:
+            raise ValueError("user must be logged in.")
+
+        db_user = common.models.get_or_create_user(session, request.user)
+
         # Create message object
-        message = Email(
+        message = common.models.Email(
             subject=data['subject'],
             content=data['content'],
+            author=db_user,
             processed_content=processed_content,
             llm_annotations=json.dumps(data.get('llm_annotations', {}))
         )
         
         # Handle message chain if parent_id is provided
         if 'parent_id' in data:
-            parent = session.query(Email).get(data['parent_id'])
+            parent = session.query(common.models.Email).get(data['parent_id'])
             if parent:
                 message.parent = parent
         
@@ -88,7 +94,7 @@ def submit_form():
             session = Session()
             processed_content = color_processor.process_content(content)
             
-            message = Email(
+            message = common.models.Email(
                 subject=subject,
                 content=content,
                 processed_content=processed_content,
@@ -98,7 +104,7 @@ def submit_form():
             if parent_id and parent_id.strip():
                 try:
                     parent_id = int(parent_id)
-                    parent = session.query(Email).get(parent_id)
+                    parent = session.query(common.models.Email).get(parent_id)
                     if parent:
                         message.parent = parent
                     else:
@@ -127,8 +133,8 @@ def submit_form():
     # Get recent messages for the dropdown
     session = Session()
     try:
-        recent_messages = session.query(Email).order_by(
-            Email.created_at.desc()
+        recent_messages = session.query(common.models.Email).order_by(
+            common.models.Email.created_at.desc()
         ).limit(50).all()
     except Exception as e:
         logger.error(f"Error fetching recent messages: {str(e)}")
