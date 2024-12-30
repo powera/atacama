@@ -2,12 +2,12 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from google.oauth2 import id_token
 from google.auth.transport import requests
 import os
-import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from functools import wraps
 
-logger = logging.getLogger(__name__)
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 

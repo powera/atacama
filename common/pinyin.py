@@ -12,7 +12,6 @@ The system maintains both in-memory and disk caches for performance.
 """
 
 from dataclasses import dataclass
-import logging
 import re
 from typing import Dict, List, Optional, Tuple, Set
 from functools import lru_cache
@@ -20,7 +19,8 @@ from functools import lru_cache
 import jieba
 from pypinyin import pinyin, Style
 
-logger = logging.getLogger(__name__)
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 @dataclass
 class ChineseAnnotation:

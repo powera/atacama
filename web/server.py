@@ -6,13 +6,15 @@ from flask import Flask, request, jsonify, render_template_string, render_templa
 from waitress import serve
 import os
 import json
-import logging
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from functools import wraps
 from pathlib import Path
+
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 from common.database import setup_database
 from common.models import Email, Quote, email_quotes
@@ -21,7 +23,6 @@ color_processor = ColorScheme()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
-logger = logging.getLogger(__name__)
 Session, db_success = setup_database()
 
 from web.blueprints.auth import require_auth

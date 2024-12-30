@@ -3,6 +3,9 @@ from typing import Dict, Pattern, Tuple, Optional, Match
 import json
 from functools import lru_cache
 
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 import common.pinyin
 
 class ColorScheme:

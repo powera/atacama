@@ -1,6 +1,9 @@
 from flask import Blueprint, send_from_directory
 import os
 
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 import constants
 
 static_bp = Blueprint('static', __name__)

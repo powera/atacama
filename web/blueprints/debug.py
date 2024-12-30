@@ -13,6 +13,9 @@ from datetime import datetime
 from functools import wraps
 from sqlalchemy import text
 
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 from common.database import setup_database
 Session, db_success = setup_database()
 from web.blueprints.auth import require_auth

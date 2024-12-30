@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import logging
 from typing import Tuple
 
-logger = logging.getLogger(__name__)
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 
 def setup_database(db_url: str = 'sqlite:///emails.db') -> Tuple[sessionmaker, bool]:
     """
