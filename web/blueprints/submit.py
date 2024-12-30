@@ -1,8 +1,9 @@
 from flask import Blueprint, request, render_template, url_for, redirect, session, jsonify
 from sqlalchemy.orm import joinedload
-import logging
-logger = logging.getLogger(__name__)
 from typing import Dict, Any, Optional, List, Tuple
+
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 from common.database import setup_database
 Session, db_success = setup_database()
