@@ -26,9 +26,6 @@ class AtacamaHandlers {
             }
         });
 
-        // Close button handler
-        this.closeButton.addEventListener('click', () => this.hideAnnotation());
-
         // Handle LLM annotations
         document.querySelectorAll('.llm-annotation').forEach(el => {
             el.addEventListener('mouseover', e => {
