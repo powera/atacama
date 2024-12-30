@@ -30,7 +30,7 @@ class TestLexer(unittest.TestCase):
         """Lexer should properly tokenize color block tags."""
         text = "<red>Important warning"
         self.assert_tokens(text, [
-            TokenType.COLOR_BLOCK_START,
+            TokenType.COLOR_BLOCK_TAG,
             TokenType.TEXT
         ])
 
@@ -39,8 +39,10 @@ class TestLexer(unittest.TestCase):
         text = "Note: (<red>important)"
         self.assert_tokens(text, [
             TokenType.TEXT,
-            TokenType.COLOR_INLINE_START,
+            TokenType.PARENTHESIS_START,
+            TokenType.COLOR_BLOCK_TAG,
             TokenType.TEXT,
+            TokenType.PARENTHESIS_END,
         ])
 
     def test_lists(self):
@@ -85,6 +87,9 @@ class TestLexer(unittest.TestCase):
             TokenType.TEXT,
             TokenType.LITERAL_START,
             TokenType.TEXT,
+            TokenType.PARENTHESIS_START,
+            TokenType.TEXT,
+            TokenType.PARENTHESIS_END,
             TokenType.LITERAL_END
         ])
 
