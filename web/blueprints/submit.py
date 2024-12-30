@@ -65,7 +65,7 @@ def process_message() -> tuple[Dict[str, Any], int]:
         return jsonify({
             'id': message.id,
             'processed_content': processed_content,
-            'view_url': url_for('get_message', message_id=message.id)
+            'view_url': url_for('messages.get_message', message_id=message.id)
         }), 201
         
     except Exception as e:
@@ -122,7 +122,7 @@ def submit_form():
             db_session.add(message)
             db_session.commit()
             
-            view_url = url_for('get_message', message_id=message.id)
+            view_url = url_for('messages.get_message', message_id=message.id)
             return render_template('submit.html', success=True, view_url=view_url)
             
         except Exception as e:

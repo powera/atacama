@@ -51,7 +51,7 @@
         {% for message in messages %}
             <article class="stream-message">
                 <header class="message-header">
-                    <a href="{{ url_for('get_message', message_id=message.id) }}" class="message-title">
+                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
                         {{ message.subject or '(No Subject)' }}
                     </a>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>
