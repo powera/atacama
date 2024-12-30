@@ -14,12 +14,12 @@
         <div class="message">
             <header class="message-header">
                 <h1>{{ message.subject }}</h1>
-                {% if message.author %}
-                  <div class="message-author">
-                    Posted by {{message.author.name}}
-                  </div>
-                {% endif %}
                 <div class="metadata">
+                  {% if message.author %}
+                    <div class="message-author">
+                      Posted by {{message.author.name}}
+                    </div>
+                  {% endif %}
                     Received: {{ created_at }}
                     {% if message.parent %}
                         <br>

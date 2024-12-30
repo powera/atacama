@@ -93,10 +93,12 @@ def submit_form():
                 
             session = Session()
             processed_content = color_processor.process_content(content)
+            db_user = common.models.get_or_create_user(session, request.user)
             
             message = common.models.Email(
                 subject=subject,
                 content=content,
+                author=db_user,
                 processed_content=processed_content,
             )
             
