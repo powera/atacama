@@ -73,7 +73,7 @@ email_quotes = Table('email_quotes', Base.metadata,
 
 def get_or_create_user(db_session, request_user) -> User:
     """Get existing user or create new one."""
-    db_user = session.query(User).filter_by(email=request_user["email"]).first()
+    db_user = db_session.query(User).filter_by(email=request_user["email"]).first()
     if not db_user:
         db_user = User(email=request_user["email"], name=request_user["name"])
         db_session.add(db_user)
