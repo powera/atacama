@@ -45,8 +45,9 @@ class Email(Base):
     content: Mapped[str] = mapped_column(Text)
     processed_content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
     author_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'))
-    author: Mapped[Optional["User"]] = relationship("User", back_populates="emails")
+    author: Mapped[Optional["User"]] = relationship("User", back_populates="emails", lazy="selectin")
 
     # Chain relationships directly in Email
     parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('emails.id'))
