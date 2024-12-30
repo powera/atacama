@@ -1,27 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-import logging
+from logging_config import configure_logging, get_logger
 import sys
 from typing import Optional
-
-def setup_logging(log_level: str = 'INFO') -> None:
-    """
-    Setup logging configuration for the application.
-    
-    :param log_level: Desired logging level (default: INFO)
-    """
-    numeric_level = getattr(logging, log_level.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError(f'Invalid log level: {log_level}')
-        
-    logging.basicConfig(
-        level=numeric_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('atacama.log'),
-            logging.StreamHandler()
-        ]
-    )
 
 def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """
@@ -49,8 +30,13 @@ def main() -> None:
     args = parser.parse_args()
     
     try:
-        setup_logging(args.log_level)
-        logger = logging.getLogger(__name__)
+        # Initialize logging with the new configuration
+        configure_logging(
+            log_level=args.log_level,
+            app_log_level='DEBUG',
+            log_dir=args.log_dir
+        )
+        logger = get_logger(__name__)
         
         if args.mode == 'mail':
             raise Exception("Mail is not enabled.")
