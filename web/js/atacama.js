@@ -1,27 +1,11 @@
 // Combined handler for annotations, stream interactions, and tooltips
 class AtacamaHandlers {
     constructor() {
-        this.setupAnnotationPopup();
         this.setupTooltipContainer();
         this.bindEvents();
         this.currentAnnotation = null;
         this.touchStartY = 0;
         this.currentTranslateY = 0;
-    }
-
-    setupAnnotationPopup() {
-        this.popup = document.createElement('div');
-        this.popup.className = 'annotation-popup';
-        this.popup.innerHTML = `
-            <span class="pinyin"></span>
-            <span class="definition"></span>
-            <button class="close-button" aria-label="Close annotation">×</button>
-        `;
-        document.body.appendChild(this.popup);
-
-        this.pinyinEl = this.popup.querySelector('.pinyin');
-        this.definitionEl = this.popup.querySelector('.definition');
-        this.closeButton = this.popup.querySelector('.close-button');
     }
 
     setupTooltipContainer() {
@@ -37,7 +21,7 @@ class AtacamaHandlers {
             if (annotation) {
                 e.preventDefault();
                 this.showAnnotation(annotation);
-            } else if (!e.target.closest('.annotation-popup')) {
+            } else {
                 this.hideAnnotation();
             }
         });
