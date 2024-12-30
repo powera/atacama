@@ -34,7 +34,6 @@ def main() -> None:
         configure_logging(
             log_level=args.log_level,
             app_log_level='DEBUG',
-            log_dir=args.log_dir
         )
         logger = get_logger(__name__)
         
