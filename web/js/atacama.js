@@ -15,17 +15,6 @@ class AtacamaHandlers {
     }
 
     bindEvents() {
-        // Annotation click handlers
-        document.addEventListener('click', (e) => {
-            const annotation = e.target.closest('.annotated-chinese');
-            if (annotation) {
-                e.preventDefault();
-                this.showAnnotation(annotation);
-            } else {
-                this.hideAnnotation();
-            }
-        });
-
         // Handle LLM annotations
         document.querySelectorAll('.llm-annotation').forEach(el => {
             el.addEventListener('mouseover', e => {
