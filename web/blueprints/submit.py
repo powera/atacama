@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, url_for, redirect, session
+from flask import Blueprint, request, render_template, url_for, redirect, session, jsonify
 from sqlalchemy.orm import joinedload
 import logging
 logger = logging.getLogger(__name__)
