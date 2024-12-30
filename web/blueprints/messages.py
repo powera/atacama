@@ -159,6 +159,26 @@ def view_chain(message_id: int):
         } for msg in chain]
     })
 
+@app.route('/recent')
+def recent_message():
+    """Show the most recent message."""
+    try:
+        db_session = Session()
+        message = db_session.query(Email).order_by(Email.created_at.desc()).first()
+        
+        if not message:
+            return render_template('message.html', error="No messages found")
+            
+        return render_template(
+            'message.html',
+            message=message,
+            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            raw_content=message.content,
+        )
+        
+    finally:
+        db_session.close()
+
 @messages_bp.route('/stream')
 def message_stream():
     """Show a stream of recent messages."""
