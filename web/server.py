@@ -42,6 +42,10 @@ app.register_blueprint(static_bp)
 from web.blueprints.auth import auth_bp
 app.register_blueprint(auth_bp)
 
+# Message display handlers
+from web.blueprints.messages import messages_bp
+app.register_blueprint(messages_bp)
+
 # Submit message form
 from web.blueprints.submit import submit_bp
 app.register_blueprint(submit_bp)
@@ -50,9 +54,9 @@ app.register_blueprint(submit_bp)
 from web.blueprints.debug import debug_bp
 app.register_blueprint(debug_bp)
 
-# Message display handlers
-from web.blueprints.messages import messages_bp
-app.register_blueprint(messages_bp)
+# Error handlers
+from web.blueprints.errors import errors_bp
+app.register_blueprint(errors_bp)
 
 @app.route('/messages/<int:message_id>/reprocess', methods=['POST'])
 @require_auth
@@ -169,6 +173,7 @@ def landing_page():
         messages=messages,
         user=user
     )
+
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""

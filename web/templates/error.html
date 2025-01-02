@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ error_title | default('Error') }} - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/error.css">
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-header">
+            <div class="error-code">{{ error_code | default('404') }}</div>
+            <h1>{{ error_title | default('Page Not Found') }}</h1>
+        </div>
+
+        <div class="error-message">
+            {{ error_message | default('The page you are looking for could not be found. It might have been removed, renamed, or does not exist.') }}
+        </div>
+
+        {% if technical_details and config.get('DEBUG', False) %}
+        <div class="technical-details">
+            <pre>{{ technical_details }}</pre>
+        </div>
+        {% endif %}
+
+        <div class="error-actions">
+            <a href="{{ url_for('landing_page') }}" class="home-link">Return to Home</a>
+        </div>
+    </div>
+</body>
+</html>
