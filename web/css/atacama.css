@@ -1,7 +1,4 @@
-/* Message-specific variables */
-:root {
-    /* No emoji definitions needed - handled in HTML */
-}
+/* Style for message text sections */
 
 /* Base message layout */
 .message {
@@ -14,6 +11,14 @@
 
 .message-header {
     margin-bottom: var(--spacing-large);
+}
+
+.message-actions { /* for replies */
+    margin 1em 0;
+}
+
+.message-actions .replies ul {
+    list-style: none;
 }
 
 .metadata {

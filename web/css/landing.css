@@ -9,22 +9,6 @@
     box-shadow: var(--box-shadow);
 }
 
-/* API endpoints section styling */
-.endpoints {
-    margin: var(--spacing-large) 0;
-    padding: var(--spacing-base);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-}
-
-.endpoints code {
-    background: var(--color-background);
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--border-radius);
-    font-family: monospace;
-    font-size: var(--font-size-small);
-}
-
 /* Message table styles */
 .table-container {
     margin: var(--spacing-large) 0;
@@ -132,30 +116,5 @@ th {
     .status {
         margin: var(--spacing-base) -var(--spacing-base);
         border-radius: 0;
-    }
-    
-    /* Adjust endpoints display */
-    .endpoints code {
-        display: block;
-        margin: var(--spacing-base) 0;
-        padding: var(--spacing-base);
-        word-break: break-all;
-    }
-}
-
-/* Print styles */
-@media print {
-    .status,
-    .endpoints {
-        border: 1px solid #ddd;
-        box-shadow: none;
-    }
-    
-    .reprocess-button {
-        display: none;
-    }
-    
-    tr {
-        page-break-inside: avoid;
     }
 }
