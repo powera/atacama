@@ -18,7 +18,6 @@ logger = get_logger(__name__)
 
 from common.database import setup_database
 from common.models import Email, Quote, email_quotes
-from common.quotes import extract_quotes, save_quotes, QuoteExtractionError, QuoteValidationError
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
