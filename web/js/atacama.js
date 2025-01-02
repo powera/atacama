@@ -88,11 +88,6 @@ class AtacamaHandlers {
     }
 }
 
-// Helper function for print mode
-function preparePrint() {
-    window.print();
-}
-
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => new AtacamaHandlers());
