@@ -9,6 +9,7 @@
     margin: 0 auto;
     padding: var(--spacing-base);
     line-height: 1.85;  /* More than default, less than sigil. */
+    background-color: var(--color-background);
 }
 
 .message-header {
