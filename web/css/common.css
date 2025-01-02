@@ -143,13 +143,13 @@
 }
 
 [data-theme="high-contrast"] .color-block-container .sigil {
-    display: inline-block;
-    margin-right: 0.5rem;
+    display: inline;
+    margin-left: 0.5rem;
 }
 
 [data-theme="high-contrast"] .color-block-container .colortext-content {
-    display: block;
-    margin-left: 2rem;
+    display: inline;
+    margin-left: 0.5rem;
 }
 
 /* Hide color blocks in main content for high contrast */
