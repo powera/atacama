@@ -240,7 +240,9 @@ class ColorScheme:
         return self.wikilink_pattern.sub(replacer, text)
 
     def process_content(self, content: str,
-                       llm_annotations: Optional[Dict] = None) -> str:
+                       llm_annotations: Optional[Dict] = None,
+                       message: Optional[Email] = None,
+                       db_session: Optional[Session] = None) -> str:
         """
         Process text content with all features.
         
