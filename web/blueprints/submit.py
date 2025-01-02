@@ -13,7 +13,6 @@ from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
 from .auth import require_auth
-from .quotes import extract_quotes, save_quotes
 
 submit_bp = Blueprint('submit', __name__)
 
@@ -29,21 +28,14 @@ def process_message() -> tuple[Dict[str, Any], int]:
         
         db_session = Session()
         
-        # Process content with enhanced features
-        processed_content = color_processor.process_content(
-            data['content'],
-            llm_annotations=data.get('llm_annotations')
-        )
-        
         user = session['user']
         db_user = common.models.get_or_create_user(db_session, user)
 
-        # Create message object
+        # Create message object first
         message = common.models.Email(
             subject=data['subject'],
             content=data['content'],
             author=db_user,
-            processed_content=processed_content,
             llm_annotations=json.dumps(data.get('llm_annotations', {}))
         )
         
@@ -53,13 +45,18 @@ def process_message() -> tuple[Dict[str, Any], int]:
             if parent:
                 message.parent = parent
         
-        # Extract and save quotes
-        quotes = extract_quotes(data['content'])
-        save_quotes(quotes, message, db_session)
-        
+        # Add message to session so it exists before processing content
         db_session.add(message)
-        db_session.commit()
         
+        # Now process content with access to the message object
+        message.processed_content = color_processor.process_content(
+            data['content'],
+            llm_annotations=data.get('llm_annotations'),
+            message=message,
+            db_session=db_session
+        )
+        
+        db_session.commit() 
         logger.info(f"Processed message with subject: {data['subject']}")
         
         return jsonify({
@@ -76,7 +73,6 @@ def process_message() -> tuple[Dict[str, Any], int]:
         db_session.close()
 
 
-
 @submit_bp.route('/submit', methods=['GET', 'POST'])
 @require_auth
 def submit_form():
@@ -86,23 +82,21 @@ def submit_form():
             subject = request.form.get('subject', '')
             content = request.form.get('content', '')
             parent_id = request.form.get('parent_id')
-            
+
             if not subject or not content:
                 return render_template('submit.html', error='Subject and content are required')
-                
+
             db_session = Session()
-            processed_content = color_processor.process_content(content)
 
             user = session['user']
             db_user = common.models.get_or_create_user(db_session, user)
-            
+
             message = common.models.Email(
                 subject=subject,
                 content=content,
-                author=db_user,
-                processed_content=processed_content,
+                author=db_user
             )
-            
+
             # Handle message chain if parent_id is provided
             if parent_id and parent_id.strip():
                 try:
@@ -114,12 +108,17 @@ def submit_form():
                         logger.warning(f"Parent message {parent_id} not found")
                 except ValueError:
                     logger.warning(f"Invalid parent_id format: {parent_id}")
-            
-            # Extract and save quotes
-            quotes = extract_quotes(content)
-            save_quotes(quotes, message, db_session)
-            
+
+            # Add message to session before processing content
             db_session.add(message)
+
+            # Process content with access to the message object
+            message.processed_content = color_processor.process_content(
+                content,
+                message=message,
+                db_session=db_session
+            )
+
             db_session.commit()
             
             view_url = url_for('messages.get_message', message_id=message.id)

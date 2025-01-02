@@ -87,11 +87,14 @@ class ColorScheme:
             
         return self.chinese_pattern.sub(replacer, text)
 
-    def process_colors(self, text: str) -> str:
+    def process_colors(self, text: str, message: Optional[Email] = None,
+                       db_session: Optional[Session] = None) -> str:
         """
         Process all color tags.
         
         :param text: Text that may contain color tags
+        :param message: the DB object for this message
+        :param db_session: the SQLAlchemy/SQLITE connection
         :return: Processed text with color spans and sigils
         """
         def replace_color(match: Match) -> str:
@@ -106,19 +109,27 @@ class ColorScheme:
                 return match.group(0)
                 
             sigil, class_name = self.COLORS[color]
-            
+           
+            if message and db_session and color in ('yellow', 'quote', 'blue'):
+                quote_data = {
+                    'text': content.strip(),
+                    'quote_type': 'reference'
+                }
+                from common.quotes import save_quotes
+                save_quotes([quote_data], message, db_session)
+
             # Handle nested colors (with parentheses)
             if nested_color:
                 return (f'<span class="color-{class_name}">'
-                       f'<span class="sigil">{sigil}</span>'
-                       f'<span class="colortext-content">({content})</span>'
-                       f'</span>')
-            
+                    f'<span class="sigil">{sigil}</span>'
+                    f'<span class="colortext-content">({content})</span>'
+                    f'</span>')
             # Handle paragraph-level colors
-            return (f'<span class="color-{class_name}">'
-                   f'<span class="sigil">{sigil}</span>'
-                   f'<span class="colortext-content">{content}</span>'
-                   f'</span>')
+            else:
+                return (f'<span class="color-{class_name}">'
+                    f'<span class="sigil">{sigil}</span>'
+                    f'<span class="colortext-content">{content}</span>'
+                    f'</span>')
                    
         # First process paragraph and nested colors
         processed = self.color_pattern.sub(replace_color, text)
