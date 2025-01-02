@@ -68,6 +68,14 @@
 .color-gray { color: #666; font-style: italic; background: linear-gradient(to right, rgba(0, 0, 0, 0.03), transparent); }
 .color-hazel { color: #8B4513; font-style: italic; background: rgba(139, 69, 19, 0.05); }
 
+/* Literal text blocks */
+.literal-text {
+    font-family: "Courier New", Courier, monospace;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0 0.3em;
+    border-radius: 2px;
+}
+
 /* Chinese annotation system */
 .annotated-chinese {
     position: relative;
