@@ -114,6 +114,86 @@
     --color-hazel: #ffa500;
 }
 
+/* over-rides for two-column text */
+/* Add to common.css - High contrast theme modifications */
+
+/* Two-column layout for high contrast mode */
+[data-theme="high-contrast"] .message {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    max-width: 1200px;
+}
+
+[data-theme="high-contrast"] .message-main {
+    grid-column: 1;
+}
+
+[data-theme="high-contrast"] .message-sidebar {
+    grid-column: 2;
+    background: #f8f8f8;
+    border-left: 2px solid #000;
+    padding: var(--spacing-base);
+}
+
+[data-theme="high-contrast"] .color-block-container {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #000;
+}
+
+[data-theme="high-contrast"] .color-block-container .sigil {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+[data-theme="high-contrast"] .color-block-container .colortext-content {
+    display: block;
+    margin-left: 2rem;
+}
+
+/* Hide color blocks in main content for high contrast */
+[data-theme="high-contrast"] .message-main [class^="color-"] .colortext-content {
+    display: none;
+}
+
+[data-theme="high-contrast"] .message-main [class^="color-"] {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    display: inline;
+}
+
+[data-theme="high-contrast"] .message-main .sigil {
+    font-size: 1.2em;
+    margin: 0 0.2em;
+}
+
+/* Ensure sidebar is scrollable if needed */
+[data-theme="high-contrast"] .message-sidebar {
+    max-height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 768px) {
+    [data-theme="high-contrast"] .message {
+        grid-template-columns: 1fr;
+    }
+
+    [data-theme="high-contrast"] .message-sidebar {
+        grid-column: 1;
+        border-left: none;
+        border-top: 2px solid #000;
+        margin-top: 2rem;
+        position: static;
+    }
+}
+
+
 /* Theme switcher positioning and styling */
 .theme-switcher {
     position: fixed;
