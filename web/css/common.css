@@ -114,6 +114,53 @@
     --color-hazel: #ffa500;
 }
 
+/* Theme switcher positioning and styling */
+.theme-switcher {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+}
+
+.theme-button {
+    padding: 0.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    cursor: pointer;
+}
+
+.theme-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    display: none;
+}
+
+.theme-switcher:hover .theme-menu {
+    display: block;
+}
+
+.theme-menu button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.theme-menu button:hover {
+    background: var(--color-annotation-bg);
+}
+
+
 /* Base styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -219,18 +266,5 @@ button:disabled,
     button,
     .button {
         width: 100%;
-    }
-}
-
-/* Print styles */
-@media print {
-    .container {
-        width: 100%;
-        padding: 0;
-    }
-    
-    button,
-    .button {
-        display: none;
     }
 }
