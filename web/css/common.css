@@ -173,7 +173,6 @@
 /* Ensure sidebar is scrollable if needed */
 [data-theme="high-contrast"] .message-sidebar {
     max-height: 100vh;
-    position: sticky;
     top: 0;
     overflow-y: auto;
 }
