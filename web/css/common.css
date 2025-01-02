@@ -91,7 +91,7 @@
     --focus-ring: 0 0 0 2px rgba(74, 158, 255, 0.2);
 }
 
-[data-theme="dark"] .color-block-container .sigil {
+[data-theme="dark"] [class^="color-"] .sigil {
     background-color: #ffffff;
 }
 
