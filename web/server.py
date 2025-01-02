@@ -79,6 +79,8 @@ def reprocess_message(message_id: int):
             data = {}
         
         # Update annotations if provided
+        llm_annotations = data.get('llm_annotations',
+            json.loads(message.llm_annotations or '{}'))
         if 'llm_annotations' in data:
             message.llm_annotations = json.dumps(llm_annotations)
         
