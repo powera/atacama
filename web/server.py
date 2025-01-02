@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 
 from common.database import setup_database
 from common.models import Email, Quote, email_quotes
+from common.quotes import extract_quotes, save_quotes, QuoteExtractionError, QuoteValidationError
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
@@ -31,7 +32,7 @@ request_logger = RequestLogger(app, log_dir='request_logs')
 from web.blueprints.auth import require_auth
 
 # Serve Quotes HTML pages
-from web.blueprints.quotes import quotes_bp, extract_quotes, save_quotes
+from web.blueprints.quotes import quotes_bp
 app.register_blueprint(quotes_bp)
 
 # Serve CSS, JS, etc.
