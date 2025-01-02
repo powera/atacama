@@ -1,11 +1,7 @@
 /* Define root variables for consistent theming */
 :root {
-    --color-primary: #4CAF50;
     --color-error: #ff0000;
     --color-success: #4CAF50;
-    --color-text: #333;
-    --color-border: #ccc;
-    --color-background: #f9f9f9;
     
     --spacing-base: clamp(0.5rem, 2vw, 1rem);
     --spacing-large: calc(var(--spacing-base) * 2);
@@ -22,7 +18,7 @@
 /* Default light theme */
 :root {
     /* Base colors */
-    --color-background: #ffffff;
+    --color-background: #f9f9f9;
     --color-text: #333333;
     --color-text-secondary: #666666;
     --color-border: #dddddd;
@@ -124,6 +120,7 @@ body {
     line-height: 1.6;
     color: var(--color-text);
     font-size: var(--font-size-base);
+    background-color: var(--color-background);
     margin: 0;
     padding: 0;
 }
