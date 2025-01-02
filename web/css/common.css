@@ -18,6 +18,106 @@
     --font-size-large: 1.6rem;
 }
 
+/* Theme system for Atacama */
+/* Default light theme */
+:root {
+    /* Base colors */
+    --color-background: #ffffff;
+    --color-text: #333333;
+    --color-text-secondary: #666666;
+    --color-border: #dddddd;
+    --color-primary: #0074D9;
+    
+    /* Component colors */
+    --color-header-bg: #f8f9fa;
+    --color-card-bg: #ffffff;
+    --color-input-bg: #ffffff;
+    --color-input-border: #cccccc;
+    
+    /* Message-specific colors */
+    --color-annotation-bg: rgba(0, 0, 0, 0.05);
+    --color-tooltip-bg: rgba(0, 0, 0, 0.8);
+    --color-tooltip-text: #ffffff;
+    
+    /* Color scheme specific */
+    --color-xantham: #A0522D;
+    --color-red: #FF4136;
+    --color-orange: #FF851B;
+    --color-quote: #B8860B;
+    --color-green: #2ECC40;
+    --color-teal: #39CCCC;
+    --color-blue: #0074D9;
+    --color-violet: #673AB7;
+    --color-mogue: #4A006A;
+    --color-gray: #666666;
+    --color-hazel: #8B4513;
+    
+    /* Shadows and effects */
+    --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --focus-ring: 0 0 0 2px rgba(0, 116, 217, 0.2);
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+    /* Base colors */
+    --color-background: #1a1a1a;
+    --color-text: #e0e0e0;
+    --color-text-secondary: #a0a0a0;
+    --color-border: #404040;
+    --color-primary: #4a9eff;
+    
+    /* Component colors */
+    --color-header-bg: #2d2d2d;
+    --color-card-bg: #2d2d2d;
+    --color-input-bg: #333333;
+    --color-input-border: #505050;
+    
+    /* Message-specific colors */
+    --color-annotation-bg: rgba(255, 255, 255, 0.1);
+    --color-tooltip-bg: rgba(255, 255, 255, 0.8);
+    --color-tooltip-text: #000000;
+    
+    /* Color scheme specific - adjusted for dark mode visibility */
+    --color-xantham: #d4734f;
+    --color-red: #ff6b63;
+    --color-orange: #ffab5e;
+    --color-quote: #ffd700;
+    --color-green: #50ff62;
+    --color-teal: #50e5e5;
+    --color-blue: #4a9eff;
+    --color-violet: #9c6fdf;
+    --color-mogue: #b54aff;
+    --color-gray: #a0a0a0;
+    --color-hazel: #d4734f;
+    
+    /* Shadows and effects */
+    --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --focus-ring: 0 0 0 2px rgba(74, 158, 255, 0.2);
+}
+
+/* High contrast theme for accessibility */
+[data-theme="high-contrast"] {
+    /* Base colors */
+    --color-background: #000000;
+    --color-text: #ffffff;
+    --color-text-secondary: #ffffff;
+    --color-border: #ffffff;
+    --color-primary: #ffff00;
+    
+    /* Maintain high contrast ratios for all colors */
+    --color-xantham: #ffff00;
+    --color-red: #ff0000;
+    --color-orange: #ffa500;
+    --color-quote: #ffff00;
+    --color-green: #00ff00;
+    --color-teal: #00ffff;
+    --color-blue: #00ffff;
+    --color-violet: #ff00ff;
+    --color-mogue: #ff00ff;
+    --color-gray: #ffffff;
+    --color-hazel: #ffa500;
+}
+
 /* Base styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
