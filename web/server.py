@@ -78,19 +78,11 @@ def reprocess_message(message_id: int):
         else:
             data = {}
         
-        llm_annotations = data.get('llm_annotations',
-            json.loads(message.llm_annotations or '{}'))
-            
-        message.processed_content = color_processor.process_content(
-            message.content,
-            llm_annotations=llm_annotations
-        )
-        
         # Update annotations if provided
         if 'llm_annotations' in data:
             message.llm_annotations = json.dumps(llm_annotations)
         
-        # Re-process quotes
+        # Remove previous quotes (if otherwise unused).
         existing_quotes = message.quotes[:]  # Make a copy of the list
         message.quotes = []  # Delete quotes
         db_session.flush()      # Sync removal of relationship
@@ -103,18 +95,20 @@ def reprocess_message(message_id: int):
             ).first():
                 db_session.delete(quote)
 
-        quotes = extract_quotes(message.content)
-        save_quotes(quotes, message, db_session)
+        message.processed_content = color_processor.process_content(
+            message.content,
+            llm_annotations=llm_annotations,
+            message=message,
+            db_session=db_session,
+        )
         
         db_session.commit()
         
         logger.info(f"Reprocessed message {message_id}")
         
-        # Get print mode from query params
-        print_mode = request.args.get('print', '').lower() == 'true'
         
         if request.headers.get('Accept', '').startswith('text/html'):
-            template = 'message_print.html' if print_mode else 'message.html'
+            template = 'message.html'
             return render_template(
                 template,
                 message=message,
@@ -122,13 +116,13 @@ def reprocess_message(message_id: int):
                 raw_content=message.content,
                 quotes=message.quotes
             )
-            
-        return jsonify({
-            'id': message.id,
-            'processed_content': message.processed_content,
-            'llm_annotations': llm_annotations,
-            'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
-        })
+        else: 
+          return jsonify({
+              'id': message.id,
+              'processed_content': message.processed_content,
+              'llm_annotations': llm_annotations,
+              'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
+          })
         
     except Exception as e:
         logger.error(f"Error reprocessing message: {str(e)}")
