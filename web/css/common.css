@@ -94,11 +94,11 @@
 /* High contrast theme for accessibility */
 [data-theme="high-contrast"] {
     /* Base colors */
-    --color-background: #000000;
-    --color-text: #ffffff;
-    --color-text-secondary: #ffffff;
+    --color-background: #ffffff;
+    --color-text: #000000;
+    --color-text-secondary: #000000;
     --color-border: #ffffff;
-    --color-primary: #ffff00;
+    --color-primary: #646400;
     
     /* Maintain high contrast ratios for all colors */
     --color-xantham: #ffff00;
