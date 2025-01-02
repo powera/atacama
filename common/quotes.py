@@ -55,7 +55,7 @@ def extract_quotes(content: str) -> List[Dict]:
         quotes = []
         
         # Extract from <yellow> tags
-        yellow_pattern = re.compile(r'<yellow>(.*?)</yellow>', re.DOTALL)
+        yellow_pattern = re.compile(r'<yellow>(.*?)', re.DOTALL)
         yellow_matches = yellow_pattern.finditer(content)
         
         for match in yellow_matches:
@@ -65,29 +65,6 @@ def extract_quotes(content: str) -> List[Dict]:
                     'text': quote_text,
                     'quote_type': 'reference',  # Default type for yellow tags
                 })
-                
-        # Extract from "quote marks"
-        quote_pattern = re.compile(r'"([^"]+)"(?:\s*[-–—]\s*([^"\n]+))?')
-        quote_matches = quote_pattern.finditer(content)
-        
-        for match in quote_matches:
-            quote_text = match.group(1).strip()
-            attribution = match.group(2).strip() if match.group(2) else None
-            
-            if quote_text:
-                quote_data = {
-                    'text': quote_text,
-                    'quote_type': 'personal',  # Default type for quoted text
-                }
-                
-                if attribution:
-                    # Try to parse attribution into author and source
-                    parts = attribution.split(',', 1)
-                    quote_data['author'] = parts[0].strip()
-                    if len(parts) > 1:
-                        quote_data['source'] = parts[1].strip()
-                        
-                quotes.append(quote_data)
                 
         return quotes
         
