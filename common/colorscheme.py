@@ -10,6 +10,7 @@ logger = get_logger(__name__)
 
 import common.pinyin
 from common.models import Email
+from common.quotes import save_quotes
 
 class ColorScheme:
     """Color scheme definitions and processing for email content."""
@@ -118,7 +119,6 @@ class ColorScheme:
                     'text': content.strip(),
                     'quote_type': 'reference'
                 }
-                from common.quotes import save_quotes
                 save_quotes([quote_data], message, db_session)
 
             # Handle nested colors (with parentheses)

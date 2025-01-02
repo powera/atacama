@@ -36,42 +36,6 @@ class QuoteValidationError(Exception):
     """Raised when quote validation fails"""
     pass
 
-def extract_quotes(content: str) -> List[Dict]:
-    """
-    Extract quotes from message content.
-    
-    Looks for content wrapped in <yellow> tags or traditional quote markers.
-    
-    Args:
-        content: Raw message content to process
-        
-    Returns:
-        List of dictionaries containing quote text and metadata
-        
-    Raises:
-        QuoteExtractionError: If quote extraction fails
-    """
-    try:
-        quotes = []
-        
-        # Extract from <yellow> tags
-        yellow_pattern = re.compile(r'<yellow>(.*?)', re.DOTALL)
-        yellow_matches = yellow_pattern.finditer(content)
-        
-        for match in yellow_matches:
-            quote_text = match.group(1).strip()
-            if quote_text:
-                quotes.append({
-                    'text': quote_text,
-                    'quote_type': 'reference',  # Default type for yellow tags
-                })
-                
-        return quotes
-        
-    except Exception as e:
-        logger.error(f"Quote extraction failed: {str(e)}")
-        raise QuoteExtractionError(f"Failed to extract quotes: {str(e)}")
-
 def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:
     """
     Validate quote data before storage.
