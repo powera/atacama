@@ -101,16 +101,16 @@
     --color-primary: #646400;
     
     /* Maintain high contrast ratios for all colors */
-    --color-xantham: #ffff00;
-    --color-red: #ff0000;
-    --color-orange: #ffa500;
-    --color-quote: #ffff00;
-    --color-green: #00ff00;
-    --color-teal: #00ffff;
-    --color-blue: #00ffff;
-    --color-violet: #ff00ff;
-    --color-mogue: #ff00ff;
-    --color-gray: #ffffff;
+    --color-xantham: #6f3030;
+    --color-red: #770000;
+    --color-orange: #7f4500;
+    --color-quote: #7f7f00;
+    --color-green: #007f00;
+    --color-teal: #30cfcf;
+    --color-blue: #00cfcf;
+    --color-violet: #7f007f;
+    --color-mogue: #4f004f;
+    --color-gray: #4f4f4f;
     --color-hazel: #ffa500;
 }
 
