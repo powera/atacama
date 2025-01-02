@@ -276,8 +276,8 @@ class ColorScheme:
         # Process lists
         content = self.process_lists(content)
         
-        # Process all color tags
-        content = self.process_colors(content)
+        # Process all color tags (and store quotes to DB)
+        content = self.process_colors(content, message, db_session)
         
         # Process << literal-text >> sections
         content = self.process_literal_text(content)
