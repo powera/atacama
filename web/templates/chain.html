@@ -17,9 +17,9 @@
             <div class="chain-navigation">
                 <div class="chain-overview">
                     <h1>Message Chain</h1>
-                </div>
-                <div class="chain-stats">
-                    {{ messages|length }} messages in chain
+                    <div class="chain-stats">
+                        {{ messages|length }} messages in chain
+                    </div>
                 </div>
             </div>
             
@@ -32,35 +32,39 @@
                 <div class="message-connector connector-bottom"></div>
                 {% endif %}
                 
-                <header class="message-header">
-                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
-                        {{ message.subject or '(No Subject)' }}
-                    </a>
-                    <span class="message-timestamp">{{ message.created_at_formatted }}</span>
-                </header>
-                
-                <div class="message-content">
-                    {{ message.processed_content | safe }}
+                <div class="chain-message-main">
+                    <header class="message-header">
+                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                            {{ message.subject or '(No Subject)' }}
+                        </a>
+                        <span class="message-timestamp">{{ message.created_at_formatted }}</span>
+                    </header>
+                    
+                    <div class="message-content">
+                        {{ message.processed_content | safe }}
+                    </div>
                 </div>
                 
-                {% if message.quotes %}
-                <div class="quote-section">
-                    <h3>Quotes</h3>
-                    {% for quote in message.quotes %}
-                        <div class="quote-card">
-                            <div class="quote-text">"{{ quote.text }}"</div>
-                            <div class="quote-metadata">
-                                {% if quote.quote_type %}
-                                    <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
-                                {% endif %}
-                                {% if quote.author %}
-                                    <span class="quote-author">by {{ quote.author }}</span>
-                                {% endif %}
+                <div class="chain-message-sidebar">
+                    {% if message.quotes %}
+                    <div class="quote-section">
+                        <h3>Quotes</h3>
+                        {% for quote in message.quotes %}
+                            <div class="quote-card">
+                                <div class="quote-text">"{{ quote.text }}"</div>
+                                <div class="quote-metadata">
+                                    {% if quote.quote_type %}
+                                        <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
+                                    {% endif %}
+                                    {% if quote.author %}
+                                        <span class="quote-author">by {{ quote.author }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </article>
             {% endfor %}
         </div>
