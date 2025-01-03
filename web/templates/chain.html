@@ -31,18 +31,16 @@
                 <div class="message-connector connector-bottom"></div>
                 {% endif %}
                 
+                <header class="message-header">
+                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                        {{ message.subject or '(No Subject)' }}
+                    </a>
+                    <span class="message-timestamp">{{ message.created_at_formatted }}</span>
+                </header>
                 <div class="message-main">
-                    <header class="message-header">
-                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
-                            {{ message.subject or '(No Subject)' }}
-                        </a>
-                        <span class="message-timestamp">{{ message.created_at_formatted }}</span>
-                    </header>
-                    
-                    <div class="message-content">
-                        {{ message.processed_content | safe }}
-                    </div>
+                    {{ message.processed_content | safe }}
                 </div>
+                <div class="message-sidebar"></div>
             </article>
             {% endfor %}
         </div>

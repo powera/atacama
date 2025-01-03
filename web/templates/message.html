@@ -11,7 +11,7 @@
     {% if error %}
         <div class="error">{{ error }}</div>
     {% elif message %}
-        <div class="message">
+        <article class="message">
             <div class="message-main">
                 <header class="message-header">
                     <h1>{{ message.subject }}</h1>
@@ -42,9 +42,10 @@
                     </div>
                 </header>
 
-                <div class="content">
+                <div class="message-main">
                     {{ message.processed_content | safe }}
                 </div>
+                <div class="message-sidebar"></div>
 
                 {% if message.quotes %}
                     <div class="quote-section">
@@ -73,11 +74,7 @@
                     </div>
                 {% endif %}
             </div>
-
-            <div class="message-sidebar">
-                <!-- This will only be visible in high-contrast mode -->
-            </div>
-        </div>
+        </article>
     {% endif %}
 </body>
 </html>
