@@ -118,9 +118,6 @@
     --color-hazel: #ffa500;
 }
 
-/* over-rides for two-column text */
-/* Add to common.css - High contrast theme modifications */
-
 /* Two-column layout for high contrast mode */
 [data-theme="high-contrast"] .message {
     display: grid;
