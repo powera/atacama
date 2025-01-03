@@ -87,7 +87,8 @@
     --focus-ring: 0 0 0 2px rgba(74, 158, 255, 0.2);
 }
 
-[data-theme="dark"] [class^="color-"] .sigil {
+[data-theme="dark"] [class^="color-"] .sigil,
+[data-theme="dark"] .colorblock .sigil {
     background-color: #ffffff;
 }
 
@@ -154,10 +155,12 @@
 }
 
 /* Hide color blocks in main content for high contrast */
+[data-theme="high-contrast"] .message-main .colorblock .colortext-content,
 [data-theme="high-contrast"] .message-main [class^="color-"] .colortext-content {
     display: none;
 }
 
+[data-theme="high-contrast"] .message-main .colorblock,
 [data-theme="high-contrast"] .message-main [class^="color-"] {
     border: none;
     background: none;

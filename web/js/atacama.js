@@ -122,7 +122,7 @@ class AtacamaViewer {
         sidebar.innerHTML = '';
 
         // Find all color blocks in the main content
-        const colorBlocks = mainContent.querySelectorAll('[class^="color-"]');
+        const colorBlocks = mainContent.querySelectorAll('.colorblock, [class^="color-"]');
         const processedBlocks = new Set();
 
         colorBlocks.forEach(block => {
