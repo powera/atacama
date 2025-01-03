@@ -110,15 +110,7 @@
     max-width: 95vw; /* Wider container for two-column layout */
 }
 
-[data-theme="high-contrast"] .stream-message {
-    display: grid;
-    grid-template-columns: 65vw 35vw;
-    gap: 2rem;
-    border: 2px solid var(--color-text);
-}
-
 [data-theme="high-contrast"] .message-header {
-    grid-column: 1 / -1; /* Header spans both columns */
     border-bottom: 1px solid var(--color-text);
     padding-bottom: var(--spacing-base);
 }
