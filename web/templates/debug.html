@@ -3,83 +3,8 @@
 <head>
     <title>Debug Information - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
-    <style>
-        .debug-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: var(--spacing-base);
-        }
-        
-        .debug-section {
-            margin: var(--spacing-large) 0;
-            padding: var(--spacing-large);
-            background: var(--color-background);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-        }
-        
-        .debug-section h2 {
-            margin-top: 0;
-            color: var(--color-primary);
-        }
-        
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: var(--spacing-large);
-            margin-top: var(--spacing-base);
-        }
-        
-        .metric-card {
-            padding: var(--spacing-base);
-            background: white;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--color-border);
-        }
-        
-        .metric-title {
-            font-size: var(--font-size-small);
-            color: #666;
-            margin-bottom: 0.5em;
-        }
-        
-        .metric-value {
-            font-size: var(--font-size-large);
-            font-weight: 500;
-        }
-        
-        .data-table {
-            width: 100%;
-            margin-top: var(--spacing-base);
-        }
-        
-        .data-table th {
-            text-align: left;
-            padding: var(--spacing-base);
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
-        .data-table td {
-            padding: var(--spacing-base);
-            border-top: 1px solid var(--color-border);
-        }
-        
-        .auto-refresh {
-            margin-top: var(--spacing-large);
-            text-align: right;
-        }
-        
-        @media screen and (max-width: 768px) {
-            .metric-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .debug-section {
-                margin: var(--spacing-base) calc(-1 * var(--spacing-base));
-                border-radius: 0;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/debug.css">
+
 </head>
 <body>
     <div class="debug-container">

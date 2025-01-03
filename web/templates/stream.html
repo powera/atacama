@@ -4,85 +4,9 @@
     <title>Message Stream - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/stream.css">
     <script src="/js/atacama.js"></script>
     <script src="/js/theme-switcher.js"></script>
-    <style>
-        .stream-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: var(--spacing-base);
-        }
-        
-        .stream-message {
-            margin: var(--spacing-large) 0;
-            padding: var(--spacing-base);
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius);
-            background: var(--color-background);
-        }
-        
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: var(--spacing-base);
-        }
-        
-        .message-title {
-            font-size: var(--font-size-large);
-            font-weight: 500;
-            color: var(--color-primary);
-            text-decoration: none;
-        }
-        
-        .message-timestamp {
-            font-size: var(--font-size-small);
-            color: var(--color-text-secondary);
-        }
-        
-        .message-content {
-            line-height: 1.6;
-        }
-
-        /* High contrast specific styles */
-        [data-theme="high-contrast"] .stream-container {
-            max-width: 1400px; /* Wider container for two-column layout */
-        }
-        
-        [data-theme="high-contrast"] .stream-message {
-            display: grid;
-            grid-template-columns: 1fr 500px;
-            gap: 2rem;
-            border: 2px solid var(--color-text);
-        }
-
-        [data-theme="high-contrast"] .message-header {
-            grid-column: 1 / -1; /* Header spans both columns */
-            border-bottom: 1px solid var(--color-text);
-            padding-bottom: var(--spacing-base);
-        }
-
-        /* Message sidebars in stream view should not be sticky */
-        [data-theme="high-contrast"] .message-sidebar {
-            position: relative;
-            max-height: none;
-            border-left: 2px solid var(--color-text);
-        }
-
-        /* Mobile responsive adjustments */
-        @media screen and (max-width: 1024px) {
-            [data-theme="high-contrast"] .stream-message {
-                grid-template-columns: 1fr;
-                gap: var(--spacing-base);
-            }
-
-            [data-theme="high-contrast"] .message-sidebar {
-                border-left: none;
-                border-top: 2px solid var(--color-text);
-                padding-top: var(--spacing-base);
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="stream-container">
