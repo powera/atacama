@@ -19,10 +19,12 @@
                     </a>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>
                 </header>
-                <div class="message-main">
-                    {{ message.processed_content | safe }}
+                <div class="message-body">
+                  <div class="message-main">
+                      {{ message.processed_content | safe }}
+                  </div>
+                  <div class="message-sidebar"></div>
                 </div>
-                <div class="message-sidebar"></div>
             </article>
         {% endfor %}
     </div>

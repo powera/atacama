@@ -240,7 +240,7 @@ class AtacamaViewer {
      * Applies the high-contrast layout to all message containers
      */
     handleHighContrastLayout() {
-        document.querySelectorAll('.message').forEach(container => {
+        document.querySelectorAll('.message-body').forEach(container => {
             const mainContent = container.querySelector('.message-main');
             const sidebar = container.querySelector('.message-sidebar');
             
@@ -282,7 +282,7 @@ class AtacamaViewer {
      * Removes the high-contrast layout and restores the default view
      */
     removeHighContrastLayout() {
-        document.querySelectorAll('.message').forEach(container => {
+        document.querySelectorAll('.message-body').forEach(container => {
             container.querySelectorAll('.colortext-content').forEach(content => {
                 content.style.display = '';
             });

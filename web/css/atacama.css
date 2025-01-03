@@ -5,6 +5,14 @@
     max-width: min(90vw, 100%);  /* either 90% of window, or 100% of container */
     margin: 0 auto;
     padding: var(--spacing-base);
+    background-color: var(--color-background);
+}
+
+/* Base message layout */
+.message-body {
+    max-width: min(90vw, 100%);  /* either 90% of window, or 100% of container */
+    margin: 0 auto;
+    padding: var(--spacing-base);
     line-height: 1.85;  /* More than default, less than sigil. */
     background-color: var(--color-background);
 }

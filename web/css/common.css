@@ -119,7 +119,7 @@
 }
 
 /* Two-column layout for high contrast mode */
-[data-theme="high-contrast"] .message {
+[data-theme="high-contrast"] .message-body {
     display: grid;
     grid-template-columns: 1fr 30vw;
     gap: 2rem;
@@ -180,7 +180,7 @@
 
 /* Mobile responsive adjustments */
 @media screen and (max-width: 768px) {
-    [data-theme="high-contrast"] .message {
+    [data-theme="high-contrast"] .message-body {
         grid-template-columns: 1fr;
     }
 
