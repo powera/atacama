@@ -1,22 +1,28 @@
 class AtacamaViewer {
     constructor() {
+        // Initialize state
         this.theme = localStorage.getItem('theme') || 'light';
-        this.currentAnnotation = null;
-        this.touchStartY = 0;
-        this.currentTranslateY = 0;
         
+        // Bind methods to maintain correct 'this' context
+        this.handleSigilClick = this.handleSigilClick.bind(this);
+        this.handleAnnotationClick = this.handleAnnotationClick.bind(this);
+        this.handleKeyDown = this.handleKeyDown.bind(this);
+        
+        // Set up the viewer
         this.initializeTheme();
         this.setupThemeSwitcher();
         this.setupThemeObserver();
-        this.bindContentEvents();
+        this.setupEventDelegation();
     }
 
     initializeTheme() {
+        // Set initial theme based on system preference if not stored
         if (!this.theme) {
             this.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
         document.documentElement.setAttribute('data-theme', this.theme);
         
+        // Apply high contrast layout if needed
         if (this.theme === 'high-contrast') {
             this.handleHighContrastLayout();
         }
@@ -36,11 +42,88 @@ class AtacamaViewer {
             </div>
         `;
 
+        // Add theme switching event listeners
         switcher.querySelectorAll('[data-theme]').forEach(button => {
             button.addEventListener('click', () => this.setTheme(button.dataset.theme));
         });
 
         document.body.appendChild(switcher);
+    }
+
+    setupEventDelegation() {
+        // Use event delegation for content interactions
+        document.addEventListener('click', (e) => {
+            // Handle sigil clicks
+            if (e.target.closest('.sigil')) {
+                this.handleSigilClick(e);
+            }
+            
+            // Handle Chinese annotation clicks
+            if (e.target.closest('.annotated-chinese')) {
+                this.handleAnnotationClick(e);
+            }
+        });
+
+        // Global keyboard handling
+        document.addEventListener('keydown', this.handleKeyDown);
+    }
+
+    handleSigilClick(e) {
+        if (this.theme === 'high-contrast') return;
+        
+        const colorBlock = e.target.closest('[class^="color-"]');
+        if (!colorBlock) return;
+        
+        const content = colorBlock.querySelector('.colortext-content');
+        if (!content) return;
+        
+        if (e.target.tagName === 'A') return;
+        
+        content.classList.toggle('expanded');
+    }
+
+    handleAnnotationClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const annotation = e.target.closest('.annotated-chinese');
+        const inlineAnnotation = annotation.nextElementSibling;
+        
+        if (!inlineAnnotation?.classList.contains('annotation-inline')) {
+            this.createAnnotationElement(annotation);
+            return;
+        }
+        
+        // Close other annotations
+        document.querySelectorAll('.annotation-inline.expanded').forEach(other => {
+            if (other !== inlineAnnotation) {
+                other.classList.remove('expanded');
+            }
+        });
+        
+        inlineAnnotation.classList.toggle('expanded');
+    }
+
+    createAnnotationElement(annotation) {
+        const pinyin = annotation.getAttribute('data-pinyin');
+        const definition = annotation.getAttribute('data-definition');
+        
+        const inlineAnnotation = document.createElement('div');
+        inlineAnnotation.className = 'annotation-inline';
+        inlineAnnotation.innerHTML = `
+            <span class="pinyin">${pinyin}</span>
+            <span class="definition">${definition}</span>
+        `;
+        
+        annotation.parentNode.insertBefore(inlineAnnotation, annotation.nextSibling);
+        inlineAnnotation.classList.add('expanded');
+    }
+
+    handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
+                .forEach(el => el.classList.remove('expanded'));
+        }
     }
 
     setTheme(newTheme) {
@@ -60,6 +143,8 @@ class AtacamaViewer {
             mutations.forEach((mutation) => {
                 if (mutation.attributeName === 'data-theme') {
                     const newTheme = document.documentElement.getAttribute('data-theme');
+                    this.theme = newTheme;
+                    
                     if (newTheme === 'high-contrast') {
                         this.handleHighContrastLayout();
                     } else {
@@ -75,57 +160,6 @@ class AtacamaViewer {
         });
     }
 
-    bindContentEvents() {
-        // Handle color block expansions
-        document.querySelectorAll('[class^="color-"]').forEach(block => {
-            const content = block.querySelector('.colortext-content');
-            const sigil = block.querySelector('.sigil');
-            if (!content || !sigil) return;
-
-            sigil.addEventListener('click', (e) => {
-                // Don't expand if in high contrast mode or clicking a link
-                if (this.theme === 'high-contrast' || e.target.tagName === 'A') return;
-                content.classList.toggle('expanded');
-            });
-        });
-
-        // Handle Chinese annotations
-        document.querySelectorAll('.annotated-chinese').forEach(annotation => {
-            const pinyin = annotation.getAttribute('data-pinyin');
-            const definition = annotation.getAttribute('data-definition');
-            
-            const inlineAnnotation = document.createElement('div');
-            inlineAnnotation.className = 'annotation-inline';
-            inlineAnnotation.innerHTML = `
-                <span class="pinyin">${pinyin}</span>
-                <span class="definition">${definition}</span>
-            `;
-            
-            annotation.parentNode.insertBefore(inlineAnnotation, annotation.nextSibling);
-            
-            annotation.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                document.querySelectorAll('.annotation-inline.expanded').forEach(other => {
-                    if (other !== inlineAnnotation) {
-                        other.classList.remove('expanded');
-                    }
-                });
-                
-                inlineAnnotation.classList.toggle('expanded');
-            });
-        });
-
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
-                    .forEach(el => el.classList.remove('expanded'));
-            }
-        });
-    }
-
     handleHighContrastLayout() {
         const messageContainers = document.querySelectorAll('.message');
         messageContainers.forEach(container => {
@@ -133,20 +167,24 @@ class AtacamaViewer {
                 this.setupHighContrastContainer(container);
             }
         });
-
-        document.querySelectorAll('.colortext-content').forEach(content => {
-            content.style.display = 'block';
-        });
     }
 
     setupHighContrastContainer(messageContainer) {
-        const content = messageContainer.innerHTML;
+        // Store original content
+        const originalContent = messageContainer.innerHTML;
         messageContainer.innerHTML = '';
 
+        // Create main content area
         const mainContent = document.createElement('div');
         mainContent.className = 'message-main';
-        mainContent.innerHTML = content;
+        mainContent.innerHTML = originalContent;
 
+        // Ensure colortext is hidden in main content
+        mainContent.querySelectorAll('.colortext-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        // Create sidebar
         const sidebar = document.createElement('div');
         sidebar.className = 'message-sidebar';
 
@@ -175,6 +213,7 @@ class AtacamaViewer {
                 container.appendChild(contentClone);
                 sidebar.appendChild(container);
 
+                // Ensure content is visible in sidebar only
                 contentClone.style.display = 'inline';
             }
         });
@@ -185,20 +224,19 @@ class AtacamaViewer {
         messageContainers.forEach(container => {
             const mainContent = container.querySelector('.message-main');
             if (mainContent) {
+                // Preserve the original structure
                 container.innerHTML = mainContent.innerHTML;
+                
+                // Reset colortext display
+                container.querySelectorAll('.colortext-content').forEach(content => {
+                    content.style.display = '';
+                });
             }
         });
-
-        document.querySelectorAll('.colortext-content').forEach(content => {
-            content.style.display = '';
-        });
-        
-        // Rebind events after layout changes
-        this.bindContentEvents();
     }
 }
 
-// Initialize when DOM is ready
+// Initialize viewer when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => new AtacamaViewer());
 } else {
