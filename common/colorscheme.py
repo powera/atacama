@@ -123,13 +123,13 @@ class ColorScheme:
 
             # Handle nested colors (with parentheses)
             if nested_color:
-                return (f'<span class="color-{class_name}">'
+                return (f'<span class="colorblock color-{class_name}">'
                     f'<span class="sigil">{sigil}</span>'
                     f'<span class="colortext-content">({content})</span>'
                     f'</span>')
             # Handle paragraph-level colors
             else:
-                return (f'<span class="color-{class_name}">'
+                return (f'<span class="colorblock color-{class_name}">'
                     f'<span class="sigil">{sigil}</span>'
                     f'<span class="colortext-content">{content}</span>'
                     f'</span>')
@@ -143,7 +143,7 @@ class ColorScheme:
             if color not in self.COLORS:
                 return match.group(0)
             sigil, class_name = self.COLORS[color]
-            return (f'<span class="color-{class_name}">'
+            return (f'<span class="colorblock color-{class_name}">'
                    f'<span class="sigil">{sigil}</span>'
                    f'<span class="colortext-content">{content}</span>'
                    f'</span>')
