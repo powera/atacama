@@ -2,7 +2,7 @@
 
 /* Base message layout */
 .message {
-    max-width: min(100%, 800px);
+    max-width: min(90vw, 100%);  /* either 90% of window, or 100% of container */
     margin: 0 auto;
     padding: var(--spacing-base);
     line-height: 1.85;  /* More than default, less than sigil. */
@@ -65,7 +65,7 @@
 /* Individual color styles */
 .color-xantham { color: var(--color-xantham); font-style: italic; }
 .color-red { color: var(--color-red); font-weight: bold; }
-.color-orange { color: var(--color-orange); border-left: 2px solid currentColor; }
+.color-orange { color: var(--color-orange) }
 .color-yellow { color: var(--color-quote); background-color: rgba(255, 255, 0, 0.1); }
 .color-quote { color: var(--color-quote); background-color: rgba(255, 255, 0, 0.1); }
 .color-green { color: var(--color-green); font-family: monospace; background-color: rgba(0, 255, 0, 0.05); }

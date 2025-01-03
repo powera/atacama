@@ -121,9 +121,9 @@
 /* Two-column layout for high contrast mode */
 [data-theme="high-contrast"] .message {
     display: grid;
-    grid-template-columns: 1fr 550px;
+    grid-template-columns: 1fr 30vw;
     gap: 2rem;
-    max-width: 1200px;
+    max-width: 90vw;
 }
 
 [data-theme="high-contrast"] .message-main {
