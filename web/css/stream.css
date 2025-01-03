@@ -1,5 +1,5 @@
 .stream-container {
-    max-width: 1000px;
+    max-width: 95vw;
     margin: 0 auto;
     padding: var(--spacing-base);
 }
