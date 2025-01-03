@@ -1,4 +1,8 @@
 class AtacamaViewer {
+    /**
+     * Initializes the viewer and sets up event handling, but defers DOM operations
+     * until the DOMContentLoaded event.
+     */
     constructor() {
         // Initialize state
         this.theme = localStorage.getItem('theme') || 'light';
@@ -8,26 +12,41 @@ class AtacamaViewer {
         this.handleAnnotationClick = this.handleAnnotationClick.bind(this);
         this.handleKeyDown = this.handleKeyDown.bind(this);
         
-        // Set up the viewer
+        // Defer initialization until DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.initialize());
+        } else {
+            this.initialize();
+        }
+    }
+
+    /**
+     * Performs all DOM-dependent initialization steps after the document is ready
+     */
+    initialize() {
         this.initializeTheme();
         this.setupThemeSwitcher();
         this.setupThemeObserver();
         this.setupEventDelegation();
     }
 
+    /**
+     * Sets up the initial theme state and applies necessary layout changes
+     */
     initializeTheme() {
-        // Set initial theme based on system preference if not stored
         if (!this.theme) {
             this.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
         document.documentElement.setAttribute('data-theme', this.theme);
         
-        // Apply high contrast layout if needed
         if (this.theme === 'high-contrast') {
             this.handleHighContrastLayout();
         }
     }
 
+    /**
+     * Creates and attaches the theme switching UI component
+     */
     setupThemeSwitcher() {
         const switcher = document.createElement('div');
         switcher.className = 'theme-switcher';
@@ -42,7 +61,6 @@ class AtacamaViewer {
             </div>
         `;
 
-        // Add theme switching event listeners
         switcher.querySelectorAll('[data-theme]').forEach(button => {
             button.addEventListener('click', () => this.setTheme(button.dataset.theme));
         });
@@ -50,24 +68,26 @@ class AtacamaViewer {
         document.body.appendChild(switcher);
     }
 
+    /**
+     * Sets up event delegation for content interactions to handle dynamically added elements
+     */
     setupEventDelegation() {
-        // Use event delegation for content interactions
         document.addEventListener('click', (e) => {
-            // Handle sigil clicks
             if (e.target.closest('.sigil')) {
                 this.handleSigilClick(e);
             }
             
-            // Handle Chinese annotation clicks
             if (e.target.closest('.annotated-chinese')) {
                 this.handleAnnotationClick(e);
             }
         });
 
-        // Global keyboard handling
         document.addEventListener('keydown', this.handleKeyDown);
     }
 
+    /**
+     * Handles clicks on sigil elements, toggling content visibility in non-high-contrast mode
+     */
     handleSigilClick(e) {
         if (this.theme === 'high-contrast') return;
         
@@ -75,13 +95,14 @@ class AtacamaViewer {
         if (!colorBlock) return;
         
         const content = colorBlock.querySelector('.colortext-content');
-        if (!content) return;
-        
-        if (e.target.tagName === 'A') return;
+        if (!content || e.target.tagName === 'A') return;
         
         content.classList.toggle('expanded');
     }
 
+    /**
+     * Handles clicks on Chinese annotations, creating or toggling the annotation display
+     */
     handleAnnotationClick(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -94,7 +115,6 @@ class AtacamaViewer {
             return;
         }
         
-        // Close other annotations
         document.querySelectorAll('.annotation-inline.expanded').forEach(other => {
             if (other !== inlineAnnotation) {
                 other.classList.remove('expanded');
@@ -104,6 +124,9 @@ class AtacamaViewer {
         inlineAnnotation.classList.toggle('expanded');
     }
 
+    /**
+     * Creates an inline annotation element for Chinese text
+     */
     createAnnotationElement(annotation) {
         const pinyin = annotation.getAttribute('data-pinyin');
         const definition = annotation.getAttribute('data-definition');
@@ -119,6 +142,9 @@ class AtacamaViewer {
         inlineAnnotation.classList.add('expanded');
     }
 
+    /**
+     * Handles global keyboard events, particularly for closing expanded elements
+     */
     handleKeyDown(e) {
         if (e.key === 'Escape') {
             document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
@@ -126,6 +152,9 @@ class AtacamaViewer {
         }
     }
 
+    /**
+     * Updates the theme and applies necessary layout changes
+     */
     setTheme(newTheme) {
         this.theme = newTheme;
         document.documentElement.setAttribute('data-theme', newTheme);
@@ -138,6 +167,9 @@ class AtacamaViewer {
         }
     }
 
+    /**
+     * Sets up an observer to handle theme changes from external sources
+     */
     setupThemeObserver() {
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -160,6 +192,9 @@ class AtacamaViewer {
         });
     }
 
+    /**
+     * Applies the high-contrast layout to all message containers
+     */
     handleHighContrastLayout() {
         const messageContainers = document.querySelectorAll('.message');
         messageContainers.forEach(container => {
@@ -169,22 +204,21 @@ class AtacamaViewer {
         });
     }
 
+    /**
+     * Transforms a message container into the two-column high-contrast layout
+     */
     setupHighContrastContainer(messageContainer) {
-        // Store original content
         const originalContent = messageContainer.innerHTML;
         messageContainer.innerHTML = '';
 
-        // Create main content area
         const mainContent = document.createElement('div');
         mainContent.className = 'message-main';
         mainContent.innerHTML = originalContent;
 
-        // Ensure colortext is hidden in main content
         mainContent.querySelectorAll('.colortext-content').forEach(content => {
             content.style.display = 'none';
         });
 
-        // Create sidebar
         const sidebar = document.createElement('div');
         sidebar.className = 'message-sidebar';
 
@@ -194,6 +228,9 @@ class AtacamaViewer {
         this.moveColorBlocksToSidebar(mainContent, sidebar);
     }
 
+    /**
+     * Creates sidebar content blocks from main content colored sections
+     */
     moveColorBlocksToSidebar(mainContent, sidebar) {
         const colorBlocks = mainContent.querySelectorAll('[class^="color-"]');
         const processedBlocks = new Set();
@@ -213,21 +250,21 @@ class AtacamaViewer {
                 container.appendChild(contentClone);
                 sidebar.appendChild(container);
 
-                // Ensure content is visible in sidebar only
                 contentClone.style.display = 'inline';
             }
         });
     }
 
+    /**
+     * Removes the high-contrast layout and restores the default view
+     */
     removeHighContrastLayout() {
         const messageContainers = document.querySelectorAll('.message');
         messageContainers.forEach(container => {
             const mainContent = container.querySelector('.message-main');
             if (mainContent) {
-                // Preserve the original structure
                 container.innerHTML = mainContent.innerHTML;
                 
-                // Reset colortext display
                 container.querySelectorAll('.colortext-content').forEach(content => {
                     content.style.display = '';
                 });
@@ -236,9 +273,5 @@ class AtacamaViewer {
     }
 }
 
-// Initialize viewer when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new AtacamaViewer());
-} else {
-    new AtacamaViewer();
-}
+// Create a single instance when the DOM is ready
+const viewer = new AtacamaViewer();
