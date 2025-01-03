@@ -174,7 +174,7 @@ class AtacamaViewer {
     handleSigilClick(e) {
         if (this.theme === 'high-contrast') return;
         
-        const colorBlock = e.target.closest('[class^="color-"]');
+        const colorBlock = e.target.closest('.colorblock, [class^="color-"]');
         if (!colorBlock) return;
         
         const content = colorBlock.querySelector('.colortext-content');
@@ -255,7 +255,7 @@ class AtacamaViewer {
      * Creates sidebar content blocks from main content colored sections
      */
     moveColorBlocksToSidebar(mainContent, sidebar) {
-        const colorBlocks = mainContent.querySelectorAll('[class^="color-"]');
+        const colorBlocks = mainContent.querySelectorAll('.colorblock, [class^="color-"]');
         const processedBlocks = new Set();
 
         colorBlocks.forEach(block => {
