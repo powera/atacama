@@ -7,6 +7,9 @@ class AtacamaViewer {
         // Initialize state
         this.theme = localStorage.getItem('theme') || 'light';
         
+        // Store observer as instance variable so we can disconnect/reconnect it
+        this.themeObserver = null;
+        
         // Bind methods to maintain correct 'this' context
         this.handleSigilClick = this.handleSigilClick.bind(this);
         this.handleAnnotationClick = this.handleAnnotationClick.bind(this);
@@ -21,7 +24,8 @@ class AtacamaViewer {
     }
 
     /**
-     * Performs all DOM-dependent initialization steps after the document is ready
+     * Performs all DOM-dependent initialization steps after the
+     * document is ready
      */
     initialize() {
         this.initializeTheme();
@@ -30,13 +34,11 @@ class AtacamaViewer {
         this.setupEventDelegation();
     }
 
-    /**
-     * Sets up the initial theme state and applies necessary layout changes
-     */
     initializeTheme() {
         if (!this.theme) {
             this.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
+        // Apply theme without triggering observer (since it isn't set up yet)
         document.documentElement.setAttribute('data-theme', this.theme);
         
         if (this.theme === 'high-contrast') {
@@ -44,9 +46,6 @@ class AtacamaViewer {
         }
     }
 
-    /**
-     * Creates and attaches the theme switching UI component
-     */
     setupThemeSwitcher() {
         const switcher = document.createElement('div');
         switcher.className = 'theme-switcher';
@@ -66,6 +65,53 @@ class AtacamaViewer {
         });
 
         document.body.appendChild(switcher);
+    }
+
+    setupThemeObserver() {
+        // Create observer to handle external theme changes
+        this.themeObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'data-theme') {
+                    // Only handle changes that come from outside our code
+                    const newTheme = document.documentElement.getAttribute('data-theme');
+                    this.handleThemeChange(newTheme);
+                }
+            });
+        });
+
+        // Start observing
+        this.themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+    }
+
+    setTheme(newTheme) {
+        // Temporarily stop observing to prevent handling our own change
+        this.themeObserver.disconnect();
+        
+        // Update theme
+        document.documentElement.setAttribute('data-theme', newTheme);
+        
+        // Handle the theme change
+        this.handleThemeChange(newTheme);
+        
+        // Resume observing for external changes
+        this.themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+    }
+
+    handleThemeChange(newTheme) {
+        this.theme = newTheme;
+        localStorage.setItem('theme', newTheme);
+        
+        if (newTheme === 'high-contrast') {
+            this.handleHighContrastLayout();
+        } else {
+            this.removeHighContrastLayout();
+        }
     }
 
     /**
