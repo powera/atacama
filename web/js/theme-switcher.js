@@ -1,3 +1,4 @@
+
 class ThemeSwitcher {
     constructor() {
         this.theme = localStorage.getItem('theme') || 'light';
@@ -13,9 +14,11 @@ class ThemeSwitcher {
         }
         document.documentElement.setAttribute('data-theme', this.theme);
         
-        // Initialize high contrast layout if needed
+        // Initialize layout based on theme
         if (this.theme === 'high-contrast') {
             this.handleHighContrastLayout();
+        } else {
+            this.ensureDefaultState();
         }
     }
 
@@ -48,7 +51,7 @@ class ThemeSwitcher {
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
         
-        // Handle high contrast layout changes
+        // Handle theme-specific layout changes
         if (newTheme === 'high-contrast') {
             this.handleHighContrastLayout();
         } else {
@@ -83,6 +86,15 @@ class ThemeSwitcher {
             if (!container.querySelector('.message-main')) {
                 this.setupHighContrastContainer(container);
             }
+        });
+
+        // Ensure visibility of .colortext-content and interactivity of .sigil
+        document.querySelectorAll('.colortext-content').forEach(content => {
+            content.style.display = 'block';
+        });
+        document.querySelectorAll('.sigil').forEach(sigil => {
+            sigil.style.pointerEvents = 'auto';
+            sigil.style.cursor = 'pointer';
         });
     }
 
@@ -143,6 +155,26 @@ class ThemeSwitcher {
             if (mainContent) {
                 container.innerHTML = mainContent.innerHTML;
             }
+        });
+
+        // Reset .colortext-content and .sigil interactivity
+        document.querySelectorAll('.colortext-content').forEach(content => {
+            content.style.display = '';
+        });
+        document.querySelectorAll('.sigil').forEach(sigil => {
+            sigil.style.pointerEvents = '';
+            sigil.style.cursor = '';
+        });
+    }
+
+    ensureDefaultState() {
+        // Reset any custom styles for other themes
+        document.querySelectorAll('.colortext-content').forEach(content => {
+            content.style.display = '';
+        });
+        document.querySelectorAll('.sigil').forEach(sigil => {
+            sigil.style.pointerEvents = '';
+            sigil.style.cursor = '';
         });
     }
 }
