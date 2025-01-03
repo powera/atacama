@@ -37,12 +37,12 @@
 
 /* High contrast specific styles */
 [data-theme="high-contrast"] .stream-container {
-    max-width: 1400px; /* Wider container for two-column layout */
+    max-width: 95vw; /* Wider container for two-column layout */
 }
 
 [data-theme="high-contrast"] .stream-message {
     display: grid;
-    grid-template-columns: 1fr 500px;
+    grid-template-columns: 1fr 35vw;
     gap: 2rem;
     border: 2px solid var(--color-text);
 }

@@ -34,13 +34,6 @@
     bottom: calc(-1 * var(--spacing-large));
 }
 
-.message-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: var(--spacing-base);
-}
-
 .message-title {
     font-size: var(--font-size-large);
     font-weight: 500;
