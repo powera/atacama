@@ -40,32 +40,9 @@
                         <span class="message-timestamp">{{ message.created_at_formatted }}</span>
                     </header>
                     
-                    <div class="content">
+                    <div class="message-content">
                         {{ message.processed_content | safe }}
                     </div>
-
-                    {% if message.quotes %}
-                    <div class="quote-section">
-                        <h3>Quotes</h3>
-                        {% for quote in message.quotes %}
-                            <div class="quote-card">
-                                <div class="quote-text">"{{ quote.text }}"</div>
-                                <div class="quote-metadata">
-                                    {% if quote.quote_type %}
-                                        <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
-                                    {% endif %}
-                                    {% if quote.author %}
-                                        <span class="quote-author">by {{ quote.author }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="message-sidebar">
-                    <!-- Empty sidebar - only populated in high-contrast mode by theme-switcher.js -->
                 </div>
             </article>
             {% endfor %}
