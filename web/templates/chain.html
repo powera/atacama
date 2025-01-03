@@ -24,7 +24,7 @@
             </div>
             
             {% for message in messages %}
-            <article class="chain-message {% if message.id == target_id %}target-message{% endif %}">
+            <article class="message chain-message {% if message.id == target_id %}target-message{% endif %}">
                 {% if not loop.first %}
                 <div class="message-connector connector-top"></div>
                 {% endif %}
@@ -32,7 +32,7 @@
                 <div class="message-connector connector-bottom"></div>
                 {% endif %}
                 
-                <div class="chain-message-main">
+                <div class="message-main">
                     <header class="message-header">
                         <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
                             {{ message.subject or '(No Subject)' }}
@@ -40,12 +40,10 @@
                         <span class="message-timestamp">{{ message.created_at_formatted }}</span>
                     </header>
                     
-                    <div class="message-content">
+                    <div class="content">
                         {{ message.processed_content | safe }}
                     </div>
-                </div>
-                
-                <div class="chain-message-sidebar">
+
                     {% if message.quotes %}
                     <div class="quote-section">
                         <h3>Quotes</h3>
@@ -64,6 +62,10 @@
                         {% endfor %}
                     </div>
                     {% endif %}
+                </div>
+                
+                <div class="message-sidebar">
+                    <!-- Empty sidebar - only populated in high-contrast mode by theme-switcher.js -->
                 </div>
             </article>
             {% endfor %}
