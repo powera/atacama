@@ -35,6 +35,9 @@
     border: 1px solid;
     padding: 2px;
 }
+[data-theme="high-contrast"] [class^="color-"] {
+    font-size: 0.75em;
+}
 
 /* Color content container */
 .colortext-content {

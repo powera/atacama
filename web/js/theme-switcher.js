@@ -131,7 +131,7 @@ class ThemeSwitcher {
                 sidebar.appendChild(container);
 
                 // Ensure content is visible in sidebar
-                contentClone.style.display = 'block';
+                contentClone.style.display = 'inline';
             }
         });
     }
