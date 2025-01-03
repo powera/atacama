@@ -117,6 +117,40 @@ class AtacamaViewer {
         }
     }
 
+    populateSidebar(mainContent, sidebar) {
+        // Clear any existing content in the sidebar
+        sidebar.innerHTML = '';
+
+        // Find all color blocks in the main content
+        const colorBlocks = mainContent.querySelectorAll('[class^="color-"]');
+        const processedBlocks = new Set();
+
+        colorBlocks.forEach(block => {
+            const content = block.querySelector('.colortext-content');
+            if (content && !processedBlocks.has(content)) {
+                processedBlocks.add(content);
+
+                // Create container for this block
+                const container = document.createElement('div');
+                container.className = 'color-block-container';
+
+                // Clone sigil and content
+                const sigilClone = block.querySelector('.sigil').cloneNode(true);
+                const contentClone = content.cloneNode(true);
+
+                container.appendChild(sigilClone);
+                container.appendChild(contentClone);
+                sidebar.appendChild(container);
+
+                // Make sidebar content visible
+                contentClone.style.display = 'inline';
+
+                // Hide original content
+                content.style.display = 'none';
+            }
+        });
+    }
+
     /**
      * Sets up event delegation for content interactions to handle dynamically added elements
      */
@@ -206,36 +240,15 @@ class AtacamaViewer {
      * Applies the high-contrast layout to all message containers
      */
     handleHighContrastLayout() {
-        const messageContainers = document.querySelectorAll('.message');
-        messageContainers.forEach(container => {
-            if (!container.querySelector('.message-main')) {
-                this.setupHighContrastContainer(container);
+        document.querySelectorAll('.message').forEach(container => {
+            const mainContent = container.querySelector('.message-main');
+            const sidebar = container.querySelector('.message-sidebar');
+            
+            if (!sidebar.hasAttribute('data-processed')) {
+                this.populateSidebar(mainContent, sidebar);
+                sidebar.setAttribute('data-processed', 'true');
             }
         });
-    }
-
-    /**
-     * Transforms a message container into the two-column high-contrast layout
-     */
-    setupHighContrastContainer(messageContainer) {
-        const originalContent = messageContainer.innerHTML;
-        messageContainer.innerHTML = '';
-
-        const mainContent = document.createElement('div');
-        mainContent.className = 'message-main';
-        mainContent.innerHTML = originalContent;
-
-        mainContent.querySelectorAll('.colortext-content').forEach(content => {
-            content.style.display = 'none';
-        });
-
-        const sidebar = document.createElement('div');
-        sidebar.className = 'message-sidebar';
-
-        messageContainer.appendChild(mainContent);
-        messageContainer.appendChild(sidebar);
-
-        this.moveColorBlocksToSidebar(mainContent, sidebar);
     }
 
     /**
@@ -269,16 +282,14 @@ class AtacamaViewer {
      * Removes the high-contrast layout and restores the default view
      */
     removeHighContrastLayout() {
-        const messageContainers = document.querySelectorAll('.message');
-        messageContainers.forEach(container => {
-            const mainContent = container.querySelector('.message-main');
-            if (mainContent) {
-                container.innerHTML = mainContent.innerHTML;
-                
-                container.querySelectorAll('.colortext-content').forEach(content => {
-                    content.style.display = '';
-                });
-            }
+        document.querySelectorAll('.message').forEach(container => {
+            container.querySelectorAll('.colortext-content').forEach(content => {
+                content.style.display = '';
+            });
+
+            const sidebar = container.querySelector('.message-sidebar');
+            sidebar.innerHTML = '';
+            sidebar.removeAttribute('data-processed');
         });
     }
 }
