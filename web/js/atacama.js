@@ -67,6 +67,9 @@ class AtacamaViewer {
         document.body.appendChild(switcher);
     }
 
+    /**
+     * Sets up an observer to handle theme changes from external sources
+     */
     setupThemeObserver() {
         // Create observer to handle external theme changes
         this.themeObserver = new MutationObserver((mutations) => {
@@ -198,45 +201,6 @@ class AtacamaViewer {
         }
     }
 
-    /**
-     * Updates the theme and applies necessary layout changes
-     */
-    setTheme(newTheme) {
-        this.theme = newTheme;
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        
-        if (newTheme === 'high-contrast') {
-            this.handleHighContrastLayout();
-        } else {
-            this.removeHighContrastLayout();
-        }
-    }
-
-    /**
-     * Sets up an observer to handle theme changes from external sources
-     */
-    setupThemeObserver() {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'data-theme') {
-                    const newTheme = document.documentElement.getAttribute('data-theme');
-                    this.theme = newTheme;
-                    
-                    if (newTheme === 'high-contrast') {
-                        this.handleHighContrastLayout();
-                    } else {
-                        this.removeHighContrastLayout();
-                    }
-                }
-            });
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['data-theme']
-        });
-    }
 
     /**
      * Applies the high-contrast layout to all message containers
