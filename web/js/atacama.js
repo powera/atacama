@@ -1,36 +1,13 @@
-// Combined handler for annotations, stream interactions, and tooltips
+// Combined handler for annotations, stream interactions
 class AtacamaHandlers {
     constructor() {
-        this.setupTooltipContainer();
         this.bindEvents();
         this.currentAnnotation = null;
         this.touchStartY = 0;
         this.currentTranslateY = 0;
     }
 
-    setupTooltipContainer() {
-        this.tooltipContainer = document.createElement('div');
-        this.tooltipContainer.className = 'tooltip';
-        document.body.appendChild(this.tooltipContainer);
-    }
-
     bindEvents() {
-        // Handle LLM annotations
-        document.querySelectorAll('.llm-annotation').forEach(el => {
-            el.addEventListener('mouseover', e => {
-                this.tooltipContainer.textContent = e.target.getAttribute('data-type');
-                this.tooltipContainer.classList.add('visible');
-                
-                const rect = e.target.getBoundingClientRect();
-                this.tooltipContainer.style.left = rect.left + 'px';
-                this.tooltipContainer.style.top = (rect.top - this.tooltipContainer.offsetHeight - 5) + 'px';
-            });
-            
-            el.addEventListener('mouseout', () => {
-                this.tooltipContainer.classList.remove('visible');
-            });
-        });
-
         // Handle color block expansions
         document.querySelectorAll('[class^="color-"]').forEach(block => {
             const content = block.querySelector('.colortext-content');

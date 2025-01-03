@@ -32,8 +32,6 @@
     
     /* Message-specific colors */
     --color-annotation-bg: rgba(0, 0, 0, 0.05);
-    --color-tooltip-bg: rgba(0, 0, 0, 0.8);
-    --color-tooltip-text: #ffffff;
     
     /* Color scheme specific */
     --color-xantham: #A0522D;
@@ -70,8 +68,6 @@
     
     /* Message-specific colors */
     --color-annotation-bg: rgba(255, 255, 255, 0.1);
-    --color-tooltip-bg: rgba(255, 255, 255, 0.8);
-    --color-tooltip-text: #000000;
     
     /* Color scheme specific - adjusted for dark mode visibility */
     --color-xantham: #d4734f;
