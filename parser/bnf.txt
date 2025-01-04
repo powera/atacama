@@ -1,0 +1,61 @@
+; Top level document structure
+<document> ::= <section>+
+
+; Sections are delimited by section breaks
+<section> ::= <content-block>+ (<section-break> <content-block>+)*
+
+; Section break has highest priority
+<section-break> ::= WHITESPACE* "----" WHITESPACE* NEWLINE
+
+; Content blocks can be multi-paragraph quotes or regular blocks
+<content-block> ::= <multi-quote-block> | <regular-block>
+
+; Multi-paragraph quotes have second-highest priority
+<multi-quote-block> ::= "<<<" NEWLINE <regular-block>+ ">>>" NEWLINE
+
+; Regular blocks are either paragraphs or lists
+<regular-block> ::= <paragraph> | <list>
+
+; Paragraphs contain either a color-tagged line or regular text
+<paragraph> ::= <color-line> | <text-line>
+
+; Color tags at start of line
+<color-line> ::= WHITESPACE* "<" COLOR-NAME ">" <text-content> NEWLINE
+
+; Text content can contain parenthesized color sections
+<text-content> ::= (<plain-text> | <paren-color-section>)+
+
+; Parenthesized color sections must track depth
+<paren-color-section> ::= "(" WHITESPACE* "<" COLOR-NAME ">" <nested-text> ")"
+
+; Nested text can contain balanced parentheses
+<nested-text> ::= (<plain-text> | <balanced-parens>)*
+
+; Track balanced parentheses recursively
+<balanced-parens> ::= "(" <nested-text> ")"
+
+; Lists have specific markers
+<list> ::= <list-item>+
+
+<list-item> ::= WHITESPACE* LIST-MARKER WHITESPACE (<color-line> | <text-line>)
+
+; Plain text can contain URLs, wikilinks, and Chinese characters
+<plain-text> ::= (<regular-char> | <url> | <wikilink> | <chinese-text> | <literal-text>)+
+
+<literal-text> ::= "<<" TEXT ">>"
+
+<url> ::= ("http://" | "https://") URL-CHAR+
+
+<wikilink> ::= "[[" TEXT "]]"
+
+<chinese-text> ::= CHINESE-CHAR+
+
+; Terminal definitions
+COLOR-NAME ::= "xantham" | "red" | "orange" | "yellow" | "quote" | "green" | 
+               "teal" | "blue" | "violet" | "music" | "mogue" | "gray" | "hazel"
+LIST-MARKER ::= "*" | "#" | ">" | "&gt;"
+CHINESE-CHAR ::= [\u4e00-\u9fff]
+URL-CHAR ::= [A-Za-z0-9_\-\./%]
+TEXT ::= [^<>]+
+WHITESPACE ::= [ \t]
+NEWLINE ::= [\r\n]

@@ -1,8 +1,8 @@
 import unittest
 from textwrap import dedent
-from parser.lexer import tokenize, TokenType, Token, LexerError
+from .lexer import tokenize, TokenType, Token, LexerError
 
-class TestLexer(unittest.TestCase):
+class TestAtacamaLexer(unittest.TestCase):
     """Test suite for the Atacama lexer component."""
 
     def assert_tokens(self, text, expected_types):
@@ -13,6 +13,17 @@ class TestLexer(unittest.TestCase):
             f"\nExpected: {[t.name for t in expected_types]}"
             f"\nGot: {[t.name for t in actual_types]}")
 
+    def assert_token_values(self, text, expected_tokens):
+        """Helper to verify both token types and values."""
+        tokens = list(tokenize(text))
+        for actual, (exp_type, exp_value) in zip(tokens, expected_tokens):
+            self.assertEqual(actual.type, exp_type,
+                f"Expected token type {exp_type.name}, got {actual.type.name}")
+            self.assertEqual(actual.value, exp_value,
+                f"Expected value '{exp_value}', got '{actual.value}'")
+        self.assertEqual(len(tokens), len(expected_tokens),
+            "Number of tokens doesn't match expected")
+
     def test_empty_input(self):
         """Lexer should handle empty input gracefully."""
         tokens = list(tokenize(""))
@@ -21,32 +32,79 @@ class TestLexer(unittest.TestCase):
     def test_plain_text(self):
         """Lexer should tokenize plain text correctly."""
         text = "Hello, world!"
-        tokens = list(tokenize(text))
-        self.assertEqual(len(tokens), 1)
-        self.assertEqual(tokens[0].type, TokenType.TEXT)
-        self.assertEqual(tokens[0].value, text)
+        self.assert_token_values(text, [(TokenType.TEXT, "Hello, world!")])
 
-    def test_color_blocks(self):
-        """Lexer should properly tokenize color block tags."""
-        text = "<red>Important warning"
+    def test_whitespace(self):
+        """Lexer should handle whitespace appropriately."""
+        text = "Hello    world"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Hello"),
+            (TokenType.WHITESPACE, "    "),
+            (TokenType.TEXT, "world")
+        ])
+
+    def test_line_color_tags(self):
+        """Lexer should properly tokenize color tags at line start."""
+        text = "<red>Important warning\nNormal text"
+        self.assert_token_values(text, [
+            (TokenType.COLOR_LINE_TAG, "<red>"),
+            (TokenType.TEXT, "Important warning"),
+            (TokenType.NEWLINE, "\n"),
+            (TokenType.TEXT, "Normal text")
+        ])
+
+    def test_parenthesized_color_tags(self):
+        """Lexer should handle color tags within parentheses."""
+        text = "Note: (<red>important)"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Note: "),
+            (TokenType.PARENTHESIS_START, "("),
+            (TokenType.COLOR_PAREN_TAG, "<red>"),
+            (TokenType.TEXT, "important"),
+            (TokenType.PARENTHESIS_END, ")")
+        ])
+
+    def test_nested_parentheses(self):
+        """Lexer should track nested parentheses correctly."""
+        text = "(((<red>deep)))"
+        self.assert_token_values(text, [
+            (TokenType.PARENTHESIS_START, "("),
+            (TokenType.PARENTHESIS_START, "("),
+            (TokenType.PARENTHESIS_START, "("),
+            (TokenType.COLOR_PAREN_TAG, "<red>"),
+            (TokenType.TEXT, "deep"),
+            (TokenType.PARENTHESIS_END, ")"),
+            (TokenType.PARENTHESIS_END, ")"),
+            (TokenType.PARENTHESIS_END, ")")
+        ])
+
+    def test_multi_quote_blocks(self):
+        """Lexer should properly handle multi-quote blocks."""
+        text = dedent("""
+            Before
+            <<<
+            Quoted text
+            More quoted
+            >>>
+            After
+        """).strip()
+        
         self.assert_tokens(text, [
-            TokenType.COLOR_BLOCK_TAG,
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.MULTI_QUOTE_START,
+            TokenType.NEWLINE,
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.MULTI_QUOTE_END,
+            TokenType.NEWLINE,
             TokenType.TEXT
         ])
 
-    def test_nested_colors(self):
-        """Lexer should handle nested color tags in parentheses."""
-        text = "Note: (<red>important)"
-        self.assert_tokens(text, [
-            TokenType.TEXT,
-            TokenType.PARENTHESIS_START,
-            TokenType.COLOR_BLOCK_TAG,
-            TokenType.TEXT,
-            TokenType.PARENTHESIS_END,
-        ])
-
     def test_lists(self):
-        """Lexer should recognize different types of list markers."""
+        """Lexer should recognize different types of list markers at line start."""
         text = dedent("""
             * Bullet item
             # Numbered item
@@ -54,54 +112,51 @@ class TestLexer(unittest.TestCase):
         """).strip()
         
         self.assert_tokens(text, [
-            TokenType.BULLET_LIST_MARKER, TokenType.TEXT, TokenType.NEWLINE,
-            TokenType.NUMBER_LIST_MARKER, TokenType.TEXT, TokenType.NEWLINE,
-            TokenType.ARROW_LIST_MARKER, TokenType.TEXT
+            TokenType.BULLET_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT, TokenType.NEWLINE,
+            TokenType.NUMBER_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT, TokenType.NEWLINE,
+            TokenType.ARROW_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT
         ])
 
     def test_chinese_text(self):
         """Lexer should identify Chinese character sequences."""
         text = "Hello 世界 World"
-        self.assert_tokens(text, [
-            TokenType.TEXT,
-            TokenType.CHINESE_TEXT,
-            TokenType.TEXT
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Hello"),
+            (TokenType.WHITESPACE, " "),
+            (TokenType.CHINESE_TEXT, "世界"),
+            (TokenType.WHITESPACE, " "),
+            (TokenType.TEXT, "World")
         ])
 
-    def test_urls_and_wikilinks(self):
-        """Lexer should properly handle URLs and wikilinks."""
-        text = "Visit https://example.com and [[Wikipedia]]"
-        self.assert_tokens(text, [
-            TokenType.TEXT,
-            TokenType.URL,
-            TokenType.TEXT,
-            TokenType.WIKILINK_START,
-            TokenType.TEXT,
-            TokenType.WIKILINK_END
+    def test_urls(self):
+        """Lexer should properly handle URLs."""
+        text = "Visit https://example.com/path?q=1"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Visit"),
+            (TokenType.WHITESPACE, " "),
+            (TokenType.URL, "https://example.com/path?q=1")
         ])
 
     def test_literal_text(self):
         """Lexer should handle literal text sections."""
         text = "Code: <<print('hello')>>"
-        self.assert_tokens(text, [
-            TokenType.TEXT,
-            TokenType.LITERAL_START,
-            TokenType.TEXT,
-            TokenType.PARENTHESIS_START,
-            TokenType.TEXT,
-            TokenType.PARENTHESIS_END,
-            TokenType.LITERAL_END
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Code:"),
+            (TokenType.WHITESPACE, " "),
+            (TokenType.LITERAL_START, "<<"),
+            (TokenType.TEXT, "print('hello')"),
+            (TokenType.LITERAL_END, ">>")
         ])
 
     def test_section_breaks(self):
         """Lexer should recognize section break markers."""
         text = "Section 1\n----\nSection 2"
-        self.assert_tokens(text, [
-            TokenType.TEXT,
-            TokenType.NEWLINE,
-            TokenType.SECTION_BREAK,
-            TokenType.NEWLINE,
-            TokenType.TEXT
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Section 1"),
+            (TokenType.NEWLINE, "\n"),
+            (TokenType.SECTION_BREAK, "----"),
+            (TokenType.NEWLINE, "\n"),
+            (TokenType.TEXT, "Section 2")
         ])
 
     def test_position_tracking(self):
@@ -115,22 +170,40 @@ class TestLexer(unittest.TestCase):
         self.assertEqual(tokens[2].column, 1)
 
     def test_complex_document(self):
-        """Test a more complex document with multiple features."""
+        """Test a complex document with multiple features interacting."""
         text = dedent("""
-            Welcome to my notes
-            
-            <red>Important points:</red>
-            * First item with 中文
-            * Second item with [[Wiki]]
-            
-            Visit https://example.com for more.
+            Welcome
             ----
-            That's all!
+            <red>Important note
+            * First item (with <blue>highlight)
+            * Second item with 中文
+            
+            >>> More details <<<
+            Visit https://example.com
         """).strip()
         
-        # We don't check exact tokens here, but verify no lexer errors
         tokens = list(tokenize(text))
-        self.assertTrue(len(tokens) > 10)  # Should have multiple tokens
+        # Verify specific important characteristics
+        self.assertTrue(any(t.type == TokenType.SECTION_BREAK for t in tokens))
+        self.assertTrue(any(t.type == TokenType.COLOR_LINE_TAG for t in tokens))
+        self.assertTrue(any(t.type == TokenType.COLOR_PAREN_TAG for t in tokens))
+        self.assertTrue(any(t.type == TokenType.BULLET_LIST_MARKER for t in tokens))
+        self.assertTrue(any(t.type == TokenType.CHINESE_TEXT for t in tokens))
+        self.assertTrue(any(t.type == TokenType.URL for t in tokens))
+
+    def test_invalid_color_tags(self):
+        """Test handling of invalid or misplaced color tags."""
+        # Color tag in middle of line without parentheses
+        text = "Start <red>not valid"
+        tokens = list(tokenize(text))
+        self.assertEqual(len(tokens), 2)  # Should treat as text
+        self.assertEqual(tokens[0].type, TokenType.TEXT)
+
+        # Invalid color name
+        text = "<invalid>text"
+        tokens = list(tokenize(text))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.TEXT)
 
 if __name__ == '__main__':
     unittest.main()
