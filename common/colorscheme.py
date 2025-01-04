@@ -38,13 +38,13 @@ class ColorScheme:
         self.color_pattern = re.compile(
             fr'(?:^[ \t]*&lt;({color_names})&gt;(.+?)(?:\r?\n|$))|'  # Start of line
             fr'\([ \t]*&lt;({color_names})&gt;(.*?)[ \t]*\)',  # In parentheses
-            re.MULTILINE | re.DOTALL
+            re.DOTALL
         )
         
         # Pattern for inline color tags
         self.inline_color_pattern = re.compile(
             fr'&lt;({color_names})&gt;(.+?)(?:\r?\n|$)',
-            re.MULTILINE | re.DOTALL
+            re.DOTALL
         )
         
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
