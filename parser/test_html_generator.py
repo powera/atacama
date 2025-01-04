@@ -1,11 +1,11 @@
 import unittest
 from textwrap import dedent
-from parser.lexer import tokenize
-from parser.parser import parse
-from parser.html_generator import generate_html, HTMLGenerator
+from lexer_new import tokenize
+from parser_new import parse
+from html_generator_new import generate_html, HTMLGenerator
 
-class TestHTMLGenerator(unittest.TestCase):
-    """Test suite for the Atacama HTML generator component."""
+class TestAtacamaHTMLGenerator(unittest.TestCase):
+    """Test suite for the Atacama HTML generator implementation."""
 
     def generate_html(self, text, annotations=None):
         """Helper to process text through the full pipeline."""
@@ -19,70 +19,98 @@ class TestHTMLGenerator(unittest.TestCase):
             return ' '.join(html.split())
         self.assertEqual(normalize(actual), normalize(expected))
 
-    def test_basic_text(self):
-        """Basic text should be wrapped in paragraph tags."""
-        html = self.generate_html("Hello, world!")
-        self.assertHtmlEqual(html, "<p>Hello, world!</p>")
-
-        # Multiple paragraphs should be separated
-        html = self.generate_html("Para 1\n\nPara 2")
-        self.assertHtmlEqual(html, "<p>Para 1</p> <p>Para 2</p>")
-
-    def test_color_blocks(self):
-        """Color blocks should include proper classes and emoji indicators."""
-        text = "<red>Important warning</red>"
+    def test_document_structure(self):
+        """Test basic document structure with sections."""
+        text = dedent("""
+            First section
+            ----
+            Second section
+            ----
+            Third section
+        """).strip()
+        
         html = self.generate_html(text)
-        expected = '''
-            <p class="color-red">
-                <span class="sigil" title="Forceful/certain">💡</span>
-                <div class="color-content">Important warning</div>
-            </p>
-        '''
-        self.assertHtmlEqual(html, expected)
+        self.assertHtmlEqual(html, """
+            <section class="content-section">
+                <p>First section</p>
+            </section>
+            <section class="content-section">
+                <p>Second section</p>
+            </section>
+            <section class="content-section">
+                <p>Third section</p>
+            </section>
+        """)
 
-        # Test nested color blocks
-        text = "<red>Outer <blue>inner</blue> text</red>"
+    def test_multi_quote_blocks(self):
+        """Test multi-paragraph quote block formatting."""
+        text = dedent("""
+            Before quote
+            <<<
+            First quoted paragraph
+            Second quoted paragraph
+            >>>
+            After quote
+        """).strip()
+        
         html = self.generate_html(text)
-        self.assertIn('class="color-red"', html)
-        self.assertIn('class="color-blue"', html)
-        self.assertIn('💡', html)  # Red's emoji
-        self.assertIn('✨', html)  # Blue's emoji
+        self.assertHtmlEqual(html, """
+            <section class="content-section">
+                <p>Before quote</p>
+                <blockquote class="multi-quote">
+                    <p>First quoted paragraph</p>
+                    <p>Second quoted paragraph</p>
+                </blockquote>
+                <p>After quote</p>
+            </section>
+        """)
 
-    def test_inline_colors(self):
-        """Inline colored text should preserve parentheses and proper nesting."""
-        text = "Note: (<red>important</red>)"
+    def test_line_color_tags(self):
+        """Test line-level color tag formatting."""
+        text = "<red>Important warning"
         html = self.generate_html(text)
-        self.assertIn('<p>Note: <span class="color-red">', html)
-        self.assertIn('</span></p>', html)
-        self.assertIn('💡', html)  # Red's emoji
-        self.assertIn('(', html)
-        self.assertIn(')', html)
+        
+        self.assertHtmlEqual(html, """
+            <section class="content-section">
+                <div class="color-red color-line">
+                    <span class="sigil" title="Forceful/certain">💡</span>
+                    <span class="colortext-content">Important warning</span>
+                </div>
+            </section>
+        """)
+
+    def test_parenthesized_colors(self):
+        """Test parenthesized color tag formatting."""
+        text = "Note: (<red>important)"
+        html = self.generate_html(text)
+        
+        self.assertHtmlEqual(html, """
+            <section class="content-section">
+                <p>Note: <span class="color-red color-paren">
+                    <span class="sigil" title="Forceful/certain">💡</span>
+                    <span class="colortext-content">(important)</span>
+                </span></p>
+            </section>
+        """)
 
     def test_lists(self):
-        """Lists should have proper structure and classes."""
+        """Test list formatting with different marker types."""
         text = dedent("""
             * First item
-            * Second item with (<red>note</red>)
-            # Numbered item
+            * Second item
+            # Number item
             > Arrow item
         """).strip()
         
         html = self.generate_html(text)
         
-        # Check list containers
-        self.assertIn('<ul>', html)
-        self.assertIn('</ul>', html)
-        
-        # Check list item classes
-        self.assertIn('class="bullet-list"', html)
-        self.assertIn('class="number-list"', html)
-        self.assertIn('class="arrow-list"', html)
-        
-        # Check nested color in list item
-        self.assertIn('class="color-red"', html)
+        self.assertIn('<ul class="atacama-list">', html)
+        self.assertIn('<li class="bullet-list">', html)
+        self.assertIn('<li class="number-list">', html)
+        self.assertIn('<li class="arrow-list">', html)
 
     def test_chinese_text(self):
-        """Chinese text should include proper annotation attributes."""
+        """Test Chinese text with annotations."""
         text = "Hello 世界 World"
         annotations = {
             "世界": {
@@ -92,88 +120,95 @@ class TestHTMLGenerator(unittest.TestCase):
         }
         
         html = self.generate_html(text, annotations)
-        
-        self.assertIn('class="annotated-chinese"', html)
-        self.assertIn('data-pinyin="Shì Jiè"', html)
-        self.assertIn('data-definition="world"', html)
-        
-        # Test without annotations
-        html = self.generate_html(text)
-        self.assertIn('class="annotated-chinese"', html)
-        self.assertIn('世界', html)
+        self.assertHtmlEqual(html, """
+            <section class="content-section">
+                <p>Hello <span class="annotated-chinese" 
+                    data-pinyin="Shì Jiè" 
+                    data-definition="world">世界</span> World</p>
+            </section>
+        """)
 
-    def test_urls_and_wikilinks(self):
-        """URLs and wikilinks should have proper attributes."""
-        text = "Visit https://example.com and [[Wikipedia]]"
+    def test_special_elements(self):
+        """Test URLs, wikilinks, and literal text elements."""
+        text = dedent("""
+            Visit https://example.com
+            Read [[Wikipedia]] article
+            Code: <<print("hello")>>
+        """).strip()
+        
         html = self.generate_html(text)
         
-        # Check URL
-        self.assertIn('<a href="https://example.com"', html)
-        self.assertIn('target="_blank"', html)
+        self.assertIn('class="external-link"', html)
         self.assertIn('rel="noopener noreferrer"', html)
-        
-        # Check wikilink
-        self.assertIn('<a href="https://en.wikipedia.org/wiki/Wikipedia"', html)
         self.assertIn('class="wikilink"', html)
+        self.assertIn('class="literal-text"', html)
 
-    def test_section_breaks(self):
-        """Section breaks should be converted to HR elements."""
-        text = "Section 1\n----\nSection 2"
+    def test_nested_structures(self):
+        """Test complex nested structures."""
+        text = dedent("""
+            <red>Warning:
+            * Item with (<blue>note)
+            * Item with <<code>>
+            >>>
+        """).strip()
+        
         html = self.generate_html(text)
-        self.assertIn('<hr>', html)
-        self.assertIn('<p>Section 1</p>', html)
-        self.assertIn('<p>Section 2</p>', html)
+        
+        self.assertIn('class="color-red color-line"', html)
+        self.assertIn('class="color-blue color-paren"', html)
+        self.assertIn('class="atacama-list"', html)
+        self.assertIn('class="bullet-list"', html)
+        self.assertIn('class="literal-text"', html)
 
-    def test_literal_text(self):
-        """Literal text should be properly wrapped."""
-        text = "Code: <<print('hello')>>"
+    def test_html_escaping(self):
+        """Test proper HTML escaping."""
+        cases = [
+            ('Text & more', '&amp;'),
+            ('Text < text', '&lt;'),
+            ('Text > text', '&gt;'),
+            ('Text "quoted"', '"quoted"'),  # Quotes don't need escaping in content
+            ('<script>alert("xss")</script>', '&lt;script&gt;')
+        ]
+        
+        for input_text, expected in cases:
+            html = self.generate_html(input_text)
+            self.assertIn(expected, html)
+
+    def test_url_sanitization(self):
+        """Test URL sanitization in links."""
+        text = 'Visit https://example.com/"malicious'
         html = self.generate_html(text)
-        self.assertIn('<span class="literal-text">', html)
-        self.assertIn("print('hello')", html)
+        self.assertIn('href="https://example.com/%22malicious"', html)
+        self.assertNotIn('href="https://example.com/"malicious"', html)
 
     def test_complex_document(self):
-        """Test a complex document with multiple features."""
+        """Test a complete document with multiple features."""
         text = dedent("""
-            Welcome to my 笔记
-
-            <red>Important points:</red>
-            * First item with [[Wiki]]
-            * Second item with 中文
-            * Third with (<blue>note</blue>)
-
-            Visit https://example.com for more.
+            Welcome
             ----
-            That's all!
+            <red>Important:
+            * Point with [[Wiki]]
+            * Point with 中文
+            
+            <<<
+            Quoted content
+            More quotes
+            >>>
+            
+            Visit https://example.com
         """).strip()
-
-        annotations = {
-            "笔记": {"pinyin": "Bǐ Jì", "definition": "notes"},
-            "中文": {"pinyin": "Zhōng Wén", "definition": "Chinese language"}
-        }
-
-        html = self.generate_html(text, annotations)
-
-        # Verify essential structure elements
-        self.assertIn('class="annotated-chinese"', html)
-        self.assertIn('class="color-red"', html)
-        self.assertIn('class="color-blue"', html)
-        self.assertIn('class="bullet-list"', html)
-        self.assertIn('class="wikilink"', html)
-        self.assertIn('<hr>', html)
-        self.assertIn('href="https://example.com"', html)
-
-    def test_empty_and_whitespace(self):
-        """Test handling of empty or whitespace-only input."""
-        self.assertEqual(self.generate_html("").strip(), "")
-        self.assertEqual(self.generate_html(" \n \t ").strip(), "")
-        self.assertEqual(self.generate_html("\n\n\n").strip(), "")
-
-    def test_malformed_html_escaping(self):
-        """Test that potentially malicious HTML is escaped."""
-        text = 'Text with <script>alert("xss")</script>'
+        
         html = self.generate_html(text)
-        self.assertNotIn('<script>', html)
-        self.assertIn('&lt;script&gt;', html)
+        
+        # Verify document structure
+        self.assertIn('<section class="content-section">', html)
+        self.assertIn('<blockquote class="multi-quote">', html)
+        
+        # Verify formatting elements
+        self.assertIn('class="color-red color-line"', html)
+        self.assertIn('class="wikilink"', html)
+        self.assertIn('class="annotated-chinese"', html)
+        self.assertIn('class="external-link"', html)
 
 if __name__ == '__main__':
     unittest.main()
