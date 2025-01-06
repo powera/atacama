@@ -54,14 +54,14 @@ class AtacamaViewer {
                 <span class="theme-icon">🌗</span>
             </button>
             <div class="theme-menu">
-                <button>Light</button>
-                <button>Dark</button>
-                <button>High Contrast</button>
+                <button data-theme-option="light">Light</button>
+                <button data-theme-option="dark">Dark</button>
+                <button data-theme-option="high-contrast">High Contrast</button>
             </div>
         `;
 
         switcher.querySelectorAll('[data-theme]').forEach(button => {
-            button.addEventListener('click', () => this.setTheme(button.dataset.theme));
+            button.addEventListener('click', () => this.setTheme(button.dataset.themeOption));
         });
 
         document.body.appendChild(switcher);
