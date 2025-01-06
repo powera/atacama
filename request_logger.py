@@ -8,6 +8,9 @@ import os
 from functools import wraps
 
 class RequestLogger:
+    # Sensitive parameters that should never be logged
+    SENSITIVE_PARAMS = {'credential', 'token', 'password', 'secret', 'auth', 'key'}
+    
     def __init__(self, app=None, log_dir: str = "logs"):
         self.log_dir = log_dir
         self.trusted_proxies = ['127.0.0.1', '::1']
@@ -18,22 +21,37 @@ class RequestLogger:
         # Ensure log directory exists
         os.makedirs(self.log_dir, exist_ok=True)
 
-        # Create request logger
+        # Create request logger with separate handlers for different levels
         request_logger = logging.getLogger('request_logger')
         request_logger.setLevel(logging.INFO)
 
-        # Create rotating file handler
-        handler = RotatingFileHandler(
+        # Handler for detailed DEBUG logs
+        debug_handler = RotatingFileHandler(
+            os.path.join(self.log_dir, 'requests.debug.log'),
+            maxBytes=10000000,  # 10MB
+            backupCount=10
+        )
+        debug_handler.setLevel(logging.DEBUG)
+        debug_formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s'
+        )
+        debug_handler.setFormatter(debug_formatter)
+        debug_handler.addFilter(lambda record: record.levelno == logging.DEBUG)
+        request_logger.addHandler(debug_handler)
+
+        # Handler for basic INFO logs
+        info_handler = RotatingFileHandler(
             os.path.join(self.log_dir, 'requests.log'),
             maxBytes=10000000,  # 10MB
             backupCount=10
         )
-        
-        formatter = logging.Formatter(
+        info_handler.setLevel(logging.INFO)
+        info_formatter = logging.Formatter(
             '%(asctime)s - %(levelname)s - %(message)s'
         )
-        handler.setFormatter(formatter)
-        request_logger.addHandler(handler)
+        info_handler.setFormatter(info_formatter)
+        info_handler.addFilter(lambda record: record.levelno >= logging.INFO)
+        request_logger.addHandler(info_handler)
 
         # Register before_request handler
         @app.before_request
@@ -60,31 +78,49 @@ class RequestLogger:
             else:
                 ip_address = request.remote_addr
 
-            # Build log entry
-            log_entry = {
+            # Basic log entry for INFO level
+            info_entry = {
                 'timestamp': datetime.utcnow().isoformat(),
                 'method': request.method,
                 'path': request.path,
                 'status_code': response.status_code,
                 'duration_ms': int(duration.total_seconds() * 1000),
+            }
+            
+            # Log basic info at INFO level
+            request_logger.info(json.dumps(info_entry))
+
+            # Detailed log entry for DEBUG level
+            debug_entry = info_entry.copy()
+            debug_entry.update({
                 'user_email': user_email,
                 'ip_address': ip_address,
                 'user_agent': request.user_agent.string,
                 'referer': request.referrer,
-                'query_params': dict(request.args),
-            }
+            })
 
-            # Add request body for POST/PUT requests (excluding file uploads and sensitive data)
+            # Add sanitized query parameters
+            if request.args:
+                sanitized_params = {
+                    k: v for k, v in request.args.items() 
+                    if k.lower() not in self.SENSITIVE_PARAMS
+                }
+                if sanitized_params:
+                    debug_entry['query_params'] = sanitized_params
+
+            # Add sanitized request body for POST/PUT requests
             if request.method in ['POST', 'PUT'] and request.is_json:
                 body = request.get_json()
                 if isinstance(body, dict):
-                    # Remove sensitive fields
-                    sanitized_body = {k: v for k, v in body.items() 
-                                   if k.lower() not in ['password', 'token', 'credential']}
-                    log_entry['request_body'] = sanitized_body
+                    sanitized_body = {
+                        k: v for k, v in body.items()
+                        if k.lower() not in self.SENSITIVE_PARAMS
+                    }
+                    if sanitized_body:
+                        debug_entry['request_body'] = sanitized_body
 
-            # Log the entry
-            request_logger.info(json.dumps(log_entry))
+            # Log detailed info at DEBUG level
+            request_logger.debug(json.dumps(debug_entry))
 
             return response
 
