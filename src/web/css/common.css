@@ -375,3 +375,32 @@ button:disabled,
         width: 100%;
     }
 }
+
+/* Print styles */
+@media print {
+    /* Reset base styles for printing */
+    :root {
+        --spacing-base: 0.25rem;
+        --spacing-large: 0.5rem;
+        --font-size-base: 10pt;
+        --font-size-small: 9pt;
+        --font-size-large: 12pt;
+    }
+
+    /* Hide interactive elements */
+    .theme-switcher,
+    .button:not(.view-link),
+    .message-actions,
+    form,
+    .info-box {
+        display: none !important;
+    }
+
+    /* Compact color blocks */
+    [class^="color-"],
+    .colorblock {
+        margin: 0;
+        padding: 0.125rem;
+        border-width: 0.5pt;
+    }
+}
