@@ -196,7 +196,6 @@
     }
 }
 
-
 /* Theme switcher positioning and styling */
 .theme-switcher {
     position: fixed;
@@ -209,19 +208,22 @@
     padding: 0.5rem;
     border-radius: 50%;
     border: 1px solid var(--color-border);
-    background: var(--color-card-bg);
+    background: var(--color-background);
     cursor: pointer;
+    color: var(--color-text);
 }
 
 .theme-menu {
     position: absolute;
     right: 0;
     top: 100%;
-    background: var(--color-card-bg);
+    background: var(--color-background);
     border: 1px solid var(--color-border);
     border-radius: 0.25rem;
     padding: 0.5rem;
     display: none;
+    min-width: 150px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .theme-switcher:hover .theme-menu {
@@ -240,9 +242,9 @@
 }
 
 .theme-menu button:hover {
-    background: var(--color-annotation-bg);
+    background: var(--color-primary);
+    color: white;
 }
-
 
 /* Base styles */
 body {
