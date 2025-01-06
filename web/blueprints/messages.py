@@ -10,6 +10,9 @@ Session, db_success = setup_database()
 from common.models import Email
 from .auth import require_auth
 
+from common.logging_config import get_logger
+logger = get_logger(__name__)
+
 messages_bp = Blueprint('messages', __name__)
 
 def get_message_by_id(message_id: int) -> Optional[Email]:
