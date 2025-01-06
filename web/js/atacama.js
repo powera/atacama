@@ -54,9 +54,9 @@ class AtacamaViewer {
                 <span class="theme-icon">🌗</span>
             </button>
             <div class="theme-menu">
-                <button data-theme="light">Light</button>
-                <button data-theme="dark">Dark</button>
-                <button data-theme="high-contrast">High Contrast</button>
+                <button>Light</button>
+                <button>Dark</button>
+                <button>High Contrast</button>
             </div>
         `;
 
