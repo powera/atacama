@@ -187,9 +187,9 @@ hr {
 }
 [data-theme="high-contrast"] hr {
     border: none;
-    border-top: 4px solid var(--color-text);
-    margin: var(--spacing-large) 0;
-    width: 80%;
+    border-top: 3px solid var(--color-text);
+    margin: var(--spacing-large) auto;
+    width: 75%;
 }
 
 /* Two-column layout for single message view */
