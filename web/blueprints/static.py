@@ -46,3 +46,12 @@ def serve_touch_icon():
     :return: Apple touch icon file response
     """
     return send_from_directory(constants.STATIC_DIR, 'apple-touch-icon.png')
+
+@static_bp.route('/robots.txt')
+def serve_robots_txt():
+    """
+    Serve the robots.txt file from the static directory.
+    
+    :return: Apple touch icon file response
+    """
+    return send_from_directory(constants.STATIC_DIR, 'robots.txt')
