@@ -185,6 +185,12 @@ hr {
     border-top: 1px solid var(--color-border);
     margin: var(--spacing-base) 0;
 }
+[data-theme="high-contrast"] hr {
+    border: none;
+    border-top: 4px solid var(--color-text);
+    margin: var(--spacing-large) 0;
+    width: 80%;
+}
 
 /* Two-column layout for single message view */
 .message.single-view .message-body {
