@@ -182,8 +182,10 @@ class AtacamaViewer {
         if (!content || !sigil || e.target.tagName === 'A') return;
         
         content.classList.toggle('expanded');
-        sigil.style.transform = content.classList.contains('expanded') ? 'rotate(30deg)' : '';
-        sigil.style.transition = 'transform 0.3s ease';
+        /* Disable rotation
+        * sigil.style.transform = content.classList.contains('expanded') ? 'rotate(30deg)' : '';
+        * sigil.style.transition = 'transform 0.3s ease';
+        * */
     }
 
     /**
