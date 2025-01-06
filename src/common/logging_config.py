@@ -14,10 +14,11 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import constants
+
 def configure_logging(
     log_level: str = "INFO",
-    app_log_level: str = "DEBUG",
-    log_dir: Optional[str] = None
+    app_log_level: str = "DEBUG"
 ) -> None:
     """
     Configure application-wide logging settings.
@@ -30,7 +31,6 @@ def configure_logging(
     Args:
         log_level: Root logger level (default: "INFO")
         app_log_level: Application-specific logger level (default: "DEBUG")
-        log_dir: Directory for log files. If None, uses './logs'
     """
     # Create a detailed formatter that helps with debugging
     formatter = logging.Formatter(
@@ -48,10 +48,7 @@ def configure_logging(
     root_logger.addHandler(console_handler)
     
     # Set up file logging if enabled
-    if log_dir is None:
-        log_dir = Path('./logs')
-    else:
-        log_dir = Path(log_dir)
+    log_dir = Path(constants.LOG_DIR)
         
     # Create log directory if it doesn't exist
     log_dir.mkdir(parents=True, exist_ok=True)

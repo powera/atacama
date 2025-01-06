@@ -1,18 +1,21 @@
-from flask import request, session, g
 from datetime import datetime
-import logging
 import json
-from typing import Optional, Dict, Any
+import logging
 from logging.handlers import RotatingFileHandler
 import os
+from typing import Optional, Dict, Any
+
+from flask import request, session, g
 from functools import wraps
+
+import constants
 
 class RequestLogger:
     # Sensitive parameters that should never be logged
     SENSITIVE_PARAMS = {'credential', 'token', 'password', 'secret', 'auth', 'key'}
     
-    def __init__(self, app=None, log_dir: str = "logs"):
-        self.log_dir = log_dir
+    def __init__(self, app=None):
+        self.log_dir = constants.REQUEST_LOG_DIR
         self.trusted_proxies = ['127.0.0.1', '::1']
         if app:
             self.init_app(app)
