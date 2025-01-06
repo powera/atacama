@@ -248,3 +248,49 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
 
     finally:
         db_session.close()
+
+@messages_bp.route('/sitemap.xml')
+def sitemap() -> str:
+    """Generate sitemap.xml containing all public URLs."""
+    try:
+        db_session = Session()
+        
+        # Get all messages and quotes
+        messages = db_session.query(Email).order_by(Email.created_at.desc()).all()
+        
+        # Build list of URLs with last modified dates
+        urls = []
+        base_url = request.url_root.rstrip('/')
+        
+        # Add static pages
+        urls.append({
+            'loc': f"{base_url}/",
+            'lastmod': datetime.utcnow().strftime('%Y-%m-%d')
+        })
+        
+        # Add all messages
+        for message in messages:
+            urls.append({
+                'loc': f"{base_url}/messages/{message.id}",
+                'lastmod': message.created_at.strftime('%Y-%m-%d')
+            })
+            
+        # Generate XML
+        sitemap_xml = render_template_string('''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    {%- for url in urls %}
+    <url>
+        <loc>{{ url.loc | e }}</loc>
+        <lastmod>{{ url.lastmod }}</lastmod>
+    </url>
+    {%- endfor %}
+</urlset>''', urls=urls)
+        
+        return app.response_class(sitemap_xml, mimetype='application/xml')
+        
+    except Exception as e:
+        logger.error(f"Error generating sitemap: {str(e)}")
+        return '', 500
+        
+    finally:
+        db_session.close()
