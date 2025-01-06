@@ -310,6 +310,28 @@ textarea {
     color: var(--color-success);
 }
 
+/* Navigation link */
+.stream-navigation {
+    text-align: center;
+    margin: var(--spacing-large) 0;
+    padding: var(--spacing-base);
+}
+
+.navigation-link {
+    display: inline-block;
+    padding: var(--spacing-base) var(--spacing-large);
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    text-decoration: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.navigation-link:hover {
+    background-color: var(--color-annotation-bg);
+}
+
 /* Button base styles */
 button,
 .button {
