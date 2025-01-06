@@ -289,7 +289,7 @@ def sitemap() -> str:
     {%- endfor %}
 </urlset>''', urls=urls)
         
-        return app.response_class(sitemap_xml, mimetype='application/xml')
+        return messages_bp.response_class(sitemap_xml, mimetype='application/xml')
         
     except Exception as e:
         logger.error(f"Error generating sitemap: {str(e)}")
