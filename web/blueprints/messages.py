@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, session
+from flask import Blueprint, render_template, jsonify, request, session, render_template_string
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
 from datetime import datetime
