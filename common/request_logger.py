@@ -23,7 +23,8 @@ class RequestLogger:
 
         # Create request logger with separate handlers for different levels
         request_logger = logging.getLogger('request_logger')
-        request_logger.setLevel(logging.INFO)
+        request_logger.propagate = False
+        request_logger.setLevel(logging.DEBUG)
 
         # Handler for detailed DEBUG logs
         debug_handler = RotatingFileHandler(
