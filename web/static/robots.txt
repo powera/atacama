@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /submit
+Disallow: /messages/*/reprocess
+Disallow: /debug
+Allow: /
+Allow: /messages
+
+Sitemap: /sitemap.xml
