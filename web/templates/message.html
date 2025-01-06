@@ -13,70 +13,68 @@
         <div class="error">{{ error }}</div>
     {% elif message %}
         <article class="message single-view">
-            <div class="message-main">
-                <header class="message-header">
-                    <h1>{{ message.subject }}</h1>
-                    <div class="metadata">
-                        {% if message.author %}
-                            <div class="message-author">
-                                Posted by {{message.author.name}}
-                            </div>
-                        {% endif %}
-                        Received: {{ created_at }}
-                        {% if message.parent %}
-                            <br>
-                            In reply to: <a href="/messages/{{ message.parent.id }}">{{ message.parent.subject }}</a>
-                            (<a href="/messages/{{ message.id }}/chain">View Chain</a>)
-                        {% endif %}
-                    </div>
-                    <div class="message-actions">
-                        {% if message.children %}
-                            <div class="replies">
-                                Replies:
-                                <ul>
-                                {% for child in message.children %}
-                                    <li><a href="/messages/{{ child.id }}">{{ child.subject }}</a></li>
-                                {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                </header>
-
-                <div class="message-body">
-                  <div class="message-main">
-                      {{ message.processed_content | safe }}
-                  </div>
-                  <div class="message-sidebar"></div>
+            <header class="message-header">
+                <h1>{{ message.subject }}</h1>
+                <div class="metadata">
+                    {% if message.author %}
+                        <div class="message-author">
+                            Posted by {{message.author.name}}
+                        </div>
+                    {% endif %}
+                    Received: {{ created_at }}
+                    {% if message.parent %}
+                        <br>
+                        In reply to: <a href="/messages/{{ message.parent.id }}">{{ message.parent.subject }}</a>
+                        (<a href="/messages/{{ message.id }}/chain">View Chain</a>)
+                    {% endif %}
                 </div>
+                <div class="message-actions">
+                    {% if message.children %}
+                        <div class="replies">
+                            Replies:
+                            <ul>
+                            {% for child in message.children %}
+                                <li><a href="/messages/{{ child.id }}">{{ child.subject }}</a></li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </header>
 
-                {% if message.quotes %}
-                    <div class="quote-section">
-                        <h2>Quotes</h2>
-                        {% for quote in message.quotes %}
-                            <div class="quote-card">
-                                <div class="quote-text">"{{ quote.text }}"</div>
-                                <div class="quote-metadata">
-                                    {% if quote.quote_type %}
-                                        <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
-                                    {% endif %}
-                                    {% if quote.author %}
-                                        <span class="quote-author">by {{ quote.author }}</span>
-                                    {% endif %}
-                                    {% if quote.source %}
-                                        <span class="quote-source">from {{ quote.source }}</span>
-                                    {% endif %}
-                                </div>
-                                {% if quote.commentary %}
-                                    <div class="quote-commentary">
-                                        {{ quote.commentary }}
-                                    </div>
+            <div class="message-body">
+              <div class="message-main">
+                  {{ message.processed_content | safe }}
+              </div>
+              <div class="message-sidebar"></div>
+            </div>
+
+            {% if message.quotes %}
+                <div class="quote-section">
+                    <h2>Quotes</h2>
+                    {% for quote in message.quotes %}
+                        <div class="quote-card">
+                            <div class="quote-text">"{{ quote.text }}"</div>
+                            <div class="quote-metadata">
+                                {% if quote.quote_type %}
+                                    <span class="quote-type {{ quote.quote_type }}">{{ quote.quote_type }}</span>
+                                {% endif %}
+                                {% if quote.author %}
+                                    <span class="quote-author">by {{ quote.author }}</span>
+                                {% endif %}
+                                {% if quote.source %}
+                                    <span class="quote-source">from {{ quote.source }}</span>
                                 {% endif %}
                             </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+                            {% if quote.commentary %}
+                                <div class="quote-commentary">
+                                    {{ quote.commentary }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </article>
     {% endif %}
 </body>
