@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
+
 import argparse
-from common.logging_config import configure_logging, get_logger
+import os
 import sys
 from typing import Optional
+
+# slight hack for file path movement
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+from common.logging_config import configure_logging, get_logger
 
 def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """
