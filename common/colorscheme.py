@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from sqlalchemy.orm.session import Session
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 import common.pinyin

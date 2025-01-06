@@ -25,7 +25,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
 Session, db_success = setup_database()
 
-from request_logger import RequestLogger
+from common.request_logger import RequestLogger
 request_logger = RequestLogger(app, log_dir='request_logs')
 
 from web.blueprints.auth import require_auth

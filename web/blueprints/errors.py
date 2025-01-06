@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
-from logging_config import get_logger
+from common.logging_config import get_logger
 
 logger = get_logger(__name__)
 

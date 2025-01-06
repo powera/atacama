@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from logging_config import configure_logging, get_logger
+from common.logging_config import configure_logging, get_logger
 import sys
 from typing import Optional
 

@@ -2,7 +2,7 @@ from flask import Blueprint, request, render_template, url_for, redirect, sessio
 from sqlalchemy.orm import joinedload
 from typing import Dict, Any, Optional, List, Tuple
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 from common.database import setup_database

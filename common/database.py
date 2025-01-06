@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from typing import Tuple
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 

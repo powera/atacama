@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 
 from sqlalchemy.orm import DeclarativeBase
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 class Base(DeclarativeBase):

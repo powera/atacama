@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from functools import wraps
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 auth_bp = Blueprint('auth', __name__)

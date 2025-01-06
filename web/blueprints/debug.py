@@ -13,7 +13,7 @@ from datetime import datetime
 from functools import wraps
 from sqlalchemy import text
 
-from logging_config import get_logger
+from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 from common.database import setup_database

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, render_template, url_for, redirect
 from sqlalchemy import select
 from typing import Dict, Any
-from logging_config import get_logger
+from common.logging_config import get_logger
 
 from common.database import setup_database
 from common.models import Quote
