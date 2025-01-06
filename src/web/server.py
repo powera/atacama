@@ -178,8 +178,4 @@ def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
         return
         
     logger.info(f"Starting message processor server on {host}:{port}")
-    try:
-        serve(app, host=host, port=port)
-    finally:
-        fetcher_daemon.stop()
-        fetcher_daemon.join()
+    serve(app, host=host, port=port)
