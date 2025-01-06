@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#f9f9f9"/>
+  
+  <!-- Message bubble shape -->
+  <path d="M6 8h20v12L22 24H6z" fill="#0074D9" stroke="#0074D9" stroke-width="2"/>
+  
+  <!-- Color stripes representing the different message types -->
+  <rect x="8" y="11" width="16" height="2" fill="#FF4136"/>
+  <rect x="8" y="14" width="16" height="2" fill="#2ECC40"/>
+  <rect x="8" y="17" width="16" height="2" fill="#B8860B"/>
+  
+  <!-- Small notch at bottom of message bubble -->
+  <path d="M22 24l4 4v-4z" fill="#0074D9"/>
+</svg>
