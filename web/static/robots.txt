@@ -2,6 +2,7 @@ User-agent: *
 Disallow: /submit
 Disallow: /messages/*/reprocess
 Disallow: /debug
+Disallow: /stream
 Allow: /
 Allow: /messages
 
