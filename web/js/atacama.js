@@ -60,7 +60,7 @@ class AtacamaViewer {
             </div>
         `;
 
-        switcher.querySelectorAll('[data-theme]').forEach(button => {
+        switcher.querySelectorAll('[data-theme-option]').forEach(button => {
             button.addEventListener('click', () => this.setTheme(button.dataset.themeOption));
         });
 
