@@ -178,9 +178,12 @@ class AtacamaViewer {
         if (!colorBlock) return;
         
         const content = colorBlock.querySelector('.colortext-content');
-        if (!content || e.target.tagName === 'A') return;
+        const sigil = colorBlock.querySelector('.sigil');
+        if (!content || !sigil || e.target.tagName === 'A') return;
         
         content.classList.toggle('expanded');
+        sigil.style.transform = content.classList.contains('expanded') ? 'rotate(90deg)' : '';
+        sigil.style.transition = 'transform 0.3s ease';
     }
 
     /**
