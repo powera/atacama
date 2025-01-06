@@ -28,3 +28,21 @@ def serve_css(filename: str):
     """
     css_dir = os.path.join(constants.WEB_DIR, 'css')
     return send_from_directory(css_dir, filename)
+
+@static_bp.route('/favicon.ico')
+def serve_favicon():
+    """
+    Serve the favicon.ico file from the static directory.
+    
+    :return: Favicon file response
+    """
+    return send_from_directory(constants.STATIC_DIR, 'favicon_multisize.ico')
+
+@static_bp.route('/apple-touch-icon.png')
+def serve_touch_icon():
+    """
+    Serve the apple-touch-icon.png file from the static directory.
+    
+    :return: Apple touch icon file response
+    """
+    return send_from_directory(constants.STATIC_DIR, 'apple-touch-icon.png')
