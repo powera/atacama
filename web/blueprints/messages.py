@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, session, render_template_string
+from flask import Blueprint, render_template, jsonify, request, session, render_template_string, make_response, Response
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -289,7 +289,9 @@ def sitemap() -> str:
     {%- endfor %}
 </urlset>''', urls=urls)
         
-        return messages_bp.response_class(sitemap_xml, mimetype='application/xml')
+        response = make_response(sitemap_xml)
+        response.headers['Content-Type'] = 'application/xml'
+        return response
         
     except Exception as e:
         logger.error(f"Error generating sitemap: {str(e)}")
