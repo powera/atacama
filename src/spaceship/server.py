@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Configuration
-BASE_DIR = '/home/atacama/atacama/spaceship'
+BASE_DIR = '/home/atacama/atacama/src/spaceship'
 IMAGE_PATH = os.path.join(BASE_DIR, 'current.png')
 TEMP_PATH = os.path.join(BASE_DIR, 'temp.png')
 UPDATE_INTERVAL = 300  # 5 minutes
@@ -53,7 +53,7 @@ class XPlanetGenerator(threading.Thread):
                 '-target', 'earth',
                 '-origin', 'sun',
                 '-geometry', '768x768',
-                '-config', '/home/atacama/atacama/spaceship/xplanet.conf'
+                '-config', '/home/atacama/atacama/src/spaceship/xplanet.conf'
             ], check=True)
             
             # Atomically move to final location
