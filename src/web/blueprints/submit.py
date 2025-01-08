@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, url_for, redirect, session
+from flask import Blueprint, request, render_template, url_for, redirect, session, jsonify
 from sqlalchemy.orm import joinedload
 from typing import Dict, Any, Optional, List, Tuple
 
@@ -14,6 +14,39 @@ from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
 submit_bp = Blueprint('submit', __name__)
+
+@submit_bp.route('/api/preview', methods=['POST'])
+@require_auth
+def preview_message():
+    """
+    Preview handler for message submission.
+    Processes the content with color tags without storing to database.
+    Expects JSON input with 'content' field.
+    Returns JSON with processed HTML content.
+    
+    :return: JSON response with rendered HTML
+    """
+    if not request.is_json:
+        return jsonify({'error': 'Request must be JSON'}), 400
+        
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({'error': 'Content required'}), 400
+        
+    try:
+        processed_content = color_processor.process_content(
+            data['content'],
+            message=None,  # Skip database operations
+            db_session=None
+        )
+        
+        return jsonify({
+            'processed_content': processed_content
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing preview: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @submit_bp.route('/submit', methods=['GET', 'POST'])
 @require_auth
