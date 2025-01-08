@@ -305,11 +305,6 @@ def check_imports(file_path: Path) -> List[str]:
         # Type checking imports that shouldn't trigger unused warnings
         type_checking_imports = {
             'Optional', 'List', 'Dict', 'Set', 'Tuple', 'Any', 'Enum',  # Common type hints
-            'TypeVar', 'Generic', 'Protocol', 'Union', 'Callable',  # Additional typing constructs
-            'NoReturn', 'Final', 'ClassVar', 'Literal',  # More typing constructs
-            'Iterator', 'Iterable', 'Generator', 'AsyncIterator',  # Collection types
-            'TypedDict', 'NamedTuple', 'NewType',  # Type definition helpers
-            'Annotated', 'Type', 'cast', 'overload',  # Advanced typing features
         }
         
         # Find unused imports, excluding type checking imports
