@@ -38,6 +38,7 @@ def submit_form():
                 content=content,
                 author=db_user
             )
+            db_session.add(message)
 
             # Handle message chain if parent_id is provided
             if parent_id and parent_id.strip():
