@@ -2,7 +2,7 @@
 
 """ Web server for atacama. """
 
-from flask import Flask, request, jsonify, render_template_string, render_template, send_from_directory, session, url_for, redirect
+from flask import Flask, request, jsonify, render_template_string, render_template, session, url_for, redirect
 from waitress import serve
 import os
 import json
@@ -10,7 +10,6 @@ from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
-from functools import wraps
 from pathlib import Path
 
 from common.logging_config import get_logger
