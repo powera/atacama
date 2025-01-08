@@ -199,7 +199,7 @@ def check_imports(file_path: Path) -> List[str]:
                         base_package = name.name.split('.')[0]
                         if base_package in stdlib_modules:
                             continue
-                        if base_package.startswith(('common', 'web', 'parser', 'spaceship')):
+                        if base_package.startswith(('common', 'web', 'parser', 'spaceship')) or base_package in ("constants",):
                             continue
                         if base_package not in requirements:
                             errors.append(f"Third-party import '{base_package}' not found in requirements.txt (package: {requirements.get(base_package.lower(), base_package)}): {file_path}")
@@ -207,7 +207,7 @@ def check_imports(file_path: Path) -> List[str]:
                     base_package = node.module.split('.')[0]
                     if base_package in stdlib_modules:
                         continue  
-                    if base_package.startswith(('common', 'web', 'parser', 'spaceship')):
+                    if base_package.startswith(('common', 'web', 'parser', 'spaceship')) or base_package in ("constants",):
                         continue
                     if base_package not in requirements:
                         errors.append(f"Third-party import '{base_package}' not found in requirements.txt (package: {requirements.get(base_package.lower(), base_package)}): {file_path}")
@@ -249,7 +249,7 @@ def main() -> int:
     :return: 0 if all checks pass, 1 if any fail
     """
     # Get project root directory (parent of this script)
-    root_dir = Path(__file__).parent
+    root_dir = Path(__file__).parent / "src"
     
     # Find all Python files
     python_files = get_python_files(root_dir)
