@@ -111,7 +111,7 @@ class ColorScheme:
             if not color or color not in self.COLORS:
                 return match.group(0)
                 
-            sigil, class_name = self.COLORS[color]
+            sigil, class_name, _ = self.COLORS[color]
            
             if message and db_session and color in ('yellow', 'quote', 'blue'):
                 quote_data = {
