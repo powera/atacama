@@ -201,57 +201,6 @@ def get_python_files(root_dir: str) -> List[Path]:
                 python_files.append(Path(root) / file)
     return sorted(python_files)
 
-class SymbolTableVisitor(ast.NodeVisitor):
-    """Visitor that builds a symbol table of defined names."""
-    def __init__(self):
-        self.defined_names = set()
-        self.used_names = set()
-        self.undefined_names = set()
-        
-    def visit_Name(self, node):
-        if isinstance(node.ctx, ast.Store):
-            self.defined_names.add(node.id)
-        elif isinstance(node.ctx, ast.Load):
-            self.used_names.add(node.id)
-            if node.id not in self.defined_names:
-                self.undefined_names.add(node.id)
-        self.generic_visit(node)
-        
-    def visit_Import(self, node):
-        for alias in node.names:
-            name = alias.asname or alias.name
-            self.defined_names.add(name)
-        self.generic_visit(node)
-        
-    def visit_ImportFrom(self, node):
-        for alias in node.names:
-            if alias.name == '*':
-                continue  # Skip star imports
-            name = alias.asname or alias.name
-            self.defined_names.add(name)
-        self.generic_visit(node)
-        
-    def visit_FunctionDef(self, node):
-        self.defined_names.add(node.name)
-        # Add function parameters to defined names
-        for arg in node.args.args:
-            self.defined_names.add(arg.arg)
-        self.generic_visit(node)
-        
-    def visit_ClassDef(self, node):
-        self.defined_names.add(node.name)
-        self.generic_visit(node)
-        
-    def visit_For(self, node):
-        # Handle loop variables
-        if isinstance(node.target, ast.Name):
-            self.defined_names.add(node.target.id)
-        elif isinstance(node.target, ast.Tuple):
-            for elt in node.target.elts:
-                if isinstance(elt, ast.Name):
-                    self.defined_names.add(elt.id)
-        self.generic_visit(node)
-
 def check_imports(file_path: Path) -> List[str]:
     """
     Check imports in a Python file for correctness.
