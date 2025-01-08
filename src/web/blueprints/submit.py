@@ -2,6 +2,7 @@ from flask import Blueprint, request, render_template, url_for, redirect, sessio
 from sqlalchemy.orm import joinedload
 from typing import Dict, Any, Optional, List, Tuple
 
+from common.auth import require_auth
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -11,8 +12,6 @@ Session, db_success = setup_database()
 import common.models
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
-
-from .auth import require_auth
 
 submit_bp = Blueprint('submit', __name__)
 

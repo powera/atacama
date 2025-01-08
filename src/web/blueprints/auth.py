@@ -4,8 +4,8 @@ from google.auth.transport import requests
 import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from functools import wraps
 
+from common.auth import require_auth
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -14,15 +14,6 @@ auth_bp = Blueprint('auth', __name__)
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-
-def require_auth(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            return render_template('login.html', 
-                                   client_id=os.getenv('GOOGLE_CLIENT_ID'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @auth_bp.route('/login')
 def login():

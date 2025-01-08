@@ -3,6 +3,7 @@ from sqlalchemy import select
 from typing import Dict, Any
 from common.logging_config import get_logger
 
+from common.auth import require_auth
 from common.database import setup_database
 from common.models import Quote
 from common.quotes import (
@@ -12,7 +13,6 @@ from common.quotes import (
     search_quotes,
     QuoteValidationError
 )
-from .auth import require_auth
 
 logger = get_logger(__name__)
 Session, db_success = setup_database()

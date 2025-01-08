@@ -10,15 +10,14 @@ import psutil
 import os
 import time
 from datetime import datetime
-from functools import wraps
 from sqlalchemy import text
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
+from common.auth import require_auth
 from common.database import setup_database
 Session, db_success = setup_database()
-from web.blueprints.auth import require_auth
 
 debug_bp = Blueprint('debug', __name__)
 
