@@ -26,9 +26,6 @@
                             <th>Subject</th>
                             <th>Preview</th>
                             <th>Received</th>
-                            {% if user %}
-                            <th>Actions</th>
-                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -46,13 +43,6 @@
                             <td data-label="Received" class="timestamp">
                                 {{ message.created_at_formatted }}
                             </td>
-                            {% if user %}
-                            <td data-label="Actions">
-                                <form method="POST" action="/messages/{{ message.id }}/reprocess" class="inline-form">
-                                    <button type="submit" class="reprocess-button">Reprocess</button>
-                                </form>
-                            </td>
-                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -1,11 +1,14 @@
 from sqlalchemy.orm import Session
-from common.models import Email, Quote
 from typing import Optional, Tuple
 import logging
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker
     
+from common.models import Email, Quote, email_quotes
+from common.colorscheme import ColorScheme
+color_processor = ColorScheme()
+
 logger = logging.getLogger(__name__)
 
 def set_message_parent(child_id: int, parent_id: int, db_url: str = 'sqlite:///emails.db') -> Tuple[bool, Optional[str]]:
@@ -145,3 +148,44 @@ def delete_message(message_id: int, db_url: str = 'sqlite:///emails.db', cascade
         error_msg = f"Connection error: {str(e)}"
         logger.error(error_msg)
         return False, error_msg
+
+def reprocess_message(message_id: int):
+    """Reprocess an existing message's content."""
+    try:
+        db_session = Session()
+        message = db_session.query(Email).options(
+            joinedload(Email.quotes)
+        ).filter(Email.id == message_id).first()
+        
+        if not message:
+            raise Exception("No message.")
+        
+        # Remove previous quotes (if otherwise unused).
+        existing_quotes = message.quotes[:]  # Make a copy of the list
+        message.quotes = []  # Delete quotes
+        db_session.flush()      # Sync removal of relationship
+
+        for quote in existing_quotes:
+            # Check if quote is used by other emails
+            if not db_session.query(email_quotes).filter(
+                email_quotes.c.quote_id == quote.id,
+                email_quotes.c.email_id != message_id
+            ).first():
+                db_session.delete(quote)
+
+        message.processed_content = color_processor.process_content(
+            message.content,
+            message=message,
+            db_session=db_session,
+        )
+        
+        db_session.commit()
+        
+        logger.info(f"Reprocessed message {message_id}")
+        
+    except Exception as e:
+        logger.error(f"Error reprocessing message: {str(e)}")
+        return False
+        
+    finally:
+        db_session.close()
