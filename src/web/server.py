@@ -2,18 +2,52 @@
 
 """ Web server for atacama. """
 
+import os
+from pathlib import Path
+
 from flask import Flask
 from waitress import serve
 from typing import Dict, Any, Optional, List, Tuple
 
+import constants
+
+from common.database import setup_database
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-from common.database import setup_database
-Session, db_success = setup_database()
+def load_or_create_secret_key() -> str:
+    """
+    Load Flask secret key from file or create new one if none exists.
+    
+    :return: Secret key string
+    :raises: RuntimeError if key directory is not writable
+    """
+    # First check environment variable
+    if env_key := os.getenv('FLASK_SECRET_KEY'):
+        return env_key
+        
+    key_path = Path(constants.KEY_DIR) / 'flask_secret_key'
+    
+    try:
+        # Ensure key directory exists
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Try to load existing key
+        if key_path.exists():
+            return key_path.read_text().strip()
+            
+        # Generate new key if none exists
+        import secrets
+        new_key = secrets.token_hex(32)
+        key_path.write_text(new_key)
+        return new_key
+        
+    except (OSError, IOError) as e:
+        logger.error(f"Failed to access secret key file: {e}")
+        raise RuntimeError(f"Could not access secret key directory: {e}")
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
+app.secret_key = load_or_create_secret_key()
 
 from common.request_logger import RequestLogger
 request_logger = RequestLogger(app)
@@ -48,6 +82,8 @@ app.register_blueprint(errors_bp)
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
+    Session, db_success = setup_database()
+
     if not db_success:
         logger.error("Database initialization failed, cannot start web server")
         return
