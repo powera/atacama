@@ -7,7 +7,7 @@ fi
 # Create the pre-commit hook
 cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
-python PRESUBMIT.py
+python PRESUBMIT.py --files=changed
 if [ $? -ne 0 ]; then
     exit 1
 fi

@@ -8,6 +8,7 @@ Currently checks:
 - Missing imports and undefined variables
 """
 
+import argparse
 import ast
 import os
 import sys
@@ -124,6 +125,21 @@ class SymbolTableVisitor(ast.NodeVisitor):
         """Handle generator expressions."""
         self.visit_ListComp(node)  # Same logic as list comprehensions
 
+    def visit_Lambda(self, node):
+        """Handle lambda function arguments."""
+        # Add all argument names to defined names
+        for arg in node.args.args:
+            self.ctx.defined_names.add(arg.arg)
+        # Handle any default argument values
+        if node.args.kwonlyargs:
+            for arg in node.args.kwonlyargs:
+                self.ctx.defined_names.add(arg.arg)
+        if node.args.vararg:
+            self.ctx.defined_names.add(node.args.vararg.arg)
+        if node.args.kwarg:
+            self.ctx.defined_names.add(node.args.kwarg.arg)
+        self.generic_visit(node)
+
 def get_stdlib_modules() -> Set[str]:
     """
     Get a set of all Python standard library module names.
@@ -184,19 +200,33 @@ def get_requirements() -> Dict[str, str]:
         print("Warning: requirements.txt not found")
     return requirements
 
-def get_python_files(root_dir: str) -> List[Path]:
+def get_python_files(root_dir: str, changed_only: bool = False) -> List[Path]:
     """
-    Find all Python files in the project.
+    Find Python files in the project.
     
     :param root_dir: Root directory to start search from
+    :param changed_only: If True, only return files modified in current Git changes
     :return: List of Path objects for Python files
     """
+    if changed_only:
+        import subprocess
+        try:
+            # Get both staged and unstaged changes
+            staged = subprocess.check_output(['git', 'diff', '--cached', '--name-only']).decode()
+            unstaged = subprocess.check_output(['git', 'diff', '--name-only']).decode()
+            
+            # Combine and filter for Python files
+            changed_files = set(staged.splitlines() + unstaged.splitlines())
+            python_files = [Path(f) for f in changed_files if f.endswith('.py')]
+            return sorted(python_files)
+        except subprocess.CalledProcessError:
+            print("Warning: Failed to get Git changes, checking all files instead")
+            return get_python_files(root_dir, False)
+    
     python_files = []
     for root, _, files in os.walk(root_dir):
-        # Skip common directories that shouldn't be checked
         if any(part.startswith('.') or part == '__pycache__' for part in Path(root).parts):
             continue
-            
         for file in files:
             if file.endswith('.py'):
                 python_files.append(Path(root) / file)
@@ -313,11 +343,21 @@ def main() -> int:
     
     :return: 0 if all checks pass, 1 if any fail
     """
+
+    # CMD args
+    parser = argparse.ArgumentParser(description='Run PRESUBMIT checks.')
+    parser.add_argument('--files', choices=['all', 'changed'],
+                   default='all',
+                   help='Which files to check: all Python files or only changed ones')
+
+    args = parser.parse_args()
+
     # Get project root directory (parent of this script)
     root_dir = Path(__file__).parent / "src"
     
+    check_changed_only = (args.files == 'changed')
     # Find all Python files
-    python_files = get_python_files(root_dir)
+    python_files = get_python_files(root_dir, changed_only=check_changed_only)
     
     # Track all errors
     all_errors = []
