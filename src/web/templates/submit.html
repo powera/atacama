@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/submit.css">
+    <link rel="stylesheet" href="/css/atacama.css">
 </head>
 <body>
     <div class="container">
@@ -27,21 +28,32 @@
                 <input type="text" id="subject" name="subject" required>
             </div>
            
-        <div class="form-group">
-            <label for="parent_id">Parent Message (optional):</label>
-            <select name="parent_id" id="parent_id">
-                <option value="">No parent message</option>
-                {% for message in recent_messages %}
-                    <option value="{{ message.id }}">
-                        {{ message.subject or '(No Subject)' }} - ID: {{ message.id }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="form-group">
+                <label for="parent_id">Parent Message (optional):</label>
+                <select name="parent_id" id="parent_id">
+                    <option value="">No parent message</option>
+                    {% for message in recent_messages %}
+                        <option value="{{ message.id }}">
+                            {{ message.subject or '(No Subject)' }} - ID: {{ message.id }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
             <div class="form-group">
                 <label for="content">Content:</label>
                 <textarea id="content" name="content" rows="10" required></textarea>
+                <div class="preview-controls">
+                    <button type="button" id="previewButton" class="secondary">Preview</button>
+                </div>
+            </div>
+
+            <div id="previewArea" class="message-preview" style="display: none;">
+                <h3>Preview</h3>
+                <div id="previewContent" class="message-body">
+                    <div class="message-main"></div>
+                    <div class="message-sidebar"></div>
+                </div>
             </div>
             
             <button type="submit">Submit</button>
@@ -64,5 +76,36 @@
             </ul>
         </div>
     </div>
+
+    <script>
+        document.getElementById('previewButton').addEventListener('click', async function() {
+            const content = document.getElementById('content').value;
+            const previewArea = document.getElementById('previewArea');
+            const previewContent = document.getElementById('previewContent').querySelector('.message-main');
+
+            try {
+                const response = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Preview request failed');
+                }
+
+                const data = await response.json();
+                previewContent.innerHTML = data.processed_content;
+                previewArea.style.display = 'block';
+
+            } catch (error) {
+                console.error('Preview error:', error);
+                previewContent.innerHTML = '<div class="error">Error generating preview</div>';
+                previewArea.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>
