@@ -163,6 +163,7 @@ def get_requirements() -> Dict[str, str]:
         'Pillow': 'PIL',
         'beautifulsoup4': 'bs4',
         'python-dotenv': 'dotenv',
+        'google-auth': 'google',
     }
     
     requirements = {}
