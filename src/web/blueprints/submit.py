@@ -15,63 +15,6 @@ color_processor = ColorScheme()
 
 submit_bp = Blueprint('submit', __name__)
 
-@submit_bp.route('/process', methods=['POST'])
-@require_auth
-def process_message() -> tuple[Dict[str, Any], int]:
-    """API endpoint to process and store messages."""
-    try:
-        data = request.get_json()
-        
-        if not data or 'subject' not in data or 'content' not in data:
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        db_session = Session()
-        
-        user = session['user']
-        db_user = common.models.get_or_create_user(db_session, user)
-
-        # Create message object first
-        message = common.models.Email(
-            subject=data['subject'],
-            content=data['content'],
-            author=db_user,
-            llm_annotations=json.dumps(data.get('llm_annotations', {}))
-        )
-        
-        # Handle message chain if parent_id is provided
-        if 'parent_id' in data:
-            parent = db_session.query(common.models.Email).get(data['parent_id'])
-            if parent:
-                message.parent = parent
-        
-        # Add message to session so it exists before processing content
-        db_session.add(message)
-        
-        # Now process content with access to the message object
-        message.processed_content = color_processor.process_content(
-            data['content'],
-            llm_annotations=data.get('llm_annotations'),
-            message=message,
-            db_session=db_session
-        )
-        
-        db_session.commit() 
-        logger.info(f"Processed message with subject: {data['subject']}")
-        
-        return jsonify({
-            'id': message.id,
-            'processed_content': message.processed_content,
-            'view_url': url_for('messages.get_message', message_id=message.id)
-        }), 201
-        
-    except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    
-    finally:
-        db_session.close()
-
-
 @submit_bp.route('/submit', methods=['GET', 'POST'])
 @require_auth
 def submit_form():
