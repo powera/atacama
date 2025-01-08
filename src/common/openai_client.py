@@ -153,7 +153,7 @@ class OpenAIClient:
             logger.debug("Model: %s", model)
             logger.debug("Brief mode: %s", brief)
             logger.debug("Context: %s", context)
-            logger.debug("JSON schema: %s", json_dumps(json_schema, indent=2) if json_schema else None)
+            logger.debug("JSON schema: %s", json.dumps(json_schema, indent=2) if json_schema else None)
         
         messages = []
         if context:

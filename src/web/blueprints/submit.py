@@ -60,7 +60,7 @@ def process_message() -> tuple[Dict[str, Any], int]:
         
         return jsonify({
             'id': message.id,
-            'processed_content': processed_content,
+            'processed_content': message.processed_content,
             'view_url': url_for('messages.get_message', message_id=message.id)
         }), 201
         
