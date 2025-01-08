@@ -3,9 +3,9 @@
 <head>
     <title>Submit Message - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/submit.css">
     <link rel="stylesheet" href="/css/atacama.css">
+    <script src="/js/atacama.js"></script>
 </head>
 <body>
     <div class="container">
@@ -100,6 +100,7 @@
                 previewContent.innerHTML = data.processed_content;
                 previewArea.style.display = 'block';
 
+                new AtacamaViewer().initialize(); 
             } catch (error) {
                 console.error('Preview error:', error);
                 previewContent.innerHTML = '<div class="error">Error generating preview</div>';
