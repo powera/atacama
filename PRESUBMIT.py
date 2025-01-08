@@ -304,7 +304,8 @@ def check_imports(file_path: Path) -> List[str]:
         
         # Type checking imports that shouldn't trigger unused warnings
         type_checking_imports = {
-            'Optional', 'List', 'Dict', 'Set', 'Tuple', 'Any', 'Enum',  # Common type hints
+            'Optional', 'List', 'Dict', 'Set', 'Tuple', 'Any', 'Enum',
+            'Pattern', 'Match',
         }
         
         # Find unused imports, excluding type checking imports
