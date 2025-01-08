@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, url_for, redirect, session, jsonify
+from flask import Blueprint, request, render_template, url_for, redirect, session
 from sqlalchemy.orm import joinedload
 from typing import Dict, Any, Optional, List, Tuple
 

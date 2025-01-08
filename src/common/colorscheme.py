@@ -7,7 +7,7 @@ from sqlalchemy.orm.session import Session
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-import common.pinyin
+from common.pinyin import annotate_chinese
 from common.models import Email
 from common.quotes import save_quotes
 
@@ -74,7 +74,7 @@ class ColorScheme:
         """
         # If no annotations provided, generate them
         if annotations is None:
-            annotations = common.pinyin.annotate_chinese(text)
+            annotations = annotate_chinese(text)
             
         def replacer(match: Match) -> str:
             hanzi = match.group(0)

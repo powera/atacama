@@ -5,7 +5,6 @@
 from flask import Flask
 from waitress import serve
 import os
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
@@ -49,7 +48,6 @@ app.register_blueprint(debug_bp)
 # Error handlers
 from web.blueprints.errors import errors_bp
 app.register_blueprint(errors_bp)
-
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
