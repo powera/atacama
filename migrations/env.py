@@ -1,6 +1,9 @@
 # migrations/env.py
 from logging.config import fileConfig
 import os
+from pathlib import Path
+import platform
+
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -8,8 +11,9 @@ from alembic import context
 
 # Import your models to make metadata available
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 from common.models import Base
+import constants
 
 # this is the Alembic Config object
 config = context.config
@@ -19,8 +23,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set the database URL
-db_path = '/home/atacama/atacama/emails.db'
-db_url = f'sqlite:///{db_path}'
+db_url = f'sqlite:///{constants.DB_PATH}'
 config.set_main_option('sqlalchemy.url', db_url)
 
 # Add MetaData object from your models

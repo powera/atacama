@@ -10,3 +10,6 @@ STATIC_DIR = os.path.join(WEB_DIR, "static")
 KEY_DIR = os.path.join(PROJECT_ROOT, "keys")
 LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
 REQUEST_LOG_DIR = os.path.join(LOG_DIR, "requests")
+
+# Specific files
+DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
