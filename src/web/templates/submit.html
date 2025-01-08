@@ -58,23 +58,18 @@
             
             <button type="submit">Submit</button>
         </form>
-        
+       
+        {% if colors %}
         <div class="info-box">
             <h3>Color Tags</h3>
             <p>You can use the following color tags in your message:</p>
             <ul>
-                <li><code>&lt;xantham&gt;</code> - sarcastic, overconfident</li>
-                <li><code>&lt;red&gt;</code> - forceful, certain</li>
-                <li><code>&lt;orange&gt;</code> - counterpoint</li>
-                <li><code>&lt;yellow&gt;</code> - quotes</li>
-                <li><code>&lt;green&gt;</code> - technical explanations</li>
-                <li><code>&lt;teal&gt;</code> - LLM output</li>
-                <li><code>&lt;blue&gt;</code> - voice from beyond</li>
-                <li><code>&lt;violet&gt;</code> - serious</li>
-                <li><code>&lt;mogue&gt;</code> - actions taken</li>
-                <li><code>&lt;gray&gt;</code> - past stories</li>
+                {% for color_name, (sigil, class_name, description) in colors.items() %}
+                <li><code>&lt;{{ color_name }}&gt;</code> {{ sigil }} - <span class="color-{{ class_name }}">{{ description }}</span></li>
+                {% endfor %}
             </ul>
         </div>
+        {% endif %}
     </div>
 
     <script>

@@ -15,19 +15,19 @@ class ColorScheme:
     """Color scheme definitions and processing for email content."""
     
     COLORS = {
-        'xantham': ('🔥', 'xantham'),  # sarcastic, overconfident
-        'red': ('💡', 'red'),          # forceful, certain
-        'orange': ('⚔️', 'orange'),    # counterpoint
-        'yellow': ('💬', 'yellow'),    # quotes
-        'quote': ('💬', 'quote'),    # quotes
-        'green': ('⚙️', 'green'),      # technical explanations
-        'teal': ('🤖', 'teal'),        # LLM output
-        'blue': ('✨', 'blue'),        # voice from beyond
-        'violet': ('📣', 'violet'),    # serious
-        'music': ('🎵', 'musicnote'),      # music note
-        'mogue': ('🌎', 'mogue'),      # actions taken
-        'gray': ('💭', 'gray'),        # past stories
-        'hazel': ('🎭', 'hazel'),      # new color
+        'xantham': ('🔥', 'xantham', 'sarcastic, overconfident'),
+        'red': ('💡', 'red', 'forceful, certain'),
+        'orange': ('⚔️', 'orange', 'counterpoint'),
+        'yellow': ('💬', 'yellow', 'quotes'),
+        'quote': ('💬', 'quote', 'quotes'),
+        'green': ('⚙️', 'green', 'technical explanations'),
+        'teal': ('🤖', 'teal', 'LLM output'),
+        'blue': ('✨', 'blue', 'voice from beyond'),
+        'violet': ('📣', 'violet', 'serious'),
+        'music': ('🎵', 'musicnote', 'music note'),
+        'mogue': ('🌎', 'mogue', 'actions taken'),
+        'gray': ('💭', 'gray', 'past stories'),
+        'hazel': ('🎭', 'hazel', 'storytelling'),
     }
     
     def __init__(self):

@@ -119,5 +119,5 @@ def submit_form():
         recent_messages = []
     finally:
         db_session.close()
-    return render_template('submit.html', recent_messages=recent_messages)
+    return render_template('submit.html', recent_messages=recent_messages, colors=color_processor.COLORS)
 
