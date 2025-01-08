@@ -37,7 +37,7 @@ class Quote(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     # Many-to-many relationship with emails where the quote appears
-    emails: Mapped[List["Email"]] = relationship(secondary='email_quotes')
+    emails: Mapped[List["Email"]] = relationship("Email", secondary='email_quotes', back_populates="quotes")
 
 class Email(Base):
     """Email model storing both original and processed content."""
@@ -65,7 +65,7 @@ class Email(Base):
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {type: str, content: str}}
     
     # Quote relationships
-    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes', lazy="selectin")
+    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes', lazy="selectin", back_populates="emails")
 
 # Association table for email-quote relationships
 email_quotes = Table('email_quotes', Base.metadata,
