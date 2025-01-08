@@ -2,12 +2,10 @@
 
 """ Web server for atacama. """
 
-from flask import Flask, request, jsonify, render_template_string, render_template, session, url_for, redirect
+from flask import Flask
 from waitress import serve
 import os
 import json
-from sqlalchemy import text, select
-from sqlalchemy.orm import joinedload
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from pathlib import Path
@@ -16,18 +14,13 @@ from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 from common.database import setup_database
-from common.models import Email, Quote, email_quotes
-from common.colorscheme import ColorScheme
-color_processor = ColorScheme()
+Session, db_success = setup_database()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')  # Change in production
-Session, db_success = setup_database()
 
 from common.request_logger import RequestLogger
 request_logger = RequestLogger(app)
-
-from web.blueprints.auth import require_auth
 
 # Serve Quotes HTML pages
 from web.blueprints.quotes import quotes_bp
@@ -56,43 +49,6 @@ app.register_blueprint(debug_bp)
 # Error handlers
 from web.blueprints.errors import errors_bp
 app.register_blueprint(errors_bp)
-
-@app.route('/')
-def landing_page():
-    """Serve the landing page with basic service information and message list."""
-    try:
-        db_session = Session()
-
-        # Test database connection
-        db_session.execute(text('SELECT 1'))
-        db_status = "Connected"
-
-        # Fetch recent messages with their relationships
-        messages = db_session.query(Email).options(
-            joinedload(Email.parent),
-            joinedload(Email.children),
-            joinedload(Email.quotes)
-        ).order_by(Email.created_at.desc()).limit(50).all()
-
-        # Format timestamps
-        for message in messages:
-            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
-
-    except Exception as e:
-        db_status = f"Error: {str(e)}"
-        messages = []
-    finally:
-        db_session.close()
-
-    # Check if user is authenticated via Google auth
-    user = session.get('user')
-
-    return render_template(
-        'landing.html',
-        db_status=db_status,
-        messages=messages,
-        user=user
-    )
 
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:

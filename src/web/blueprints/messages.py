@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, jsonify, request, session, render_template_string, make_response, Response
+from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -220,6 +221,7 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
 
     return messages, has_more
 
+@messages_bp.route('/')
 @messages_bp.route('/stream')
 @messages_bp.route('/stream/older/<int:older_than_id>')
 @messages_bp.route('/stream/user/<int:user_id>')
@@ -299,3 +301,41 @@ def sitemap() -> str:
         
     finally:
         db_session.close()
+
+@messages_bp.route('/details')
+def landing_page():
+    """Serve the landing page with basic service information and message list."""
+    try:
+        db_session = Session()
+
+        # Test database connection
+        db_session.execute(text('SELECT 1'))
+        db_status = "Connected"
+
+        # Fetch recent messages with their relationships
+        messages = db_session.query(Email).options(
+            joinedload(Email.parent),
+            joinedload(Email.children),
+            joinedload(Email.quotes)
+        ).order_by(Email.created_at.desc()).limit(50).all()
+
+        # Format timestamps
+        for message in messages:
+            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+
+    except Exception as e:
+        db_status = f"Error: {str(e)}"
+        messages = []
+    finally:
+        db_session.close()
+
+    # Check if user is authenticated via Google auth
+    user = session.get('user')
+
+    return render_template(
+        'landing.html',
+        db_status=db_status,
+        messages=messages,
+        user=user
+    )
+
