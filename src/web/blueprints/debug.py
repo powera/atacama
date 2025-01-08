@@ -118,3 +118,41 @@ def debug_api():
         'system': get_system_stats(),
         'database': get_database_stats()
     })
+
+@debug_bp.route('/debug/login', methods=['GET'])
+def debug_login():
+    """
+    Development-only route to set a user as logged in with specified credentials.
+    Only works if FLASK_ENV is set to 'development'.
+    
+    Query parameters:
+        name: Display name for the debug user
+        email: Email address for the debug user
+        
+    :return: Redirect to home page
+    """
+    if os.getenv('FLASK_ENV') != 'development':
+        return "Debug login only available in development mode", 403
+        
+    name = request.args.get('name')
+    email = request.args.get('email')
+    
+    if not name or not email:
+        return "Both name and email parameters are required", 400
+        
+    session['user'] = {
+        'name': name,
+        'email': email,
+        'provider': 'debug'
+    }
+    
+    return redirect(url_for('landing_page'))
+
+@debug_bp.route('/debug/logout')
+def debug_logout():
+    """Clear the debug user session."""
+    if os.getenv('FLASK_ENV') != 'development':
+        return "Debug logout only available in development mode", 403
+        
+    session.clear()
+    return redirect(url_for('landing_page'))
