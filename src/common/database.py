@@ -3,10 +3,11 @@ from sqlalchemy.orm import sessionmaker
 from typing import Tuple
 
 from common.logging_config import get_logger
+from constants import DB_PATH
 logger = get_logger(__name__)
 
 
-def setup_database(db_url: str = 'sqlite:///emails.db') -> Tuple[sessionmaker, bool]:
+def setup_database(db_url: str = f'sqlite:///{DB_PATH}') -> Tuple[sessionmaker, bool]:
     """
     Initialize database connection and create tables.
     
