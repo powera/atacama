@@ -13,7 +13,116 @@ import os
 import sys
 import pkgutil
 from pathlib import Path
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict, Tuple, Optional
+from contextlib import contextmanager
+
+class Context:
+    """Tracks scoping context during AST traversal."""
+    def __init__(self):
+        self.defined_names: Set[str] = set()
+        self.used_names: Set[str] = set()
+        self.undefined_names: Set[str] = set()
+        self.comprehension_vars: Set[str] = set()
+        self.in_comprehension = False
+
+    @contextmanager
+    def comprehension_scope(self):
+        """Context manager for tracking comprehension scope."""
+        prev = self.in_comprehension
+        self.in_comprehension = True
+        yield
+        self.in_comprehension = prev
+
+class SymbolTableVisitor(ast.NodeVisitor):
+    """Visitor that builds a symbol table of defined names."""
+    def __init__(self):
+        self.ctx = Context()
+        
+        # Initialize with magic variables that are always defined
+        self.ctx.defined_names.update([
+            '__name__', '__file__', '__doc__', '__package__',
+            '__path__', '__spec__', '__loader__', '__cached__',
+            '__builtins__', '__import__', '__annotations__'
+        ])
+
+    def visit_ExceptHandler(self, node):
+        """Handle exception handler variables."""
+        # Add exception variable to defined names if present
+        if node.name:
+            self.ctx.defined_names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_Name(self, node):
+        """Handle variable names, tracking definition and usage."""
+        if isinstance(node.ctx, ast.Store):
+            self.ctx.defined_names.add(node.id)
+        elif isinstance(node.ctx, ast.Load):
+            self.ctx.used_names.add(node.id)
+            if (node.id not in self.ctx.defined_names and 
+                node.id not in self.ctx.comprehension_vars):
+                self.ctx.undefined_names.add(node.id)
+        self.generic_visit(node)
+
+    def visit_Import(self, node):
+        """Handle regular imports."""
+        for alias in node.names:
+            name = alias.asname or alias.name
+            self.ctx.defined_names.add(name)
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node):
+        """Handle from-imports, including handling star imports."""
+        for alias in node.names:
+            if alias.name == '*':
+                continue  # Skip star imports in analysis
+            name = alias.asname or alias.name
+            self.ctx.defined_names.add(name)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node):
+        """Handle function definitions and their parameters."""
+        self.ctx.defined_names.add(node.name)
+        # Add function parameters
+        for arg in node.args.args:
+            self.ctx.defined_names.add(arg.arg)
+        # Add kwonly arguments
+        for arg in node.args.kwonlyargs:
+            self.ctx.defined_names.add(arg.arg)
+        # Add varargs and kwargs if present
+        if node.args.vararg:
+            self.ctx.defined_names.add(node.args.vararg.arg)
+        if node.args.kwarg:
+            self.ctx.defined_names.add(node.args.kwarg.arg)
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node):
+        """Handle class definitions."""
+        self.ctx.defined_names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_ListComp(self, node):
+        """Handle list comprehensions."""
+        with self.ctx.comprehension_scope():
+            for generator in node.generators:
+                if isinstance(generator.target, ast.Name):
+                    self.ctx.comprehension_vars.add(generator.target.id)
+                elif isinstance(generator.target, (ast.Tuple, ast.List)):
+                    for elt in generator.target.elts:
+                        if isinstance(elt, ast.Name):
+                            self.ctx.comprehension_vars.add(elt.id)
+            self.generic_visit(node)
+
+    def visit_SetComp(self, node):
+        """Handle set comprehensions."""
+        self.visit_ListComp(node)  # Same logic as list comprehensions
+
+    def visit_DictComp(self, node):
+        """Handle dictionary comprehensions."""
+        self.visit_ListComp(node)  # Same logic as list comprehensions
+
+    def visit_GeneratorExp(self, node):
+        """Handle generator expressions."""
+        self.visit_ListComp(node)  # Same logic as list comprehensions
 
 def get_stdlib_modules() -> Set[str]:
     """
@@ -21,9 +130,6 @@ def get_stdlib_modules() -> Set[str]:
     
     :return: Set of module names
     """
-    import sys
-    import pkgutil
-    
     stdlib_modules = set()
     
     # Get built-in module names from sys.modules
@@ -93,58 +199,7 @@ def get_python_files(root_dir: str) -> List[Path]:
         for file in files:
             if file.endswith('.py'):
                 python_files.append(Path(root) / file)
-    return python_files
-
-class SymbolTableVisitor(ast.NodeVisitor):
-    """Visitor that builds a symbol table of defined names."""
-    def __init__(self):
-        self.defined_names = set()
-        self.used_names = set()
-        self.undefined_names = set()
-        
-    def visit_Name(self, node):
-        if isinstance(node.ctx, ast.Store):
-            self.defined_names.add(node.id)
-        elif isinstance(node.ctx, ast.Load):
-            self.used_names.add(node.id)
-            if node.id not in self.defined_names:
-                self.undefined_names.add(node.id)
-        self.generic_visit(node)
-        
-    def visit_Import(self, node):
-        for alias in node.names:
-            name = alias.asname or alias.name
-            self.defined_names.add(name)
-        self.generic_visit(node)
-        
-    def visit_ImportFrom(self, node):
-        for alias in node.names:
-            if alias.name == '*':
-                continue  # Skip star imports
-            name = alias.asname or alias.name
-            self.defined_names.add(name)
-        self.generic_visit(node)
-        
-    def visit_FunctionDef(self, node):
-        self.defined_names.add(node.name)
-        # Add function parameters to defined names
-        for arg in node.args.args:
-            self.defined_names.add(arg.arg)
-        self.generic_visit(node)
-        
-    def visit_ClassDef(self, node):
-        self.defined_names.add(node.name)
-        self.generic_visit(node)
-        
-    def visit_For(self, node):
-        # Handle loop variables
-        if isinstance(node.target, ast.Name):
-            self.defined_names.add(node.target.id)
-        elif isinstance(node.target, ast.Tuple):
-            for elt in node.target.elts:
-                if isinstance(elt, ast.Name):
-                    self.defined_names.add(elt.id)
-        self.generic_visit(node)
+    return sorted(python_files)
 
 def check_imports(file_path: Path) -> List[str]:
     """
@@ -216,8 +271,18 @@ def check_imports(file_path: Path) -> List[str]:
         symbol_visitor = SymbolTableVisitor()
         symbol_visitor.visit(tree)
         
-        # Find unused imports
-        unused_imports = import_names - symbol_visitor.used_names - {'_'}  # Exclude _ from unused check
+        # Type checking imports that shouldn't trigger unused warnings
+        type_checking_imports = {
+            'Optional', 'List', 'Dict', 'Set', 'Tuple', 'Any', 'Enum',  # Common type hints
+            'TypeVar', 'Generic', 'Protocol', 'Union', 'Callable',  # Additional typing constructs
+            'NoReturn', 'Final', 'ClassVar', 'Literal',  # More typing constructs
+            'Iterator', 'Iterable', 'Generator', 'AsyncIterator',  # Collection types
+            'TypedDict', 'NamedTuple', 'NewType',  # Type definition helpers
+            'Annotated', 'Type', 'cast', 'overload',  # Advanced typing features
+        }
+        
+        # Find unused imports, excluding type checking imports
+        unused_imports = (import_names - symbol_visitor.ctx.used_names - {'_'} - type_checking_imports)
         for name in unused_imports:
             errors.append(f"Unused import '{name}' in {file_path}")
             
@@ -225,11 +290,10 @@ def check_imports(file_path: Path) -> List[str]:
         builtin_names = set(dir(__builtins__))
         common_names = {
             'self', 'cls', 'kwargs', 'args',  # Common parameter names
-            'Optional', 'List', 'Dict', 'Set', 'Tuple', 'Any',  # Type hints
             'Base',  # SQLAlchemy
             'logger',  # Logging
         }
-        undefined = symbol_visitor.undefined_names - builtin_names - common_names
+        undefined = symbol_visitor.ctx.undefined_names - builtin_names - common_names
         
         # Report undefined variables
         for name in undefined:
