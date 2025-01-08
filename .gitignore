@@ -2,5 +2,8 @@ __pycache__
 *.swp
 data/cedict/cedict_1_0_ts_utf-8_mdbg.txt
 
+# Never store keys
+keys/
+
 logs/
 venv/
