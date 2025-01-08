@@ -81,7 +81,7 @@ def callback():
     session['user'] = user_info
     session.permanent = True
     
-    return redirect(url_for('landing_page'))
+    return redirect('/')
 
 @auth_bp.route('/logout')
 def logout():

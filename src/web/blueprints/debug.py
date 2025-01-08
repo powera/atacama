@@ -5,7 +5,7 @@ This blueprint provides endpoints for viewing system status, session information
 and other debug data. All endpoints require authentication.
 """
 
-from flask import Blueprint, render_template, jsonify, current_app, session
+from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, url_for
 import psutil
 import os
 import time
@@ -146,7 +146,7 @@ def debug_login():
         'provider': 'debug'
     }
     
-    return redirect(url_for('landing_page'))
+    return redirect('/')
 
 @debug_bp.route('/debug/logout')
 def debug_logout():
@@ -155,4 +155,4 @@ def debug_logout():
         return "Debug logout only available in development mode", 403
         
     session.clear()
-    return redirect(url_for('landing_page'))
+    return redirect('/')
