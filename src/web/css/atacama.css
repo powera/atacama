@@ -25,7 +25,6 @@
     max-width: 90vw;
 }
 
-
 .message-header {
     display: flex;
     justify-content: space-between;
@@ -59,7 +58,8 @@
 }
 
 .message-content {
-    line-height: 1.6;
+    line-height: var(--line-height);
+    font-size: var(--base-font-size);
 }
 
 [data-theme="high-contrast"] .message-main {
@@ -98,11 +98,11 @@
 [class^="color-"], .colorblock {
     display: inline-flex;
     align-items: center;
-    margin: 2px;
+    margin: 1px;
     cursor: pointer;
     border: 1px solid currentColor;
-    padding: 2px 4px;
-    border-radius: 3px;
+    padding: 1px 2px;
+    border-radius: 2px;
     background-color: var(--color-background);
 }
 
@@ -130,15 +130,27 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8em;
-    line-height: 1;
+    font-size: 1.25em;
     vertical-align: middle;
     position: relative;
-    transition: transform 0.3s ease;
-    padding: 2px;
-    border-radius: 3px;
-    background: var(--color-background);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    padding: 1px;
+    border-radius: 5px;
+    background: var(--color-sigil-background);
+}
+/* High-contrast "main" sigils do not expand */
+[data-theme="high-contrast"] .message-main .sigil {
+    margin: 0 0.2em;
+}
+[data-theme="high-contrast"] .color-block-container .sigil {
+    font-size: 1.6em;
+    display: inline;
+    margin-left: 0.2rem;
+}
+@media print {
+    .sigil {
+        filter: grayscale(100%) contrast(120%); /* Convert to grayscale with enhanced contrast */
+        -webkit-filter: grayscale(100%) contrast(120%); /* Safari support */
+    }
 }
 
 /* Color block settings for high-contrast mode */
@@ -146,11 +158,6 @@
     margin-bottom: 1rem;
     padding: 0.5rem;
     border-bottom: 1px solid #000;
-}
-
-[data-theme="high-contrast"] .color-block-container .sigil {
-    display: inline;
-    margin-left: 0.5rem;
 }
 
 [data-theme="high-contrast"] .color-block-container .colortext-content {
@@ -171,11 +178,6 @@
     padding: 0;
     margin: 0;
     display: inline;
-}
-
-[data-theme="high-contrast"] .message-main .sigil {
-    font-size: 1.2em;
-    margin: 0 0.2em;
 }
 
 /* Individual color styles */

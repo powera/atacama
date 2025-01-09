@@ -54,7 +54,6 @@
     background: var(--background-color);
     padding: var(--spacing-base);
     border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
     margin-bottom: var(--spacing-large);
 }
 
@@ -63,18 +62,4 @@
     gap: var(--spacing-base);
     align-items: center;
     justify-content: space-between;
-}
-
-
-/* High contrast specific styles */
-[data-theme="high-contrast"] .stream-container {
-    max-width: 95vw; /* Wider container for two-column layout */
-}
-
-/* Mobile responsive adjustments */
-@media screen and (max-width: 1024px) {
-    [data-theme="high-contrast"] .stream-message {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-base);
-    }
 }
