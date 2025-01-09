@@ -12,29 +12,6 @@
     background: var(--color-background);
 }
 
-.message-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: var(--spacing-base);
-}
-
-.message-title {
-    font-size: var(--font-size-large);
-    font-weight: 500;
-    color: var(--color-primary);
-    text-decoration: none;
-}
-
-.message-timestamp {
-    font-size: var(--font-size-small);
-    color: var(--color-text-secondary);
-}
-
-.message-content {
-    line-height: 1.6;
-}
-
 .chain-container {
     max-width: 95vw;
     margin: 0 auto;
@@ -71,22 +48,6 @@
     bottom: calc(-1 * var(--spacing-large));
 }
 
-.message-title {
-    font-size: var(--font-size-large);
-    font-weight: 500;
-    color: var(--color-primary);
-    text-decoration: none;
-}
-
-.message-timestamp {
-    font-size: var(--font-size-small);
-    color: #666;
-}
-
-.message-content {
-    line-height: 1.6;
-}
-
 .chain-navigation {
     top: var(--spacing-base);
     z-index: 100;
@@ -110,28 +71,10 @@
     max-width: 95vw; /* Wider container for two-column layout */
 }
 
-[data-theme="high-contrast"] .message-header {
-    border-bottom: 1px solid var(--color-text);
-    padding-bottom: var(--spacing-base);
-}
-
-/* Message sidebars in stream view should not be sticky */
-[data-theme="high-contrast"] .message-sidebar {
-    position: relative;
-    max-height: none;
-    border-left: 2px solid var(--color-text);
-}
-
 /* Mobile responsive adjustments */
 @media screen and (max-width: 1024px) {
     [data-theme="high-contrast"] .stream-message {
         grid-template-columns: 1fr;
         gap: var(--spacing-base);
-    }
-
-    [data-theme="high-contrast"] .message-sidebar {
-        border-left: none;
-        border-top: 2px solid var(--color-text);
-        padding-top: var(--spacing-base);
     }
 }

@@ -13,12 +13,29 @@
     max-width: min(90vw, 100%);  /* either 90% of window, or 100% of container */
     margin: 0 auto;
     padding: var(--spacing-base);
-    line-height: 1.85;  /* More than default, less than sigil. */
+    line-height: var(--line-height);
     background-color: var(--color-background);
 }
 
+/* Two-column layout for high contrast mode */
+[data-theme="high-contrast"] .message-body {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    max-width: 90vw;
+}
+
+
 .message-header {
-    margin-bottom: var(--spacing-large);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--spacing-base);
+}
+
+[data-theme="high-contrast"] .message-header {
+    border-bottom: 1px solid var(--color-text);
+    padding-bottom: var(--spacing-base);
 }
 
 .message-actions { /* for replies */
@@ -27,6 +44,48 @@
 
 .message-actions .replies ul {
     list-style: none;
+}
+
+.message-timestamp {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+.message-title {
+    font-size: var(--font-size-large);
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.message-content {
+    line-height: 1.6;
+}
+
+[data-theme="high-contrast"] .message-main {
+    grid-column: 1;
+}
+
+[data-theme="high-contrast"] .message-sidebar {
+    grid-column: 2;
+    background: #f8f8f8;
+    border-left: 2px solid var(--color-text);
+    padding: var(--spacing-base);
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 768px) {
+    [data-theme="high-contrast"] .message-body {
+        grid-template-columns: 1fr;
+    }
+
+    [data-theme="high-contrast"] .message-sidebar {
+        grid-column: 1;
+        border-left: none;
+        border-top: 2px solid var(--color-text);
+        margin-top: 2rem;
+        position: static;
+    }
 }
 
 .metadata {
@@ -80,6 +139,43 @@
     border-radius: 3px;
     background: var(--color-background);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Color block settings for high-contrast mode */
+[data-theme="high-contrast"] .color-block-container {
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #000;
+}
+
+[data-theme="high-contrast"] .color-block-container .sigil {
+    display: inline;
+    margin-left: 0.5rem;
+}
+
+[data-theme="high-contrast"] .color-block-container .colortext-content {
+    display: inline;
+    margin-left: 0.5rem;
+}
+
+/* Hide color blocks in main content for high contrast */
+[data-theme="high-contrast"] .message-main .colorblock .colortext-content,
+[data-theme="high-contrast"] .message-main [class^="color-"] .colortext-content {
+    display: none;
+}
+
+[data-theme="high-contrast"] .message-main .colorblock,
+[data-theme="high-contrast"] .message-main [class^="color-"] {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    display: inline;
+}
+
+[data-theme="high-contrast"] .message-main .sigil {
+    font-size: 1.2em;
+    margin: 0 0.2em;
 }
 
 /* Individual color styles */
@@ -182,27 +278,9 @@ hr {
 }
 [data-theme="high-contrast"] hr {
     border: none;
-    border-top: 3px solid var(--color-text);
+    border-top: 2px solid var(--color-text);
     margin: var(--spacing-large) auto;
     width: 75%;
-}
-
-/* Two-column layout for single message view */
-.message.single-view .message-body {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: var(--spacing-large);
-    align-items: start;
-}
-
-.message.single-view .message-sidebar {
-    position: sticky;
-    top: var(--spacing-base);
-    height: calc(100vh - 2 * var(--spacing-base));
-    overflow-y: auto;
-    padding: var(--spacing-base);
-    border-left: 1px solid var(--color-border);
-    background: var(--color-background);
 }
 
 /* Mobile adjustments */

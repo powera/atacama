@@ -12,6 +12,7 @@
     --font-size-base: clamp(16px, 1rem + 0.5vw, 18px);
     --font-size-small: 0.95rem;
     --font-size-large: 1.6rem;
+    --line-height: 1.75;
 }
 
 /* Theme system for Atacama */
@@ -99,7 +100,7 @@
     --color-text: #000000;
     --color-text-secondary: #000000;
     --color-border: #ffffff;
-    --color-primary: #646400;
+    --color-primary: #333303;
     
     /* Maintain high contrast ratios for all colors */
     --color-xantham: #6f3030;
@@ -107,93 +108,16 @@
     --color-orange: #7f4500;
     --color-quote: #7f7f00;
     --color-green: #007f00;
-    --color-teal: #30cfcf;
-    --color-blue: #00cfcf;
-    --color-violet: #7f007f;
-    --color-mogue: #4f004f;
+    --color-teal: #155e5e;
+    --color-blue: #00125b;
+    --color-violet: #3f0b48;
+    --color-mogue: #200820;
     --color-gray: #4f4f4f;
     --color-hazel: #ffa500;
 
     --font-size-base: clamp(10px, 1rem + 0.5vw, 16px);
     --font-size-small: 0.85rem;
     --font-size-large: 1.3rem;
-}
-
-/* Two-column layout for high contrast mode */
-[data-theme="high-contrast"] .message-body {
-    display: grid;
-    grid-template-columns: 1fr 30vw;
-    gap: 2rem;
-    max-width: 90vw;
-}
-
-[data-theme="high-contrast"] .message-main {
-    grid-column: 1;
-}
-
-[data-theme="high-contrast"] .message-sidebar {
-    grid-column: 2;
-    background: #f8f8f8;
-    border-left: 2px solid #000;
-    padding: var(--spacing-base);
-}
-
-[data-theme="high-contrast"] .color-block-container {
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    border-bottom: 1px solid #000;
-}
-
-[data-theme="high-contrast"] .color-block-container .sigil {
-    display: inline;
-    margin-left: 0.5rem;
-}
-
-[data-theme="high-contrast"] .color-block-container .colortext-content {
-    display: inline;
-    margin-left: 0.5rem;
-}
-
-/* Hide color blocks in main content for high contrast */
-[data-theme="high-contrast"] .message-main .colorblock .colortext-content,
-[data-theme="high-contrast"] .message-main [class^="color-"] .colortext-content {
-    display: none;
-}
-
-[data-theme="high-contrast"] .message-main .colorblock,
-[data-theme="high-contrast"] .message-main [class^="color-"] {
-    border: none;
-    background: none;
-    padding: 0;
-    margin: 0;
-    display: inline;
-}
-
-[data-theme="high-contrast"] .message-main .sigil {
-    font-size: 1.2em;
-    margin: 0 0.2em;
-}
-
-/* Ensure sidebar is scrollable if needed */
-[data-theme="high-contrast"] .message-sidebar {
-    max-height: 100vh;
-    top: 0;
-    overflow-y: auto;
-}
-
-/* Mobile responsive adjustments */
-@media screen and (max-width: 768px) {
-    [data-theme="high-contrast"] .message-body {
-        grid-template-columns: 1fr;
-    }
-
-    [data-theme="high-contrast"] .message-sidebar {
-        grid-column: 1;
-        border-left: none;
-        border-top: 2px solid #000;
-        margin-top: 2rem;
-        position: static;
-    }
 }
 
 /* Theme switcher positioning and styling */
@@ -385,6 +309,7 @@ button:disabled,
         --font-size-base: 10pt;
         --font-size-small: 9pt;
         --font-size-large: 12pt;
+        --line-height: 1.35;
     }
 
     /* Hide interactive elements */
