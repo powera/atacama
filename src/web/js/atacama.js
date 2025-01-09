@@ -133,7 +133,13 @@ class AtacamaViewer {
                 // Create container for this block
                 const container = document.createElement('div');
                 container.className = 'color-block-container';
-
+                
+                // Add the original color class to maintain styling
+                const colorClass = Array.from(block.classList)
+                    .find(cls => cls.startsWith('color-'));
+                if (colorClass) {
+                    container.classList.add(colorClass);
+                }
                 // Clone sigil and content
                 const sigilClone = block.querySelector('.sigil').cloneNode(true);
                 const contentClone = content.cloneNode(true);
