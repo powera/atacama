@@ -135,7 +135,7 @@
     position: relative;
     padding: 1px;
     border-radius: 5px;
-    background: var(--color-sigil-background);
+    background: var(--color-sigil-background) !important;
 }
 /* High-contrast "main" sigils do not expand */
 [data-theme="high-contrast"] .message-main .sigil {
@@ -150,6 +150,8 @@
     .sigil {
         filter: grayscale(100%) contrast(120%); /* Convert to grayscale with enhanced contrast */
         -webkit-filter: grayscale(100%) contrast(120%); /* Safari support */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 }
 

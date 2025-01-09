@@ -20,7 +20,7 @@
 :root {
     /* Base colors */
     --color-background: #f9f9f9;
-    --color-sigil-background: #cccccc;
+    --color-sigil-background: #e5e5e5;
     --color-text: #333333;
     --color-text-secondary: #666666;
     --color-border: #dddddd;
@@ -94,7 +94,7 @@
 [data-theme="high-contrast"] {
     /* Base colors */
     --color-background: #ffffff;
-    --color-sigil-background: #cccccc;
+    --color-sigil-background: #d9d9d9;
     --color-text: #000000;
     --color-text-secondary: #000000;
     --color-border: #ffffff;
@@ -317,13 +317,5 @@ button:disabled,
     form,
     .info-box {
         display: none !important;
-    }
-
-    /* Compact color blocks */
-    [class^="color-"],
-    .colorblock {
-        margin: 0;
-        padding: 0.125rem;
-        border-width: 0.5pt;
     }
 }
