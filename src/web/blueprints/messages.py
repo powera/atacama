@@ -80,7 +80,7 @@ def view_chain(message_id: int):
             'chain.html',
             messages=chain,
             target_id=message_id,
-            channel=chain[0].channel.value if chain else None
+            channel=chain[0].channel.value if (chain[0].channel) else None
         )
     
     # Otherwise return JSON
