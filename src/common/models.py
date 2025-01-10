@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Dict
 from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
+import enum
 
 from sqlalchemy.orm import DeclarativeBase
 
@@ -10,6 +11,15 @@ logger = get_logger(__name__)
 
 class Base(DeclarativeBase):
     pass
+
+class Channel(enum.Enum):
+    """Channel enum for message categorization."""
+    PRIVATE = "private"
+    SPORTS = "sports"
+    POLITICS = "politics"
+    RELIGION = "religion"
+    CHESS = "chess"
+    MISC = "misc"
 
 class User(Base):
     """User model for tracking post authors."""
@@ -48,6 +58,7 @@ class Email(Base):
     content: Mapped[str] = mapped_column(Text)
     processed_content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    channel: Mapped[Channel] = mapped_column(Enum(Channel), nullable=False, default=Channel.PRIVATE, server_default=Channel.PRIVATE.value)
 
     author_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'))
     author: Mapped[Optional["User"]] = relationship("User", back_populates="emails", lazy="selectin")
@@ -82,5 +93,3 @@ def get_or_create_user(db_session, request_user) -> User:
         db_session.add(db_user)
         db_session.flush()
     return db_user
-
-

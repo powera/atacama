@@ -9,21 +9,45 @@
 </head>
 <body>
     <div class="stream-container">
-        <h1>Recent Messages</h1>
+        <header class="stream-header">
+            <h1>{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}</h1>
+            
+            <nav class="channel-navigation">
+                <ul class="channel-list">
+                    <li class="channel-item {% if not current_channel %}active{% endif %}">
+                        <a href="{{ url_for('messages.message_stream') }}" class="channel-link">All</a>
+                    </li>
+                    {% for channel in available_channels %}
+                        {% if channel != 'private' %}
+                            <li class="channel-item {% if current_channel == channel %}active{% endif %}">
+                                <a href="{{ url_for('messages.message_stream', channel=channel) }}" class="channel-link">
+                                    {{ channel|title }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
+        </header>
         
         {% for message in messages %}
             <article class="stream-message message">
                 <header class="message-header">
-                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
-                        {{ message.subject or '(No Subject)' }}
-                    </a>
+                    <div class="message-header-main">
+                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                            {{ message.subject or '(No Subject)' }}
+                        </a>
+                        {% if message.channel.value != 'private' %}
+                            <span class="message-channel">{{ message.channel.value|title }}</span>
+                        {% endif %}
+                    </div>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>
                 </header>
                 <div class="message-body">
-                  <div class="message-main">
-                      {{ message.processed_content | safe }}
-                  </div>
-                  <div class="message-sidebar"></div>
+                    <div class="message-main">
+                        {{ message.processed_content | safe }}
+                    </div>
+                    <div class="message-sidebar"></div>
                 </div>
             </article>
         {% endfor %}

@@ -62,4 +62,122 @@
     gap: var(--spacing-base);
     align-items: center;
     justify-content: space-between;
+
+/* High contrast specific styles */
+[data-theme="high-contrast"] .stream-container {
+    max-width: 95vw; /* Wider container for two-column layout */
 }
+
+[data-theme="high-contrast"] .message-header {
+    border-bottom: 1px solid var(--color-text);
+    padding-bottom: var(--spacing-base);
+}
+
+/* Message sidebars in stream view should not be sticky */
+[data-theme="high-contrast"] .message-sidebar {
+    position: relative;
+    max-height: none;
+    border-left: 2px solid var(--color-text);
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 1024px) {
+    [data-theme="high-contrast"] .stream-message {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-base);
+    }
+
+    [data-theme="high-contrast"] .message-sidebar {
+        border-left: none;
+        border-top: 2px solid var(--color-text);
+        padding-top: var(--spacing-base);
+    }
+}
+
+
+
+/* Channel */
+
+.channel-navigation {
+    margin: var(--spacing-large) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.channel-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.channel-item {
+    margin: 0;
+}
+
+.channel-link {
+    display: inline-block;
+    padding: var(--spacing-base) var(--spacing-large);
+    color: var(--color-text);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.channel-item.active .channel-link {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.channel-link:hover {
+    border-bottom-color: var(--color-border);
+}
+
+
+.message-channel {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    padding: 0.2em 0.5em;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .channel-link {
+    color: var(--color-text);
+}
+
+[data-theme="dark"] .channel-item.active .channel-link {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* High contrast theme adjustments */
+[data-theme="high-contrast"] .channel-navigation {
+    border-bottom: 2px solid var(--color-text);
+}
+
+[data-theme="high-contrast"] .channel-link {
+    border-bottom-width: 3px;
+}
+
+[data-theme="high-contrast"] .message-channel {
+    border: 2px solid currentColor;
+}
+
+/* Mobile responsive adjustments */
+@media screen and (max-width: 768px) {
+    .channel-list {
+        gap: 0.5rem;
+    }
+
+    .channel-link {
+        padding: var(--spacing-base);
+    }
+
+    .message-channel {
+        align-self: flex-start;
+    }
+}
+>>>>>>> 13edc87 (backend support for "channels".)

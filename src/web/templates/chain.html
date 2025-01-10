@@ -16,9 +16,17 @@
             <div class="chain-navigation">
                 <div class="chain-overview">
                     <h1>Message Chain</h1>
-                    <div class="chain-stats">
-                        {{ messages|length }} messages in chain
+                    <div class="chain-metadata">
+                        <span class="chain-stats">{{ messages|length }} messages in chain</span>
+                        {% if messages %}
+                            <span class="chain-channel">{{ messages[0].channel.value|title }} Channel</span>
+                        {% endif %}
                     </div>
+                    {% if messages %}
+                        <a href="{{ url_for('messages.message_stream', channel=messages[0].channel.value) }}" class="channel-link">
+                            View All {{ messages[0].channel.value|title }} Messages
+                        </a>
+                    {% endif %}
                 </div>
             </div>
             
@@ -32,16 +40,21 @@
                 {% endif %}
                 
                 <header class="message-header">
-                    <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
-                        {{ message.subject or '(No Subject)' }}
-                    </a>
+                    <div class="message-header-main">
+                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                            {{ message.subject or '(No Subject)' }}
+                        </a>
+                        {% if message.channel.value != 'private' %}
+                            <span class="message-channel">{{ message.channel.value|title }}</span>
+                        {% endif %}
+                    </div>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>
                 </header>
                 <div class="message-body">
-                  <div class="message-main">
-                      {{ message.processed_content | safe }}
-                  </div>
-                  <div class="message-sidebar"></div>
+                    <div class="message-main">
+                        {{ message.processed_content | safe }}
+                    </div>
+                    <div class="message-sidebar"></div>
                 </div>
             </article>
             {% endfor %}
