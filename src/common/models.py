@@ -14,11 +14,14 @@ class Base(DeclarativeBase):
 
 class Channel(enum.Enum):
     """Channel enum for message categorization."""
-    PRIVATE = "private"
+    PRIVATE = "private"  # default
+    SANDBOX = "sandbox"  # For testing and experimentation
     SPORTS = "sports"
     POLITICS = "politics"
     RELIGION = "religion"
     CHESS = "chess"
+    BOOKS = "books"
+    TELEVISION = "television"
     MISC = "misc"
 
     @classmethod
