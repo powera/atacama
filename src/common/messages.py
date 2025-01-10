@@ -115,6 +115,9 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
         except KeyError:
             logger.error(f"Invalid channel specified: {channel}")
             return [], False
+    else:
+        # Default to avoid private channel
+        query = query.filter(Email.channel != Channel.PRIVATE)
 
     # Get one extra message to check if there are more
     messages = query.order_by(Email.id.desc()).limit(limit + 1).all()

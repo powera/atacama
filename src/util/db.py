@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload, sessionmaker
   
 from constants import DB_PATH
-from common.models import Email, Quote, email_quotes
+from common.models import Email, Channel, Quote, email_quotes
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
