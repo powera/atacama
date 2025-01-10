@@ -189,3 +189,64 @@ def reprocess_message(message_id: int):
         
     finally:
         db_session.close()
+
+def set_message_channel(message_id: int, channel_name: str, db_url: str = 'sqlite:///emails.db') -> Tuple[bool, Optional[str]]:
+    """
+    Set the channel for a message in the database.
+    
+    Args:
+        message_id: ID of the message to update
+        channel_name: Name of the channel (must match Channel enum values)
+        db_url: SQLAlchemy database URL (defaults to SQLite)
+        
+    Returns:
+        Tuple of (success: bool, error_message: Optional[str])
+        
+    Example:
+        >>> success, error = set_message_channel(5, "SPORTS")
+        >>> if success:
+        ...     print("Channel updated successfully")
+        ... else:
+        ...     print(f"Error: {error}")
+    """
+    try:
+        # Create database engine and session
+        engine = create_engine(db_url)
+        SessionLocal = sessionmaker(bind=engine)
+        session = SessionLocal()
+        
+        try:
+            # Get the message
+            message = session.query(Email).get(message_id)
+            
+            # Validate message exists
+            if not message:
+                return False, f"Message with ID {message_id} not found"
+                
+            # Validate and set channel
+            try:
+                channel = Channel[channel_name.upper()]
+                message.channel = channel
+            except KeyError:
+                valid_channels = ", ".join([c.name for c in Channel])
+                return False, f"Invalid channel '{channel_name}'. Valid channels are: {valid_channels}"
+            
+            # Commit the changes
+            session.commit()
+            
+            logger.info(f"Set message {message_id} channel to {channel.name}")
+            return True, None
+            
+        except Exception as e:
+            session.rollback()
+            error_msg = f"Database error: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+            
+        finally:
+            session.close()
+            
+    except Exception as e:
+        error_msg = f"Connection error: {str(e)}"
+        logger.error(error_msg)
+        return False, error_msg
