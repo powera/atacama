@@ -4,14 +4,15 @@ import logging
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload, sessionmaker
-    
+  
+from constants import DB_PATH
 from common.models import Email, Quote, email_quotes
 from common.colorscheme import ColorScheme
 color_processor = ColorScheme()
 
 logger = logging.getLogger(__name__)
 
-def set_message_parent(child_id: int, parent_id: int, db_url: str = 'sqlite:///emails.db') -> Tuple[bool, Optional[str]]:
+def set_message_parent(child_id: int, parent_id: int, db_url: str = f'sqlite:///{DB_PATH}') -> Tuple[bool, Optional[str]]:
     """
     Set a parent-child relationship between two messages in the database.
     
@@ -78,7 +79,7 @@ def set_message_parent(child_id: int, parent_id: int, db_url: str = 'sqlite:///e
         return False, error_msg
 
 
-def delete_message(message_id: int, db_url: str = 'sqlite:///emails.db', cascade: bool = False) -> Tuple[bool, Optional[str]]:
+def delete_message(message_id: int, db_url: str = f'sqlite:///{DB_PATH}', cascade: bool = False) -> Tuple[bool, Optional[str]]:
     """
     Delete a message and its associated data from the database.
     
@@ -190,7 +191,7 @@ def reprocess_message(message_id: int):
     finally:
         db_session.close()
 
-def set_message_channel(message_id: int, channel_name: str, db_url: str = 'sqlite:///emails.db') -> Tuple[bool, Optional[str]]:
+def set_message_channel(message_id: int, channel_name: str, db_url: str = f'sqlite:///{DB_PATH}') -> Tuple[bool, Optional[str]]:
     """
     Set the channel for a message in the database.
     
