@@ -65,11 +65,11 @@ def submit_form():
 
             user = session['user']
             db_user = common.models.get_or_create_user(db_session, user)
-
             message = common.models.Email(
                 subject=subject,
                 content=content,
-                author=db_user
+                author=db_user,
+                channel=common.models.Channel(request.form.get('channel', 'private'))
             )
             db_session.add(message)
 

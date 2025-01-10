@@ -27,7 +27,19 @@
                 <label for="subject">Subject:</label>
                 <input type="text" id="subject" name="subject" required>
             </div>
-           
+
+            <div class="form-group">
+                <label for="channel">Channel:</label>
+                <select name="channel" id="channel" required>
+                    <option value="private">Private</option>
+                    <option value="sports">Sports</option>
+                    <option value="politics">Politics</option>
+                    <option value="religion">Religion</option>
+                    <option value="chess">Chess</option>
+                    <option value="misc">Misc</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="parent_id">Parent Message (optional):</label>
                 <select name="parent_id" id="parent_id">
