@@ -59,7 +59,7 @@ def submit_form():
             parent_id = request.form.get('parent_id')
 
             if not subject or not content:
-                return render_template('submit.html', error='Subject and content are required')
+                return render_template('error.html', error_code=422), 422
 
             db_session = Session()
 
@@ -102,7 +102,7 @@ def submit_form():
             
         except Exception as e:
             logger.error(f"Error processing form submission: {str(e)}")
-            return render_template('submit.html', error=str(e))
+            return render_template('error.html', error_code=500), 500
             
         finally:
             db_session.close()

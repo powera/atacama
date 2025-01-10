@@ -17,8 +17,14 @@ GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 
 @auth_bp.route('/login')
 def login():
-    return render_template('login.html', 
-                         client_id=os.getenv('GOOGLE_CLIENT_ID'))
+    return render_template(
+        'login.html', client_id=os.getenv('GOOGLE_CLIENT_ID'))
+
+@auth_bp.route('/logout')
+def logout():
+    """Clear user session."""
+    session.clear()
+    return redirect(url_for('login'))
 
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """
@@ -58,6 +64,7 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
         logger.error(f"Token verification failed: {str(e)}")
         return None
 
+
 @auth_bp.route('/oauth2callback')
 def callback():
     """Handle OAuth 2.0 callback from Google."""
@@ -82,9 +89,3 @@ def callback():
     session.permanent = True
     
     return redirect('/')
-
-@auth_bp.route('/logout')
-def logout():
-    """Clear user session."""
-    session.clear()
-    return redirect(url_for('login'))

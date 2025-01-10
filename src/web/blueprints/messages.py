@@ -16,75 +16,7 @@ logger = get_logger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
-def get_message_by_id(message_id: int) -> Optional[Email]:
-    """
-    Helper function to retrieve a message by ID with all relevant relationships.
-    
-    Args:
-        message_id: ID of the message to retrieve
-        
-    Returns:
-        Email object if found, None otherwise
-    """
-    db_session = Session()
-    try:
-        return db_session.query(Email).options(
-            joinedload(Email.parent),
-            joinedload(Email.children),
-            joinedload(Email.quotes)
-        ).filter(Email.id == message_id).first()
-    except Exception as e:
-        logger.error(f"Error retrieving message {message_id}: {str(e)}")
-        return None
-    finally:
-        db_session.close()
-
-def get_message_chain(message_id: int) -> List[Email]:
-    """
-    Retrieve the full chain of messages related to a given message ID.
-    Includes the parent chain and all child messages.
-    
-    Args:
-        message_id: ID of the message to get the chain for
-        
-    Returns:
-        List of Email objects representing the chain, ordered chronologically
-    """
-    db_session = Session()
-    try:
-        # Get the target message with its relationships
-        message = db_session.query(Email).options(
-            joinedload(Email.parent),
-            joinedload(Email.children),
-            joinedload(Email.quotes)
-        ).filter(Email.id == message_id).first()
-        
-        if not message:
-            return []
-            
-        # Build the chain
-        chain = []
-        
-        # Add parent chain in reverse chronological order
-        current = message
-        while current.parent:
-            chain.insert(0, current.parent)
-            current = current.parent
-            
-        # Add the target message
-        chain.append(message)
-        
-        # Add children in chronological order that match the channel
-        matching_children = [child for child in message.children if child.channel == message.channel]
-        chain.extend(sorted(matching_children, key=lambda x: x.created_at))
-        
-        return chain
-        
-    except Exception as e:
-        logger.error(f"Error retrieving message chain for {message_id}: {str(e)}")
-        return []
-    finally:
-        db_session.close()
+from common.messages import get_message_by_id, get_message_chain
 
 @messages_bp.route('/messages/<int:message_id>', methods=['GET'])
 def get_message(message_id: int):
@@ -99,12 +31,9 @@ def get_message(message_id: int):
     if not message:
         return jsonify({'error': 'Message not found'}), 404
     
-    # Get print mode from query params
-    print_mode = request.args.get('print', '').lower() == 'true'
-    
     # Return HTML if requested
     if request.headers.get('Accept', '').startswith('text/html'):
-        template = 'message_print.html' if print_mode else 'message.html'
+        template = 'message.html'
         return render_template(
             template,
             message=message,
