@@ -84,3 +84,46 @@ def get_message_chain(message_id: int) -> List[Email]:
         return []
     finally:
         db_session.close()
+
+
+def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=None, limit=10):
+    """
+    Retrieve messages with optional filtering and pagination.
+
+    :param db_session: Database session
+    :param older_than_id: If provided, get messages older than this ID
+    :param user_id: If provided, filter messages by user ID
+    :param channel: If provided, filter messages by channel/topic
+    :param limit: Maximum number of messages to return
+    :return: Tuple of (messages, has_more)
+    """
+    query = db_session.query(Email).options(
+        joinedload(Email.quotes),
+        joinedload(Email.author)
+    )
+
+    if older_than_id:
+        query = query.filter(Email.id < older_than_id)
+
+    if user_id:
+        query = query.filter(Email.author_id == user_id)
+
+    if channel:
+        try:
+            channel_enum = Channel[channel.upper()]
+            query = query.filter(Email.channel == channel_enum)
+        except KeyError:
+            logger.error(f"Invalid channel specified: {channel}")
+            return [], False
+
+    # Get one extra message to check if there are more
+    messages = query.order_by(Email.id.desc()).limit(limit + 1).all()
+
+    has_more = len(messages) > limit
+    messages = messages[:limit]  # Remove the extra message if it exists
+
+    # Format timestamps
+    for message in messages:
+        message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+
+    return messages, has_more
