@@ -21,6 +21,31 @@ class Channel(enum.Enum):
     CHESS = "chess"
     MISC = "misc"
 
+    @classmethod
+    def from_string(cls, value: str) -> "Channel":
+        """Convert string to Channel enum value, case-insensitive.
+        
+        :param value: String value to convert
+        :return: Channel enum value
+        :raises ValueError: If string doesn't match any channel
+        """
+        try:
+            return cls[value.upper()]
+        except KeyError:
+            # Try matching on enum value instead
+            for channel in cls:
+                if channel.value == value.lower():
+                    return channel
+            raise ValueError(f"Invalid channel: {value}")
+
+    @classmethod
+    def get_default(cls) -> "Channel":
+        """Get default channel value.
+        
+        :return: PRIVATE channel enum value
+        """
+        return cls.PRIVATE
+
 class User(Base):
     """User model for tracking post authors."""
     __tablename__ = 'users'
@@ -58,7 +83,7 @@ class Email(Base):
     content: Mapped[str] = mapped_column(Text)
     processed_content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    channel: Mapped[Channel] = mapped_column(Enum(Channel), nullable=False, default=Channel.PRIVATE, server_default=Channel.PRIVATE.value)
+    channel: Mapped[Channel] = mapped_column(Enum(Channel), default=Channel.PRIVATE, server_default=Channel.PRIVATE.value)
 
     author_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'))
     author: Mapped[Optional["User"]] = relationship("User", back_populates="emails", lazy="selectin")

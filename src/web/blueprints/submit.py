@@ -71,7 +71,6 @@ def submit_form():
                 author=db_user,
                 channel=common.models.Channel(request.form.get('channel', 'private'))
             )
-            db_session.add(message)
 
             # Handle message chain if parent_id is provided
             if parent_id and parent_id.strip():
