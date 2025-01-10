@@ -33,13 +33,14 @@ def get_message(message_id: int):
     # Return HTML if requested
     if request.headers.get('Accept', '').startswith('text/html'):
         template = 'message.html'
+        channel = message.channel.value if message.channel else None
         return render_template(
             template,
             message=message,
             created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             raw_content=message.content,
             quotes=message.quotes,
-            channel=message.channel.value
+            channel=channel,
         )
             
     # Otherwise return JSON
