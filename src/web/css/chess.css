@@ -86,3 +86,38 @@
     font-size: calc(var(--cell-size) * 0.4);
     user-select: none;
 }
+
+.chess-turn-indicator {
+    text-align: center;
+    padding: 0.5rem;
+    font-size: calc(var(--cell-size) * 0.5);
+    color: var(--label-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.turn-symbol {
+    font-size: calc(var(--cell-size) * 0.4);
+}
+
+.white-to-move .turn-symbol {
+    color: #fff;
+    text-shadow: 0 0 1px #000;
+}
+
+.black-to-move .turn-symbol {
+    color: #000;
+    text-shadow: 0 0 1px #fff;
+}
+
+[data-theme="dark"] .white-to-move .turn-symbol {
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+}
+
+[data-theme="dark"] .black-to-move .turn-symbol {
+    color: #000;
+    text-shadow: 0 0 2px #fff;
+}

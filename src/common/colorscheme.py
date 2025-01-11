@@ -185,8 +185,12 @@ class ColorScheme:
         """
         def fen_to_board(match: Match) -> str:
             fen = match.group(1)
+            fen_parts = fen.split()
+            position = fen_parts[0]
+            to_move = 'white' if len(fen_parts) > 1 and fen_parts[1] == 'w' else 'black'
+
             board = []
-            ranks = fen.split()[0].split('/')  # Get just the piece positions
+            ranks = position.split('/')  # Get just the piece positions
             
             # Map FEN piece letters to Unicode chess pieces
             pieces = {
@@ -218,7 +222,13 @@ class ColorScheme:
             # Combine ranks into complete board with row labels and file labels
             files = 'abcdefgh'
             board_html = ['<div class="chess-board">']
-            
+           
+            # Add turn indicator at top
+            board_html.append(f'<div class="chess-turn-indicator {to_move}-to-move">')
+            board_html.append(f'<span class="turn-symbol">●</span>')
+            board_html.append(f'{to_move.capitalize()} to move')
+            board_html.append('</div>')
+
             # Add file labels at top
             board_html.append('<div class="chess-labels files">')
             board_html.extend(f'<div class="chess-label">{f}</div>' for f in files)
