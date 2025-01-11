@@ -47,6 +47,7 @@ class ColorScheme:
         )
         
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
+        self.pgn_pattern = re.compile(r'\{\{pgn\|(.*?)\}\}')
         self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
         self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
@@ -174,6 +175,73 @@ class ColorScheme:
             
         return pattern.sub(replacer, text)
 
+    def process_pgn(self, text: str) -> str:
+        """
+        Process FEN chess board notation into visual boards using pure HTML/CSS.
+        No external libraries required.
+        
+        :param text: Text that may contain FEN notation in {{pgn|...}} tags
+        :return: Text with FEN notation converted to HTML chess boards
+        """
+        def fen_to_board(match: Match) -> str:
+            fen = match.group(1)
+            board = []
+            ranks = fen.split()[0].split('/')  # Get just the piece positions
+            
+            # Map FEN piece letters to Unicode chess pieces
+            pieces = {
+                'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙',  # White pieces
+                'K': '♚', 'Q': '♛', 'R': '♜', 'B': '♝', 'N': '♞', 'P': '♟',  # Black pieces
+            }
+            
+            # Process each rank
+            for rank_idx, rank in enumerate(ranks):
+                cells = []
+                file_idx = 0
+                for char in rank:
+                    if char.isdigit():
+                        # Empty squares
+                        empty_count = int(char)
+                        for _ in range(empty_count):
+                            cell_color = 'light' if (rank_idx + file_idx) % 2 == 0 else 'dark'
+                            cells.append(f'<div class="chess-cell {cell_color}"></div>')
+                            file_idx += 1
+                    else:
+                        # Square with piece
+                        cell_color = 'light' if (rank_idx + file_idx) % 2 == 0 else 'dark'
+                        piece = pieces.get(char, '')
+                        piece_color = 'white-piece' if char.isupper() else 'black-piece'
+                        cells.append(f'<div class="chess-cell {cell_color}"><span class="chess-piece {piece_color}">{piece}</span></div>')
+                        file_idx += 1
+                board.append(''.join(cells))
+            
+            # Combine ranks into complete board with row labels and file labels
+            files = 'abcdefgh'
+            board_html = ['<div class="chess-board">']
+            
+            # Add file labels at top
+            board_html.append('<div class="chess-labels files">')
+            board_html.extend(f'<div class="chess-label">{f}</div>' for f in files)
+            board_html.append('</div>')
+            
+            # Add ranks with labels
+            for rank_idx, rank in enumerate(board):
+                board_html.append(f'<div class="chess-rank">')
+                board_html.append(f'<div class="chess-label">{8-rank_idx}</div>')
+                board_html.append(rank)
+                board_html.append(f'<div class="chess-label">{8-rank_idx}</div>')
+                board_html.append('</div>')
+            
+            # Add file labels at bottom
+            board_html.append('<div class="chess-labels files">')
+            board_html.extend(f'<div class="chess-label">{f}</div>' for f in files)
+            board_html.append('</div>')
+            
+            board_html.append('</div>')
+            return '\n'.join(board_html)
+        
+        return self.pgn_pattern.sub(fen_to_board, text)
+
     def process_lists(self, text: str) -> str:
         """
         Convert list markers to HTML lists with appropriate classes.
@@ -274,7 +342,10 @@ class ColorScheme:
         
         # Process lists
         content = self.process_lists(content)
-        
+       
+        # Process {{pgn}}
+        content = self.process_pgn(content)
+
         # Process all color tags (and store quotes to DB)
         content = self.process_colors(content, message, db_session)
         

@@ -1,0 +1,88 @@
+/* Chess board styles */
+.chess-board {
+    --cell-size: min(40px, 4vw);
+    --board-bg: #e5e5e5;
+    --light-square: #fff;
+    --dark-square: #b5b5b5;
+    --border-color: #666;
+    --label-color: var(--color-text);
+    
+    display: inline-block;
+    padding: 0.5rem;
+    background: var(--board-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+[data-theme="dark"] .chess-board {
+    --board-bg: #404040;
+    --light-square: #808080;
+    --dark-square: #404040;
+    --border-color: #666;
+}
+
+[data-theme="high-contrast"] .chess-board {
+    --board-bg: #000;
+    --light-square: #fff;
+    --dark-square: #000;
+    --border-color: #000;
+}
+
+.chess-rank {
+    display: flex;
+    align-items: center;
+}
+
+.chess-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(var(--cell-size) * 0.8);
+    line-height: 1;
+}
+
+.chess-cell.light { background: var(--light-square); }
+.chess-cell.dark { background: var(--dark-square); }
+
+.chess-piece {
+    user-select: none;
+}
+
+.white-piece {
+    color: #fff;
+    text-shadow: 0 0 1px #000;
+}
+
+[data-theme="dark"] .white-piece {
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+}
+
+.black-piece {
+    color: #000;
+    text-shadow: 0 0 1px #fff;
+}
+
+[data-theme="dark"] .black-piece {
+    color: #000;
+    text-shadow: 0 0 2px #fff;
+}
+
+.chess-labels {
+    display: flex;
+    padding: 0 var(--cell-size);
+}
+
+.chess-label {
+    width: var(--cell-size);
+    height: calc(var(--cell-size) * 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--label-color);
+    font-size: calc(var(--cell-size) * 0.4);
+    user-select: none;
+}
