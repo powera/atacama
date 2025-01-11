@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, session, render_template_string, make_response, Response
+from flask import Blueprint, render_template, jsonify, request, session, render_template_string, make_response, Response, redirect, url_for
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
@@ -16,6 +16,23 @@ logger = get_logger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
+def check_message_access(message: Email) -> bool:
+    """
+    Check if current user has access to view the message.
+    
+    Args:
+        message: Email object to check access for
+        
+    Returns:
+        bool: True if user can access message, False otherwise
+    """
+    # Allow access to non-restricted channels
+    if message.channel not in [Channel.PRIVATE, Channel.POLITICS]:
+        return True
+        
+    # Require authentication for restricted channels
+    return 'user' in session
+
 from common.messages import get_message_by_id, get_message_chain, get_filtered_messages
 @messages_bp.route('/messages/<int:message_id>', methods=['GET'])
 def get_message(message_id: int):
@@ -29,6 +46,12 @@ def get_message(message_id: int):
     
     if not message:
         return jsonify({'error': 'Message not found'}), 404
+        
+    # Check access permissions
+    if not check_message_access(message):
+        if request.headers.get('Accept', '').startswith('text/html'):
+            return redirect(url_for('auth.login'))
+        return jsonify({'error': 'Authentication required'}), 401
     
     # Return HTML if requested
     if request.headers.get('Accept', '').startswith('text/html'):
@@ -70,6 +93,13 @@ def view_chain(message_id: int):
     if not chain:
         return render_template('chain.html', error="Message or chain not found")
     
+    # Check access permissions for all messages in chain
+    for message in chain:
+        if not check_message_access(message):
+            if request.headers.get('Accept', '').startswith('text/html'):
+                return redirect(url_for('auth.login'))
+            return jsonify({'error': 'Authentication required'}), 401
+    
     # Format timestamps for display
     for message in chain:
         message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -109,6 +139,10 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
     Show a stream of messages with optional filtering.
     Supports pagination and filtering by user or channel.
     """
+    # Check if trying to access restricted channel
+    if channel in ['private', 'politics'] and 'user' not in session:
+        return redirect(url_for('auth.login'))
+        
     try:
         db_session = Session()
         messages, has_more = get_filtered_messages(
@@ -117,9 +151,16 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
             user_id=user_id,
             channel=channel
         )
+        
+        # Filter out messages user doesn't have access to
+        messages = [msg for msg in messages if check_message_access(msg)]
 
         # Get list of available channels for navigation
         channels = [c.value for c in Channel]
+        
+        # Only show restricted channels in navigation if user is logged in
+        if 'user' not in session:
+            channels = [c for c in channels if c not in ['private', 'politics']]
 
         return render_template(
             'stream.html',
@@ -155,15 +196,16 @@ def sitemap() -> str:
         
         # Add channel pages
         for channel in Channel:
-            if channel != Channel.PRIVATE:  # Don't include private channel in sitemap
+            # Only include public channels in sitemap
+            if channel not in [Channel.PRIVATE, Channel.SANDBOX, Channel.POLITICS]:
                 urls.append({
                     'loc': f"{base_url}/stream/channel/{channel.value}",
                     'lastmod': datetime.utcnow().strftime('%Y-%m-%d')
                 })
         
-        # Add all non-private messages
+        # Add all public messages
         for message in messages:
-            if message.channel != Channel.PRIVATE:
+            if message.channel not in [Channel.PRIVATE, Channel.SANDBOX, Channel.POLITICS]:
                 urls.append({
                     'loc': f"{base_url}/messages/{message.id}",
                     'lastmod': message.created_at.strftime('%Y-%m-%d')
@@ -208,12 +250,19 @@ def landing_page():
             joinedload(Email.quotes)
         ).order_by(Email.created_at.desc()).limit(50).all()
 
+        # Filter messages based on access permissions
+        messages = [msg for msg in messages if check_message_access(msg)]
+
         # Format timestamps
         for message in messages:
             message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
         # Get available channels for navigation
         channels = [c.value for c in Channel]
+        
+        # Only show restricted channels if user is logged in
+        if 'user' not in session:
+            channels = [c for c in channels if c not in ['private', 'politics']]
 
     except Exception as e:
         db_status = f"Error: {str(e)}"
