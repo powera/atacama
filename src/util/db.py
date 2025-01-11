@@ -153,7 +153,9 @@ def delete_message(message_id: int, db_url: str = f'sqlite:///{DB_PATH}', cascad
 def reprocess_message(message_id: int):
     """Reprocess an existing message's content."""
     try:
-        db_session = Session()
+        engine = create_engine(f'sqlite:///{DB_PATH}')
+        SessionLocal = sessionmaker(bind=engine)
+        db_session = SessionLocal()
         message = db_session.query(Email).options(
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
