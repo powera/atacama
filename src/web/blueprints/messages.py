@@ -160,7 +160,7 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
         
         # Only show restricted channels in navigation if user is logged in
         if 'user' not in session:
-            channels = [c for c in channels if c not in ['private', 'politics']]
+            channels = [c for c in channels if c not in ['private', 'politics', 'sandbox']]
 
         return render_template(
             'stream.html',

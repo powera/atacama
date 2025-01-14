@@ -22,6 +22,8 @@ class Channel(enum.Enum):
     CHESS = "chess"
     BOOKS = "books"
     TELEVISION = "television"
+    TECH = "tech"
+    LLM = "llm"
     MISC = "misc"
 
     @classmethod
