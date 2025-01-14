@@ -12,6 +12,7 @@ The system maintains both in-memory and disk caches for performance.
 """
 
 from dataclasses import dataclass
+import os.path
 import re
 from typing import Dict, List, Optional, Tuple, Set
 from functools import lru_cache
@@ -19,6 +20,7 @@ from functools import lru_cache
 import jieba
 from pypinyin import pinyin, Style
 
+import constants
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -138,7 +140,8 @@ class PinyinProcessor:
         Example: 下腳 下脚 [xia4 jiao3] /to get a footing/
         """
         try:
-            with open('data/cedict/cedict_1_0_ts_utf-8_mdbg.txt', 'r', encoding='utf-8') as f:
+            cedict_path = os.path.join(constants.DATA_DIR, "cedict/cedict_1_0_ts_utf-8_mdbg.txt")
+            with open(cedict_path, 'r', encoding='utf-8') as f:
                 pattern = re.compile(r'^(\S+)\s+(\S+)\s+\[(.*?)\]\s+/(.*?)/')
                 
                 for line in f:
