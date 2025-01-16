@@ -25,6 +25,7 @@ class ChannelConfig:
     access_level: AccessLevel
     domain_restriction: Optional[str] = None
     requires_preference: bool = False
+    requires_admin: bool = False
 
     @property
     def requires_auth(self) -> bool:
@@ -71,6 +72,7 @@ class ChannelManager:
                     access_level=access_level,
                     domain_restriction=settings.get('domain_restriction'),
                     requires_preference=settings.get('requires_preference', False)
+                    requires_admin=settings.get('requires_admin', False)
                 )
                 
             # Load defaults

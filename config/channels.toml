@@ -52,7 +52,8 @@ access_level = "public"
 
 [channels.orinoco]
 description = "Orinoco project"
-access_level = "private"
+access_level = "restricted"
+requires_admin = true
 
 [defaults]
 # Default channel for new messages

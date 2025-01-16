@@ -9,7 +9,8 @@ from typing import Dict, List
 
 from common.auth import require_auth
 from common.database import db
-from common.models import User, Channel
+from common.models import User
+from common.channel_config import get_channel_manager
 from common.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -54,12 +55,18 @@ def list_users():
                 'access': access
             })
             
+        # Get admin-controlled channels from configuration
+        channel_manager = get_channel_manager()
+        admin_channels = [
+            channel for channel in channel_manager.get_channel_names()
+            if channel_manager.get_channel_config(channel).requires_admin
+        ]
+            
         return render_template(
             'admin/users.html',
             users=user_access,
-            channels=[c for c in Channel if c.value == 'orinoco']  # Only show admin-controlled channels
+            channels=admin_channels
         )
-
 
 @admin_bp.route('/admin/users/<int:user_id>/grant', methods=['POST'])
 @require_auth
@@ -74,9 +81,8 @@ def grant_access(user_id: int):
         flash('Channel required')
         return redirect(url_for('admin.list_users'))
         
-    try:
-        channel_enum = Channel[channel.upper()]
-    except KeyError:
+    channel = channel.lower()
+    if not get_channel_manager().get_channel_config(channel):
         flash('Invalid channel')
         return redirect(url_for('admin.list_users'))
         
@@ -88,7 +94,7 @@ def grant_access(user_id: int):
             
         # Update admin channel access
         access = json.loads(user.admin_channel_access or '{}')
-        access[channel_enum.value] = datetime.utcnow().isoformat()
+        access[channel] = datetime.utcnow().isoformat()
         user.admin_channel_access = json.dumps(access)
         
         # Clear cached permissions
@@ -113,9 +119,8 @@ def revoke_access(user_id: int):
         flash('Channel required')
         return redirect(url_for('admin.list_users'))
         
-    try:
-        channel_enum = Channel[channel.upper()]
-    except KeyError:
+    channel = channel.lower()
+    if not get_channel_manager().get_channel_config(channel):
         flash('Invalid channel')
         return redirect(url_for('admin.list_users'))
         
@@ -127,7 +132,7 @@ def revoke_access(user_id: int):
             
         # Update admin channel access
         access = json.loads(user.admin_channel_access or '{}')
-        access.pop(channel_enum.value, None)
+        access.pop(channel, None)
         user.admin_channel_access = json.dumps(access)
         
         # Clear cached permissions
