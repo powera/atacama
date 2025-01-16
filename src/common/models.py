@@ -77,7 +77,7 @@ class User(Base):
     # Maps channel names to timestamps when access was granted
     # e.g. {"orinoco": "2025-01-15T14:30:00Z"}
     admin_channel_access: Mapped[Optional[Dict]] = mapped_column(Text, 
-        default=lambda: json.dumps({})
+        default=lambda: json.dumps({}))
 
     # One-to-many relationship with emails
     emails: Mapped[List["Email"]] = relationship("Email", back_populates="author")

@@ -95,6 +95,7 @@ def get_message(message_id: int):
     Args:
         message_id: ID of the message to display
     """
+    db_session = Session()
     message = db_session.query(Email).get(message_id)
     
     if not message:
