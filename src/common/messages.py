@@ -9,7 +9,7 @@ import json
 from functools import lru_cache
 
 from common.database import db
-from common.models import Email, Channel, User
+from common.models import Email, User
 from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
 logger = get_logger(__name__)
@@ -28,12 +28,12 @@ def get_user_email_domain(user: Optional[User]) -> Optional[str]:
 
 
 @lru_cache(maxsize=1000)
-def check_admin_approval(user_id: int, channel: Channel) -> bool:
+def check_admin_approval(user_id: int, channel: str) -> bool:
     """
     Check if user has been granted access to admin-controlled channel.
     
     :param user_id: Database ID of user
-    :param channel: Channel to check
+    :param channel: Channel name to check
     :return: True if user has access, False otherwise
     """
     with db.session() as db_session:
@@ -43,19 +43,19 @@ def check_admin_approval(user_id: int, channel: Channel) -> bool:
             
         # Load channel preferences
         access = json.loads(user.admin_channel_access or '{}')
-        return channel.value in access
+        return channel in access
 
 
-def check_channel_access(channel: Channel, user: Optional[User] = None) -> bool:
+def check_channel_access(channel: str, user: Optional[User] = None) -> bool:
     """
     Check if current user has access to the specified channel.
     
-    :param channel: Channel to check access for
+    :param channel: Channel name to check access for
     :param user: Optional common.models.User
     :return: True if user can access channel, False otherwise
     """
     channel_manager = get_channel_manager()
-    config = channel_manager.get_channel_config(channel.value)
+    config = channel_manager.get_channel_config(channel)
     if not config:
         logger.error(f"No configuration found for channel {channel}")
         return False
@@ -81,21 +81,22 @@ def check_channel_access(channel: Channel, user: Optional[User] = None) -> bool:
             if not db_user:
                 return False
             prefs = json.loads(db_user.channel_preferences or '{}')
-            if not prefs.get(channel.value, False):
+            if not prefs.get(channel, False):
                 return False
 
     return True
 
 
-def get_user_allowed_channels(user: Optional[User] = None) -> List[Channel]:
+def get_user_allowed_channels(user: Optional[User] = None) -> List[str]:
     """
     Get list of channels the user can access.
     
     :param user: Optional user session dictionary
-    :return: List of accessible Channel enums
+    :return: List of accessible channel names
     """
     allowed = []
-    for channel in Channel:
+    channel_manager = get_channel_manager()
+    for channel in channel_manager.get_channel_names():
         if check_channel_access(channel, user):
             allowed.append(channel)
     return allowed
@@ -200,16 +201,15 @@ def get_filtered_messages(
         query = query.filter(Email.author_id == user_id)
 
     if channel:
-        try:
-            channel_enum = Channel[channel.upper()]
-            query = query.filter(Email.channel == channel_enum)
-            
-            if not check_channel_access(channel_enum, g.user):
-                logger.warning(f"User lacks access to channel: {channel}")
-                return [], False
-                
-        except KeyError:
+        channel = channel.lower()
+        if not get_channel_manager().get_channel_config(channel):
             logger.error(f"Invalid channel specified: {channel}")
+            return [], False
+            
+        query = query.filter(Email.channel == channel)
+        
+        if not check_channel_access(channel, g.user):
+            logger.warning(f"User lacks access to channel: {channel}")
             return [], False
     else:
         # Filter to allowed channels
