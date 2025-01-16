@@ -1,63 +1,18 @@
 from datetime import datetime
 import json
 from typing import Optional, List, Dict
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, joinedload
+from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, event
+from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, joinedload, validates
 import enum
 
 from sqlalchemy.orm import DeclarativeBase
 
-from common.channel_config import get_channel_manager, init_channel_manager
+from common.channel_config import get_channel_manager
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 class Base(DeclarativeBase):
     pass
-
-class Channel(enum.Enum):
-    """Channel enum for message categorization."""
-    def __init_subclass__(cls, **kwargs):
-        """Initialize enum members from configuration."""
-        super().__init_subclass__(**kwargs)
-        
-    def __new__(cls):
-        """Create enum members from channel configuration."""
-        manager = get_channel_manager()
-            
-        # Create enum members from configuration
-        members = {}
-        for channel_name in manager.get_channel_names():
-            enum_name = channel_name.upper()
-            members[enum_name] = channel_name.lower()
-            
-        # Create the enum class with configured members
-        return enum.Enum.__new__(cls, cls.__name__, members)
-        
-    @classmethod
-    def from_string(cls, value: str) -> "Channel":
-        """Convert string to Channel enum value, case-insensitive.
-        
-        :param value: String value to convert
-        :return: Channel enum value
-        :raises ValueError: If string doesn't match any channel
-        """
-        try:
-            return cls[value.upper()]
-        except KeyError:
-            # Try matching on enum value instead
-            for channel in cls:
-                if channel.value == value.lower():
-                    return channel
-            raise ValueError(f"Invalid channel: {value}")
-
-    @classmethod
-    def get_default(cls) -> "Channel":
-        """Get default channel value.
-        
-        :return: Default channel enum value from configuration
-        """
-        manager = get_channel_manager()
-        return cls.from_string(manager.default_channel)
 
 class User(Base):
     """User model for tracking post authors."""
@@ -69,15 +24,8 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     channel_preferences: Mapped[Optional[Dict]] = mapped_column(Text, 
         default=lambda: json.dumps({
-            "politics": False,
-            "chess": False,
-            "sports": True,
-            "religion": True,
-            "books": True,
-            "television": True,
-            "tech": True,
-            "llm": True,
-            "misc": True
+            channel: channel in get_channel_manager().default_preferences
+            for channel in get_channel_manager().get_channel_names()
         })
     )
     # Maps channel names to timestamps when access was granted
@@ -113,7 +61,7 @@ class Email(Base):
     content: Mapped[str] = mapped_column(Text)
     processed_content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    channel: Mapped[Channel] = mapped_column(Enum(Channel), default=Channel.PRIVATE, server_default=Channel.PRIVATE.value)
+    channel: Mapped[str] = mapped_column(String, default=None, server_default='private')
 
     author_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'))
     author: Mapped[Optional["User"]] = relationship("User", back_populates="emails", lazy="selectin")
@@ -132,6 +80,35 @@ class Email(Base):
     
     # Quote relationships
     quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes', lazy="selectin", back_populates="emails")
+
+    @validates('channel')
+    def validate_channel(self, key, channel):
+        """Validate channel value against configuration."""
+        if channel is None:
+            channel = get_channel_manager().default_channel
+            
+        channel = channel.lower()
+        if channel not in get_channel_manager().get_channel_names():
+            raise ValueError(f"Invalid channel: {channel}")
+        return channel
+
+    def __init__(self, **kwargs):
+        """Initialize email with default channel if none provided."""
+        if 'channel' not in kwargs:
+            kwargs['channel'] = get_channel_manager().default_channel
+        super().__init__(**kwargs)
+
+    @property
+    def requires_auth(self) -> bool:
+        """Whether this message requires authentication to view."""
+        config = get_channel_manager().get_channel_config(self.channel)
+        return config.requires_auth if config else True
+
+    @property
+    def is_public(self) -> bool:
+        """Whether this message is publicly viewable."""
+        config = get_channel_manager().get_channel_config(self.channel)
+        return config.is_public if config else False
 
 # Association table for email-quote relationships
 email_quotes = Table('email_quotes', Base.metadata,
