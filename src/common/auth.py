@@ -9,10 +9,15 @@ from common.models import get_or_create_user
 
 def _populate_user():
     """Helper to populate g.user from session if logged in."""
-    if 'user' in session and not hasattr(g, 'user'):
+    if hasattr(g, 'user'):  # redundant
+        return
+    if 'user' in session:
         with db.session() as db_session:
             db_session.expire_on_commit = False
             g.user = get_or_create_user(db_session, session['user'])
+    else:  # user not in session
+        g.user = None
+
 
 def require_auth(f):
     @wraps(f)

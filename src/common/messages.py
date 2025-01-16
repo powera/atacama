@@ -61,8 +61,8 @@ def check_admin_approval(user_id: int, channel: Channel) -> bool:
             return False
             
         # Load channel preferences
-        prefs = json.loads(user.channel_preferences or '{}')
-        return prefs.get(f"admin_{channel.value}", False)
+        access = json.loads(user.admin_channel_access or '{}')
+        return channel.value in access
 
 
 def check_channel_access(channel: Channel, user: Optional[User] = None) -> bool:
