@@ -296,11 +296,11 @@ def landing_page():
             messages = []
             channels = []
 
-    return render_template(
-        'landing.html',
-        db_status=db_status,
-        messages=messages,
-        user=session.get('user'),
-        available_channels=channels,
-        channel_configs=channel_manager.channels
-    )
+        return render_template(
+            'landing.html',
+            db_status=db_status,
+            messages=messages,
+            user=session.get('user'),
+            available_channels=channels,
+            channel_configs=channel_manager.channels
+        )
