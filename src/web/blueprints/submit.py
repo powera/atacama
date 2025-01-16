@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload
 from typing import Dict, Any, Optional, List, Tuple
 
 from common.auth import require_auth
+from common.channel_config import get_channel_manager
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -97,10 +98,14 @@ def submit_form():
             return render_template('submit.html', success=True, view_url=view_url)
             
     else:  # method=GET
-    # Get recent messages for the dropdown
+        # Get recent messages for the dropdown
         with db.session() as db_session:
             recent_messages = db_session.query(common.models.Email).order_by(
                 common.models.Email.created_at.desc()
             ).limit(50).all()
-            return render_template('submit.html', recent_messages=recent_messages, colors=color_processor.COLORS)
+            return render_template(
+                'submit.html',
+                recent_messages=recent_messages,
+                colors=color_processor.COLORS,
+                channels=get_channel_manager().channels)
 

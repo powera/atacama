@@ -31,17 +31,11 @@
             <div class="form-group">
                 <label for="channel">Channel:</label>
                 <select name="channel" id="channel" required>
-                    <option value="private">Private</option>
-                    <option value="sports">Sports</option>
-                    <option value="politics">Politics</option>
-                    <option value="religion">Religion</option>
-                    <option value="chess">Chess</option>
-                    <option value="books">Books</option>
-                    <option value="television">Television</option>
-                    <option value="tech">Tech</option>
-                    <option value="llm">LLM</option>
-                    <option value="misc">Misc</option>
-                    <option value="orinoco">Orinoco</option>
+                    {% for name, config in channels.items() %}
+                        <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
+                            {{ name|title }} - {{ config.description }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 

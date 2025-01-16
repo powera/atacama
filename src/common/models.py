@@ -7,6 +7,7 @@ import enum
 
 from sqlalchemy.orm import DeclarativeBase
 
+from common.channel_config import get_channel_manager, init_channel_manager
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -15,19 +16,23 @@ class Base(DeclarativeBase):
 
 class Channel(enum.Enum):
     """Channel enum for message categorization."""
-    PRIVATE = "private"  # default
-    SANDBOX = "sandbox"  # For testing and experimentation
-    SPORTS = "sports"
-    POLITICS = "politics"
-    RELIGION = "religion"
-    CHESS = "chess"
-    BOOKS = "books"
-    TELEVISION = "television"
-    TECH = "tech"
-    LLM = "llm"
-    MISC = "misc"
-    ORINOCO = "orinoco"  # test secret channel
-
+    def __init_subclass__(cls, **kwargs):
+        """Initialize enum members from configuration."""
+        super().__init_subclass__(**kwargs)
+        
+    def __new__(cls):
+        """Create enum members from channel configuration."""
+        manager = get_channel_manager()
+            
+        # Create enum members from configuration
+        members = {}
+        for channel_name in manager.get_channel_names():
+            enum_name = channel_name.upper()
+            members[enum_name] = channel_name.lower()
+            
+        # Create the enum class with configured members
+        return enum.Enum.__new__(cls, cls.__name__, members)
+        
     @classmethod
     def from_string(cls, value: str) -> "Channel":
         """Convert string to Channel enum value, case-insensitive.
@@ -49,9 +54,10 @@ class Channel(enum.Enum):
     def get_default(cls) -> "Channel":
         """Get default channel value.
         
-        :return: PRIVATE channel enum value
+        :return: Default channel enum value from configuration
         """
-        return cls.PRIVATE
+        manager = get_channel_manager()
+        return cls.from_string(manager.default_channel)
 
 class User(Base):
     """User model for tracking post authors."""
