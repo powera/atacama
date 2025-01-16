@@ -72,6 +72,10 @@ app.register_blueprint(messages_bp)
 from web.blueprints.submit import submit_bp
 app.register_blueprint(submit_bp)
 
+# Admin handlers
+from web.blueprints.admin import admin_bp
+app.register_blueprint(admin_bp)
+
 # Debug handlers
 from web.blueprints.debug import debug_bp
 app.register_blueprint(debug_bp)
