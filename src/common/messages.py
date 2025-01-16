@@ -1,116 +1,197 @@
-"""Database functions for retrieving messages and message chains."""
+"""Database functions for retrieving messages and message chains with configurable access control."""
+
 from flask import session, g
-from sqlalchemy import text, select
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 import json
+import enum
+from functools import lru_cache
 
 from common.database import setup_database
 Session, db_success = setup_database()
 
-from common.models import Email, Channel
-
+from common.models import Email, Channel, User
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-
-def check_message_access(message: Email) -> bool:
-    """
-    Check if current user has access to view the message based on channel preferences
-    and domain restrictions.
-
-    Args:
-        message: Email object to check access for
-
-    Returns:
-        bool: True if user can access message, False otherwise
-    """
-    # Always require auth for private and politics
-    if message.channel in [Channel.PRIVATE, Channel.POLITICS]:
-        if 'user' not in session:
-            return False
-
-    # For non-private channels, allow public access if not logged in
-    elif 'user' not in session:
-        return True
-
-    # Get user's channel preferences
-    user = session.get('user', {})
-    prefs = json.loads(g.user.channel_preferences or '{}')
-
-    # Special case: politics requires earlyversion.com domain
-    if message.channel == Channel.POLITICS:
-        if not user.get('email', '').endswith('@earlyversion.com'):
-            return False
-        return prefs.get('politics', False)
-
-    # Check if user has enabled this channel
-    channel = message.channel.value
-    return prefs.get(channel, True)  # Default to True for backward compatibility
-
-
-def get_message_by_id(message_id: int) -> Optional[Email]:
-    """
-    Helper function to retrieve a message by ID with all relevant relationships.
+class AccessStrategy(enum.Enum):
+    """Define how access control is handled for each channel."""
+    PUBLIC = "public"           # Anyone can view
+    PRIVATE = "private"        # Must be logged in
+    DOMAIN = "domain"          # Must have specific email domain
+    ADMIN = "admin"           # Must be explicitly granted access
     
-    Args:
-        message_id: ID of the message to retrieve
-        
-    Returns:
-        Email object if found, None otherwise
+# Define access control configuration for each channel
+CHANNEL_ACCESS = {
+    Channel.PRIVATE: AccessStrategy.PRIVATE,
+    Channel.POLITICS: AccessStrategy.DOMAIN,
+    Channel.ORINOCO: AccessStrategy.ADMIN,
+    # All other channels default to PUBLIC
+}
+
+# Define domain restrictions for DOMAIN strategy channels
+DOMAIN_RESTRICTIONS = {
+    Channel.POLITICS: ["earlyversion.com"]
+}
+
+def get_user_email_domain(user: Optional[Dict]) -> Optional[str]:
+    """
+    Extract domain from user's email.
+    
+    :param user: User session dictionary
+    :return: Domain string or None if no email
+    """
+    if not user or 'email' not in user:
+        return None
+    return user['email'].split('@')[-1]
+
+@lru_cache(maxsize=1000)
+def check_admin_approval(user_id: int, channel: Channel) -> bool:
+    """
+    Check if user has been granted access to admin-controlled channel.
+    
+    :param user_id: Database ID of user
+    :param channel: Channel to check
+    :return: True if user has access, False otherwise
     """
     db_session = Session()
     try:
-        return db_session.query(Email).options(
-            joinedload(Email.parent),
-            joinedload(Email.children),
-            joinedload(Email.quotes)
-        ).filter(Email.id == message_id).first()
+        user = db_session.query(User).get(user_id)
+        if not user:
+            return False
+            
+        # Load channel preferences
+        prefs = json.loads(user.channel_preferences or '{}')
+        return prefs.get(f"admin_{channel.value}", False)
+        
     except Exception as e:
-        logger.error(f"Error retrieving message {message_id}: {str(e)}")
-        return None
+        logger.error(f"Error checking admin approval: {str(e)}")
+        return False
     finally:
         db_session.close()
 
-
-def get_message_chain(message_id: int) -> List[Email]:
+def check_channel_access(channel: Channel, user: Optional[Dict] = None) -> bool:
     """
-    Retrieve the full chain of messages related to a given message ID.
-    Includes the parent chain and all child messages.
+    Check if current user has access to the specified channel.
     
-    Args:
-        message_id: ID of the message to get the chain for
+    :param channel: Channel to check access for
+    :param user: Optional user session dictionary
+    :return: True if user can access channel, False otherwise
+    """
+    # Get access strategy for channel
+    strategy = CHANNEL_ACCESS.get(channel, AccessStrategy.PUBLIC)
+    
+    # Handle each access strategy
+    if strategy == AccessStrategy.PUBLIC:
+        return True
         
-    Returns:
-        List of Email objects representing the chain, ordered chronologically
+    if strategy == AccessStrategy.PRIVATE:
+        return user is not None
+        
+    if strategy == AccessStrategy.DOMAIN:
+        if not user:
+            return False
+        user_domain = get_user_email_domain(user)
+        allowed_domains = DOMAIN_RESTRICTIONS.get(channel, [])
+        return user_domain in allowed_domains
+        
+    if strategy == AccessStrategy.ADMIN:
+        if not user:
+            return False
+        db_user = g.get('user')
+        if not db_user:
+            return False
+        return check_admin_approval(db_user.id, channel)
+        
+    logger.error(f"Unknown access strategy {strategy} for channel {channel}")
+    return False
+
+def get_user_allowed_channels(user: Optional[Dict] = None) -> List[Channel]:
+    """
+    Get list of channels the user can access.
+    
+    :param user: Optional user session dictionary
+    :return: List of accessible Channel enums
+    """
+    allowed = []
+    for channel in Channel:
+        if check_channel_access(channel, user):
+            allowed.append(channel)
+    return allowed
+
+def check_message_access(message: Email) -> bool:
+    """
+    Check if current user has access to view the message.
+    
+    :param message: Email object to check access for
+    :return: True if user can access message, False otherwise
+    """
+    user = session.get('user')
+    return check_channel_access(message.channel, user)
+
+def get_message_by_id(message_id: int) -> Optional[Email]:
+    """
+    Retrieve a message by ID with all relevant relationships.
+    
+    :param message_id: ID of the message to retrieve
+    :return: Email object if found and accessible, None otherwise
     """
     db_session = Session()
     try:
-        # Get the target message with its relationships
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
-        if not message:
+        if not message or not check_message_access(message):
+            return None
+            
+        return message
+        
+    except Exception as e:
+        logger.error(f"Error retrieving message {message_id}: {str(e)}")
+        return None
+    finally:
+        db_session.close()
+
+def get_message_chain(message_id: int) -> List[Email]:
+    """
+    Retrieve the full chain of messages related to a given message ID.
+    
+    :param message_id: ID of the message to get chain for
+    :return: List of accessible Email objects in chronological order
+    """
+    db_session = Session()
+    try:
+        message = db_session.query(Email).options(
+            joinedload(Email.parent),
+            joinedload(Email.children),
+            joinedload(Email.quotes)
+        ).filter(Email.id == message_id).first()
+        
+        if not message or not check_message_access(message):
             return []
             
-        # Build the chain
         chain = []
         
-        # Add parent chain in reverse chronological order
+        # Add parent chain
         current = message
         while current.parent:
-            chain.insert(0, current.parent)
+            if check_message_access(current.parent):
+                chain.insert(0, current.parent)
             current = current.parent
             
-        # Add the target message
+        # Add target message
         chain.append(message)
         
-        # Add children in chronological order that match the channel
-        matching_children = [child for child in message.children if child.channel == message.channel]
+        # Add accessible children
+        matching_children = [
+            child for child in message.children 
+            if child.channel == message.channel and check_message_access(child)
+        ]
         chain.extend(sorted(matching_children, key=lambda x: x.created_at))
         
         return chain
@@ -121,16 +202,21 @@ def get_message_chain(message_id: int) -> List[Email]:
     finally:
         db_session.close()
 
-
-def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=None, limit=10):
+def get_filtered_messages(
+    db_session,
+    older_than_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    channel: Optional[str] = None,
+    limit: int = 10
+) -> Tuple[List[Email], bool]:
     """
-    Retrieve messages with optional filtering and pagination.
-
+    Retrieve messages with filtering and pagination.
+    
     :param db_session: Database session
-    :param older_than_id: If provided, get messages older than this ID
-    :param user_id: If provided, filter messages by user ID
-    :param channel: If provided, filter messages by channel/topic
-    :param limit: Maximum number of messages to return
+    :param older_than_id: Get messages older than this ID
+    :param user_id: Filter by author user ID
+    :param channel: Filter by channel name
+    :param limit: Maximum messages to return
     :return: Tuple of (messages, has_more)
     """
     query = db_session.query(Email).options(
@@ -149,8 +235,7 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
             channel_enum = Channel[channel.upper()]
             query = query.filter(Email.channel == channel_enum)
             
-            # Check channel access for filtered view
-            if not check_message_access(Email(channel=channel_enum)):
+            if not check_channel_access(channel_enum, session.get('user')):
                 logger.warning(f"User lacks access to channel: {channel}")
                 return [], False
                 
@@ -158,27 +243,15 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
             logger.error(f"Invalid channel specified: {channel}")
             return [], False
     else:
-        # Get user's channel preferences
-        user = session.get('user', {})
-        if user:
-            prefs = json.loads(g.user.channel_preferences or '{}')
-            allowed_channels = [
-                Channel[k.upper()] for k, v in prefs.items() 
-                if v and (k != 'politics' or user.get('email', '').endswith('@earlyversion.com'))
-            ]
-            # Filter to allowed channels
-            query = query.filter(Email.channel.in_(allowed_channels))
-        else:
-            # For anonymous users, exclude private/politics/sandbox
-            query = query.filter(Email.channel.not_in((
-                Channel.PRIVATE, Channel.POLITICS, Channel.SANDBOX
-            )))
+        # Filter to allowed channels
+        allowed_channels = get_user_allowed_channels(session.get('user'))
+        query = query.filter(Email.channel.in_(allowed_channels))
 
-    # Get one extra message to check if there are more
+    # Get one extra to check if there are more
     messages = query.order_by(Email.id.desc()).limit(limit + 1).all()
 
     has_more = len(messages) > limit
-    messages = messages[:limit]  # Remove the extra message if it exists
+    messages = messages[:limit]
 
     # Format timestamps
     for message in messages:

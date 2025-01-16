@@ -26,6 +26,7 @@ class Channel(enum.Enum):
     TECH = "tech"
     LLM = "llm"
     MISC = "misc"
+    ORINOCO = "orinoco"  # test secret channel
 
     @classmethod
     def from_string(cls, value: str) -> "Channel":
@@ -73,6 +74,10 @@ class User(Base):
             "misc": True
         })
     )
+    # Maps channel names to timestamps when access was granted
+    # e.g. {"orinoco": "2025-01-15T14:30:00Z"}
+    admin_channel_access: Mapped[Optional[Dict]] = mapped_column(Text, 
+        default=lambda: json.dumps({})
 
     # One-to-many relationship with emails
     emails: Mapped[List["Email"]] = relationship("Email", back_populates="author")

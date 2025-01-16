@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Users - Admin</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Manage User Access</h1>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <table class="table-container">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Channel Access</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in users %}
+                    <tr>
+                        <td>{{ item.user.email }}</td>
+                        <td>{{ item.user.name }}</td>
+                        <td>
+                            {% for channel, granted_at in item.access.items() %}
+                                <div>
+                                    {{ channel }} (granted {{ granted_at }})
+                                </div>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for channel in channels %}
+                                {% if channel.value not in item.access %}
+                                    <form method="POST" action="{{ url_for('admin.grant_access', user_id=item.user.id) }}" style="display: inline">
+                                        <input type="hidden" name="channel" value="{{ channel.value }}">
+                                        <button type="submit">Grant {{ channel.value }}</button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('admin.revoke_access', user_id=item.user.id) }}" style="display: inline">
+                                        <input type="hidden" name="channel" value="{{ channel.value }}">
+                                        <button type="submit" class="danger">Revoke {{ channel.value }}</button>
+                                    </form>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
