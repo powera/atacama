@@ -16,8 +16,7 @@ from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 from common.auth import require_auth
-from common.database import setup_database
-Session, db_success = setup_database()
+from common.database import db
 
 debug_bp = Blueprint('debug', __name__)
 
@@ -50,8 +49,7 @@ def get_database_stats():
     
     :return: Dictionary of database metrics
     """
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         # Test connection
         db_session.execute(text('SELECT 1'))
         
@@ -67,13 +65,7 @@ def get_database_stats():
             'status': 'Connected',
             'table_stats': stats
         }
-    except Exception as e:
-        return {
-            'status': f'Error: {str(e)}',
-            'table_stats': {}
-        }
-    finally:
-        db_session.close()
+
 
 @debug_bp.route('/debug')
 @require_auth

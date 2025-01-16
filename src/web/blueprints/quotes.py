@@ -4,18 +4,18 @@ from typing import Dict, Any
 from common.logging_config import get_logger
 
 from common.auth import require_auth
-from common.database import setup_database
+from common.database import db
 from common.models import Quote
 from common.quotes import (
     QUOTE_TYPES,
     get_quotes_by_type,
     update_quote,
+    delete_quote,
     search_quotes,
     QuoteValidationError
 )
 
 logger = get_logger(__name__)
-Session, db_success = setup_database()
 
 quotes_bp = Blueprint('quotes', __name__)
 
@@ -23,15 +23,14 @@ quotes_bp = Blueprint('quotes', __name__)
 @require_auth
 def list_quotes():
     """Display all tracked quotes with their metadata."""
-    session = Session()
-    try:
+    with db.session() as db_session:
         quote_type = request.args.get('type')
         search_term = request.args.get('search')
         
         if search_term:
-            quotes = search_quotes(session, search_term, quote_type)
+            quotes = search_quotes(db_session, search_term, quote_type)
         else:
-            quotes = get_quotes_by_type(session, quote_type)
+            quotes = get_quotes_by_type(db_session, quote_type)
         
         return render_template(
             'quotes.html',
@@ -40,22 +39,13 @@ def list_quotes():
             current_type=quote_type,
             search_term=search_term
         )
-    except Exception as e:
-        logger.error(f"Error listing quotes: {str(e)}")
-        return render_template(
-            'quotes.html',
-            error=str(e),
-            quote_types=QUOTE_TYPES
-        )
-    finally:
-        session.close()
+
 
 @quotes_bp.route('/quotes/<int:quote_id>/edit', methods=['GET', 'POST'])
 @require_auth
 def edit_quote(quote_id: int):
     """Edit a specific quote's metadata."""
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         quote = db_session.get(Quote, quote_id)
         if not quote:
             return "Quote not found", 404
@@ -89,28 +79,17 @@ def edit_quote(quote_id: int):
             quote=quote,
             quote_types=QUOTE_TYPES.keys()
         )
-        
-    except Exception as e:
-        logger.error(f"Error editing quote: {str(e)}")
-        return str(e), 500
-    finally:
-        db_session.close()
+
 
 @quotes_bp.route('/quotes/<int:quote_id>/delete', methods=['POST'])
 @require_auth
 def delete_quote(quote_id: int):
     """Delete a quote."""
-    db_session = Session()
-    try:
-        from common.quotes import delete_quote as delete_quote_func
-        if delete_quote_func(db_session, quote_id):
+    with db.session() as db_session:
+        if delete_quote(db_session, quote_id):
             return redirect(url_for('quotes.list_quotes'))
         return "Quote not found", 404
-    except Exception as e:
-        logger.error(f"Error deleting quote: {str(e)}")
-        return str(e), 500
-    finally:
-        db_session.close()
+
 
 @quotes_bp.route('/quotes/search')
 @require_auth

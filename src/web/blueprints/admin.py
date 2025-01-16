@@ -8,12 +8,11 @@ import enum
 from typing import Dict, List
 
 from common.auth import require_auth
-from common.database import setup_database
+from common.database import db
 from common.models import User, Channel
 from common.logging_config import get_logger
 
 logger = get_logger(__name__)
-Session, db_success = setup_database()
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -43,8 +42,7 @@ def list_users():
         flash('Admin access required')
         return redirect(url_for('messages.landing_page'))
         
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         users = db_session.query(User).order_by(User.email).all()
         
         # Get channel access for each user
@@ -61,8 +59,7 @@ def list_users():
             users=user_access,
             channels=[c for c in Channel if c.value == 'orinoco']  # Only show admin-controlled channels
         )
-    finally:
-        db_session.close()
+
 
 @admin_bp.route('/admin/users/<int:user_id>/grant', methods=['POST'])
 @require_auth
@@ -83,8 +80,7 @@ def grant_access(user_id: int):
         flash('Invalid channel')
         return redirect(url_for('admin.list_users'))
         
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         user = db_session.query(User).get(user_id)
         if not user:
             flash('User not found')
@@ -101,13 +97,6 @@ def grant_access(user_id: int):
         
         db_session.commit()
         flash(f'Granted {channel} access to {user.email}')
-        
-    except Exception as e:
-        logger.error(f"Error granting access: {str(e)}")
-        flash('Error granting access')
-        
-    finally:
-        db_session.close()
         
     return redirect(url_for('admin.list_users'))
 
@@ -130,8 +119,7 @@ def revoke_access(user_id: int):
         flash('Invalid channel')
         return redirect(url_for('admin.list_users'))
         
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         user = db_session.query(User).get(user_id)
         if not user:
             flash('User not found')
@@ -148,12 +136,5 @@ def revoke_access(user_id: int):
         
         db_session.commit()
         flash(f'Revoked {channel} access from {user.email}')
-        
-    except Exception as e:
-        logger.error(f"Error revoking access: {str(e)}")
-        flash('Error revoking access')
-        
-    finally:
-        db_session.close()
         
     return redirect(url_for('admin.list_users'))

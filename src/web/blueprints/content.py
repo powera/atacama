@@ -7,11 +7,9 @@ from datetime import datetime
 import json
 
 from common.auth import require_auth, optional_auth
-from common.database import setup_database
+from common.database import db
 from common.models import Email, Channel, get_or_create_user
 from common.messages import get_message_by_id, get_message_chain, get_filtered_messages, check_message_access
-
-Session, db_success = setup_database()
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
@@ -22,8 +20,7 @@ messages_bp = Blueprint('messages', __name__)
 @require_auth
 def channel_preferences():
     """Show and update channel preferences for the logged-in user."""
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         # Get current user
         user = get_or_create_user(db_session, session['user'])
         
@@ -59,9 +56,7 @@ def channel_preferences():
             channels=[c for c in Channel if c != Channel.SANDBOX],
             is_early_version=is_early_version
         )
-        
-    finally:
-        db_session.close()
+
 
 @messages_bp.route('/nav')
 @require_auth
@@ -95,43 +90,44 @@ def get_message(message_id: int):
     Args:
         message_id: ID of the message to display
     """
-    db_session = Session()
-    message = db_session.query(Email).get(message_id)
-    
-    if not message:
-        return jsonify({'error': 'Message not found'}), 404
+    with db.session() as db_session:
+        message = db_session.query(Email).get(message_id)
         
-    # Check access permissions
-    if not check_message_access(message):
-        if request.headers.get('Accept', '').startswith('text/html'):
-            return redirect(url_for('auth.login'))
-        return jsonify({'error': 'Authentication required'}), 401
-    
-    # Return HTML if requested
-    if request.headers.get('Accept', '').startswith('text/html'):
-        template = 'message.html'
-        channel = message.channel.value if message.channel else None
-        return render_template(
-            template,
-            message=message,
-            created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            raw_content=message.content,
-            quotes=message.quotes,
-            channel=channel,
-        )
+        if not message:
+            return jsonify({'error': 'Message not found'}), 404
             
-    # Otherwise return JSON
-    return jsonify({
-        'id': message.id,
-        'subject': message.subject,
-        'content': message.content,
-        'processed_content': message.processed_content,
-        'created_at': message.created_at.isoformat(),
-        'parent_id': message.parent_id,
-        'channel': message.channel.value,
-        'llm_annotations': json.loads(message.llm_annotations or '{}'),
-        'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
-    })
+        # Check access permissions
+        if not check_message_access(message):
+            if request.headers.get('Accept', '').startswith('text/html'):
+                return redirect(url_for('auth.login'))
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Return HTML if requested
+        if request.headers.get('Accept', '').startswith('text/html'):
+            template = 'message.html'
+            channel = message.channel.value if message.channel else None
+            return render_template(
+                template,
+                message=message,
+                created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                raw_content=message.content,
+                quotes=message.quotes,
+                channel=channel,
+            )
+                
+        # Otherwise return JSON
+        return jsonify({
+            'id': message.id,
+            'subject': message.subject,
+            'content': message.content,
+            'processed_content': message.processed_content,
+            'created_at': message.created_at.isoformat(),
+            'parent_id': message.parent_id,
+            'channel': message.channel.value,
+            'llm_annotations': json.loads(message.llm_annotations or '{}'),
+            'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
+        })
+
 
 @messages_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
 @optional_auth
@@ -182,6 +178,7 @@ def view_chain(message_id: int):
         } for msg in chain]
     })
 
+
 @messages_bp.route('/')
 @messages_bp.route('/stream')
 @messages_bp.route('/stream/older/<int:older_than_id>')
@@ -199,8 +196,7 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
     if channel in ['private', 'politics'] and 'user' not in session:
         return redirect(url_for('auth.login'))
         
-    try:
-        db_session = Session()
+    with db.session() as db_session:
         messages, has_more = get_filtered_messages(
             db_session,
             older_than_id=older_than_id,
@@ -215,18 +211,14 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
         channels = []
         if 'user' in session:
             user_prefs = json.loads(session['user'].get('channel_preferences', '{}'))
-            is_early_version = session['user']['email'].endswith('@earlyversion.com')
             for c in Channel:
                 if c != Channel.SANDBOX:
-                    if c == Channel.POLITICS:
-                        if is_early_version and user_prefs.get('politics', False):
-                            channels.append(c.value)
-                    elif user_prefs.get(c.value, True):
+                    if user_prefs.get(c.value, True):
                         channels.append(c.value)
         else:
             # Show public channels for anonymous users
             channels = [c.value for c in Channel 
-                      if c not in (Channel.PRIVATE, Channel.POLITICS, Channel.SANDBOX)]
+                        if c not in (Channel.PRIVATE, Channel.POLITICS, Channel.SANDBOX)]
 
         return render_template(
             'stream.html',
@@ -238,15 +230,11 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
             available_channels=channels
         )
 
-    finally:
-        db_session.close()
 
 @messages_bp.route('/sitemap.xml')
 def sitemap() -> str:
     """Generate sitemap.xml containing all public URLs."""
-    try:
-        db_session = Session()
-        
+    with db.session() as db_session:
         # Get all messages and quotes
         messages = db_session.query(Email).order_by(Email.created_at.desc()).all()
         
@@ -291,21 +279,13 @@ def sitemap() -> str:
         response = make_response(sitemap_xml)
         response.headers['Content-Type'] = 'application/xml'
         return response
-        
-    except Exception as e:
-        logger.error(f"Error generating sitemap: {str(e)}")
-        return '', 500
-        
-    finally:
-        db_session.close()
+
 
 @messages_bp.route('/details')
 @optional_auth
 def landing_page():
     """Serve the landing page with basic service information and message list."""
-    try:
-        db_session = Session()
-
+    with db.session() as db_session:
         # Test database connection
         db_session.execute(text('SELECT 1'))
         db_status = "Connected"
@@ -330,13 +310,6 @@ def landing_page():
         # Only show restricted channels if user is logged in
         if 'user' not in session:
             channels = [c for c in channels if c not in ['private', 'politics']]
-
-    except Exception as e:
-        db_status = f"Error: {str(e)}"
-        messages = []
-        channels = []
-    finally:
-        db_session.close()
 
     # Check if user is authenticated via Google auth
     user = session.get('user')

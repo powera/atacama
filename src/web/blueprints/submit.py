@@ -6,8 +6,7 @@ from common.auth import require_auth
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-from common.database import setup_database
-Session, db_success = setup_database()
+from common.database import db
 
 import common.models
 from common.colorscheme import ColorScheme
@@ -53,15 +52,13 @@ def preview_message():
 def submit_form():
     """Handle message submission via HTML form."""
     if request.method == 'POST':
-        try:
+        with db.session() as db_session:
             subject = request.form.get('subject', '')
             content = request.form.get('content', '')
             parent_id = request.form.get('parent_id')
 
             if not subject or not content:
                 return render_template('error.html', error_code=422), 422
-
-            db_session = Session()
 
             user = session['user']
             db_user = common.models.get_or_create_user(db_session, user)
@@ -99,24 +96,11 @@ def submit_form():
             view_url = url_for('messages.get_message', message_id=message.id)
             return render_template('submit.html', success=True, view_url=view_url)
             
-        except Exception as e:
-            logger.error(f"Error processing form submission: {str(e)}")
-            return render_template('error.html', error_code=500), 500
-            
-        finally:
-            db_session.close()
-        # END of processing submission of message by POST
-            
+    else:  # method=GET
     # Get recent messages for the dropdown
-    db_session = Session()
-    try:
-        recent_messages = db_session.query(common.models.Email).order_by(
-            common.models.Email.created_at.desc()
-        ).limit(50).all()
-    except Exception as e:
-        logger.error(f"Error fetching recent messages: {str(e)}")
-        recent_messages = []
-    finally:
-        db_session.close()
-    return render_template('submit.html', recent_messages=recent_messages, colors=color_processor.COLORS)
+        with db.session() as db_session:
+            recent_messages = db_session.query(common.models.Email).order_by(
+                common.models.Email.created_at.desc()
+            ).limit(50).all()
+            return render_template('submit.html', recent_messages=recent_messages, colors=color_processor.COLORS)
 

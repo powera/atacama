@@ -14,7 +14,7 @@ from sqlalchemy.orm import joinedload
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from common.database import setup_database
+from common.database import db
 from common.models import Email, Quote
 from common.logging_config import get_logger
 
@@ -59,17 +59,10 @@ def export_messages(output_path: str, pretty: bool = False) -> None:
     :param output_path: Path where the JSON file should be saved
     :param pretty: Whether to format the JSON output for readability
     """
-    Session, success = setup_database()
-    
-    if not success:
-        logger.error("Failed to connect to database")
-        return
-        
-    try:
-        session = Session()
+    with db.session() as db_session:
         
         # Query all messages with their relationships
-        messages = session.query(Email).options(
+        messages = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
             joinedload(Email.quotes),
@@ -96,12 +89,7 @@ def export_messages(output_path: str, pretty: bool = False) -> None:
                 
         logger.info(f"Successfully exported {len(messages)} messages to {output_path}")
         
-    except Exception as e:
-        logger.error(f"Error exporting messages: {str(e)}")
-        raise
-        
-    finally:
-        session.close()
+
 
 def main() -> None:
     """Main entry point for the export script."""
