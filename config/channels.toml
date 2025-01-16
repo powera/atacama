@@ -1,25 +1,54 @@
 # Atacama Channel Configuration
 
-[channels]
 # Default internal channel
-private = { description = "Default private channel", access_level = "private" }
-sandbox = { description = "For testing and experimentation", access_level = "private" }
+[channels.private]
+description = "Default private channel"
+access_level = "private"
+
+# For testing and experimentation
+[channels.sandbox]
+description = "For testing and experimentation"
+access_level = "private"
 
 # Public channels
-sports = { description = "Sports discussion", access_level = "public" }
-politics = { 
-    description = "Political discussion", 
-    access_level = "restricted",
-    domain_restriction = "@earlyversion.com",
-    requires_preference = true
-}
-religion = { description = "Religious discussion", access_level = "public" }
-chess = { description = "Chess discussion and games", access_level = "public" }
-books = { description = "Book discussion and reviews", access_level = "public" }
-television = { description = "TV shows and media", access_level = "public" }
-tech = { description = "Technology discussion", access_level = "public" }
-llm = { description = "Language model discussion", access_level = "public" }
-misc = { description = "Miscellaneous topics", access_level = "public" }
+[channels.sports]
+description = "Sports discussion"
+access_level = "public"
+
+# Political discussion with domain restriction
+[channels.politics]
+description = "Political discussion"
+access_level = "restricted"
+domain_restriction = "@earlyversion.com"
+requires_preference = true
+
+[channels.religion]
+description = "Religious discussion"
+access_level = "public"
+
+[channels.chess]
+description = "Chess discussion and games"
+access_level = "public"
+
+[channels.books]
+description = "Book discussion and reviews"
+access_level = "public"
+
+[channels.television]
+description = "TV shows and media"
+access_level = "public"
+
+[channels.tech]
+description = "Technology discussion"
+access_level = "public"
+
+[channels.llm]
+description = "Language model discussion"
+access_level = "public"
+
+[channels.misc]
+description = "Miscellaneous topics"
+access_level = "public"
 
 [defaults]
 # Default channel for new messages
