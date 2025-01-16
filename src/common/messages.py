@@ -6,34 +6,14 @@ from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 import json
-import enum
 from functools import lru_cache
 
 from common.database import db
-
 from common.models import Email, Channel, User
+from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-class AccessStrategy(enum.Enum):
-    """Define how access control is handled for each channel."""
-    PUBLIC = "public"           # Anyone can view
-    PRIVATE = "private"        # Must be logged in
-    DOMAIN = "domain"          # Must have specific email domain
-    ADMIN = "admin"           # Must be explicitly granted access
-    
-# Define access control configuration for each channel
-CHANNEL_ACCESS = {
-    Channel.PRIVATE: AccessStrategy.PRIVATE,
-    Channel.POLITICS: AccessStrategy.DOMAIN,
-    Channel.ORINOCO: AccessStrategy.ADMIN,
-    # All other channels default to PUBLIC
-}
-
-# Define domain restrictions for DOMAIN strategy channels
-DOMAIN_RESTRICTIONS = {
-    Channel.POLITICS: ["earlyversion.com"]
-}
 
 def get_user_email_domain(user: Optional[User]) -> Optional[str]:
     """
@@ -45,6 +25,7 @@ def get_user_email_domain(user: Optional[User]) -> Optional[str]:
     if not user or not user.email:
         return None
     return user.email.split('@')[-1]
+
 
 @lru_cache(maxsize=1000)
 def check_admin_approval(user_id: int, channel: Channel) -> bool:
@@ -73,33 +54,38 @@ def check_channel_access(channel: Channel, user: Optional[User] = None) -> bool:
     :param user: Optional common.models.User
     :return: True if user can access channel, False otherwise
     """
-    # Get access strategy for channel
-    strategy = CHANNEL_ACCESS.get(channel, AccessStrategy.PUBLIC)
-    
-    # Handle each access strategy
-    if strategy == AccessStrategy.PUBLIC:
+    channel_manager = get_channel_manager()
+    config = channel_manager.get_channel_config(channel.value)
+    if not config:
+        logger.error(f"No configuration found for channel {channel}")
+        return False
+
+    # Public channels are always accessible
+    if config.access_level == AccessLevel.PUBLIC:
         return True
-        
-    if strategy == AccessStrategy.PRIVATE:
-        return user is not None
-        
-    if strategy == AccessStrategy.DOMAIN:
-        if not user:
-            return False
-        user_domain = get_user_email_domain(user)
-        allowed_domains = DOMAIN_RESTRICTIONS.get(channel, [])
-        return user_domain in allowed_domains
-        
-    if strategy == AccessStrategy.ADMIN:
-        if not user:
-            return False
-        db_user = g.get('user')
-        if not db_user:
-            return False
-        return check_admin_approval(db_user.id, channel)
-        
-    logger.error(f"Unknown access strategy {strategy} for channel {channel}")
-    return False
+
+    # Private and restricted channels require authentication
+    if not user:
+        return False
+
+    # For restricted channels, check domain restrictions
+    if config.access_level == AccessLevel.RESTRICTED:
+        if config.domain_restriction:
+            user_domain = get_user_email_domain(user)
+            if not user_domain or not user_domain.endswith(config.domain_restriction):
+                return False
+
+        # Check if channel requires preference to be enabled
+        if config.requires_preference:
+            db_user = g.get('user')
+            if not db_user:
+                return False
+            prefs = json.loads(db_user.channel_preferences or '{}')
+            if not prefs.get(channel.value, False):
+                return False
+
+    return True
+
 
 def get_user_allowed_channels(user: Optional[User] = None) -> List[Channel]:
     """
@@ -114,6 +100,7 @@ def get_user_allowed_channels(user: Optional[User] = None) -> List[Channel]:
             allowed.append(channel)
     return allowed
 
+
 def check_message_access(message: Email) -> bool:
     """
     Check if current user has access to view the message.
@@ -123,6 +110,7 @@ def check_message_access(message: Email) -> bool:
     """
     user = session.get('user')
     return check_channel_access(message.channel, user)
+
 
 def get_message_by_id(message_id: int) -> Optional[Email]:
     """
