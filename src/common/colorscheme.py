@@ -50,6 +50,7 @@ class ColorScheme:
         self.pgn_pattern = re.compile(r'\{\{pgn\|(.*?)\}\}')
         self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
         self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
+        self.emphasis_pattern = re.compile(r'\*([^\n*]{1,40})\*')
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
         self.wikilink_pattern = re.compile(r'\[\[([^]]+)\]\]')
 
@@ -300,6 +301,13 @@ class ColorScheme:
 
         return '\n'.join(processed_lines)
 
+    def process_emphasis(self, text: str) -> str:
+        """Convert *emphasized* text to use <em> tag."""
+        def replacer(match: Match) -> str:
+            text = match.group(1)
+            return f'<em>{content}</em>'
+        return self.emphasis_pattern.sub(replacer, text)
+
     def process_urls(self, text: str) -> str:
         """Convert URLs to clickable links."""
         def replacer(match: Match) -> str:
@@ -337,7 +345,10 @@ class ColorScheme:
         # <span> tags touched by this function, which needs to prevent
         # user-submitted <span> tags from rendering.
         content = self.sanitize_html(content)
-        
+       
+        # Process the *emphasis* tag
+        content = self.process_emphasis(content)
+
         # Process URLs and wikilinks
         content = self.process_urls(content)
         content = self.process_wikilinks(content)
