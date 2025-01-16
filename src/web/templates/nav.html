@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Site Navigation - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Site Navigation</h1>
+
+        <section class="nav-section">
+            <h2>Main Pages</h2>
+            <ul class="nav-list">
+                <li><a href="/">Home</a></li>
+                <li><a href="/submit">Submit Message</a></li>
+                <li><a href="/quotes">Quote Archive</a></li>
+                <li><a href="/channels">Channel Preferences</a></li>
+            </ul>
+        </section>
+
+        <section class="nav-section">
+            <h2>Channel Streams</h2>
+            <ul class="nav-list">
+                <li><a href="/stream">All Channels</a></li>
+                {% for channel in channels %}
+                <li>
+                    <a href="{{ url_for('messages.message_stream', channel=channel.value) }}">
+                        {{ channel.value|title }} Channel
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <style>
+            .nav-section {
+                margin-bottom: var(--spacing-large);
+                padding: var(--spacing-base);
+                border: 1px solid var(--color-border);
+                border-radius: var(--border-radius);
+                background: var(--color-background);
+            }
+            
+            .nav-section h2 {
+                margin-top: 0;
+                padding-bottom: var(--spacing-base);
+                border-bottom: 1px solid var(--color-border);
+                font-size: var(--font-size-large);
+            }
+            
+            .nav-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .nav-list li {
+                margin: var(--spacing-base) 0;
+            }
+            
+            .nav-list a {
+                display: block;
+                padding: var(--spacing-base);
+                color: var(--color-text);
+                text-decoration: none;
+                border-radius: var(--border-radius);
+                transition: background-color 0.2s ease;
+            }
+            
+            .nav-list a:hover {
+                background-color: var(--color-annotation-bg);
+                color: var(--color-primary);
+            }
+            
+            @media screen and (max-width: 768px) {
+                .nav-section {
+                    margin-bottom: var(--spacing-base);
+                }
+                
+                .nav-list a {
+                    padding: calc(var(--spacing-base) * 1.5) var(--spacing-base);
+                }
+            }
+        </style>
+    </div>
+</body>
+</html>

@@ -59,7 +59,20 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    
+    channel_preferences: Mapped[Optional[Dict]] = mapped_column(Text, 
+        default=lambda: json.dumps({
+            "politics": False,
+            "chess": False,
+            "sports": True,
+            "religion": True,
+            "books": True,
+            "television": True,
+            "tech": True,
+            "llm": True,
+            "misc": True
+        })
+    )
+
     # One-to-many relationship with emails
     emails: Mapped[List["Email"]] = relationship("Email", back_populates="author")
 

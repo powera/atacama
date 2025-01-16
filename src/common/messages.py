@@ -14,6 +14,41 @@ from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def check_message_access(message: Email) -> bool:
+    """
+    Check if current user has access to view the message based on channel preferences
+    and domain restrictions.
+
+    Args:
+        message: Email object to check access for
+
+    Returns:
+        bool: True if user can access message, False otherwise
+    """
+    # Always require auth for private and politics
+    if message.channel in [Channel.PRIVATE, Channel.POLITICS]:
+        if 'user' not in session:
+            return False
+
+    # For non-private channels, allow public access if not logged in
+    elif 'user' not in session:
+        return True
+
+    # Get user's channel preferences
+    user = session.get('user', {})
+    prefs = json.loads(user.get('channel_preferences', '{}'))
+
+    # Special case: politics requires earlyversion.com domain
+    if message.channel == Channel.POLITICS:
+        if not user.get('email', '').endswith('@earlyversion.com'):
+            return False
+        return prefs.get('politics', False)
+
+    # Check if user has enabled this channel
+    channel = message.channel.value
+    return prefs.get(channel, True)  # Default to True for backward compatibility
+
+
 def get_message_by_id(message_id: int) -> Optional[Email]:
     """
     Helper function to retrieve a message by ID with all relevant relationships.
@@ -112,14 +147,31 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
         try:
             channel_enum = Channel[channel.upper()]
             query = query.filter(Email.channel == channel_enum)
+            
+            # Check channel access for filtered view
+            if not check_message_access(Email(channel=channel_enum)):
+                logger.warning(f"User lacks access to channel: {channel}")
+                return [], False
+                
         except KeyError:
             logger.error(f"Invalid channel specified: {channel}")
             return [], False
     else:
-        # Default to avoid private channel
-        query = query.filter(Email.channel not in (
-            Channel.PRIVATE, Channel.SANDBOX,
-        ))
+        # Get user's channel preferences
+        user = session.get('user', {})
+        if user:
+            prefs = json.loads(user.get('channel_preferences', '{}'))
+            allowed_channels = [
+                Channel[k.upper()] for k, v in prefs.items() 
+                if v and (k != 'politics' or user.get('email', '').endswith('@earlyversion.com'))
+            ]
+            # Filter to allowed channels
+            query = query.filter(Email.channel.in_(allowed_channels))
+        else:
+            # For anonymous users, exclude private/politics/sandbox
+            query = query.filter(Email.channel.not_in((
+                Channel.PRIVATE, Channel.POLITICS, Channel.SANDBOX
+            )))
 
     # Get one extra message to check if there are more
     messages = query.order_by(Email.id.desc()).limit(limit + 1).all()

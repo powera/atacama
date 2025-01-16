@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, jsonify, request, session, render_template_string, make_response, Response, redirect, url_for
+from flask import Blueprint, render_template, jsonify, request, session, render_template_string
+from flask import make_response, Response, redirect, url_for, flash
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
@@ -7,33 +8,84 @@ import json
 
 from common.auth import require_auth
 from common.database import setup_database
-Session, db_success = setup_database()
+from common.models import Email, Channel, get_or_create_user
+from common.messages import get_message_by_id, get_message_chain, get_filtered_messages, check_message_access
 
-from common.models import Email, Channel
+Session, db_success = setup_database()
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
-def check_message_access(message: Email) -> bool:
-    """
-    Check if current user has access to view the message.
-    
-    Args:
-        message: Email object to check access for
+@messages_bp.route('/channels', methods=['GET', 'POST'])
+@require_auth
+def channel_preferences():
+    """Show and update channel preferences for the logged-in user."""
+    db_session = Session()
+    try:
+        # Get current user
+        user = get_or_create_user(db_session, session['user'])
         
-    Returns:
-        bool: True if user can access message, False otherwise
-    """
-    # Allow access to non-restricted channels
-    if message.channel not in [Channel.PRIVATE, Channel.POLITICS]:
-        return True
+        if request.method == 'POST':
+            # Get enabled channels from form
+            new_prefs = {}
+            for channel in Channel:
+                if channel != Channel.SANDBOX:  # Skip sandbox channel
+                    channel_name = channel.value
+                    # Check if channel is enabled in form
+                    enabled = request.form.get(f'channel_{channel_name}') == 'on'
+                    
+                    # Special handling for politics channel
+                    if channel == Channel.POLITICS:
+                        if not session['user']['email'].endswith('@earlyversion.com'):
+                            enabled = False
+                            
+                    new_prefs[channel_name] = enabled
+            
+            # Update user preferences
+            user.channel_preferences = json.dumps(new_prefs)
+            db_session.commit()
+            flash('Channel preferences updated successfully', 'success')
+            return redirect(url_for('messages.channel_preferences'))
+            
+        # For GET request, show current preferences
+        current_prefs = json.loads(user.channel_preferences or '{}')
+        is_early_version = session['user']['email'].endswith('@earlyversion.com')
         
-    # Require authentication for restricted channels
-    return 'user' in session
+        return render_template(
+            'channel_preferences.html',
+            preferences=current_prefs,
+            channels=[c for c in Channel if c != Channel.SANDBOX],
+            is_early_version=is_early_version
+        )
+        
+    finally:
+        db_session.close()
 
-from common.messages import get_message_by_id, get_message_chain, get_filtered_messages
+@messages_bp.route('/nav')
+@require_auth
+def navigation():
+    """Show site navigation/sitemap page."""
+    # Get list of available channels for the user
+    user_prefs = json.loads(session['user'].get('channel_preferences', '{}'))
+    is_early_version = session['user']['email'].endswith('@earlyversion.com')
+    
+    # Only show channels the user has access to
+    available_channels = []
+    for channel in Channel:
+        if channel not in (Channel.SANDBOX, Channel.PRIVATE):
+            if channel == Channel.POLITICS:
+                if is_early_version and user_prefs.get('politics', False):
+                    available_channels.append(channel)
+            elif user_prefs.get(channel.value, True):
+                available_channels.append(channel)
+    
+    return render_template(
+        'navigation.html',
+        channels=available_channels
+    )
+
 @messages_bp.route('/messages/<int:message_id>', methods=['GET'])
 def get_message(message_id: int):
     """
@@ -42,7 +94,7 @@ def get_message(message_id: int):
     Args:
         message_id: ID of the message to display
     """
-    message = get_message_by_id(message_id)
+    message = db_session.query(Email).get(message_id)
     
     if not message:
         return jsonify({'error': 'Message not found'}), 404
@@ -156,11 +208,21 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
         messages = [msg for msg in messages if check_message_access(msg)]
 
         # Get list of available channels for navigation
-        channels = [c.value for c in Channel]
-        
-        # Only show restricted channels in navigation if user is logged in
-        if 'user' not in session:
-            channels = [c for c in channels if c not in ['private', 'politics', 'sandbox']]
+        channels = []
+        if 'user' in session:
+            user_prefs = json.loads(session['user'].get('channel_preferences', '{}'))
+            is_early_version = session['user']['email'].endswith('@earlyversion.com')
+            for c in Channel:
+                if c != Channel.SANDBOX:
+                    if c == Channel.POLITICS:
+                        if is_early_version and user_prefs.get('politics', False):
+                            channels.append(c.value)
+                    elif user_prefs.get(c.value, True):
+                        channels.append(c.value)
+        else:
+            # Show public channels for anonymous users
+            channels = [c.value for c in Channel 
+                      if c not in (Channel.PRIVATE, Channel.POLITICS, Channel.SANDBOX)]
 
         return render_template(
             'stream.html',
