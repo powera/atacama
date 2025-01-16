@@ -65,7 +65,7 @@ from web.blueprints.auth import auth_bp
 app.register_blueprint(auth_bp)
 
 # Message display handlers
-from web.blueprints.messages import messages_bp
+from web.blueprints.content import messages_bp
 app.register_blueprint(messages_bp)
 
 # Submit message form
