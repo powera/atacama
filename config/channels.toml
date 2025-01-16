@@ -50,6 +50,10 @@ access_level = "public"
 description = "Miscellaneous topics"
 access_level = "public"
 
+[channels.orinoco]
+description = "Orinoco project"
+access_level = "private"
+
 [defaults]
 # Default channel for new messages
 default_channel = "private"
