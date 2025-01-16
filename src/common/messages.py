@@ -9,8 +9,7 @@ import json
 import enum
 from functools import lru_cache
 
-from common.database import setup_database
-Session, db_success = setup_database()
+from common.database import db
 
 from common.models import Email, Channel, User
 from common.logging_config import get_logger
@@ -36,16 +35,16 @@ DOMAIN_RESTRICTIONS = {
     Channel.POLITICS: ["earlyversion.com"]
 }
 
-def get_user_email_domain(user: Optional[Dict]) -> Optional[str]:
+def get_user_email_domain(user: Optional[User]) -> Optional[str]:
     """
     Extract domain from user's email.
     
     :param user: User session dictionary
     :return: Domain string or None if no email
     """
-    if not user or 'email' not in user:
+    if not user or not user.email:
         return None
-    return user['email'].split('@')[-1]
+    return user.email.split('@')[-1]
 
 @lru_cache(maxsize=1000)
 def check_admin_approval(user_id: int, channel: Channel) -> bool:
@@ -56,8 +55,7 @@ def check_admin_approval(user_id: int, channel: Channel) -> bool:
     :param channel: Channel to check
     :return: True if user has access, False otherwise
     """
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         user = db_session.query(User).get(user_id)
         if not user:
             return False
@@ -65,19 +63,14 @@ def check_admin_approval(user_id: int, channel: Channel) -> bool:
         # Load channel preferences
         prefs = json.loads(user.channel_preferences or '{}')
         return prefs.get(f"admin_{channel.value}", False)
-        
-    except Exception as e:
-        logger.error(f"Error checking admin approval: {str(e)}")
-        return False
-    finally:
-        db_session.close()
 
-def check_channel_access(channel: Channel, user: Optional[Dict] = None) -> bool:
+
+def check_channel_access(channel: Channel, user: Optional[User] = None) -> bool:
     """
     Check if current user has access to the specified channel.
     
     :param channel: Channel to check access for
-    :param user: Optional user session dictionary
+    :param user: Optional common.models.User
     :return: True if user can access channel, False otherwise
     """
     # Get access strategy for channel
@@ -108,7 +101,7 @@ def check_channel_access(channel: Channel, user: Optional[Dict] = None) -> bool:
     logger.error(f"Unknown access strategy {strategy} for channel {channel}")
     return False
 
-def get_user_allowed_channels(user: Optional[Dict] = None) -> List[Channel]:
+def get_user_allowed_channels(user: Optional[User] = None) -> List[Channel]:
     """
     Get list of channels the user can access.
     
@@ -138,8 +131,7 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
     :param message_id: ID of the message to retrieve
     :return: Email object if found and accessible, None otherwise
     """
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
@@ -150,12 +142,7 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
             return None
             
         return message
-        
-    except Exception as e:
-        logger.error(f"Error retrieving message {message_id}: {str(e)}")
-        return None
-    finally:
-        db_session.close()
+
 
 def get_message_chain(message_id: int) -> List[Email]:
     """
@@ -164,8 +151,7 @@ def get_message_chain(message_id: int) -> List[Email]:
     :param message_id: ID of the message to get chain for
     :return: List of accessible Email objects in chronological order
     """
-    db_session = Session()
-    try:
+    with db.session() as db_session:
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
@@ -195,12 +181,7 @@ def get_message_chain(message_id: int) -> List[Email]:
         chain.extend(sorted(matching_children, key=lambda x: x.created_at))
         
         return chain
-        
-    except Exception as e:
-        logger.error(f"Error retrieving message chain for {message_id}: {str(e)}")
-        return []
-    finally:
-        db_session.close()
+
 
 def get_filtered_messages(
     db_session,
@@ -235,7 +216,7 @@ def get_filtered_messages(
             channel_enum = Channel[channel.upper()]
             query = query.filter(Email.channel == channel_enum)
             
-            if not check_channel_access(channel_enum, session.get('user')):
+            if not check_channel_access(channel_enum, g.user):
                 logger.warning(f"User lacks access to channel: {channel}")
                 return [], False
                 
@@ -244,7 +225,7 @@ def get_filtered_messages(
             return [], False
     else:
         # Filter to allowed channels
-        allowed_channels = get_user_allowed_channels(session.get('user'))
+        allowed_channels = get_user_allowed_channels(g.user)
         query = query.filter(Email.channel.in_(allowed_channels))
 
     # Get one extra to check if there are more

@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 from typing import Optional, List, Dict
 from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
+from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, joinedload
 import enum
 
 from sqlalchemy.orm import DeclarativeBase
@@ -136,7 +136,7 @@ email_quotes = Table('email_quotes', Base.metadata,
 
 def get_or_create_user(db_session, request_user) -> User:
     """Get existing user or create new one."""
-    db_user = db_session.query(User).filter_by(email=request_user["email"]).first()
+    db_user = db_session.query(User).options(joinedload('*')).filter_by(email=request_user["email"]).first()
     if not db_user:
         db_user = User(email=request_user["email"], name=request_user["name"])
         db_session.add(db_user)
