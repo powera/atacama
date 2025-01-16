@@ -1,4 +1,5 @@
 """Database functions for retrieving messages and message chains."""
+from flask import session, g
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any
@@ -36,7 +37,7 @@ def check_message_access(message: Email) -> bool:
 
     # Get user's channel preferences
     user = session.get('user', {})
-    prefs = json.loads(user.get('channel_preferences', '{}'))
+    prefs = json.loads(g.user.channel_preferences or '{}')
 
     # Special case: politics requires earlyversion.com domain
     if message.channel == Channel.POLITICS:
@@ -160,7 +161,7 @@ def get_filtered_messages(db_session, older_than_id=None, user_id=None, channel=
         # Get user's channel preferences
         user = session.get('user', {})
         if user:
-            prefs = json.loads(user.get('channel_preferences', '{}'))
+            prefs = json.loads(g.user.channel_preferences or '{}')
             allowed_channels = [
                 Channel[k.upper()] for k, v in prefs.items() 
                 if v and (k != 'politics' or user.get('email', '').endswith('@earlyversion.com'))

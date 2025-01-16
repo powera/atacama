@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import json
 
-from common.auth import require_auth
+from common.auth import require_auth, optional_auth
 from common.database import setup_database
 from common.models import Email, Channel, get_or_create_user
 from common.messages import get_message_by_id, get_message_chain, get_filtered_messages, check_message_access
@@ -82,11 +82,12 @@ def navigation():
                 available_channels.append(channel)
     
     return render_template(
-        'navigation.html',
+        'nav.html',
         channels=available_channels
     )
 
 @messages_bp.route('/messages/<int:message_id>', methods=['GET'])
+@optional_auth
 def get_message(message_id: int):
     """
     Retrieve and display a single message.
@@ -132,6 +133,7 @@ def get_message(message_id: int):
     })
 
 @messages_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
+@optional_auth
 def view_chain(message_id: int):
     """
     Display the full chain of messages related to a given message ID.
@@ -186,6 +188,7 @@ def view_chain(message_id: int):
 @messages_bp.route('/stream/user/<int:user_id>/older/<int:older_than_id>')
 @messages_bp.route('/stream/channel/<path:channel>')
 @messages_bp.route('/stream/channel/<path:channel>/older/<int:older_than_id>')
+@optional_auth
 def message_stream(older_than_id=None, user_id=None, channel=None):
     """
     Show a stream of messages with optional filtering.
@@ -296,6 +299,7 @@ def sitemap() -> str:
         db_session.close()
 
 @messages_bp.route('/details')
+@optional_auth
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     try:
