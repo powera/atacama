@@ -71,7 +71,7 @@ class ChannelManager:
                     description=settings.get('description', ''),
                     access_level=access_level,
                     domain_restriction=settings.get('domain_restriction'),
-                    requires_preference=settings.get('requires_preference', False)
+                    requires_preference=settings.get('requires_preference', False),
                     requires_admin=settings.get('requires_admin', False)
                 )
                 

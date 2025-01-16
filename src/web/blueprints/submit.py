@@ -67,7 +67,7 @@ def submit_form():
                 subject=subject,
                 content=content,
                 author=db_user,
-                channel=common.models.Channel(request.form.get('channel', 'private'))
+                channel=request.form.get('channel', 'private')
             )
 
             # Handle message chain if parent_id is provided

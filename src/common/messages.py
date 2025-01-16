@@ -54,6 +54,9 @@ def check_channel_access(channel: str, user: Optional[User] = None) -> bool:
     :param user: Optional common.models.User
     :return: True if user can access channel, False otherwise
     """
+    if channel is None:  # legacy
+        channel = "private"
+    channel = channel
     channel_manager = get_channel_manager()
     config = channel_manager.get_channel_config(channel)
     if not config:

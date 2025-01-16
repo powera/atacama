@@ -10,7 +10,7 @@ import json
 
 from common.auth import require_auth, optional_auth
 from common.database import db
-from common.models import Email, Channel, get_or_create_user
+from common.models import Email, get_or_create_user
 from common.messages import get_message_by_id, get_message_chain, get_filtered_messages, check_message_access
 from common.channel_config import get_channel_manager
 
@@ -69,9 +69,9 @@ def navigation():
     
     # Get list of accessible channels
     available_channels = []
-    for channel in Channel:
-        config = channel_manager.get_channel_config(channel.value)
-        if config and channel_manager.check_channel_access(channel.value, user_email):
+    for channel in channel_manager.channels:
+        config = channel_manager.get_channel_config(channel)
+        if config and channel_manager.check_channel_access(channel, user_email):
             available_channels.append((channel, config))
     
     return render_template(
@@ -100,7 +100,7 @@ def get_message(message_id: int):
         
         if request.headers.get('Accept', '').startswith('text/html'):
             channel_manager = get_channel_manager()
-            channel_config = channel_manager.get_channel_config(message.channel.value)
+            channel_config = channel_manager.get_channel_config(message.channel)
             
             return render_template(
                 'message.html',
@@ -108,7 +108,7 @@ def get_message(message_id: int):
                 created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 raw_content=message.content,
                 quotes=message.quotes,
-                channel=message.channel.value,
+                channel=message.channel,
                 channel_config=channel_config
             )
                 
@@ -119,7 +119,7 @@ def get_message(message_id: int):
             'processed_content': message.processed_content,
             'created_at': message.created_at.isoformat(),
             'parent_id': message.parent_id,
-            'channel': message.channel.value,
+            'channel': message.channel,
             'llm_annotations': json.loads(message.llm_annotations or '{}'),
             'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
         })
@@ -144,7 +144,7 @@ def view_chain(message_id: int):
     channel_manager = get_channel_manager()
     channel_config = None
     if chain:
-        channel_config = channel_manager.get_channel_config(chain[0].channel.value)
+        channel_config = channel_manager.get_channel_config(chain[0].channel)
         for message in chain:
             message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
     
@@ -153,7 +153,7 @@ def view_chain(message_id: int):
             'chain.html',
             messages=chain,
             target_id=message_id,
-            channel=chain[0].channel.value if chain else None,
+            channel=chain[0].channel if chain else None,
             channel_config=channel_config
         )
     
@@ -165,7 +165,7 @@ def view_chain(message_id: int):
             'processed_content': msg.processed_content,
             'created_at': msg.created_at.isoformat(),
             'parent_id': msg.parent_id,
-            'channel': msg.channel.value,
+            'channel': msg.channel,
             'is_target': msg.id == message_id
         } for msg in chain]
     })
@@ -241,7 +241,7 @@ def sitemap() -> str:
         
         # Add public messages
         for message in messages:
-            config = channel_manager.get_channel_config(message.channel.value)
+            config = channel_manager.get_channel_config(message.channel)
             if config and config.access_level == 'public':
                 urls.append({
                     'loc': f"{base_url}/messages/{message.id}",
