@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>{{ error_title | default('Error') }} - Atacama</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/atacama.css">
     <link rel="stylesheet" href="/css/error.css">
@@ -19,13 +21,25 @@
 
         {% if technical_details and config.get('DEBUG', False) %}
         <div class="technical-details">
+            <h2>Technical Details</h2>
             <pre>{{ technical_details }}</pre>
         </div>
         {% endif %}
 
         <div class="error-actions">
-            <a href="/" class="home-link">Return to Home</a>
+            <a href="/" class="button home-link">Return to Home</a>
+            {% if public_channels %}
+            <div class="public-channels">
+                <h2>Public Channels</h2>
+                <ul>
+                    {% for channel in public_channels %}
+                    <a href="/channel/{{ channel }}" class="channel-link">{{ channel }}</a>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </div>
     </div>
+
 </body>
 </html>
