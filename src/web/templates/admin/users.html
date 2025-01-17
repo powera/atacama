@@ -16,46 +16,68 @@
             {% endif %}
         {% endwith %}
         
-        <table class="table-container">
-            <thead>
-                <tr>
-                    <th>Email</th>
-                    <th>Name</th>
-                    <th>Channel Access</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in users %}
+        <div class="table-container">
+            <table>
+                <thead>
                     <tr>
-                        <td>{{ item.user.email }}</td>
-                        <td>{{ item.user.name }}</td>
-                        <td>
-                            {% for channel, granted_at in item.access.items() %}
-                                <div>
-                                    {{ channel }} (granted {{ granted_at }})
-                                </div>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            {% for channel in channels %}
-                                {% if channel.value not in item.access %}
-                                    <form method="POST" action="{{ url_for('admin.grant_access', user_id=item.user.id) }}" style="display: inline">
-                                        <input type="hidden" name="channel" value="{{ channel.value }}">
-                                        <button type="submit">Grant {{ channel.value }}</button>
-                                    </form>
-                                {% else %}
-                                    <form method="POST" action="{{ url_for('admin.revoke_access', user_id=item.user.id) }}" style="display: inline">
-                                        <input type="hidden" name="channel" value="{{ channel.value }}">
-                                        <button type="submit" class="danger">Revoke {{ channel.value }}</button>
-                                    </form>
-                                {% endif %}
-                            {% endfor %}
-                        </td>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Channel Access</th>
+                        <th>Actions</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for item in users %}
+                        <tr>
+                            <td>{{ item.user.email }}</td>
+                            <td>{{ item.user.name }}</td>
+                            <td>
+                                {% for channel, granted_at in item.access.items() %}
+                                    <div class="channel-access">
+                                        {{ channel }} (granted {{ granted_at }})
+                                    </div>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for channel in channels %}
+                                    {% if channel not in item.access %}
+                                        <form method="POST" action="{{ url_for('admin.grant_access', user_id=item.user.id) }}" class="inline-form">
+                                            <input type="hidden" name="channel" value="{{ channel }}">
+                                            <button type="submit" class="button">Grant {{ channel }}</button>
+                                        </form>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('admin.revoke_access', user_id=item.user.id) }}" class="inline-form">
+                                            <input type="hidden" name="channel" value="{{ channel }}">
+                                            <button type="submit" class="button danger">Revoke {{ channel }}</button>
+                                        </form>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    <style>
+        .inline-form {
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        .channel-access {
+            margin-bottom: 0.25rem;
+        }
+        .button.danger {
+            background-color: var(--color-error);
+        }
+        .flash-message {
+            padding: var(--spacing-base);
+            margin-bottom: var(--spacing-large);
+            border-radius: var(--border-radius);
+            background-color: var(--color-primary);
+            color: white;
+        }
+    </style>
 </body>
 </html>

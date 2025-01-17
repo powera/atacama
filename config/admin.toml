@@ -1,0 +1,10 @@
+# Admin user configuration
+
+[admins]
+super_admin = [
+    "powera@gmail.com"
+]
+
+channel_admin = [
+    "atacama@earlyversion.com"
+]

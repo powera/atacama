@@ -1,17 +1,22 @@
 """Admin functionality for managing user access to restricted channels."""
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from sqlalchemy import select
-import json
-from datetime import datetime
 import enum
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 
+import tomli
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from sqlalchemy import select
+
+import constants
 from common.auth import require_auth
+from common.channel_config import AccessLevel, get_channel_manager
 from common.database import db
-from common.models import User
-from common.channel_config import get_channel_manager
 from common.logging_config import get_logger
+from common.models import User
 
 logger = get_logger(__name__)
 
@@ -22,18 +27,33 @@ class AdminRole(enum.Enum):
     SUPER_ADMIN = "super_admin"    # Can manage other admins
     CHANNEL_ADMIN = "channel_admin" # Can grant channel access
 
-# Store admin roles - in a real system, this would be in the database
-ADMIN_USERS = {
-    "powera@gmail.com": AdminRole.SUPER_ADMIN,
-    "atacama@earlyversion.com": AdminRole.CHANNEL_ADMIN
-}
+def load_admin_config() -> Dict[str, AdminRole]:
+    """Load admin user configuration from TOML file."""
+    config_path = Path(constants.CONFIG_DIR) / "admin.toml"
+    try:
+        with open(config_path, 'rb') as f:
+            config = tomli.load(f)
+            admins = {}
+            for role, emails in config.get('admins', {}).items():
+                try:
+                    admin_role = AdminRole(role)
+                    for email in emails:
+                        admins[email] = admin_role
+                except ValueError:
+                    logger.error(f"Invalid admin role in config: {role}")
+            return admins
+    except Exception as e:
+        logger.error(f"Error loading admin configuration: {str(e)}")
+        return {}
+
+# Load admin configuration
+ADMIN_USERS = load_admin_config()
 
 def is_admin() -> bool:
     """Check if current user has admin access."""
-    user = session.get('user')
-    if not user or 'email' not in user:
+    if not hasattr(g, 'user') or not g.user:
         return False
-    return user['email'] in ADMIN_USERS
+    return g.user.email in ADMIN_USERS
 
 @admin_bp.route('/admin/users')
 @require_auth
@@ -44,7 +64,9 @@ def list_users():
         return redirect(url_for('messages.landing_page'))
         
     with db.session() as db_session:
-        users = db_session.query(User).order_by(User.email).all()
+        # Use SQLAlchemy 2.0 style query
+        stmt = select(User).order_by(User.email)
+        users = db_session.execute(stmt).scalars().all()
         
         # Get channel access for each user
         user_access = []
@@ -58,8 +80,8 @@ def list_users():
         # Get admin-controlled channels from configuration
         channel_manager = get_channel_manager()
         admin_channels = [
-            channel for channel in channel_manager.get_channel_names()
-            if channel_manager.get_channel_config(channel).requires_admin
+            name for name in channel_manager.get_channel_names()
+            if channel_manager.get_channel_config(name).requires_admin
         ]
             
         return render_template(
@@ -82,12 +104,16 @@ def grant_access(user_id: int):
         return redirect(url_for('admin.list_users'))
         
     channel = channel.lower()
-    if not get_channel_manager().get_channel_config(channel):
-        flash('Invalid channel')
+    channel_config = get_channel_manager().get_channel_config(channel)
+    if not channel_config or not channel_config.requires_admin:
+        flash('Invalid admin-controlled channel')
         return redirect(url_for('admin.list_users'))
         
     with db.session() as db_session:
-        user = db_session.query(User).get(user_id)
+        # Use SQLAlchemy 2.0 style query
+        stmt = select(User).where(User.id == user_id)
+        user = db_session.execute(stmt).scalar_one_or_none()
+        
         if not user:
             flash('User not found')
             return redirect(url_for('admin.list_users'))
@@ -120,12 +146,16 @@ def revoke_access(user_id: int):
         return redirect(url_for('admin.list_users'))
         
     channel = channel.lower()
-    if not get_channel_manager().get_channel_config(channel):
-        flash('Invalid channel')
+    channel_config = get_channel_manager().get_channel_config(channel)
+    if not channel_config or not channel_config.requires_admin:
+        flash('Invalid admin-controlled channel')
         return redirect(url_for('admin.list_users'))
         
     with db.session() as db_session:
-        user = db_session.query(User).get(user_id)
+        # Use SQLAlchemy 2.0 style query
+        stmt = select(User).where(User.id == user_id)
+        user = db_session.execute(stmt).scalar_one_or_none()
+        
         if not user:
             flash('User not found')
             return redirect(url_for('admin.list_users'))
