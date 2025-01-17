@@ -123,10 +123,6 @@ def grant_access(user_id: int):
         access[channel] = datetime.utcnow().isoformat()
         user.admin_channel_access = json.dumps(access)
         
-        # Clear cached permissions
-        from common.messages import check_admin_approval
-        check_admin_approval.cache_clear()
-        
         db_session.commit()
         flash(f'Granted {channel} access to {user.email}')
         
@@ -164,10 +160,6 @@ def revoke_access(user_id: int):
         access = json.loads(user.admin_channel_access or '{}')
         access.pop(channel, None)
         user.admin_channel_access = json.dumps(access)
-        
-        # Clear cached permissions
-        from common.messages import check_admin_approval
-        check_admin_approval.cache_clear()
         
         db_session.commit()
         flash(f'Revoked {channel} access from {user.email}')
