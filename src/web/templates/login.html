@@ -1,29 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
-    <script src="https://accounts.google.com/gsi/client" async></script>
+    <link rel="stylesheet" href="/css/landing.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Login</h1>
-        <div id="g_id_onload"
-             data-client_id="{{ client_id }}"
-             data-callback="handleCredentialResponse">
+    <main class="container">
+        <div class="login-container">
+            <h1>Welcome to Atacama</h1>
+            
+            <div class="login-box">
+                <p class="login-text">Please sign in with your Google account to continue.</p>
+                
+                <div id="g_id_onload"
+                     data-client_id="{{ client_id }}"
+                     data-context="signin"
+                     data-callback="handleCredentialResponse"
+                     data-auto_select="true"
+                     data-itp_support="true">
+                </div>
+                
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="outline"
+                     data-text="signin_with"
+                     data-shape="rectangular"
+                     data-logo_alignment="left">
+                </div>
+            </div>
         </div>
-        <div class="g_id_signin"
-             data-type="standard">
-        </div>
-    </div>
+    </main>
     
     <script>
+        // Handle the credential response from Google
         function handleCredentialResponse(response) {
-            // Send the ID token to your server
-            const token = response.credential;
-            
-            // Redirect to the main page
-            window.location.href = '/oauth2callback?credential=' + token;
+            if (response && response.credential) {
+                // Redirect to callback endpoint with credential
+                window.location.href = '/oauth2callback?credential=' + encodeURIComponent(response.credential);
+            } else {
+                console.error('Invalid credential response');
+            }
         }
     </script>
 </body>
