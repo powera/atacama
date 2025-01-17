@@ -50,16 +50,16 @@ class TestHtmlSanitization(unittest.TestCase):
         """Test that color tags are properly preserved."""
         content = "<red>Important text"
         processed = self.processor.process_content(content)
-        self.assertIn('class="color-red"', processed)
-        self.assertIn('> Important text</p>', processed)
+        self.assertIn('class="colorblock color-red"', processed)
+        self.assertIn('colortext-content">Important text</span>', processed)
         self.assertNotIn('__PRESERVED', processed)
 
     def test_preserve_nested_tags(self):
         """Test preservation of nested color tags."""
         content = "<red>Alert: (<blue>Critical update) required"
         processed = self.processor.process_content(content)
-        self.assertIn('class="color-red"', processed)
-        self.assertIn('class="color-blue"', processed)
+        self.assertIn('class="colorblock color-red"', processed)
+        self.assertIn('class="colorblock color-blue"', processed)
         self.assertIn('Critical update', processed)
         self.assertNotIn('__PRESERVED', processed)
 
@@ -80,16 +80,19 @@ class TestChineseProcessing(unittest.TestCase):
         """Test that Chinese characters are wrapped in spans."""
         content = "Hello 你好 World"
         processed = self.processor.process_content(content)
-        self.assertIn('<span class="annotated-chinese">你好</span>', processed)
+        self.assertIn('<span class="annotated-chinese" data-pinyin="', processed)
+        self.assertIn('你好</span>', processed)
 
         content = "Some chinese: 测试"
         processed = self.processor.process_content(content)
-        self.assertIn('<span class="annotated-chinese">测试</span>', processed)
+        self.assertIn('<span class="annotated-chinese" data-pinyin="', processed)
+        self.assertIn('测试</span>', processed)
 
     def test_chinese_with_html_escaping(self):
         """Test Chinese annotations with characters needing HTML escaping."""
         content = "Test 测试"
         processed = self.processor.process_content(content)
+        self.assertIn('<span class="annotated-chinese" data-pinyin="', processed)
 
 class TestColorProcessing(unittest.TestCase):
     """Test color tag processing."""
@@ -101,16 +104,16 @@ class TestColorProcessing(unittest.TestCase):
         """Test paragraph-level color processing."""
         content = "<blue>A mystical message"
         processed = self.processor.process_content(content)
-        self.assertIn('class="color-blue"', processed)
+        self.assertIn('class="colorblock color-blue"', processed)
         self.assertIn('<span class="sigil">✨</span>', processed)
 
     def test_nested_colors_in_parentheses(self):
         """Test nested color processing within parentheses."""
         content = "A note (<red>important)"
         processed = self.processor.process_content(content)
-        self.assertIn('class="color-red"', processed)
+        self.assertIn('class="colorblock color-red"', processed)
         self.assertIn('<span class="sigil">💡</span>', processed)
-        self.assertIn('(', processed)  # Check parentheses preserved
+        self.assertIn('(important)', processed)  # Check parentheses preserved
 
 class TestParagraphProcessing(unittest.TestCase):
     """Test paragraph and line break processing."""

@@ -109,22 +109,32 @@ class TestChannelManager(ChannelConfigTestBase):
             "access_level": "invalid"
         }
         
-        with open(self.config_path, "wb") as f:
+        # Create temp file for invalid config
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.toml', delete=False) as f:
             tomli_w.dump(invalid_config, f)
+            invalid_path = f.name
             
-        with self.assertRaises(ValueError):
-            ChannelManager(self.config_path)
+        try:
+            with self.assertRaises(ValueError):
+                ChannelManager(invalid_path)
+        finally:
+            os.unlink(invalid_path)
             
     def test_missing_default_channel(self):
         """Test error when default channel doesn't exist."""
-        invalid_config = self.valid_config.copy()
+        invalid_config = copy.deepcopy(self.valid_config)
         invalid_config["defaults"]["default_channel"] = "nonexistent"
         
-        with open(self.config_path, "wb") as f:
+        # Create temp file for invalid config
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.toml', delete=False) as f:
             tomli_w.dump(invalid_config, f)
+            invalid_path = f.name
             
-        with self.assertRaises(ValueError):
-            ChannelManager(self.config_path)
+        try:
+            with self.assertRaises(ValueError):
+                ChannelManager(invalid_path)
+        finally:
+            os.unlink(invalid_path)
 
 class TestChannelAccess(ChannelConfigTestBase):
     """Test channel access control logic."""
