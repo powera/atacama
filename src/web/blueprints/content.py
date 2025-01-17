@@ -15,7 +15,8 @@ from flask import (
     Response,
     redirect, 
     url_for, 
-    flash
+    flash,
+    g
 )
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
