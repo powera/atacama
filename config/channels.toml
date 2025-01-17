@@ -20,7 +20,6 @@ access_level = "public"
 description = "Political discussion"
 access_level = "restricted"
 domain_restriction = "@earlyversion.com"
-requires_preference = true
 
 [channels.religion]
 description = "Religious discussion"

@@ -1,12 +1,11 @@
 """Database functions for retrieving messages and message chains with configurable access control."""
 
+import json
 from flask import session, g
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
-import json
-from functools import lru_cache
 
 from common.database import db
 from common.models import Email, User
@@ -27,7 +26,6 @@ def get_user_email_domain(user: Optional[User]) -> Optional[str]:
     return user.email.split('@')[-1]
 
 
-@lru_cache(maxsize=1000)
 def check_admin_approval(user_id: int, channel: str) -> bool:
     """
     Check if user has been granted access to admin-controlled channel.
@@ -41,79 +39,81 @@ def check_admin_approval(user_id: int, channel: str) -> bool:
         if not user:
             return False
             
-        # Load channel preferences
+        # Load admin channel access
         access = json.loads(user.admin_channel_access or '{}')
         return channel in access
 
 
-def check_channel_access(channel: str, user: Optional[User] = None) -> bool:
+def check_channel_access(channel: str, user: Optional[User] = None, 
+                        ignore_preferences: bool = False) -> bool:
     """
-    Check if current user has access to the specified channel.
+    Check if user has access to the specified channel.
     
     :param channel: Channel name to check access for
-    :param user: Optional common.models.User
+    :param user: Optional User model instance
+    :param ignore_preferences: If True, only check system restrictions
     :return: True if user can access channel, False otherwise
     """
-    if channel is None:  # legacy
+    if channel is None:
         channel = "private"
-    channel = channel
+        
     channel_manager = get_channel_manager()
     config = channel_manager.get_channel_config(channel)
     if not config:
         logger.error(f"No configuration found for channel {channel}")
         return False
 
-    # Public channels are always accessible
-    if config.access_level == AccessLevel.PUBLIC:
+    # First check system access restrictions
+    has_admin_access = user and check_admin_approval(user.id, channel)
+    system_access = channel_manager.check_system_access(
+        channel, 
+        email=user.email if user else None,
+        has_admin_access=has_admin_access
+    )
+    
+    if not system_access:
+        return False
+        
+    # If ignoring preferences or no user, we're done
+    if ignore_preferences or not user:
+        return True
+        
+    # Check user's channel preferences
+    try:
+        prefs = json.loads(user.channel_preferences or '{}')
+        return prefs.get(channel, True)  # Default to enabled if not set
+    except json.JSONDecodeError:
+        logger.error(f"Invalid channel preferences for user {user.id}")
         return True
 
-    # Private and restricted channels require authentication
-    if not user:
-        return False
 
-    # For restricted channels, check domain restrictions
-    if config.access_level == AccessLevel.RESTRICTED:
-        if config.domain_restriction:
-            user_domain = get_user_email_domain(user)
-            if not user_domain or not user_domain.endswith(config.domain_restriction):
-                return False
-
-        # Check if channel requires preference to be enabled
-        if config.requires_preference:
-            db_user = g.get('user')
-            if not db_user:
-                return False
-            prefs = json.loads(db_user.channel_preferences or '{}')
-            if not prefs.get(channel, False):
-                return False
-
-    return True
-
-
-def get_user_allowed_channels(user: Optional[User] = None) -> List[str]:
+def get_user_allowed_channels(user: Optional[User] = None, 
+                            ignore_preferences: bool = False) -> List[str]:
     """
     Get list of channels the user can access.
     
-    :param user: Optional user session dictionary
+    :param user: Optional User model instance
+    :param ignore_preferences: If True, only check system restrictions
     :return: List of accessible channel names
     """
     allowed = []
     channel_manager = get_channel_manager()
     for channel in channel_manager.get_channel_names():
-        if check_channel_access(channel, user):
+        if check_channel_access(channel, user, ignore_preferences):
             allowed.append(channel)
     return allowed
 
 
-def check_message_access(message: Email) -> bool:
+def check_message_access(message: Email, ignore_preferences: bool = True) -> bool:
     """
-    Check if current user has access to view the message.
+    Check if current user can access the message.
+    By default, ignores user preferences for direct message access.
     
     :param message: Email object to check access for
+    :param ignore_preferences: If True, only check system restrictions
     :return: True if user can access message, False otherwise
     """
-    user = session.get('user')
-    return check_channel_access(message.channel, user)
+    return check_channel_access(message.channel, g.user, ignore_preferences)
 
 
 def get_message_by_id(message_id: int) -> Optional[Email]:
@@ -130,7 +130,7 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
-        if not message or not check_message_access(message):
+        if not message or not check_message_access(message, ignore_preferences=True):
             return None
             
         return message
@@ -150,7 +150,7 @@ def get_message_chain(message_id: int) -> List[Email]:
             joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
-        if not message or not check_message_access(message):
+        if not message or not check_message_access(message, ignore_preferences=True):
             return []
             
         chain = []
@@ -158,7 +158,7 @@ def get_message_chain(message_id: int) -> List[Email]:
         # Add parent chain
         current = message
         while current.parent:
-            if check_message_access(current.parent):
+            if check_message_access(current.parent, ignore_preferences=True):
                 chain.insert(0, current.parent)
             current = current.parent
             
@@ -168,7 +168,8 @@ def get_message_chain(message_id: int) -> List[Email]:
         # Add accessible children
         matching_children = [
             child for child in message.children 
-            if child.channel == message.channel and check_message_access(child)
+            if child.channel == message.channel and 
+               check_message_access(child, ignore_preferences=True)
         ]
         chain.extend(sorted(matching_children, key=lambda x: x.created_at))
         
@@ -184,6 +185,7 @@ def get_filtered_messages(
 ) -> Tuple[List[Email], bool]:
     """
     Retrieve messages with filtering and pagination.
+    Respects user preferences for stream views.
     
     :param db_session: Database session
     :param older_than_id: Get messages older than this ID
@@ -211,12 +213,12 @@ def get_filtered_messages(
             
         query = query.filter(Email.channel == channel)
         
-        if not check_channel_access(channel, g.user):
+        if not check_channel_access(channel, g.user, ignore_preferences=False):
             logger.warning(f"User lacks access to channel: {channel}")
             return [], False
     else:
-        # Filter to allowed channels
-        allowed_channels = get_user_allowed_channels(g.user)
+        # Filter to allowed channels (respecting preferences)
+        allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
         query = query.filter(Email.channel.in_(allowed_channels))
 
     # Get one extra to check if there are more

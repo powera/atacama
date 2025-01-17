@@ -24,7 +24,6 @@ class ChannelConfig:
     description: str
     access_level: AccessLevel
     domain_restriction: Optional[str] = None
-    requires_preference: bool = False
     requires_admin: bool = False
 
     @property
@@ -71,7 +70,6 @@ class ChannelManager:
                     description=settings.get('description', ''),
                     access_level=access_level,
                     domain_restriction=settings.get('domain_restriction'),
-                    requires_preference=settings.get('requires_preference', False),
                     requires_admin=settings.get('requires_admin', False)
                 )
                 
@@ -117,12 +115,14 @@ class ChannelManager:
         """
         return self.channels.get(channel_name)
         
-    def check_channel_access(self, channel_name: str, email: Optional[str] = None) -> bool:
+    def check_system_access(self, channel_name: str, email: Optional[str] = None, 
+                         has_admin_access: bool = False) -> bool:
         """
-        Check if channel access is allowed.
+        Check if channel access is allowed by system restrictions (ignoring user preferences).
         
         :param channel_name: Name of channel to check
         :param email: Optional email address for domain restriction checks
+        :param has_admin_access: Whether user has admin access to restricted channels
         :return: True if access allowed, False otherwise
         """
         config = self.get_channel_config(channel_name)
@@ -132,10 +132,22 @@ class ChannelManager:
         if config.is_public:
             return True
             
+        # Private channels just need authentication
+        if config.access_level == AccessLevel.PRIVATE:
+            return email is not None
+            
+        # Restricted channels need domain and/or admin checks
         if config.access_level == AccessLevel.RESTRICTED:
             if not email:
                 return False
-            if config.domain_restriction and not email.endswith(config.domain_restriction):
+                
+            # Check domain restriction if it exists
+            if config.domain_restriction:
+                if not email.endswith(config.domain_restriction):
+                    return False
+                    
+            # Check admin restriction if it exists
+            if config.requires_admin and not has_admin_access:
                 return False
                 
         return True
