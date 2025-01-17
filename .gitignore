@@ -7,3 +7,6 @@ keys/
 
 logs/
 venv/
+
+# Claude core for uploading
+claude_core/
