@@ -1,18 +1,18 @@
-from flask import Blueprint, request, render_template, url_for, redirect, session, jsonify
+"""Blueprint for message submission and preview functionality."""
+
+from flask import Blueprint, request, render_template, url_for, redirect, session
+from flask import jsonify, g, flash
 from sqlalchemy.orm import joinedload
-from typing import Dict, Any, Optional, List, Tuple
 
 from common.auth import require_auth
 from common.channel_config import get_channel_manager
-from common.logging_config import get_logger
-logger = get_logger(__name__)
-
-from common.database import db
-
-import common.models
 from common.colorscheme import ColorScheme
-color_processor = ColorScheme()
+from common.database import db
+from common.logging_config import get_logger
+from common.models import Email, get_or_create_user
 
+logger = get_logger(__name__)
+color_processor = ColorScheme()
 submit_bp = Blueprint('submit', __name__)
 
 @submit_bp.route('/api/preview', methods=['POST'])
@@ -20,11 +20,13 @@ submit_bp = Blueprint('submit', __name__)
 def preview_message():
     """
     Preview handler for message submission.
+    
     Processes the content with color tags without storing to database.
     Expects JSON input with 'content' field.
-    Returns JSON with processed HTML content.
     
     :return: JSON response with rendered HTML
+    :raises: HTTP 400 if request is not JSON or missing content
+    :raises: HTTP 500 if processing fails
     """
     if not request.is_json:
         return jsonify({'error': 'Request must be JSON'}), 400
@@ -48,64 +50,85 @@ def preview_message():
         logger.error(f"Error processing preview: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@submit_bp.route('/submit', methods=['GET', 'POST'])
+@submit_bp.route('/submit', methods=['GET'])
 @require_auth
-def submit_form():
-    """Handle message submission via HTML form."""
-    if request.method == 'POST':
-        with db.session() as db_session:
-            subject = request.form.get('subject', '')
-            content = request.form.get('content', '')
-            parent_id = request.form.get('parent_id')
+def show_submit_form():
+    """
+    Display the message submission form.
+    
+    :return: Rendered submit form template
+    """
+    channel_manager = get_channel_manager()
+    
+    with db.session() as db_session:
+        recent_messages = db_session.query(Email).options(
+            joinedload(Email.author)
+        ).order_by(
+            Email.created_at.desc()
+        ).limit(50).all()
+        
+        return render_template(
+            'submit.html',
+            recent_messages=recent_messages,
+            colors=color_processor.COLORS,
+            channels=channel_manager.channels,
+            default_channel=channel_manager.default_channel)
 
-            if not subject or not content:
-                return render_template('error.html', error_code=422), 422
+@submit_bp.route('/submit', methods=['POST'])
+@require_auth
+def handle_submit():
+    """
+    Process message submission from form.
+    
+    :return: Redirect to new message or error page
+    :raises: HTTP 422 if required fields are missing
+    """
+    channel_manager = get_channel_manager()
+    
+    subject = request.form.get('subject', '').strip()
+    content = request.form.get('content', '').strip()
+    channel = request.form.get('channel', channel_manager.default_channel).strip()
+    parent_id = request.form.get('parent_id')
 
-            user = session['user']
-            db_user = common.models.get_or_create_user(db_session, user)
-            message = common.models.Email(
-                subject=subject,
-                content=content,
-                author=db_user,
-                channel=request.form.get('channel', 'private')
-            )
+    if not subject or not content:
+        return render_template('error.html', error_code=422), 422
 
-            # Handle message chain if parent_id is provided
-            if parent_id and parent_id.strip():
-                try:
-                    parent_id = int(parent_id)
-                    parent = db_session.query(common.models.Email).get(parent_id)
-                    if parent:
-                        message.parent = parent
-                    else:
-                        logger.warning(f"Parent message {parent_id} not found")
-                except ValueError:
-                    logger.warning(f"Invalid parent_id format: {parent_id}")
+    with db.session() as db_session:
+        # Get fresh user object within transaction
+        db_user = get_or_create_user(db_session, session['user'])
+        
+        # Create message
+        message = Email(
+            subject=subject,
+            content=content,
+            author=db_user,
+            channel=channel
+        )
 
-            # Add message to session before processing content
-            db_session.add(message)
+        # Handle message chain if parent_id is provided
+        if parent_id and parent_id.strip():
+            try:
+                parent_id = int(parent_id)
+                parent = db_session.query(Email).get(parent_id)
+                if parent:
+                    message.parent = parent
+                else:
+                    logger.warning(f"Parent message {parent_id} not found")
+            except ValueError:
+                logger.warning(f"Invalid parent_id format: {parent_id}")
 
-            # Process content with access to the message object
-            message.processed_content = color_processor.process_content(
-                content,
-                message=message,
-                db_session=db_session
-            )
+        # Add message to session before processing content
+        db_session.add(message)
 
-            db_session.commit()
-            
-            view_url = url_for('messages.get_message', message_id=message.id)
-            return render_template('submit.html', success=True, view_url=view_url, channels=get_channel_manager().channels)
-            
-    else:  # method=GET
-        # Get recent messages for the dropdown
-        with db.session() as db_session:
-            recent_messages = db_session.query(common.models.Email).order_by(
-                common.models.Email.created_at.desc()
-            ).limit(50).all()
-            return render_template(
-                'submit.html',
-                recent_messages=recent_messages,
-                colors=color_processor.COLORS,
-                channels=get_channel_manager().channels)
+        # Process content with access to the message object
+        message.processed_content = color_processor.process_content(
+            content,
+            message=message,
+            db_session=db_session
+        )
 
+        db_session.commit()
+        message_id = message.id  # Get ID before session closes
+    
+    flash('Message submitted successfully!', 'success')
+    return redirect(url_for('messages.get_message', message_id=message_id))

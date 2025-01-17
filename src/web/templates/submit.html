@@ -13,15 +13,7 @@
         {% if error %}
         <div class="error">{{ error }}</div>
         {% endif %}
-        {% if success %}
-        <div class="success-container">
-            <div class="success">Message submitted successfully!</div>
-            {% if view_url %}
-            <a href="{{ view_url }}" class="view-link">View Message →</a>
-            {% endif %}
-        </div>
-        {% endif %}
-        
+
         <form method="POST" action="/submit">
             <div class="form-group">
                 <label for="subject">Subject:</label>
@@ -35,6 +27,7 @@
                     {% for name, config in channels.items() %}
                         <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
                             {{ name|title }} - {{ config.description }}
+                            {% if config.requires_auth %}(Private){% endif %}
                         </option>
                     {% endfor %}
                 </select>
@@ -47,7 +40,9 @@
                     <option value="">No parent message</option>
                     {% for message in recent_messages %}
                         <option value="{{ message.id }}">
-                            {{ message.subject or '(No Subject)' }} - ID: {{ message.id }}
+                            {{ message.subject or '(No Subject)' }} 
+                            {% if message.author %} by {{ message.author.name }}{% endif %}
+                            - ID: {{ message.id }}
                         </option>
                     {% endfor %}
                 </select>
@@ -71,7 +66,7 @@
             
             <button type="submit">Submit</button>
         </form>
-       
+        
         {% if colors %}
         <div class="info-box">
             <h3>Color Tags</h3>
@@ -86,7 +81,7 @@
     </div>
 
     <script>
-        document.getElementById('previewButton').addEventListener('click', async function() {
+        document.getElementById('previewButton')?.addEventListener('click', async function() {
             const content = document.getElementById('content').value;
             const previewArea = document.getElementById('previewArea');
             const previewContent = document.getElementById('previewContent').querySelector('.message-main');
@@ -108,6 +103,7 @@
                 previewContent.innerHTML = data.processed_content;
                 previewArea.style.display = 'block';
 
+                // Initialize Atacama viewer for preview content
                 new AtacamaViewer().initialize(); 
             } catch (error) {
                 console.error('Preview error:', error);
