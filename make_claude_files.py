@@ -15,16 +15,12 @@ CORE_FILES = {
     # Database and models
     'src/common/database.py',
     'src/common/models.py',
-    'migrations/env.py',
-    'alembic.ini',
     
     # Core utilities and configuration
     'src/common/logging_config.py',
     'src/common/telemetry.py',
     'src/common/auth.py',
     'src/common/colorscheme.py',
-    'src/common/pinyin.py',
-    'src/common/quotes.py',
     'src/constants.py',
     
     # API integrations
@@ -32,7 +28,14 @@ CORE_FILES = {
     
     # Channel management
     'src/common/channel_config.py',
-    'src/common/messages.py'
+    'src/common/messages.py',
+
+    # Core CSS files
+    'src/web/css/common.css',
+    'src/web/css/atacama.css',
+
+    # Core JS files
+    'src/web/js/atacama.js',
 }
 
 def ensure_clean_dir(directory: Path) -> None:
