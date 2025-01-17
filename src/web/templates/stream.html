@@ -24,9 +24,6 @@
                                 <a href="{{ url_for('messages.message_stream', channel=channel) }}" class="channel-link">
                                     {{ channel|title }}
                                 </a>
-                                  {% if channel_configs[channel].description %}
-                                    <span class="channel-description">{{ channel_configs[channel].description }}</span>
-                                  {% endif %}
                             </li>
                         {% endif %}
                     {% endfor %}
