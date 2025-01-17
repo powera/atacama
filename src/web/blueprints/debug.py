@@ -11,13 +11,14 @@ from datetime import datetime
 
 # Third-party imports
 import psutil
-from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, url_for
+from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, url_for, g
 from sqlalchemy import text, engine
 
 # Local imports
 from common.auth import require_auth
 from common.database import db
 from common.channel_config import get_channel_manager
+from common.messages import check_channel_access
 from common.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -92,11 +93,19 @@ def get_channel_stats():
     :return: Dictionary containing channel configuration information
     """
     channel_manager = get_channel_manager()
+    channels = channel_manager.get_channel_names()
+    
+    # Get current user's channel access
+    channel_access = {}
+    for channel in channels:
+        channel_access[channel] = check_channel_access(channel, g.user)
+    
     return {
-        'channels': channel_manager.get_channel_names(),
+        'channels': channels,
         'public_channels': channel_manager.get_public_channels(),
         'default_channel': channel_manager.default_channel,
-        'default_preferences': channel_manager.default_preferences
+        'default_preferences': channel_manager.default_preferences,
+        'channel_access': channel_access
     }
 
 @debug_bp.route('/debug')

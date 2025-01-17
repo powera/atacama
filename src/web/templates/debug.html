@@ -68,12 +68,13 @@
                 </div>
             </div>
             
-            <h3>Channel List</h3>
+            <h3>Channel Access</h3>
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Channel</th>
                         <th>Type</th>
+                        <th>User Access</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,6 +82,13 @@
                     <tr>
                         <td>{{ channel }}</td>
                         <td>{{ 'Public' if channel in channel_stats.public_channels else 'Private' }}</td>
+                        <td>
+                            {% if channel_stats.channel_access[channel] %}
+                            <span class="access-granted">✓ Allowed</span>
+                            {% else %}
+                            <span class="access-denied">✗ No Access</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
