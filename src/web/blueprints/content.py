@@ -27,7 +27,9 @@ from common.messages import (
     get_message_by_id,
     get_message_chain,
     get_filtered_messages,
-    check_message_access
+    check_message_access,
+    check_channel_access,
+    get_user_allowed_channels
 )
 from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
@@ -85,7 +87,7 @@ def navigation() -> str:
     available_channels = []
     for channel in channel_manager.channels:
         config = channel_manager.get_channel_config(channel)
-        if config and channel_manager.check_channel_access(channel, user_email):
+        if config and check_channel_access(channel, g.user):
             available_channels.append((channel, config))
     
     return render_template(
@@ -225,14 +227,8 @@ def message_stream(older_than_id: Optional[int] = None,
             channel=channel
         )
         
-        # Filter messages and get available channels
-        messages = [msg for msg in messages if check_message_access(msg)]
-        channels = []
-        
-        user_email = session['user']['email'] if 'user' in session else None
-        for channel_name, config in channel_manager.channels.items():
-            if channel_manager.check_channel_access(channel_name, user_email):
-                channels.append(channel_name)
+        # Get available channels
+        channels = get_user_allowed_channels(g.user, ignore_preferences=False)
 
         return render_template(
             'stream.html',
@@ -324,10 +320,7 @@ def landing_page():
                 message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
             # Get available channels for user
-            channels = []
-            for channel_name, config in channel_manager.channels.items():
-                if channel_manager.check_channel_access(channel_name, user):
-                    channels.append(channel_name)
+            channels = get_user_allowed_channels(g.user, ignore_preferences=False)
 
         except Exception as e:
             logger.error(f"Database error in landing page: {str(e)}")
