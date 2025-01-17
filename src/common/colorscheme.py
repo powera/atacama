@@ -304,7 +304,7 @@ class ColorScheme:
     def process_emphasis(self, text: str) -> str:
         """Convert *emphasized* text to use <em> tag."""
         def replacer(match: Match) -> str:
-            text = match.group(1)
+            content = match.group(1)
             return f'<em>{content}</em>'
         return self.emphasis_pattern.sub(replacer, text)
 

@@ -95,7 +95,7 @@ def submit_form():
             db_session.commit()
             
             view_url = url_for('messages.get_message', message_id=message.id)
-            return render_template('submit.html', success=True, view_url=view_url)
+            return render_template('submit.html', success=True, view_url=view_url, channels=get_channel_manager().channels)
             
     else:  # method=GET
         # Get recent messages for the dropdown

@@ -28,6 +28,7 @@
                 <input type="text" id="subject" name="subject" required>
             </div>
 
+            {% if channels %}
             <div class="form-group">
                 <label for="channel">Channel:</label>
                 <select name="channel" id="channel" required>
@@ -38,6 +39,7 @@
                     {% endfor %}
                 </select>
             </div>
+            {% endif %}
 
             <div class="form-group">
                 <label for="parent_id">Parent Message (optional):</label>
