@@ -23,6 +23,9 @@
                             <li class="channel-item {% if current_channel == channel %}active{% endif %}">
                                 <a href="{{ url_for('messages.message_stream', channel=channel) }}" class="channel-link">
                                     {{ channel|title }}
+                                    {% if channel_configs[channel].description %}
+                                    <span class="channel-description">{{ channel_configs[channel].description }}</span>
+                                    {% endif %}
                                 </a>
                             </li>
                         {% endif %}
@@ -38,8 +41,8 @@
                         <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
                             {{ message.subject or '(No Subject)' }}
                         </a>
-                        {% if message.channel.value != 'private' %}
-                            <span class="message-channel">{{ message.channel.value|title }}</span>
+                        {% if message.channel != 'private' %}
+                            <span class="message-channel">{{ message.channel|title }}</span>
                         {% endif %}
                     </div>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>

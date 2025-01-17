@@ -71,6 +71,31 @@ th {
     min-height: 44px;
 }
 
+/* Channel navigation: TODO: merge with stream.css settings */
+.channel-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-base);
+    margin: var(--spacing-large) 0;
+}
+
+.channel-link {
+    padding: 0.5em 1em;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    color: var(--color-text);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+}
+
+.channel-link:hover {
+    background: var(--color-annotation-bg);
+}
+
+.channel-link[data-access="public"] { border-color: #2c662d; }
+.channel-link[data-access="private"] { border-color: #856404; }
+.channel-link[data-access="restricted"] { border-color: #721c24; }
+
 /* Mobile-specific adjustments */
 @media screen and (max-width: 768px) {
     /* Convert table to cards */

@@ -1,28 +1,49 @@
 """Blueprint for handling content pages and message display."""
 
-from flask import Blueprint, render_template, jsonify, request, session, render_template_string
-from flask import make_response, Response, redirect, url_for, flash
+import json
+from datetime import datetime
+from typing import Optional, List, Dict, Any, Tuple
+
+from flask import (
+    Blueprint, 
+    render_template, 
+    jsonify, 
+    request, 
+    session,
+    render_template_string,
+    make_response,
+    Response,
+    redirect, 
+    url_for, 
+    flash
+)
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
-from typing import Optional, List, Dict, Any
-from datetime import datetime
-import json
 
 from common.auth import require_auth, optional_auth
 from common.database import db
 from common.models import Email, get_or_create_user
-from common.messages import get_message_by_id, get_message_chain, get_filtered_messages, check_message_access
-from common.channel_config import get_channel_manager
-
+from common.messages import (
+    get_message_by_id,
+    get_message_chain,
+    get_filtered_messages,
+    check_message_access
+)
+from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
+
 logger = get_logger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
 @messages_bp.route('/channels', methods=['GET', 'POST'])
 @require_auth
-def channel_preferences():
-    """Show and update channel preferences for the logged-in user."""
+def channel_preferences() -> str:
+    """
+    Show and update channel preferences for the logged-in user.
+    
+    :return: Rendered template response
+    """
     channel_manager = get_channel_manager()
     
     with db.session() as db_session:
@@ -44,7 +65,7 @@ def channel_preferences():
                             enabled = False
                     
                     new_prefs[channel_name] = enabled
-                elif config.access_level != 'public':
+                elif config.access_level != AccessLevel.PUBLIC:
                     # Default non-public channels to enabled unless explicitly disabled
                     new_prefs[channel_name] = current_prefs.get(channel_name, True)
             
@@ -62,8 +83,12 @@ def channel_preferences():
 
 @messages_bp.route('/nav')
 @require_auth
-def navigation():
-    """Show site navigation/sitemap page."""
+def navigation() -> str:
+    """
+    Show site navigation/sitemap page.
+    
+    :return: Rendered template response
+    """
     channel_manager = get_channel_manager()
     user_email = session['user']['email']
     
@@ -81,11 +106,12 @@ def navigation():
 
 @messages_bp.route('/messages/<int:message_id>', methods=['GET'])
 @optional_auth
-def get_message(message_id: int):
+def get_message(message_id: int) -> Response:
     """
     Retrieve and display a single message.
     
     :param message_id: ID of the message to display
+    :return: Response containing message data or error
     """
     with db.session() as db_session:
         message = db_session.query(Email).get(message_id)
@@ -126,8 +152,13 @@ def get_message(message_id: int):
 
 @messages_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
 @optional_auth
-def view_chain(message_id: int):
-    """Display the full chain of messages related to a given message ID."""
+def view_chain(message_id: int) -> Response:
+    """
+    Display the full chain of messages related to a given message ID.
+    
+    :param message_id: ID of the target message
+    :return: Response containing chain data or error
+    """
     chain = get_message_chain(message_id)
     
     if not chain:
@@ -178,8 +209,17 @@ def view_chain(message_id: int):
 @messages_bp.route('/stream/channel/<path:channel>')
 @messages_bp.route('/stream/channel/<path:channel>/older/<int:older_than_id>')
 @optional_auth
-def message_stream(older_than_id=None, user_id=None, channel=None):
-    """Show a stream of messages with optional filtering."""
+def message_stream(older_than_id: Optional[int] = None, 
+                  user_id: Optional[int] = None,
+                  channel: Optional[str] = None) -> str:
+    """
+    Show a stream of messages with optional filtering.
+    
+    :param older_than_id: Optional ID to paginate from
+    :param user_id: Optional user ID to filter by
+    :param channel: Optional channel name to filter by
+    :return: Rendered template response
+    """
     channel_manager = get_channel_manager()
     
     # Check channel access before querying
@@ -217,8 +257,12 @@ def message_stream(older_than_id=None, user_id=None, channel=None):
         )
 
 @messages_bp.route('/sitemap.xml')
-def sitemap() -> str:
-    """Generate sitemap.xml containing all public URLs."""
+def sitemap() -> Response:
+    """
+    Generate sitemap.xml containing all public URLs.
+    
+    :return: XML response containing sitemap
+    """
     channel_manager = get_channel_manager()
     
     with db.session() as db_session:
@@ -233,7 +277,7 @@ def sitemap() -> str:
         
         # Add public channel pages
         for channel_name, config in channel_manager.channels.items():
-            if config.access_level == 'public':
+            if config.access_level == AccessLevel.PUBLIC:
                 urls.append({
                     'loc': f"{base_url}/stream/channel/{channel_name}",
                     'lastmod': datetime.utcnow().strftime('%Y-%m-%d')
@@ -242,7 +286,7 @@ def sitemap() -> str:
         # Add public messages
         for message in messages:
             config = channel_manager.get_channel_config(message.channel)
-            if config and config.access_level == 'public':
+            if config and config.access_level == AccessLevel.PUBLIC:
                 urls.append({
                     'loc': f"{base_url}/messages/{message.id}",
                     'lastmod': message.created_at.strftime('%Y-%m-%d')
@@ -264,8 +308,12 @@ def sitemap() -> str:
 
 @messages_bp.route('/details')
 @optional_auth
-def landing_page():
-    """Serve the landing page with basic service information and message list."""
+def landing_page() -> str:
+    """
+    Serve the landing page with basic service information and message list.
+    
+    :return: Rendered template response
+    """
     channel_manager = get_channel_manager()
     user_email = session['user']['email'] if 'user' in session else None
     

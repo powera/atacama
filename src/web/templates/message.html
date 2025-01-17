@@ -23,10 +23,17 @@
                         </div>
                     {% endif %}
                     Received: {{ created_at }}
+                    {% if message.channel != 'private' %}
+                        <br>
+                        Channel: <a href="{{ url_for('messages.message_stream', channel=message.channel) }}">{{ message.channel|title }}</a>
+                        {% if channel_config and channel_config.description %}
+                            - {{ channel_config.description }}
+                        {% endif %}
+                    {% endif %}
                     {% if message.parent %}
                         <br>
-                        In reply to: <a href="/messages/{{ message.parent.id }}">{{ message.parent.subject }}</a>
-                        (<a href="/messages/{{ message.id }}/chain">View Chain</a>)
+                        In reply to: <a href="{{ url_for('messages.get_message', message_id=message.parent.id) }}">{{ message.parent.subject }}</a>
+                        (<a href="{{ url_for('messages.view_chain', message_id=message.id) }}">View Chain</a>)
                     {% endif %}
                 </div>
                 <div class="message-actions">
@@ -35,7 +42,7 @@
                             Replies:
                             <ul>
                             {% for child in message.children %}
-                                <li><a href="/messages/{{ child.id }}">{{ child.subject }}</a></li>
+                                <li><a href="{{ url_for('messages.get_message', message_id=child.id) }}">{{ child.subject }}</a></li>
                             {% endfor %}
                             </ul>
                         </div>

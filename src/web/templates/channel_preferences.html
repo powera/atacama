@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Channel Preferences - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/atacama.css">
@@ -12,7 +14,7 @@
         
         .channel-option {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             margin: var(--spacing-base) 0;
             padding: var(--spacing-base);
             border: 1px solid var(--color-border);
@@ -36,11 +38,33 @@
             cursor: pointer;
         }
         
+        .channel-info {
+            margin-top: 0.5em;
+            font-size: var(--font-size-small);
+            color: var(--color-text-secondary);
+        }
+        
         .channel-restricted {
             color: var(--color-text-secondary);
             font-size: var(--font-size-small);
             margin-left: var(--spacing-base);
         }
+        
+        .channel-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 0.5em;
+        }
+        
+        .tag-public { background: #e7f5e7; color: #2c662d; }
+        .tag-private { background: #fff3cd; color: #856404; }
+        .tag-restricted { background: #f8d7da; color: #721c24; }
+        
+        [data-theme="dark"] .tag-public { background: #1e3a1e; color: #7cc47d; }
+        [data-theme="dark"] .tag-private { background: #3d3524; color: #ffd866; }
+        [data-theme="dark"] .tag-restricted { background: #3d2427; color: #ea868f; }
         
         .unsaved-warning {
             display: none;
@@ -85,33 +109,42 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
         
         <form method="POST" class="preferences-form" id="prefsForm">
-            <div class="unsaved-warning" id="unsavedWarning">
+            <div class="unsaved-warning" id="unsavedWarning" role="alert" aria-live="polite">
                 You have unsaved changes. Remember to click Save to apply your changes.
             </div>
             
-            {% for channel in channels %}
-                {% if channel.value != 'sandbox' %}
-                    <div class="channel-option">
-                        <input type="checkbox" 
-                               id="channel_{{ channel.value }}"
-                               name="channel_{{ channel.value }}"
-                               {% if preferences.get(channel.value, True) %}checked{% endif %}
-                               {% if channel.value == 'politics' and not is_early_version %}disabled{% endif %}
-                               onchange="checkChanges()">
-                        <label for="channel_{{ channel.value }}">
-                            {{ channel.value|title }}
-                            {% if channel.value == 'politics' and not is_early_version %}
-                                <span class="channel-restricted">(Requires @earlyversion.com email)</span>
-                            {% endif %}
-                        </label>
-                    </div>
-                {% endif %}
+            {% for channel_name, config in channels.items() %}
+                <div class="channel-option">
+                    <input type="checkbox" 
+                           id="channel_{{ channel_name }}"
+                           name="channel_{{ channel_name }}"
+                           {% if preferences.get(channel_name, True) %}checked{% endif %}
+                           {% if config.requires_preference and config.domain_restriction and not user_email.endswith(config.domain_restriction) %}disabled{% endif %}
+                           onchange="checkChanges()"
+                           aria-describedby="desc_{{ channel_name }}">
+                    <label for="channel_{{ channel_name }}">
+                        {{ channel_name|title }}
+                        <span class="channel-tag tag-{{ config.access_level.value }}">
+                            {{ config.access_level.value|title }}
+                        </span>
+                        {% if config.description %}
+                            <div class="channel-info" id="desc_{{ channel_name }}">
+                                {{ config.description }}
+                            </div>
+                        {% endif %}
+                        {% if config.domain_restriction %}
+                            <div class="channel-restricted">
+                                Requires {{ config.domain_restriction }} email
+                            </div>
+                        {% endif %}
+                    </label>
+                </div>
             {% endfor %}
             
             <div class="form-actions">

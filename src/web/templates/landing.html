@@ -3,29 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Atacama Message Processor - View and manage messages across channels">
     <title>Atacama Message Processor</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/landing.css">
-    <script src="/js/atacama.js"></script>
+    <link rel="stylesheet" href="/css/atacama.css">
+    <script src="/js/atacama.js" defer></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Atacama Message Processor</h1>
-            <a href="/stream">View Stream</a>
+            
+            {% if available_channels %}
+            <nav class="channel-nav" aria-label="Channel navigation">
+                {% for channel in available_channels %}
+                    {% set config = channel_configs[channel] %}
+                    <a href="/stream/channel/{{ channel }}" 
+                       class="channel-link"
+                       data-access="{{ config.access_level.value }}"
+                       title="{{ config.description }}">
+                        {{ channel|title }}
+                    </a>
+                {% endfor %}
+            </nav>
+            {% endif %}
         </header>
 
-        <section class="messages">
+        <section class="messages" aria-label="Recent messages">
             <h2>Recent Messages</h2>
             {% if messages %}
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Subject</th>
-                            <th>Preview</th>
-                            <th>Received</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Preview</th>
+                            <th scope="col">Channel</th>
+                            <th scope="col">Received</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -40,6 +56,11 @@
                             <td data-label="Preview" class="message-preview">
                                 {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
                             </td>
+                            <td data-label="Channel">
+                                <a href="/stream/channel/{{ message.channel }}" class="channel-link">
+                                    {{ message.channel|title }}
+                                </a>
+                            </td>
                             <td data-label="Received" class="timestamp">
                                 {{ message.created_at_formatted }}
                             </td>
@@ -49,7 +70,7 @@
                 </table>
             </div>
             {% else %}
-            <div class="no-messages">
+            <div class="no-messages" role="status">
                 <p>No messages processed yet</p>
             </div>
             {% endif %}
@@ -57,20 +78,22 @@
 
         {% if not user %}
         <section class="login-prompt">
-            <p>Please log in to access additional features and submit messages.</p>
+            <p>Please <a href="/login">log in</a> to access additional features and submit messages.</p>
         </section>
         {% endif %}
-            {% if user %}
-            <nav class="user-navigation">
-                <a href="/submit" class="button">Submit Message</a>
-                <a href="/quotes" class="button">View Quotes</a>
-            </nav>
-            {% endif %}
+
+        {% if user %}
+        <nav class="user-navigation">
+            <a href="/submit" class="button">Submit Message</a>
+            <a href="/quotes" class="button">View Quotes</a>
+            <a href="/channels" class="button">Channel Preferences</a>
+        </nav>
+        {% endif %}
     </div>
 
     <script>
         // Add touch feedback for mobile devices
-        document.querySelectorAll('.message-link, .button').forEach(element => {
+        document.querySelectorAll('.message-link, .button, .channel-link').forEach(element => {
             element.addEventListener('touchstart', function() {
                 this.style.opacity = '0.7';
             });
