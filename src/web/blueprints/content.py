@@ -36,9 +36,10 @@ logger = get_logger(__name__)
 
 messages_bp = Blueprint('messages', __name__)
 
+
 @messages_bp.route('/channels', methods=['GET', 'POST'])
 @require_auth
-def channel_preferences() -> str:
+def channel_preferences():
     """
     Show and update channel preferences for the logged-in user.
     
@@ -52,23 +53,9 @@ def channel_preferences() -> str:
         
         if request.method == 'POST':
             new_prefs = {}
-            user_email = session['user']['email']
-            
-            for channel_name, config in channel_manager.channels.items():
-                # Only handle preferences for channels that need them
-                if config.requires_preference:
-                    enabled = request.form.get(f'channel_{channel_name}') == 'on'
-                    
-                    # Check domain restrictions
-                    if config.domain_restriction:
-                        if not user_email.endswith(config.domain_restriction):
-                            enabled = False
-                    
-                    new_prefs[channel_name] = enabled
-                elif config.access_level != AccessLevel.PUBLIC:
-                    # Default non-public channels to enabled unless explicitly disabled
-                    new_prefs[channel_name] = current_prefs.get(channel_name, True)
-            
+            for channel_name in channel_manager.get_channel_names():
+                new_prefs[channel_name] = request.form.get(f'channel_{channel_name}') == 'on'
+                
             user.channel_preferences = json.dumps(new_prefs)
             db_session.commit()
             flash('Channel preferences updated successfully', 'success')
@@ -78,8 +65,10 @@ def channel_preferences() -> str:
             'channel_preferences.html',
             preferences=current_prefs,
             channels=channel_manager.channels,
-            user_email=session['user']['email']
+            user=user,
+            user_email=user.email
         )
+
 
 @messages_bp.route('/nav')
 @require_auth
