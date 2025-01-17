@@ -306,36 +306,38 @@ def sitemap() -> Response:
         response.headers['Content-Type'] = 'application/xml'
         return response
 
+
 @messages_bp.route('/details')
 @optional_auth
-def landing_page() -> str:
-    """
-    Serve the landing page with basic service information and message list.
-    
-    :return: Rendered template response
-    """
+def landing_page():
+    """Serve the landing page with basic service information and message list."""
     channel_manager = get_channel_manager()
-    user_email = session['user']['email'] if 'user' in session else None
-    
+
     with db.session() as db_session:
         try:
             db_session.execute(text('SELECT 1'))
             db_status = "Connected"
-            
+
             messages = db_session.query(Email).options(
                 joinedload(Email.parent),
                 joinedload(Email.children),
                 joinedload(Email.quotes)
             ).order_by(Email.created_at.desc()).limit(50).all()
 
+            # Get user if logged in
+            user = None
+            if 'user' in session:
+                user = get_or_create_user(db_session, session['user'])
+
+            # Filter messages and get available channels
             messages = [msg for msg in messages if check_message_access(msg)]
-            
             for message in messages:
                 message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
+            # Get available channels for user
             channels = []
             for channel_name, config in channel_manager.channels.items():
-                if channel_manager.check_channel_access(channel_name, user_email):
+                if channel_manager.check_channel_access(channel_name, user):
                     channels.append(channel_name)
 
         except Exception as e:
