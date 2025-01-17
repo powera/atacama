@@ -134,6 +134,9 @@
     border-bottom-color: var(--color-border);
 }
 
+.channel-description {
+    font-size: var(--font-size-small);
+}
 
 .message-channel {
     font-size: var(--font-size-small);
@@ -180,4 +183,3 @@
         align-self: flex-start;
     }
 }
->>>>>>> 13edc87 (backend support for "channels".)
