@@ -4,7 +4,6 @@
     <title>Debug Information - Atacama</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/debug.css">
-
 </head>
 <body>
     <div class="debug-container">
@@ -39,6 +38,10 @@
                     <div class="metric-title">Connection Status</div>
                     <div class="metric-value">{{ db_stats.status }}</div>
                 </div>
+                <div class="metric-card">
+                    <div class="metric-title">Database Type</div>
+                    <div class="metric-value">{{ db_stats.type|default('Unknown') }}</div>
+                </div>
                 {% for table, count in db_stats.table_stats.items() %}
                 <div class="metric-card">
                     <div class="metric-title">{{ table|replace('_count', '')|title }}</div>
@@ -46,6 +49,42 @@
                 </div>
                 {% endfor %}
             </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Channel Configuration</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Default Channel</div>
+                    <div class="metric-value">{{ channel_stats.default_channel }}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Total Channels</div>
+                    <div class="metric-value">{{ channel_stats.channels|length }}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-title">Public Channels</div>
+                    <div class="metric-value">{{ channel_stats.public_channels|join(', ') }}</div>
+                </div>
+            </div>
+            
+            <h3>Channel List</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for channel in channel_stats.channels %}
+                    <tr>
+                        <td>{{ channel }}</td>
+                        <td>{{ 'Public' if channel in channel_stats.public_channels else 'Private' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         
         <div class="debug-section">
