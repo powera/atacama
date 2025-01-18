@@ -159,7 +159,7 @@ def get_message_chain(message_id: int) -> List[Email]:
         # Add parent chain
         current = message
         while current.parent:
-            if check_message_access(current.parent, ignore_preferences=True):
+            if check_message_access(current.parent, ignore_preferences=True) and current.parent.channel != "foobar":
                 chain.insert(0, current.parent)
             current = current.parent
             
