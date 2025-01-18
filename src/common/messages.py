@@ -148,7 +148,8 @@ def get_message_chain(message_id: int) -> List[Email]:
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
-            joinedload(Email.quotes)
+            joinedload(Email.quotes),
+            joinedload(Email.channel)
         ).filter(Email.id == message_id).first()
         
         if not message or not check_message_access(message, ignore_preferences=True):
