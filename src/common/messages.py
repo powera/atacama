@@ -3,7 +3,7 @@
 import json
 from flask import session, g
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, undefer
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
@@ -127,7 +127,8 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
-            joinedload(Email.quotes)
+            joinedload(Email.quotes),
+            undefer('channel')
         ).filter(Email.id == message_id).first()
         
         if not message or not check_message_access(message, ignore_preferences=True):
