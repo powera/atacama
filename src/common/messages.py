@@ -3,7 +3,7 @@
 import json
 from flask import session, g
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload, undefer
+from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
@@ -144,11 +144,11 @@ def get_message_chain(message_id: int) -> List[Email]:
     :return: List of accessible Email objects in chronological order
     """
     with db.session() as db_session:
+        db_session.expire_on_commit = False
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),
-            joinedload(Email.quotes),
-            undefer(Email.channel)
+            joinedload(Email.quotes)
         ).filter(Email.id == message_id).first()
         
         if not message or not check_message_access(message, ignore_preferences=True):
@@ -159,7 +159,7 @@ def get_message_chain(message_id: int) -> List[Email]:
         # Add parent chain
         current = message
         while current.parent:
-            if check_message_access(current.parent, ignore_preferences=True) and current.parent.channel != "foobar":
+            if check_message_access(current.parent, ignore_preferences=True):
                 chain.insert(0, current.parent)
             current = current.parent
             
@@ -173,11 +173,11 @@ def get_message_chain(message_id: int) -> List[Email]:
                check_message_access(child, ignore_preferences=True)
         ]
         chain.extend(sorted(matching_children, key=lambda x: x.created_at))
+
+        # Refresh for good luck
+        for msg in chain:
+            db_session.refresh(msg)
        
-        # Hack - access channel in context
-        tmp = []
-        for c in chain:
-            tmp.append(c.channel)
         return chain
 
 
