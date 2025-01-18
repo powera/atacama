@@ -156,12 +156,13 @@ def view_chain(message_id: int) -> Response:
     if not chain:
         return render_template('chain.html', error="Message or chain not found")
     
+    # (currently) unneeded; access checked in get_message_chain
     # Check access permissions for all messages in chain
-    for message in chain:
-        if not check_message_access(message):
-            if request.headers.get('Accept', '').startswith('text/html'):
-                return redirect(url_for('auth.login'))
-            return jsonify({'error': 'Authentication required'}), 401
+    #for message in chain:
+    #    if not check_message_access(message):
+    #        if request.headers.get('Accept', '').startswith('text/html'):
+    #            return redirect(url_for('auth.login'))
+    #        return jsonify({'error': 'Authentication required'}), 401
     
     # Format timestamps and get channel configuration
     channel_manager = get_channel_manager()
