@@ -173,7 +173,11 @@ def get_message_chain(message_id: int) -> List[Email]:
                check_message_access(child, ignore_preferences=True)
         ]
         chain.extend(sorted(matching_children, key=lambda x: x.created_at))
-        
+       
+        # Hack - access channel in context
+        tmp = []
+        for c in chain:
+            tmp.append(c.channel)
         return chain
 
 
