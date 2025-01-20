@@ -122,7 +122,7 @@ def update_claude_core() -> None:
     """Update claude_core directory with flattened core files and file listing."""
     claude_core = Path.cwd() / 'staging'
     ensure_clean_dir(claude_core)
-    file_paths = CORE_FILES + ALL_TEMPLATES
+    file_paths = CORE_FILES | ALL_TEMPLATES
     
     # Check for name collisions and get flat names
     path_to_name = check_name_collisions(file_paths)
