@@ -16,12 +16,12 @@
             <nav class="channel-navigation">
                 <ul class="channel-list">
                     <li class="channel-item {% if not current_channel %}active{% endif %}">
-                        <a href="{{ url_for('messages.message_stream') }}" class="channel-link">All</a>
+                        <a href="{{ url_for('content.message_stream') }}" class="channel-link">All</a>
                     </li>
                     {% for channel in available_channels %}
                         {% if channel != 'private' %}
                             <li class="channel-item {% if current_channel == channel %}active{% endif %}">
-                                <a href="{{ url_for('messages.message_stream', channel=channel) }}" class="channel-link">
+                                <a href="{{ url_for('content.message_stream', channel=channel) }}" class="channel-link">
                                     {{ channel|title }}
                                 </a>
                             </li>
@@ -35,7 +35,7 @@
             <article class="stream-message message">
                 <header class="message-header">
                     <div class="message-header-main">
-                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                        <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-title">
                             {{ message.subject or '(No Subject)' }}
                         </a>
                         {% if message.channel != 'private' %}
@@ -56,11 +56,11 @@
         {% if has_more %}
             <div class="stream-navigation">
                 {% if current_user_id %}
-                    <a href="{{ url_for('messages.message_stream', user_id=current_user_id, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
+                    <a href="{{ url_for('content.message_stream', user_id=current_user_id, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
                 {% elif current_channel %}
-                    <a href="{{ url_for('messages.message_stream', channel=current_channel, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
+                    <a href="{{ url_for('content.message_stream', channel=current_channel, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
                 {% else %}
-                    <a href="{{ url_for('messages.message_stream', older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
+                    <a href="{{ url_for('content.message_stream', older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
                 {% endif %}
             </div>
         {% endif %}

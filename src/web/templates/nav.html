@@ -25,7 +25,7 @@
                 <li><a href="/stream">All Channels</a></li>
                 {% for name, config in channels %}
                 <li>
-                    <a href="{{ url_for('messages.message_stream', channel=name) }}">
+                    <a href="{{ url_for('content.message_stream', channel=name) }}">
                         {{ name|title }} Channel
                         {% if config.description %}
                         <span class="channel-description">{{ config.description }}</span>

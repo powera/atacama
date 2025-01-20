@@ -24,7 +24,7 @@
                         {% endif %}
                     </div>
                     {% if messages %}
-                        <a href="{{ url_for('messages.message_stream', channel=messages[0].channel) }}" class="channel-link">
+                        <a href="{{ url_for('content.message_stream', channel=messages[0].channel) }}" class="channel-link">
                             View All {{ messages[0].channel|title }} Messages
                         </a>
                     {% endif %}
@@ -42,7 +42,7 @@
                 
                 <header class="message-header">
                     <div class="message-header-main">
-                        <a href="{{ url_for('messages.get_message', message_id=message.id) }}" class="message-title">
+                        <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-title">
                             {{ message.subject or '(No Subject)' }}
                         </a>
                         {% if message.channel != 'private' %}
