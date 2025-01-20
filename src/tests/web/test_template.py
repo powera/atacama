@@ -103,7 +103,8 @@ class TemplateTests(unittest.TestCase):
             url = url_for('content.get_message', message_id=message_id)
             
             # Test authenticated view
-            response = self.client.get(url)
+            response = self.client.get(url,
+                                       headers={'Accept': 'text/html'})
             self.assertEqual(response.status_code, 200)
             
             # Verify content elements
@@ -126,7 +127,8 @@ class TemplateTests(unittest.TestCase):
                 messages.append((message_id, data))
             
             # Test stream view
-            response = self.client.get(url_for('content.message_stream'))
+            response = self.client.get(url_for('content.message_stream'),
+                                       headers={'Accept': 'text/html'})
             self.assertEqual(response.status_code, 200)
             
             # Check for message elements
@@ -138,6 +140,7 @@ class TemplateTests(unittest.TestCase):
         """Test the login.html template renders correctly."""
         with self.app.app_context():
             response = self.client.get(url_for('auth.login'))
+                                       headers={'Accept': 'text/html'})
             self.assertEqual(response.status_code, 200)
             
             # Check for essential login page elements
