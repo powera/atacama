@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Tool for preparing project files for Claude integration.
-Creates claude_core directory with flattened core files and full file listing.
+Creates directory with flattened core files and full file listing.
 """
 
 import os
@@ -37,6 +37,17 @@ CORE_FILES = {
     # Core JS files
     'src/web/js/atacama.js',
 }
+
+ALL_TEMPLATES = {
+    'src/web/templates/chain.html',
+    'src/web/templates/message.html',
+    'src/web/templates/stream.html',
+    'src/web/templates/submit.html',
+    'src/web/css/stream.css',
+    'src/web/css/submit.css',
+    'src/web/css/chess.css',
+}
+
 
 def ensure_clean_dir(directory: Path) -> None:
     """Create empty directory, removing old contents if necessary."""
@@ -109,15 +120,16 @@ def get_project_files() -> str:
 
 def update_claude_core() -> None:
     """Update claude_core directory with flattened core files and file listing."""
-    claude_core = Path.cwd() / 'claude_core'
+    claude_core = Path.cwd() / 'staging'
     ensure_clean_dir(claude_core)
+    file_paths = CORE_FILES + ALL_TEMPLATES
     
     # Check for name collisions and get flat names
-    path_to_name = check_name_collisions(CORE_FILES)
+    path_to_name = check_name_collisions(file_paths)
     
     # Copy core files with flattened names
     processed = set()
-    for file_path in CORE_FILES:
+    for file_path in file_paths:
         src_path = Path.cwd() / file_path
         if not src_path.exists():
             print(f"Warning: Core file not found: {file_path}")

@@ -1,0 +1,7 @@
+Atacama is a web publishing platform.
+
+When re-writing code files, try to keep diffs to a minimum.  In particular, do not re-format or adjust spacing on comments, docstrings, function calls etc. unless explicitly instructed to do so.  Do not remove comments when transcribing files unless the code they are associated with is also removed.
+
+When writing new docstrings, use the reStructuredText format style (such as :param).  The project uses SQLAlchemy, and must support both a SQLITE database locally and a Postgres database in production.
+
+Do not write code files in response to the first message in a conversation. Do not write code for multiple files in response to a single prompt unless explicitly requested that "both" or "all" the files be in the next response.
