@@ -37,7 +37,7 @@ from common.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-content_bp = Blueprint('messages', __name__)
+content_bp = Blueprint('content', __name__)
 
 
 @content_bp.route('/channels', methods=['GET', 'POST'])

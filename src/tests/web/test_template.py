@@ -5,7 +5,7 @@ from flask.testing import FlaskClient
 from typing import Dict, Any
 
 from common.database import db
-from common.models import Email, User
+from common.models import Email, User, Base
 from web.server import create_app
 
 class TemplateTests(unittest.TestCase):
@@ -23,12 +23,17 @@ class TemplateTests(unittest.TestCase):
             db.initialize(test=True)  # This will create tables in the test database
             
     def tearDown(self):
-        """Clean up after tests."""
+        """Clean up after tests by dropping all tables."""
         with self.app.app_context():
-            db.initialize(test=True)  # Reset database between tests
+            # Drop all tables
+            Base.metadata.drop_all(db._engine)
+            # Dispose engine to close connections
+            if db._engine:
+                db._engine.dispose()
+            db.initialized = False
 
-    def create_test_user(self) -> User:
-        """Helper to create a test user."""
+    def create_test_user(self) -> Dict[str, Any]:
+        """Helper to create a test user and return user data."""
         with self.app.app_context():
             with db.session() as session:
                 user = User(
@@ -37,7 +42,11 @@ class TemplateTests(unittest.TestCase):
                 )
                 session.add(user)
                 session.commit()
-                return user
+                return {
+                    'id': user.id,
+                    'email': user.email,
+                    'name': user.name
+                }
 
     def create_test_message(self, **kwargs) -> tuple[int, dict]:
         """
@@ -54,6 +63,12 @@ class TemplateTests(unittest.TestCase):
         }
         defaults.update(kwargs)
         
+        if 'author' in kwargs and isinstance(kwargs['author'], dict):
+            # If author is passed as a dict, get the User object
+            with db.session() as session:
+                author = session.query(User).get(kwargs['author']['id'])
+                defaults['author'] = author
+        
         with self.app.app_context():
             with db.session() as session:
                 message = Email(**defaults)
@@ -66,26 +81,26 @@ class TemplateTests(unittest.TestCase):
                     'processed_content': message.processed_content
                 }
 
-    def login(self, user: User) -> None:
+    def login(self, user_data: Dict[str, Any]) -> None:
         """Helper to simulate user login."""
         with self.client.session_transaction() as session:
             session['user'] = {
-                'email': user.email,
-                'name': user.name
+                'email': user_data['email'],
+                'name': user_data['name']
             }
 
     def test_message_template_authenticated(self):
         """Test the message.html template renders correctly for authenticated users."""
         with self.app.app_context():
             # Create test data
-            user = self.create_test_user()
-            message_id, message_data = self.create_test_message(author=user)
+            user_data = self.create_test_user()
+            message_id, message_data = self.create_test_message(author=user_data)
             
             # Login the user
-            self.login(user)
+            self.login(user_data)
             
             # Generate URL for message view
-            url = url_for('content.view_message', message_id=message_id)
+            url = url_for('content.get_message', message_id=message_id)
             
             # Test authenticated view
             response = self.client.get(url)
@@ -95,23 +110,23 @@ class TemplateTests(unittest.TestCase):
             content = response.get_data(as_text=True)
             self.assertIn(message_data['subject'], content)
             self.assertIn(message_data['processed_content'], content)
-            self.assertIn(user.name, content)
+            self.assertIn(user_data['name'], content)
 
     def test_stream_template(self):
         """Test the stream.html template renders correctly."""
         with self.app.app_context():
             # Create test messages
-            user = self.create_test_user()
+            user_data = self.create_test_user()
             messages = []
             for i in range(3):
                 message_id, data = self.create_test_message(
                     subject=f'Test Message {i}',
-                    author=user
+                    author=user_data
                 )
                 messages.append((message_id, data))
             
             # Test stream view
-            response = self.client.get(url_for('content.stream'))
+            response = self.client.get(url_for('content.message_stream'))
             self.assertEqual(response.status_code, 200)
             
             # Check for message elements
