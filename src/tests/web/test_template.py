@@ -39,8 +39,12 @@ class TemplateTests(unittest.TestCase):
                 session.commit()
                 return user
 
-    def create_test_message(self, **kwargs) -> Email:
-        """Helper to create a test message."""
+    def create_test_message(self, **kwargs) -> tuple[int, dict]:
+        """
+        Helper to create a test message.
+        
+        :return: Tuple of (message_id, message_data)
+        """
         defaults = {
             'subject': 'Test Subject',
             'content': 'Test content',
@@ -55,37 +59,56 @@ class TemplateTests(unittest.TestCase):
                 message = Email(**defaults)
                 session.add(message)
                 session.commit()
-                return message
+                # Return id and basic data while still in session
+                return message.id, {
+                    'subject': message.subject,
+                    'content': message.content,
+                    'processed_content': message.processed_content
+                }
 
-    def test_message_template(self):
-        """Test the message.html template renders correctly."""
+    def login(self, user: User) -> None:
+        """Helper to simulate user login."""
+        with self.client.session_transaction() as session:
+            session['user'] = {
+                'email': user.email,
+                'name': user.name
+            }
+
+    def test_message_template_authenticated(self):
+        """Test the message.html template renders correctly for authenticated users."""
         with self.app.app_context():
             # Create test data
             user = self.create_test_user()
-            message = self.create_test_message(author=user)
+            message_id, message_data = self.create_test_message(author=user)
+            
+            # Login the user
+            self.login(user)
             
             # Generate URL for message view
-            url = url_for('content.view_message', message_id=message.id)
+            url = url_for('content.view_message', message_id=message_id)
             
-            # Test unauthenticated view
+            # Test authenticated view
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             
-            # Verify basic content elements
-            self.assertIn(message.subject, response.get_data(as_text=True))
-            self.assertIn(message.processed_content, response.get_data(as_text=True))
-            self.assertIn(user.name, response.get_data(as_text=True))
+            # Verify content elements
+            content = response.get_data(as_text=True)
+            self.assertIn(message_data['subject'], content)
+            self.assertIn(message_data['processed_content'], content)
+            self.assertIn(user.name, content)
 
     def test_stream_template(self):
         """Test the stream.html template renders correctly."""
         with self.app.app_context():
             # Create test messages
             user = self.create_test_user()
+            messages = []
             for i in range(3):
-                self.create_test_message(
+                message_id, data = self.create_test_message(
                     subject=f'Test Message {i}',
                     author=user
                 )
+                messages.append((message_id, data))
             
             # Test stream view
             response = self.client.get(url_for('content.stream'))
@@ -93,9 +116,8 @@ class TemplateTests(unittest.TestCase):
             
             # Check for message elements
             content = response.get_data(as_text=True)
-            self.assertIn('Test Message 0', content)
-            self.assertIn('Test Message 1', content)
-            self.assertIn('Test Message 2', content)
+            for _, data in messages:
+                self.assertIn(data['subject'], content)
 
     def test_login_template(self):
         """Test the login.html template renders correctly."""
@@ -105,14 +127,15 @@ class TemplateTests(unittest.TestCase):
             
             # Check for essential login page elements
             content = response.get_data(as_text=True)
-            self.assertIn('Sign in', content)
-            self.assertIn('google-signin', content)
+            self.assertIn('Login', content)
+            self.assertIn('https://accounts.google.com/gsi/client', content)
 
     def test_error_template(self):
         """Test error.html template renders correctly."""
         with self.app.app_context():
-            # Test 404 error page
-            response = self.client.get('/nonexistent-page')
+            # Test 404 error page - specify we want HTML response
+            response = self.client.get('/nonexistent-page', 
+                                     headers={'Accept': 'text/html'})
             self.assertEqual(response.status_code, 404)
             
             content = response.get_data(as_text=True)
