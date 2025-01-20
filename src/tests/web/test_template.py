@@ -139,7 +139,7 @@ class TemplateTests(unittest.TestCase):
     def test_login_template(self):
         """Test the login.html template renders correctly."""
         with self.app.app_context():
-            response = self.client.get(url_for('auth.login'))
+            response = self.client.get(url_for('auth.login'),
                                        headers={'Accept': 'text/html'})
             self.assertEqual(response.status_code, 200)
             
