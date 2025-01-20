@@ -122,7 +122,8 @@ class TemplateTests(unittest.TestCase):
             for i in range(3):
                 message_id, data = self.create_test_message(
                     subject=f'Test Message {i}',
-                    author=user_data
+                    author=user_data,
+                    channel="sports",  # message needs a channel in default
                 )
                 messages.append((message_id, data))
             
