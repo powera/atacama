@@ -75,8 +75,8 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.auth import auth_bp
     app.register_blueprint(auth_bp)
 
-    from web.blueprints.content import messages_bp
-    app.register_blueprint(messages_bp)
+    from web.blueprints.content import content_bp
+    app.register_blueprint(content_bp)
 
     from web.blueprints.submit import submit_bp
     app.register_blueprint(submit_bp)

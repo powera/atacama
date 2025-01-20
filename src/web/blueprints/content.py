@@ -37,10 +37,10 @@ from common.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-messages_bp = Blueprint('messages', __name__)
+content_bp = Blueprint('messages', __name__)
 
 
-@messages_bp.route('/channels', methods=['GET', 'POST'])
+@content_bp.route('/channels', methods=['GET', 'POST'])
 @require_auth
 def channel_preferences():
     """
@@ -73,7 +73,7 @@ def channel_preferences():
         )
 
 
-@messages_bp.route('/nav')
+@content_bp.route('/nav')
 @require_auth
 def navigation() -> str:
     """
@@ -96,7 +96,7 @@ def navigation() -> str:
         channels=available_channels
     )
 
-@messages_bp.route('/messages/<int:message_id>', methods=['GET'])
+@content_bp.route('/messages/<int:message_id>', methods=['GET'])
 @optional_auth
 def get_message(message_id: int) -> Response:
     """
@@ -142,7 +142,7 @@ def get_message(message_id: int) -> Response:
             'quotes': [{'text': q.text, 'type': q.quote_type} for q in message.quotes]
         })
 
-@messages_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
+@content_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
 @optional_auth
 def view_chain(message_id: int) -> Response:
     """
@@ -194,13 +194,13 @@ def view_chain(message_id: int) -> Response:
         } for msg in chain]
     })
 
-@messages_bp.route('/')
-@messages_bp.route('/stream')
-@messages_bp.route('/stream/older/<int:older_than_id>')
-@messages_bp.route('/stream/user/<int:user_id>')
-@messages_bp.route('/stream/user/<int:user_id>/older/<int:older_than_id>')
-@messages_bp.route('/stream/channel/<path:channel>')
-@messages_bp.route('/stream/channel/<path:channel>/older/<int:older_than_id>')
+@content_bp.route('/')
+@content_bp.route('/stream')
+@content_bp.route('/stream/older/<int:older_than_id>')
+@content_bp.route('/stream/user/<int:user_id>')
+@content_bp.route('/stream/user/<int:user_id>/older/<int:older_than_id>')
+@content_bp.route('/stream/channel/<path:channel>')
+@content_bp.route('/stream/channel/<path:channel>/older/<int:older_than_id>')
 @optional_auth
 def message_stream(older_than_id: Optional[int] = None, 
                   user_id: Optional[int] = None,
@@ -243,7 +243,7 @@ def message_stream(older_than_id: Optional[int] = None,
             channel_configs=channel_manager.channels
         )
 
-@messages_bp.route('/sitemap.xml')
+@content_bp.route('/sitemap.xml')
 def sitemap() -> Response:
     """
     Generate sitemap.xml containing all public URLs.
@@ -294,7 +294,7 @@ def sitemap() -> Response:
         return response
 
 
-@messages_bp.route('/details')
+@content_bp.route('/details')
 @optional_auth
 def landing_page():
     """Serve the landing page with basic service information and message list."""
