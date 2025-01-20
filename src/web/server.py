@@ -46,43 +46,54 @@ def load_or_create_secret_key() -> str:
         logger.error(f"Failed to access secret key file: {e}")
         raise RuntimeError(f"Could not access secret key directory: {e}")
 
-app = Flask(__name__)
-app.secret_key = load_or_create_secret_key()
+def create_app(testing: bool = False) -> Flask:
+    """
+    Create and configure Flask application instance.
+    
+    :param testing: Whether to configure app for testing
+    :return: Configured Flask app
+    """
+    app = Flask(__name__)
+    
+    if not testing:
+        app.secret_key = load_or_create_secret_key()
+    else:
+        app.secret_key = 'test-key'
+    
+    # Request logging (skip for testing)
+    if not testing:
+        from common.request_logger import RequestLogger
+        request_logger = RequestLogger(app)
 
-from common.request_logger import RequestLogger
-request_logger = RequestLogger(app)
+    # Register blueprints
+    from web.blueprints.quotes import quotes_bp
+    app.register_blueprint(quotes_bp)
 
-# Serve Quotes HTML pages
-from web.blueprints.quotes import quotes_bp
-app.register_blueprint(quotes_bp)
+    from web.blueprints.static import static_bp
+    app.register_blueprint(static_bp)
 
-# Serve CSS, JS, etc.
-from web.blueprints.static import static_bp
-app.register_blueprint(static_bp)
+    from web.blueprints.auth import auth_bp
+    app.register_blueprint(auth_bp)
 
-# Login, logout, Google Auth callbacks
-from web.blueprints.auth import auth_bp
-app.register_blueprint(auth_bp)
+    from web.blueprints.content import messages_bp
+    app.register_blueprint(messages_bp)
 
-# Message display handlers
-from web.blueprints.content import messages_bp
-app.register_blueprint(messages_bp)
+    from web.blueprints.submit import submit_bp
+    app.register_blueprint(submit_bp)
 
-# Submit message form
-from web.blueprints.submit import submit_bp
-app.register_blueprint(submit_bp)
+    from web.blueprints.admin import admin_bp
+    app.register_blueprint(admin_bp)
 
-# Admin handlers
-from web.blueprints.admin import admin_bp
-app.register_blueprint(admin_bp)
+    from web.blueprints.debug import debug_bp
+    app.register_blueprint(debug_bp)
 
-# Debug handlers
-from web.blueprints.debug import debug_bp
-app.register_blueprint(debug_bp)
+    from web.blueprints.errors import errors_bp
+    app.register_blueprint(errors_bp)
 
-# Error handlers
-from web.blueprints.errors import errors_bp
-app.register_blueprint(errors_bp)
+    return app
+
+# Create the default app instance
+app = create_app()
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
