@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, List, Tuple
 
 import constants
 
-from common.database import setup_database
+from common.database import db
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -97,9 +97,7 @@ app = create_app()
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
-    Session, db_success = setup_database()
-
-    if not db_success:
+    if not db.initialize():
         logger.error("Database initialization failed, cannot start web server")
         return
         

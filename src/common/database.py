@@ -24,8 +24,9 @@ class Database:
         self._engine = None
         self._session_factory = None
         self.initialized = False
+        self.is_test = False
 
-    def initialize(self) -> bool:
+    def initialize(self, test=False) -> bool:
         """
         Initialize database engine and create tables.
         
@@ -33,7 +34,11 @@ class Database:
         """
         if self.initialized:
             return True
-            
+        
+        if test:
+            self.is_test = True
+            self.db_url = "sqlite:///:memory:"
+
         try:
             self._engine = create_engine(self.db_url)
             
@@ -87,17 +92,3 @@ class Database:
 
 # Global database instance
 db = Database()
-
-# Legacy API for backward compatibility
-def setup_database(db_url: str = f'sqlite:///{DB_PATH}') -> tuple[sessionmaker, bool]:
-    """
-    Initialize database connection and create tables.
-    
-    :param db_url: SQLAlchemy database URL
-    :return: Tuple of (Session maker, success status)
-    """
-    global db
-    if db_url != db.db_url:
-        db = Database(db_url)
-    success = db.initialize()
-    return db.get_session(), success

@@ -20,12 +20,12 @@ class TemplateTests(unittest.TestCase):
         self.client = self.app.test_client()
         
         with self.app.app_context():
-            db.initialize()  # This will create tables in the test database
+            db.initialize(test=True)  # This will create tables in the test database
             
     def tearDown(self):
         """Clean up after tests."""
         with self.app.app_context():
-            db.initialize()  # Reset database between tests
+            db.initialize(test=True)  # Reset database between tests
 
     def create_test_user(self) -> User:
         """Helper to create a test user."""
