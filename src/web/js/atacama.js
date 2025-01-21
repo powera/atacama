@@ -107,6 +107,16 @@ class AtacamaViewer {
     }
 
     handleThemeChange(newTheme) {
+        // Clean up any active Youtube players before theme switch
+        document.querySelectorAll('.youtube-player iframe').forEach(iframe => {
+            iframe.remove();
+        });
+
+        // Re-collapse any expanded players in main content
+        document.querySelectorAll('.youtube-embed-container .colortext-content.expanded')
+            .forEach(container => {
+                container.classList.remove('expanded');
+            });
         this.theme = newTheme;
         localStorage.setItem('theme', newTheme);
         
