@@ -197,6 +197,25 @@
 .color-gray { color: var(--color-gray); font-style: italic; background: linear-gradient(to right, rgba(0, 0, 0, 0.03), transparent); }
 .color-hazel { color: var(--color-hazel); font-style: italic; background: rgba(139, 69, 19, 0.05); }
 
+
+/* Youtube embed container */
+.youtube-embed-container { 
+    color: var(--color-red);
+    display: inline-flex;
+    align-items: center;
+}
+
+.youtube-embed-container .youtube-player {
+    width: 100%;
+    max-width: 640px;
+    aspect-ratio: 16/9;
+    margin: 1rem 0;
+}
+
+[data-theme="high-contrast"] .youtube-embed-container .youtube-player {
+    margin: 0.5rem 0;
+}
+
 /* Literal text blocks */
 .literal-text {
     font-family: "Courier New", Courier, monospace;

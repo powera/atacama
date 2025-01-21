@@ -308,11 +308,43 @@ class ColorScheme:
             return f'<em>{content}</em>'
         return self.emphasis_pattern.sub(replacer, text)
 
+def _is_youtube_url(self, url: str) -> Tuple[bool, Optional[str]]:
+        """
+        Check if URL is a Youtube video and extract video ID.
+
+        :param url: URL to check
+        :return: Tuple of (is_youtube, video_id)
+        """
+        youtube_patterns = [
+            r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)',
+            r'(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)'
+        ]
+
+        for pattern in youtube_patterns:
+            match = re.match(pattern, url)
+            if match:
+                return True, match.group(1)
+        return False, None
+
     def process_urls(self, text: str) -> str:
-        """Convert URLs to clickable links."""
+        """Convert URLs to clickable links and handle Youtube embeds."""
         def replacer(match: Match) -> str:
             url = match.group(0)
             sanitized_url = url.replace('"', '%22')
+
+            # Check if it's a Youtube URL
+            is_youtube, video_id = self._is_youtube_url(url)
+            if is_youtube and video_id:
+                return (
+                    f'<span class="colorblock youtube-embed-container">'
+                    f'<span class="sigil">📺</span>'
+                    f'<span class="colortext-content">'
+                    f'<div class="youtube-player" data-video-id="{video_id}"></div>'
+                    f'</span>'
+                    f'<a href="{sanitized_url}" target="_blank" rel="noopener noreferrer">{url}</a>'
+                    f'</span>'
+                )
+
             return f'<a href="{sanitized_url}" target="_blank" rel="noopener noreferrer">{url}</a>'
         return self.url_pattern.sub(replacer, text)
 

@@ -175,6 +175,33 @@ class AtacamaViewer {
     }
 
     /**
+     * Initializes or unloads Youtube player in a container
+     */
+    handleYoutubePlayer(container, isExpanded) {
+        const player = container.querySelector('.youtube-player');
+        if (!player) return;
+        
+        const videoId = player.dataset.videoId;
+        if (!videoId) return;
+        
+        if (isExpanded && !player.querySelector('iframe')) {
+            // Create iframe when expanding
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('frameborder', '0');
+            iframe.setAttribute('allowfullscreen', '1');
+            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
+            player.appendChild(iframe);
+        } else if (!isExpanded && player.querySelector('iframe')) {
+            // Remove iframe when collapsing
+            player.innerHTML = '';
+        }
+    }
+
+
+    /**
      * Handles clicks on sigil elements, toggling content visibility in non-high-contrast mode
      */
     handleSigilClick(e) {
@@ -186,8 +213,14 @@ class AtacamaViewer {
         const content = colorBlock.querySelector('.colortext-content');
         const sigil = colorBlock.querySelector('.sigil');
         if (!content || !sigil || e.target.tagName === 'A') return;
-        
+        const isExpanding = !content.classList.contains('expanded');
         content.classList.toggle('expanded');
+
+        // Handle Youtube player if this is a video container
+        if (colorBlock.classList.contains('youtube-embed-container')) {
+            this.handleYoutubePlayer(content, isExpanding);
+        }
+
         /* Disable rotation
         * sigil.style.transform = content.classList.contains('expanded') ? 'rotate(30deg)' : '';
         * sigil.style.transition = 'transform 0.3s ease';
