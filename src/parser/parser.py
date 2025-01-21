@@ -18,31 +18,35 @@ class NodeType(Enum):
     LITERAL = auto()     # Literal text block
     TEXT = auto()        # Plain text content
 
-@dataclass(kw_only=True)
+@dataclass
 class Node:
     """Base class for all AST nodes."""
-    type: NodeType
-    children: List['Node'] = field(default_factory=list)
-    token: Optional[Token] = None
-    
-    def __repr__(self):
-        return f"{self.type.name}({len(self.children)} children)"
+    pass
 
-@dataclass(kw_only=True)
+@dataclass 
 class TextNode(Node):
     """Leaf node containing text content."""
+    type: NodeType
     content: str
+    children: List['Node'] = field(default_factory=list)
+    token: Optional[Token] = field(default=None)
 
-@dataclass(kw_only=True)
+@dataclass 
 class ColorNode(Node):
     """Node for color-formatted content."""
+    type: NodeType
     color: str
     is_line: bool  # True for line-level color, False for parenthesized
+    children: List['Node'] = field(default_factory=list)
+    token: Optional[Token] = field(default=None)
 
-@dataclass(kw_only=True)
+@dataclass
 class ListNode(Node):
     """Node representing a list structure."""
+    type: NodeType
     marker_type: str  # 'bullet', 'number', or 'arrow'
+    children: List['Node'] = field(default_factory=list)
+    token: Optional[Token] = field(default=None)
 
 class ParseError(Exception):
     """Exception raised for parsing errors."""

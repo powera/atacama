@@ -1,6 +1,6 @@
 import unittest
 from textwrap import dedent
-from .lexer import tokenize, TokenType, Token, LexerError
+from parser.lexer import tokenize, TokenType, Token, LexerError
 
 class TestAtacamaLexer(unittest.TestCase):
     """Test suite for the Atacama lexer component."""
