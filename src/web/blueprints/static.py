@@ -59,6 +59,7 @@ def serve_favicon() -> Response:
         raise
 
 @static_bp.route('/apple-touch-icon.png')
+@static_bp.route('/apple-touch-icon-precomposed.png')
 def serve_touch_icon() -> Response:
     """
     Serve the apple-touch-icon.png file from the static directory.
