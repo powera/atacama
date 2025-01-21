@@ -308,7 +308,7 @@ class ColorScheme:
             return f'<em>{content}</em>'
         return self.emphasis_pattern.sub(replacer, text)
 
-def _is_youtube_url(self, url: str) -> Tuple[bool, Optional[str]]:
+    def _is_youtube_url(self, url: str) -> Tuple[bool, Optional[str]]:
         """
         Check if URL is a Youtube video and extract video ID.
 
