@@ -48,6 +48,16 @@ class TestColorPatterns(unittest.TestCase):
         self.assertEqual(matches[0].groups(), ("red", "first", None, None))
         self.assertEqual(matches[1].groups(), (None, None, "blue", "second"))
 
+    def test_complex_nested_colors(self):
+        """Test multiple nested color patterns in a single line."""
+        text = "<red> The color is (<blue> blue) and (<green> green)."
+        sanitized = self.processor.sanitize_html(text)
+        matches = list(self.processor.color_pattern.finditer(sanitized))
+        self.assertEqual(len(matches), 3)
+        self.assertEqual(matches[0].groups(), ("red", " The color is (<blue> blue) and (<green> green).", None, None))
+        self.assertEqual(matches[1].groups(), (None, None, "blue", " blue"))
+        self.assertEqual(matches[2].groups(), (None, None, "green", " green"))
+
     def test_inline_color_pattern(self):
         """Test inline color pattern matches."""
         test_cases = [
