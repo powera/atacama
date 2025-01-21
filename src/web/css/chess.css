@@ -49,26 +49,44 @@
 
 .chess-piece {
     user-select: none;
+    font-size: calc(var(--cell-size) * 0.9);
 }
 
+/* Enhanced piece visibility */
 .white-piece {
     color: #fff;
-    text-shadow: 0 0 1px #000;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000;
 }
 
 [data-theme="dark"] .white-piece {
     color: #fff;
-    text-shadow: 0 0 2px #000;
+    text-shadow: 
+        -1.5px -1.5px 0 #000,
+         1.5px -1.5px 0 #000,
+        -1.5px  1.5px 0 #000,
+         1.5px  1.5px 0 #000;
 }
 
 .black-piece {
     color: #000;
-    text-shadow: 0 0 1px #fff;
+    text-shadow: 
+        -1px -1px 0 #fff,
+         1px -1px 0 #fff,
+        -1px  1px 0 #fff,
+         1px  1px 0 #fff;
 }
 
 [data-theme="dark"] .black-piece {
     color: #000;
-    text-shadow: 0 0 2px #fff;
+    text-shadow: 
+        -1.5px -1.5px 0 #fff,
+         1.5px -1.5px 0 #fff,
+        -1.5px  1.5px 0 #fff,
+         1.5px  1.5px 0 #fff;
 }
 
 .chess-labels {
@@ -104,20 +122,36 @@
 
 .white-to-move .turn-symbol {
     color: #fff;
-    text-shadow: 0 0 1px #000;
+    text-shadow: 
+        -1px -1px 0 #000,
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000;
 }
 
 .black-to-move .turn-symbol {
     color: #000;
-    text-shadow: 0 0 1px #fff;
+    text-shadow: 
+        -1px -1px 0 #fff,
+         1px -1px 0 #fff,
+        -1px  1px 0 #fff,
+         1px  1px 0 #fff;
 }
 
 [data-theme="dark"] .white-to-move .turn-symbol {
     color: #fff;
-    text-shadow: 0 0 2px #000;
+    text-shadow: 
+        -1.5px -1.5px 0 #000,
+         1.5px -1.5px 0 #000,
+        -1.5px  1.5px 0 #000,
+         1.5px  1.5px 0 #000;
 }
 
 [data-theme="dark"] .black-to-move .turn-symbol {
     color: #000;
-    text-shadow: 0 0 2px #fff;
+    text-shadow: 
+        -1.5px -1.5px 0 #fff,
+         1.5px -1.5px 0 #fff,
+        -1.5px  1.5px 0 #fff,
+         1.5px  1.5px 0 #fff;
 }
