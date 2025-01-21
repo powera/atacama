@@ -336,12 +336,12 @@ class ColorScheme:
             is_youtube, video_id = self._is_youtube_url(url)
             if is_youtube and video_id:
                 return (
+                    f'<a href="{sanitized_url}" target="_blank" rel="noopener noreferrer">{url}</a>'
                     f'<span class="colorblock youtube-embed-container">'
                     f'<span class="sigil">📺</span>'
                     f'<span class="colortext-content">'
                     f'<div class="youtube-player" data-video-id="{video_id}"></div>'
                     f'</span>'
-                    f'<a href="{sanitized_url}" target="_blank" rel="noopener noreferrer">{url}</a>'
                     f'</span>'
                 )
 
