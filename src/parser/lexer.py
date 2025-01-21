@@ -16,15 +16,21 @@ class TokenType(Enum):
     ARROW_LIST_MARKER = auto()
 
     # Block structure
-    MULTI_QUOTE_START = auto()
-    MULTI_QUOTE_END = auto()
+    MLQ_START = auto()  # <<< multi-line quote blocks >>>
+    MLQ_END = auto()
     PARENTHESIS_START = auto()
     PARENTHESIS_END = auto()
 
     # Color tags with context
-    COLOR_LINE_TAG = auto()
-    COLOR_PAREN_TAG = auto()
+    COLOR_BLOCK_TAG = auto()    # At line start
+    COLOR_INLINE_TAG = auto()   # Within parentheses
 
+    # Special inline formatting
+    EMPHASIS = auto()       # *emphasized text*
+    TEMPLATE_PGN = auto()   # {{pgn|...}}
+    TEMPLATE_ISBN = auto()  # {{isbn|...}}
+    TEMPLATE_WIKIDATA = auto()  # {{wikidata|...}}
+    
     # Special content
     CHINESE_TEXT = auto()
     URL = auto()
@@ -151,6 +157,30 @@ class AtacamaLexer:
             
         return None
 
+    def handle_emphasis(self) -> Optional[Token]:
+        """Process emphasized text (*like this*)."""
+        if self.current_char != '*' or self.peek() == ' ':  # Not emphasis if space after *
+            return None
+            
+        # Remember start position
+        start_line, start_col = self.line, self.column
+        self.advance()  # Skip opening *
+        
+        # Collect text until closing *
+        text = []
+        while self.current_char and self.current_char != '*' and self.current_char != '\n':
+            text.append(self.current_char)
+            self.advance()
+            
+        if self.current_char == '*' and len(text) <= 40:  # Max length for emphasis
+            self.advance()  # Skip closing *
+            return Token(TokenType.EMPHASIS, ''.join(text), start_line, start_col)
+            
+        # Not valid emphasis, reset and return None
+        self.pos = start_col
+        self.advance()
+        return None
+
     def handle_color_tag(self) -> Optional[Token]:
         """Process color tags with context awareness."""
         if self.current_char != '<':
@@ -175,7 +205,7 @@ class AtacamaLexer:
                 # Determine tag type based on context
                 if self.at_line_start or (self.in_parentheses > 0 and self.text[self.pos-len(tag_str)-1] == '('):
                     return Token(
-                        TokenType.COLOR_LINE_TAG if self.at_line_start else TokenType.COLOR_PAREN_TAG,
+                        TokenType.COLOR_BLOCK_TAG if self.at_line_start else TokenType.COLOR_INLINE_TAG,
                         tag_str,
                         line,
                         col
@@ -186,8 +216,49 @@ class AtacamaLexer:
         self.advance()
         return None
 
-    def handle_multi_quote(self) -> Optional[Token]:
-        """Process multi-quote block markers."""
+    def handle_template(self) -> Optional[Token]:
+        """Process template tags like {{pgn|...}} {{isbn|...}} {{wikidata|...}}."""
+        if self.current_char != '{' or self.peek() != '{':
+            return None
+            
+        start_line, start_col = self.line, self.column
+        self.advance()  # Skip first {
+        self.advance()  # Skip second {
+        
+        # Read template name
+        template = []
+        while self.current_char and self.current_char != '|' and self.current_char != '}':
+            template.append(self.current_char)
+            self.advance()
+            
+        if self.current_char != '|':
+            return None
+            
+        template_name = ''.join(template)
+        content = []
+        
+        self.advance()  # Skip |
+        while self.current_char and not (self.current_char == '}' and self.peek() == '}'):
+            content.append(self.current_char)
+            self.advance()
+            
+        if self.current_char == '}' and self.peek() == '}':
+            self.advance()  # Skip first }
+            self.advance()  # Skip second }
+            
+            template_type = {
+                'pgn': TokenType.TEMPLATE_PGN,
+                'isbn': TokenType.TEMPLATE_ISBN,
+                'wikidata': TokenType.TEMPLATE_WIKIDATA
+            }.get(template_name)
+            
+            if template_type:
+                return Token(template_type, ''.join(content), start_line, start_col)
+                
+        return None
+
+    def handle_mlq(self) -> Optional[Token]:
+        """Process MLQ (multi-line quote) block markers."""
         if self.current_char != '<' and self.current_char != '>':
             return None
             
@@ -199,13 +270,13 @@ class AtacamaLexer:
             self.advance()
             self.advance()
             self.advance()
-            return Token(TokenType.MULTI_QUOTE_START, '<<<', line, col)
+            return Token(TokenType.MLQ_START, '<<<', line, col)
             
         if char == '>' and self.peek() == '>' and self.peek(2) == '>':
             self.advance()
             self.advance()
             self.advance()
-            return Token(TokenType.MULTI_QUOTE_END, '>>>', line, col)
+            return Token(TokenType.MLQ_END, '>>>', line, col)
             
         return None
 
@@ -243,7 +314,7 @@ class AtacamaLexer:
         return Token(TokenType.CHINESE_TEXT, ''.join(chars), line, col)
 
     def handle_url(self) -> Optional[Token]:
-        """Process URLs using regex pattern matching."""
+        """Process URLs."""
         if self.current_char != 'h':
             return None
             
@@ -263,74 +334,112 @@ class AtacamaLexer:
     def get_next_token(self) -> Optional[Token]:
         """Get the next token from the input stream."""
         while self.current_char is not None:
-            # Track position for error reporting
             line, column = self.line, self.column
 
-            # Handle whitespace
-            if self.current_char.isspace() and self.current_char != '\n':
-                whitespace = []
-                while self.current_char and self.current_char.isspace() and self.current_char != '\n':
-                    whitespace.append(self.current_char)
-                    self.advance()
-                return Token(TokenType.WHITESPACE, ''.join(whitespace), line, column)
+            # Skip non-significant whitespace except newlines
+            while self.current_char and self.current_char.isspace() and self.current_char != '\n':
+                self.advance()
+
+            # Return None if we've hit the end
+            if self.current_char is None:
+                return None
 
             # Handle newlines
             if self.current_char == '\n':
                 self.advance()
                 return Token(TokenType.NEWLINE, '\n', line, column)
 
-            # Try all token handlers in priority order
-            for handler in [
-                self.handle_section_break,
-                self.handle_multi_quote,
-                self.handle_list_marker,
-                self.handle_color_tag,
-                self.handle_literal,
-                self.handle_url,
-                self.handle_chinese
-            ]:
-                if token := handler():
+            # Check first character to determine which handlers to try
+            if self.current_char == '-':
+                if token := self.handle_section_break():
                     return token
-
-            # Handle parentheses
-            if self.current_char == '(':
+                    
+            elif self.current_char == '<':
+                # MLQ blocks, color tags, or literal text
+                if self.peek() == '<':
+                    if self.peek(2) == '<':
+                        if token := self.handle_mlq():
+                            return token
+                    else:
+                        if token := self.handle_literal():
+                            return token
+                else:
+                    if token := self.handle_color_tag():
+                        return token
+                        
+            elif self.current_char == '>':
+                if self.peek() == '>':
+                    if self.peek(2) == '>':
+                        if token := self.handle_mlq():
+                            return token
+                    else:
+                        if token := self.handle_literal():
+                            return token
+                        
+            elif self.at_line_start and self.current_char in '*#>':
+                if token := self.handle_list_marker():
+                    return token
+                    
+            elif self.current_char == '{' and self.peek() == '{':
+                if token := self.handle_template():
+                    return token
+                    
+            elif self.current_char == '*' and not self.peek().isspace():
+                if token := self.handle_emphasis():
+                    return token
+                    
+            elif self.current_char == 'h' and self.peek() == 't':
+                if token := self.handle_url():
+                    return token
+                    
+            elif '\u4e00' <= self.current_char <= '\u9fff':
+                if token := self.handle_chinese():
+                    return token
+                    
+            elif self.current_char == '(':
                 self.in_parentheses += 1
                 self.advance()
                 return Token(TokenType.PARENTHESIS_START, '(', line, column)
                 
-            if self.current_char == ')':
+            elif self.current_char == ')':
                 self.in_parentheses = max(0, self.in_parentheses - 1)
                 self.advance()
                 return Token(TokenType.PARENTHESIS_END, ')', line, column)
-
-            # Handle wikilinks
-            if self.current_char == '[' and self.peek() == '[':
+                
+            elif self.current_char == '[' and self.peek() == '[':
                 self.advance()
                 self.advance()
                 return Token(TokenType.WIKILINK_START, '[[', line, column)
                 
-            if self.current_char == ']' and self.peek() == ']':
+            elif self.current_char == ']' and self.peek() == ']':
                 self.advance()
                 self.advance()
                 return Token(TokenType.WIKILINK_END, ']]', line, column)
 
-            # Collect regular text
-            if self.current_char:
-                text = []
-                while self.current_char and not (
-                    self.current_char in {'<', '>', '[', ']', '(', ')', '-', '\n', ' ', '\t', '*', '#'}
-                    or '\u4e00' <= self.current_char <= '\u9fff'
-                    or (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p')
-                ):
-                    text.append(self.current_char)
-                    self.advance()
-                if text:
-                    return Token(TokenType.TEXT, ''.join(text), line, column)
+            # Collect regular text until we hit a token start
+            text = []
+            while self.current_char and not (
+                self.current_char == '\n' or  # Break on newlines
+                self.current_char in '()[]' or  # Break on brackets
+                (self.current_char == '<' and self.peek() in {'<', '/'}) or
+                (self.current_char == '{' and self.peek() == '{') or
+                (self.current_char == '[' and self.peek() == '[') or
+                (self.at_line_start and self.current_char in '*#>') or  # List markers at start
+                (self.current_char == '*' and not self.peek().isspace()) or
+                (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p') or
+                ('\u4e00' <= self.current_char <= '\u9fff')
+            ):
+                text.append(self.current_char)
+                self.advance()
+                
+            if text:
+                return Token(TokenType.TEXT, ''.join(text), line, column)
 
-            # Skip unrecognized characters
+            # Skip any unrecognized characters
             self.advance()
 
         return None
+
 
     def tokenize(self, text: str) -> Generator[Token, None, None]:
         """Convert input text into a stream of tokens."""
@@ -338,6 +447,8 @@ class AtacamaLexer:
         while token := self.get_next_token():
             yield token
 
+
+# Helper function that returns a list instead of a generator
 def tokenize(text: str) -> List[Token]:
     """Convenience function to tokenize text and return a list of tokens."""
     lexer = AtacamaLexer()

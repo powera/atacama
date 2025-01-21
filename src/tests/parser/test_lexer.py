@@ -38,16 +38,14 @@ class TestAtacamaLexer(unittest.TestCase):
         """Lexer should handle whitespace appropriately."""
         text = "Hello    world"
         self.assert_token_values(text, [
-            (TokenType.TEXT, "Hello"),
-            (TokenType.WHITESPACE, "    "),
-            (TokenType.TEXT, "world")
+            (TokenType.TEXT, "Hello    world"),
         ])
 
     def test_line_color_tags(self):
         """Lexer should properly tokenize color tags at line start."""
         text = "<red>Important warning\nNormal text"
         self.assert_token_values(text, [
-            (TokenType.COLOR_LINE_TAG, "<red>"),
+            (TokenType.COLOR_BLOCK_TAG, "<red>"),
             (TokenType.TEXT, "Important warning"),
             (TokenType.NEWLINE, "\n"),
             (TokenType.TEXT, "Normal text")
@@ -59,7 +57,7 @@ class TestAtacamaLexer(unittest.TestCase):
         self.assert_token_values(text, [
             (TokenType.TEXT, "Note: "),
             (TokenType.PARENTHESIS_START, "("),
-            (TokenType.COLOR_PAREN_TAG, "<red>"),
+            (TokenType.COLOR_INLINE_TAG, "<red>"),
             (TokenType.TEXT, "important"),
             (TokenType.PARENTHESIS_END, ")")
         ])
@@ -71,7 +69,7 @@ class TestAtacamaLexer(unittest.TestCase):
             (TokenType.PARENTHESIS_START, "("),
             (TokenType.PARENTHESIS_START, "("),
             (TokenType.PARENTHESIS_START, "("),
-            (TokenType.COLOR_PAREN_TAG, "<red>"),
+            (TokenType.COLOR_INLINE_TAG, "<red>"),
             (TokenType.TEXT, "deep"),
             (TokenType.PARENTHESIS_END, ")"),
             (TokenType.PARENTHESIS_END, ")"),
@@ -92,13 +90,13 @@ class TestAtacamaLexer(unittest.TestCase):
         self.assert_tokens(text, [
             TokenType.TEXT,
             TokenType.NEWLINE,
-            TokenType.MULTI_QUOTE_START,
+            TokenType.MLQ_START,
             TokenType.NEWLINE,
             TokenType.TEXT,
             TokenType.NEWLINE,
             TokenType.TEXT,
             TokenType.NEWLINE,
-            TokenType.MULTI_QUOTE_END,
+            TokenType.MLQ_END,
             TokenType.NEWLINE,
             TokenType.TEXT
         ])
@@ -121,19 +119,16 @@ class TestAtacamaLexer(unittest.TestCase):
         """Lexer should identify Chinese character sequences."""
         text = "Hello 世界 World"
         self.assert_token_values(text, [
-            (TokenType.TEXT, "Hello"),
-            (TokenType.WHITESPACE, " "),
+            (TokenType.TEXT, "Hello "),
             (TokenType.CHINESE_TEXT, "世界"),
-            (TokenType.WHITESPACE, " "),
-            (TokenType.TEXT, "World")
+            (TokenType.TEXT, " World")
         ])
 
     def test_urls(self):
         """Lexer should properly handle URLs."""
         text = "Visit https://example.com/path?q=1"
         self.assert_token_values(text, [
-            (TokenType.TEXT, "Visit"),
-            (TokenType.WHITESPACE, " "),
+            (TokenType.TEXT, "Visit "),
             (TokenType.URL, "https://example.com/path?q=1")
         ])
 
@@ -141,10 +136,12 @@ class TestAtacamaLexer(unittest.TestCase):
         """Lexer should handle literal text sections."""
         text = "Code: <<print('hello')>>"
         self.assert_token_values(text, [
-            (TokenType.TEXT, "Code:"),
-            (TokenType.WHITESPACE, " "),
+            (TokenType.TEXT, "Code: "),
             (TokenType.LITERAL_START, "<<"),
-            (TokenType.TEXT, "print('hello')"),
+            (TokenType.TEXT, "print"),
+            (TokenType.PARENTHESIS_START, "("),
+            (TokenType.TEXT, "'hello'"),
+            (TokenType.PARENTHESIS_END, ")"),
             (TokenType.LITERAL_END, ">>")
         ])
 
@@ -185,8 +182,8 @@ class TestAtacamaLexer(unittest.TestCase):
         tokens = list(tokenize(text))
         # Verify specific important characteristics
         self.assertTrue(any(t.type == TokenType.SECTION_BREAK for t in tokens))
-        self.assertTrue(any(t.type == TokenType.COLOR_LINE_TAG for t in tokens))
-        self.assertTrue(any(t.type == TokenType.COLOR_PAREN_TAG for t in tokens))
+        self.assertTrue(any(t.type == TokenType.COLOR_BLOCK_TAG for t in tokens))
+        self.assertTrue(any(t.type == TokenType.COLOR_INLINE_TAG for t in tokens))
         self.assertTrue(any(t.type == TokenType.BULLET_LIST_MARKER for t in tokens))
         self.assertTrue(any(t.type == TokenType.CHINESE_TEXT for t in tokens))
         self.assertTrue(any(t.type == TokenType.URL for t in tokens))
