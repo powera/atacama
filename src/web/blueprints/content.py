@@ -62,7 +62,7 @@ def channel_preferences():
             user.channel_preferences = json.dumps(new_prefs)
             db_session.commit()
             flash('Channel preferences updated successfully', 'success')
-            return redirect(url_for('messages.channel_preferences'))
+            return redirect(url_for('content.channel_preferences'))
             
         return render_template(
             'channel_preferences.html',

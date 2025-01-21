@@ -131,4 +131,4 @@ def handle_submit():
         message_id = message.id  # Get ID before session closes
     
     flash('Message submitted successfully!', 'success')
-    return redirect(url_for('messages.get_message', message_id=message_id))
+    return redirect(url_for('content.get_message', message_id=message_id))

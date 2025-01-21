@@ -61,7 +61,7 @@ def list_users():
     """Show list of users and their channel access."""
     if not is_admin():
         flash('Admin access required')
-        return redirect(url_for('messages.landing_page'))
+        return redirect(url_for('content.landing_page'))
         
     with db.session() as db_session:
         # Use SQLAlchemy 2.0 style query
@@ -96,7 +96,7 @@ def grant_access(user_id: int):
     """Grant channel access to a user."""
     if not is_admin():
         flash('Admin access required')
-        return redirect(url_for('messages.landing_page'))
+        return redirect(url_for('content.landing_page'))
         
     channel = request.form.get('channel')
     if not channel:
@@ -134,7 +134,7 @@ def revoke_access(user_id: int):
     """Revoke channel access from a user."""
     if not is_admin():
         flash('Admin access required')
-        return redirect(url_for('messages.landing_page'))
+        return redirect(url_for('content.landing_page'))
         
     channel = request.form.get('channel')
     if not channel:
