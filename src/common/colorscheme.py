@@ -49,9 +49,11 @@ class ColorScheme:
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
         self.pgn_pattern = re.compile(r'\{\{pgn\|(.*?)\}\}')
         self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
-        self.multiline_quote_pattern = re.compile(
-            r'(?:^|\n)[ \t]*&lt;&lt;&lt;[ \t]*\n(.*?)(?:\n&gt;&gt;&gt;|\n[ \t]*----[ \t]*(?:\r\n|$))',
-            re.DOTALL | re.MULTILINE)
+        self.multiline_block_pattern = re.compile(
+            r'&lt;&lt;&lt;[ \t]*([^\n].*?)(?:&gt;&gt;&gt;|(\n[ \t]*----[ \t]*(?:\r?\n|$)))',
+            re.DOTALL)
+        self.paragraph_break_pattern = re.compile(r'\n\s*\n')
+
         self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
         self.emphasis_pattern = re.compile(r'\*([^\n*]{1,40})\*')
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
@@ -164,6 +166,7 @@ class ColorScheme:
         """
         def replacer(match: Match) -> str:
             content = match.group(1)
+            section_break = match.group(2)
             
             # Split content into paragraphs on empty lines
             paragraphs = [p.strip().replace('\n', ' ') 
@@ -172,12 +175,15 @@ class ColorScheme:
             # Join paragraphs with proper HTML structure
             content_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
             
-            return (f'<div class="mlq">'
-                    f'<button class="mlq-collapse" aria-label="Toggle visibility">'
-                    f'<span class="mlq-collapse-icon">−</span>'
-                    f'</button>'
-                    f'<div class="mlq-content">{content_html}</div>'
-                    f'</div>')
+            result = (f'<div class="mlq">'
+                      f'<button type="button" class="mlq-collapse" aria-label="Toggle visibility">'
+                      f'<span class="mlq-collapse-icon">−</span>'
+                      f'</button>'
+                      f'<div class="mlq-content">{content_html}</div>'
+                      f'</div>')
+            if section_break:
+                result += "\n----"
+            return result
             
         return self.multiline_block_pattern.sub(replacer, text)
 
