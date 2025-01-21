@@ -1,5 +1,10 @@
 from typing import Dict, Optional, List
 from .parser import Node, NodeType, TextNode, ColorNode, ListNode
+from common.colorblocks import (
+    create_color_block, create_chinese_annotation, create_list_item,
+    create_list_container, create_multiline_block, create_literal_text,
+    create_url_link, create_wiki_link, create_emphasis
+)
 
 class HTMLGenerator:
     """
@@ -11,23 +16,6 @@ class HTMLGenerator:
     priority and multi-quote blocks as the second highest.
     """
     
-    # Color definitions with their associated emojis and descriptions
-    COLORS = {
-        'xantham': ('🔥', 'Sarcastic/overconfident'),
-        'red': ('💡', 'Forceful/certain'),
-        'orange': ('⚔️', 'Counterpoint'),
-        'yellow': ('💬', 'Quotes'),
-        'quote': ('💬', 'Quotes'),
-        'green': ('⚙️', 'Technical'),
-        'teal': ('🤖', 'LLM output'),
-        'blue': ('✨', 'Voice from beyond'),
-        'violet': ('📣', 'Serious'),
-        'music': ('🎵', 'Musical'),
-        'mogue': ('🌎', 'Actions taken'),
-        'gray': ('💭', 'Past stories'),
-        'hazel': ('🎭', 'Character voice')
-    }
-
     def __init__(self, annotations: Optional[Dict] = None):
         """Initialize the HTML generator with optional Chinese text annotations."""
         self.annotations = annotations or {}
@@ -51,12 +39,8 @@ class HTMLGenerator:
     
     def _generate_multi_quote(self, node: Node) -> str:
         """Generate HTML for a multi-paragraph quote block."""
-        content = '\n'.join(self.generate(child) for child in node.children)
-        return (
-            f'<blockquote class="multi-quote">\n'
-            f'{content}\n'
-            f'</blockquote>'
-        )
+        paragraphs = [self.generate(child) for child in node.children]
+        return create_multiline_block(paragraphs)
     
     def _generate_paragraph(self, node: Node) -> str:
         """Generate HTML for a paragraph node."""
@@ -72,10 +56,9 @@ class HTMLGenerator:
         items = []
         for child in node.children:
             item_content = self.generate(child)
-            class_name = f"{node.marker_type}-list"
-            items.append(f'<li class="{class_name}">{item_content}</li>')
-        
-        return f'<ul class="atacama-list">\n{"".join(items)}\n</ul>'
+            items.append(create_list_item(item_content, node.marker_type))
+            
+        return create_list_container(items)
     
     def _generate_list_item(self, node: Node) -> str:
         """Generate HTML for a list item."""
@@ -84,64 +67,33 @@ class HTMLGenerator:
     def _generate_color_block(self, node: ColorNode) -> str:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)
-        emoji, desc = self.COLORS.get(node.color, ('❓', 'Unknown'))
-        
-        # Different structure for line-level vs parenthesized colors
-        if node.is_line:
-            return (
-                f'<div class="color-{node.color} color-line">\n'
-                f'<span class="sigil" title="{desc}">{emoji}</span>\n'
-                f'<span class="colortext-content">{content}</span>\n'
-                f'</div>'
-            )
-        else:
-            return (
-                f'<span class="color-{node.color} color-paren">'
-                f'<span class="sigil" title="{desc}">{emoji}</span>'
-                f'<span class="colortext-content">({content})</span>'
-                f'</span>'
-            )
+        return create_color_block(node.color, content, node.is_line)
     
     def _generate_chinese(self, node: Node) -> str:
         """Generate HTML for Chinese text with annotations."""
         text = node.token.value
         if text in self.annotations:
             ann = self.annotations[text]
-            pinyin = ann["pinyin"].replace('"', '&quot;')
-            definition = ann["definition"].replace('"', '&quot;')
-            return (
-                f'<span class="annotated-chinese" '
-                f'data-pinyin="{pinyin}" '
-                f'data-definition="{definition}">'
-                f'{text}</span>'
+            return create_chinese_annotation(
+                hanzi=text,
+                pinyin=ann["pinyin"],
+                definition=ann["definition"]
             )
-        return f'<span class="annotated-chinese">{text}</span>'
+        return create_chinese_annotation(hanzi=text)
     
     def _generate_url(self, node: Node) -> str:
         """Generate HTML for a URL with proper attributes."""
-        url = node.token.value
-        sanitized_url = url.replace('"', '%22')  # Basic URL sanitization
-        return (
-            f'<a href="{sanitized_url}" '
-            f'class="external-link" '
-            f'target="_blank" '
-            f'rel="noopener noreferrer">{url}</a>'
-        )
+        return create_url_link(node.token.value)
     
     def _generate_wikilink(self, node: Node) -> str:
         """Generate HTML for a wiki-style link."""
         content = self.generate(node.children[0])
-        url = content.replace(' ', '_').replace('"', '%22')
-        return (
-            f'<a href="https://en.wikipedia.org/wiki/{url}" '
-            f'class="wikilink" '
-            f'target="_blank">{content}</a>'
-        )
+        return create_wiki_link(content)
     
     def _generate_literal(self, node: Node) -> str:
         """Generate HTML for literal text blocks."""
         content = self.generate(node.children[0])
-        return f'<span class="literal-text">{content}</span>'
+        return create_literal_text(content)
     
     def _generate_text(self, node: TextNode) -> str:
         """Generate HTML for plain text content."""
