@@ -49,6 +49,9 @@ class ColorScheme:
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
         self.pgn_pattern = re.compile(r'\{\{pgn\|(.*?)\}\}')
         self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
+        self.multiline_quote_pattern = re.compile(
+            r'(?:^|\n)[ \t]*&lt;&lt;&lt;[ \t]*\n(.*?)(?:\n&gt;&gt;&gt;|\n[ \t]*----[ \t]*(?:\r\n|$))',
+            re.DOTALL | re.MULTILINE)
         self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
         self.emphasis_pattern = re.compile(r'\*([^\n*]{1,40})\*')
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
@@ -150,6 +153,34 @@ class ColorScheme:
                    f'</span>')
                    
         return self.inline_color_pattern.sub(replace_inline, processed)
+
+
+    def process_multiline_blocks(self, text: str) -> str:
+        """
+        Process multi-line text blocks.
+        
+        :param text: Text to process
+        :return: Processed text
+        """
+        def replacer(match: Match) -> str:
+            content = match.group(1)
+            
+            # Split content into paragraphs on empty lines
+            paragraphs = [p.strip().replace('\n', ' ') 
+                         for p in self.paragraph_break_pattern.split(content) if p.strip()]
+            
+            # Join paragraphs with proper HTML structure
+            content_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
+            
+            return (f'<div class="mlq">'
+                    f'<button class="mlq-collapse" aria-label="Toggle visibility">'
+                    f'<span class="mlq-collapse-icon">−</span>'
+                    f'</button>'
+                    f'<div class="mlq-content">{content_html}</div>'
+                    f'</div>')
+            
+        return self.multiline_block_pattern.sub(replacer, text)
+
 
     def process_literal_text(self, text: str) -> str:
         """
@@ -393,6 +424,9 @@ class ColorScheme:
             for pos, annotation in llm_annotations.items():
                 content = content[:int(pos)] + "🔍✨💡" + content[int(pos):]
         
+        # Process multi-line blocks (before color tags)
+        content = self.process_multiline_blocks(content)
+
         # Process lists
         content = self.process_lists(content)
        

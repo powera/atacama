@@ -169,6 +169,10 @@ class AtacamaViewer {
             if (e.target.closest('.annotated-chinese')) {
                 this.handleAnnotationClick(e);
             }
+
+            if (e.target.closest('.mlq-collapse')) {
+                this.handleMlqCollapse(e);
+            }
         });
 
         document.addEventListener('keydown', this.handleKeyDown);
@@ -249,6 +253,19 @@ class AtacamaViewer {
         });
         
         inlineAnnotation.classList.toggle('expanded');
+    }
+
+
+    /**
+     * Handles clicks on mlq collapse buttons
+     */
+    handleMlqCollapse(e) {
+        const button = e.target.closest('.mlq-collapse');
+        const block = button.closest('.mlq');
+        const icon = button.querySelector('.mlq-collapse-icon');
+        
+        block.classList.toggle('collapsed');
+        icon.textContent = block.classList.contains('collapsed') ? '+' : '−';
     }
 
     /**
