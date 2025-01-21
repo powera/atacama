@@ -55,7 +55,7 @@ class ColorScheme:
         self.paragraph_break_pattern = re.compile(r'\n\s*\n')
 
         self.list_pattern = re.compile(
-            r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$',
+            r'^[ \t]*([*#]|&gt;)[ \t]+(.+?)[ \t]*$',
             re.MULTILINE)  # multiline for {^$} to work on per-line basis
         self.emphasis_pattern = re.compile(r'\*([^\n*]{1,40})\*')
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')

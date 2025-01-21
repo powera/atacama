@@ -126,8 +126,7 @@ class TestListPattern(unittest.TestCase):
         test_cases = [
             ("* bullet point", [("*", "bullet point")]),
             ("# numbered item", [("#", "numbered item")]),
-            ("> arrow item", [(">", "arrow item")]),
-            ("> html arrow", [(">", "html arrow")]),
+            ("> arrow item", [("&gt;", "arrow item")]),
             ("not a list", [])
         ]
         
@@ -143,12 +142,12 @@ class TestListPattern(unittest.TestCase):
         test_cases = [
             ("  * indented bullet", [("*", "indented bullet")]),
             ("\t# tabbed number", [("#", "tabbed number")]),
-            ("    > deeply indented", [(">", "deeply indented")])
+            ("    > deeply indented", [("&gt;", "deeply indented")])
         ]
         
         for text, expected in test_cases:
             sanitized = self.processor.sanitize_html(text)
-            matches = list(self.processor.list_pattern.finditer(text))
+            matches = list(self.processor.list_pattern.finditer(sanitized))
             self.assertEqual(len(matches), len(expected))
             for match, (e_marker, e_content) in zip(matches, expected):
                 self.assertEqual(match.groups(), (e_marker, e_content))
