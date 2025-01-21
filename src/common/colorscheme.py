@@ -38,13 +38,12 @@ class ColorScheme:
         self.color_pattern = re.compile(
             fr'(?:^[ \t]*&lt;({color_names})&gt;(.+?)(?:\r?\n|$))|'  # Start of line
             fr'\([ \t]*&lt;({color_names})&gt;(.*?)[ \t]*\)',  # In parentheses
-            re.DOTALL
+            re.MULTILINE
         )
         
         # Pattern for inline color tags
         self.inline_color_pattern = re.compile(
-            fr'&lt;({color_names})&gt;(.+?)(?:\r?\n|$)',
-            re.DOTALL
+            fr'&lt;({color_names})&gt;(.+?)(?:\r?\n|$)'
         )
         
         self.chinese_pattern = re.compile(r'[\u4e00-\u9fff]+')
@@ -52,10 +51,12 @@ class ColorScheme:
         self.section_break_pattern = re.compile(r'[ \t]*----[ \t]*(?:\r\n|\r|\n|$)')
         self.multiline_block_pattern = re.compile(
             r'&lt;&lt;&lt;[ \t]*([^\n].*?)(?:&gt;&gt;&gt;|(\n[ \t]*----[ \t]*(?:\r?\n|$)))',
-            re.DOTALL)
+            re.DOTALL)  # DOTALL for .* to capture text on multiple lines
         self.paragraph_break_pattern = re.compile(r'\n\s*\n')
 
-        self.list_pattern = re.compile(r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$', re.MULTILINE)
+        self.list_pattern = re.compile(
+            r'^[ \t]*([*#>]|&gt;)[ \t]+(.+?)[ \t]*$',
+            re.MULTILINE)  # multiline for {^$} to work on per-line basis
         self.emphasis_pattern = re.compile(r'\*([^\n*]{1,40})\*')
         self.url_pattern = re.compile(r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*')
         self.wikilink_pattern = re.compile(r'\[\[([^]]+)\]\]')
@@ -204,8 +205,7 @@ class ColorScheme:
             Text with literal sections wrapped in styled spans
         """
         pattern = re.compile(
-            r'&lt;&lt;(.*?)&gt;&gt;',
-            re.MULTILINE | re.DOTALL
+            r'&lt;&lt;(.*?)&gt;&gt;'
         )
         
         def replacer(match: Match) -> str:
@@ -391,18 +391,3 @@ class ColorScheme:
                 paragraphs.append(para.strip())
         
         return '\n'.join(paragraphs)
-
-    def extract_color_content(self, content: str, color: str) -> list[str]:
-        """
-        Extract content from specified color tags.
-        
-        :param content: Text content to process
-        :param color: Color tag name to extract
-        :return: List of text content found within the specified color tags
-        """
-        pattern = re.compile(
-            fr'<{color}>(.*?)(?:\r?\n|$)',
-            re.MULTILINE | re.DOTALL
-        )
-        matches = pattern.finditer(content)
-        return [match.group(1).strip() for match in matches if match.group(1).strip()]
