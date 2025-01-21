@@ -21,6 +21,7 @@ CORE_FILES = {
     'src/common/telemetry.py',
     'src/common/auth.py',
     'src/common/colorscheme.py',
+    'src/common/colorblocks.py',
     'src/constants.py',
     
     # API integrations
@@ -120,7 +121,7 @@ def get_project_files() -> str:
 
 def update_claude_core() -> None:
     """Update claude_core directory with flattened core files and file listing."""
-    claude_core = Path.cwd() / 'staging'
+    claude_core = Path.cwd() / 'claude' / 'staging'
     ensure_clean_dir(claude_core)
     file_paths = CORE_FILES | ALL_TEMPLATES
     
