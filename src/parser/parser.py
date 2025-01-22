@@ -18,35 +18,31 @@ class NodeType(Enum):
     LITERAL = auto()     # Literal text block
     TEXT = auto()        # Plain text content
 
-@dataclass
 class Node:
     """Base class for all AST nodes."""
-    pass
+    def __init__(self, type: NodeType, children: List['Node'] = None, token: Optional[Token] = None):
+        self.type = type
+        self.children = children or []
+        self.token = token
 
-@dataclass 
 class TextNode(Node):
     """Leaf node containing text content."""
-    type: NodeType
-    content: str
-    children: List['Node'] = field(default_factory=list)
-    token: Optional[Token] = field(default=None)
+    def __init__(self, type: NodeType, content: str, children: List['Node'] = None, token: Optional[Token] = None):
+        super().__init__(type, children, token)
+        self.content = content
 
-@dataclass 
 class ColorNode(Node):
     """Node for color-formatted content."""
-    type: NodeType
-    color: str
-    is_line: bool  # True for line-level color, False for parenthesized
-    children: List['Node'] = field(default_factory=list)
-    token: Optional[Token] = field(default=None)
+    def __init__(self, type: NodeType, color: str, is_line: bool, children: List['Node'] = None, token: Optional[Token] = None):
+        super().__init__(type, children, token)
+        self.color = color
+        self.is_line = is_line  # True for line-level color, False for parenthesized
 
-@dataclass
 class ListNode(Node):
     """Node representing a list structure."""
-    type: NodeType
-    marker_type: str  # 'bullet', 'number', or 'arrow'
-    children: List['Node'] = field(default_factory=list)
-    token: Optional[Token] = field(default=None)
+    def __init__(self, type: NodeType, marker_type: str, children: List['Node'] = None, token: Optional[Token] = None):
+        super().__init__(type, children, token)
+        self.marker_type = marker_type  # 'bullet', 'number', or 'arrow'
 
 class ParseError(Exception):
     """Exception raised for parsing errors."""
