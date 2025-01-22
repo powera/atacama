@@ -206,3 +206,27 @@ def set_message_channel(message_id: int, channel_name: str) -> Tuple[bool, Optio
             error_msg = f"Database error: {str(e)}"
             logger.error(error_msg)
             return False, error_msg
+
+
+def list_uncategorized_messages() -> list:
+    """
+    Get all messages that have no channel set.
+
+    Returns:
+        List of tuples containing (id, subject) for uncategorized messages
+
+    Example:
+        >>> messages = list_uncategorized_messages()
+        >>> for id, subject in messages:
+        ...     print(f"Message {id}: {subject}")
+    """
+    with db.session() as session:
+        try:
+            messages = session.query(Email.id, Email.subject)\
+                .filter(Email.channel == None)\
+                .all()
+            return messages
+
+        except Exception as e:
+            logger.error(f"Error listing uncategorized messages: {str(e)}")
+            return []
