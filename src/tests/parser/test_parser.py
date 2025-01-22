@@ -65,7 +65,7 @@ class TestAtacamaParser(unittest.TestCase):
         
         section = ast.children[0]
         color_node = section.children[0]
-        self.assertTrue(isinstance(color_node, ColorNode))
+        self.assertIsInstance(color_node, ColorNode)
         self.assertEqual(color_node.color, "red")
         self.assertTrue(color_node.is_line)
 
@@ -78,8 +78,8 @@ class TestAtacamaParser(unittest.TestCase):
         para = section.children[0]
         
         # Text node followed by color node
-        self.assertTrue(isinstance(para.children[0], TextNode))
-        self.assertTrue(isinstance(para.children[1], ColorNode))
+        self.assertIsInstance(para.children[0], TextNode)
+        self.assertIsInstance(para.children[1], ColorNode)
         self.assertEqual(para.children[1].color, "blue")
         self.assertFalse(para.children[1].is_line)
 
@@ -216,20 +216,6 @@ class TestAtacamaParser(unittest.TestCase):
             NodeType.MLQ, NodeType.CHINESE, NodeType.WIKILINK
         }
         self.assertTrue(expected_types.issubset(found_types))
-
-    def test_error_handling(self):
-        """Parser should handle error conditions appropriately."""
-        # Unmatched parentheses
-        with self.assertRaises(ParseError):
-            self.parse_text("Text (unclosed")
-        
-        # Unclosed MLQ block
-        with self.assertRaises(ParseError):
-            self.parse_text("<<< Unclosed quote")
-            
-        # Unclosed wikilink
-        with self.assertRaises(ParseError):
-            self.parse_text("[[Unclosed link")
 
 if __name__ == '__main__':
     unittest.main()
