@@ -1,5 +1,5 @@
 from typing import Dict, Optional, List
-from .parser import Node, NodeType, TextNode, ColorNode
+from .parser import Node, NodeType, ColorNode
 from common.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
     create_list_container, create_multiline_block, create_literal_text,
@@ -95,7 +95,7 @@ class HTMLGenerator:
         content = self.generate(node.children[0])
         return create_literal_text(content)
     
-    def _generate_text(self, node: TextNode) -> str:
+    def _generate_text(self, node: Node) -> str:
         """Generate HTML for plain text content."""
         # Basic HTML escaping
         return node.content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
