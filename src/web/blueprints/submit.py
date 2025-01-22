@@ -12,6 +12,8 @@ from common.database import db
 from common.logging_config import get_logger
 from common.models import Email, get_or_create_user
 
+import parser
+
 logger = get_logger(__name__)
 color_processor = ColorScheme()
 submit_bp = Blueprint('submit', __name__)
@@ -37,10 +39,8 @@ def preview_message():
         return jsonify({'error': 'Content required'}), 400
         
     try:
-        processed_content = color_processor.process_content(
-            data['content'],
-            message=None,  # Skip database operations
-            db_session=None
+        processed_content = parser.process_message(
+            data['content']
         )
         
         return jsonify({
