@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from common.auth import require_auth
 from common.channel_config import get_channel_manager
+import common.colorblocks
 from common.colorscheme import ColorScheme
 from common.database import db
 from common.logging_config import get_logger
@@ -70,7 +71,7 @@ def show_submit_form():
         return render_template(
             'submit.html',
             recent_messages=recent_messages,
-            colors=color_processor.COLORS,
+            colors=common.colorblocks.COLORS,
             channels=channel_manager.channels,
             default_channel=channel_manager.default_channel)
 
