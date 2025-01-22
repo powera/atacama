@@ -177,9 +177,11 @@ class TestAtacamaParser(unittest.TestCase):
             Introduction
             ----
             <red>Warning:
-            * First point with [[Wiki]]
+            * First point with some text.
             * Second with (<blue>note)
             
+            Some [[Wiki]] text.
+
             <<<
             Quoted text
             More quotes
@@ -194,13 +196,14 @@ class TestAtacamaParser(unittest.TestCase):
         self.assertGreater(len(ast.children), 1)
         
         # Verify presence of key node types
-        node_types = {n.type for n in ast.children}
         expected_types = {
             NodeType.HR, NodeType.COLOR_BLOCK, 
             NodeType.LIST_ITEM, NodeType.MLQ,
             NodeType.CHINESE, NodeType.WIKILINK
         }
-        self.assertTrue(expected_types.issubset(node_types))
+        for expected_type in expected_types:
+            self.assertTrue(any(n.type == expected_type for n in ast.children),
+                f"Expected to find node type {expected_type.name}")
 
 if __name__ == '__main__':
-    unittest.main()
+      unittest.main()
