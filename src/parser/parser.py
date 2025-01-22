@@ -115,6 +115,10 @@ class AtacamaParser:
                 block = self.parse_block()
                 if block:
                     blocks.append(block)
+                    
+            # Consume any trailing newlines
+            while self.peek() and self.peek().type == TokenType.NEWLINE:
+                self.consume()
         
         if self.peek() and self.peek().type == TokenType.SECTION_BREAK:
             self.consume()  # Consume section break
@@ -133,6 +137,8 @@ class AtacamaParser:
         while self.peek() and self.peek().type != TokenType.MLQ_END:
             if block := self.parse_block():
                 quote.children.append(block)
+            elif self.peek().type == TokenType.NEWLINE:
+                self.consume()
         
         if self.peek():
             self.expect(TokenType.MLQ_END)
@@ -151,7 +157,7 @@ class AtacamaParser:
             return self.parse_list()
             
         # Handle line-level color tags
-        if self.peek().type == TokenType.COLOR_BLOCK_TAG:
+        if self.peek().type == TokenType.COLOR_TAG:
             return self.parse_color_line()
             
         return self.parse_paragraph()
@@ -188,7 +194,7 @@ class AtacamaParser:
     
     def parse_color_line(self) -> Node:
         """Parse a line-level color block."""
-        token = self.expect(TokenType.COLOR_BLOCK_TAG)
+        token = self.consume()
         color = token.value.strip('<>')
         
         content = self.parse_inline_content()
@@ -232,34 +238,27 @@ class AtacamaParser:
 
             elif token.type == TokenType.EMPHASIS:
                 flush_text()
-                nodes.append(Node(
+                nodes.append(TextNode(
                     type=NodeType.EMPHASIS,
-                    token=self.consume()
+                    content=self.consume().value
                 ))
                 
-            elif token.type in {TokenType.TEMPLATE_PGN, TokenType.TEMPLATE_ISBN, TokenType.TEMPLATE_WIKIDATA}:
-                flush_text()
-                nodes.append(Node(
-                    type=NodeType.TEMPLATE,
-                    token=self.consume()
-                ))
-            
             elif token.type == TokenType.PARENTHESIS_START:
                 flush_text()
                 nodes.append(self.parse_paren_content())
             
             elif token.type == TokenType.CHINESE_TEXT:
                 flush_text()
-                nodes.append(Node(
+                nodes.append(TextNode(
                     type=NodeType.CHINESE,
-                    token=self.consume()
+                    content=self.consume().value
                 ))
             
             elif token.type == TokenType.URL:
                 flush_text()
-                nodes.append(Node(
+                nodes.append(TextNode(
                     type=NodeType.URL,
-                    token=self.consume()
+                    content=self.consume().value
                 ))
             
             elif token.type == TokenType.WIKILINK_START:
@@ -270,7 +269,7 @@ class AtacamaParser:
                 flush_text()
                 nodes.append(self.parse_literal())
             
-            elif token.type in {TokenType.TEXT, TokenType.WHITESPACE}:
+            elif token.type == TokenType.TEXT:
                 current_text.append(self.consume().value)
             
             else:
@@ -292,7 +291,7 @@ class AtacamaParser:
         self.current_paren_depth += 1
         
         # Check for color tag
-        if self.peek() and self.peek().type == TokenType.COLOR_INLINE_TAG:
+        if self.peek() and self.peek().type == TokenType.COLOR_TAG:
             token = self.consume()
             color = token.value.strip('<>')
             content = self.parse_inline_content()

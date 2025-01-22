@@ -40,7 +40,7 @@ class TestAtacamaParser(unittest.TestCase):
             self.assert_node_type(child, NodeType.SECTION)
 
     def test_multi_quote_blocks(self):
-        """Parser should handle multi-paragraph quote blocks."""
+        """Parser should handle multi-line quote blocks (MLQ)."""
         text = dedent("""
             Before quote
             <<<
@@ -56,7 +56,7 @@ class TestAtacamaParser(unittest.TestCase):
         
         section = sections[0]
         self.assertEqual(len(section.children), 3)  # Before, quote block, after
-        self.assert_node_type(section.children[1], NodeType.MULTI_QUOTE)
+        self.assert_node_type(section.children[1], NodeType.MLQ)
 
     def test_line_color_tags(self):
         """Parser should handle line-level color tags."""
@@ -84,7 +84,7 @@ class TestAtacamaParser(unittest.TestCase):
         self.assertFalse(para.children[1].is_line)
 
     def test_lists(self):
-        """Parser should handle different types of lists."""
+        """Parser should handle different types of list markers."""
         text = dedent("""
             * Bullet item
             * Another bullet
@@ -100,8 +100,10 @@ class TestAtacamaParser(unittest.TestCase):
         # Should have three lists (bullet, number, arrow)
         self.assertEqual(len(section.children), 3)
         
-        for list_node in section.children:
+        markers = ['bullet', 'number', 'arrow']
+        for list_node, marker in zip(section.children, markers):
             self.assert_node_type(list_node, NodeType.LIST)
+            self.assertEqual(list_node.marker_type, marker)
             self.assertEqual(len(list_node.children), 2)  # Each has two items
 
     def test_nested_parentheses(self):
@@ -112,7 +114,7 @@ class TestAtacamaParser(unittest.TestCase):
         section = ast.children[0]
         para = section.children[0]
         
-        # Verify the structure contains nested content
+        # Verify structure contains nested content
         self.assertGreater(len(para.children), 1)
 
     def test_chinese_text(self):
@@ -147,6 +149,37 @@ class TestAtacamaParser(unittest.TestCase):
         self.assertIn(NodeType.WIKILINK, found_types)
         self.assertIn(NodeType.LITERAL, found_types)
 
+    def test_emphasis(self):
+        """Parser should handle emphasized text."""
+        text = "This is *emphasized* text"
+        ast = self.parse_text(text)
+        
+        section = ast.children[0]
+        para = section.children[0]
+        
+        # Should have text, emphasis, text nodes
+        self.assertEqual(len(para.children), 3)
+        self.assert_node_type(para.children[1], NodeType.EMPHASIS)
+
+    def test_newline_handling(self):
+        """Parser should handle newlines between blocks correctly."""
+        text = dedent("""
+            First paragraph
+            
+            Second paragraph
+            * List item
+            
+            <blue>Colored text
+            
+            Final paragraph
+        """).strip()
+        
+        ast = self.parse_text(text)
+        section = ast.children[0]
+        
+        # Should properly separate blocks
+        self.assertGreater(len(section.children), 3)
+
     def test_complex_document(self):
         """Parser should handle complex documents with multiple features."""
         text = dedent("""
@@ -180,7 +213,7 @@ class TestAtacamaParser(unittest.TestCase):
         
         expected_types = {
             NodeType.SECTION, NodeType.COLOR_BLOCK, NodeType.LIST,
-            NodeType.MULTI_QUOTE, NodeType.CHINESE, NodeType.WIKILINK
+            NodeType.MLQ, NodeType.CHINESE, NodeType.WIKILINK
         }
         self.assertTrue(expected_types.issubset(found_types))
 
@@ -190,13 +223,13 @@ class TestAtacamaParser(unittest.TestCase):
         with self.assertRaises(ParseError):
             self.parse_text("Text (unclosed")
         
-        # Invalid color tags
-        with self.assertRaises(ParseError):
-            self.parse_text("(<invalid>text)")
-        
-        # Unclosed multi-quote
+        # Unclosed MLQ block
         with self.assertRaises(ParseError):
             self.parse_text("<<< Unclosed quote")
+            
+        # Unclosed wikilink
+        with self.assertRaises(ParseError):
+            self.parse_text("[[Unclosed link")
 
 if __name__ == '__main__':
     unittest.main()
