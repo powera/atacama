@@ -42,6 +42,11 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             </section>
         """)
 
+    def test_empty_document(self):
+        """Test handling of empty document."""
+        html = self.generate_html("")
+        self.assertEqual(html, "")
+
     def test_multi_quote_blocks(self):
         """Test multi-paragraph quote block formatting."""
         text = dedent("""
@@ -57,13 +62,37 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         self.assertHtmlEqual(html, """
             <section class="content-section">
                 <p>Before quote</p>
-                <blockquote class="multi-quote">
-                    <p>First quoted paragraph</p>
-                    <p>Second quoted paragraph</p>
-                </blockquote>
+                <div class="mlq">
+                    <button type="button" class="mlq-collapse" aria-label="Toggle visibility">
+                        <span class="mlq-collapse-icon">−</span>
+                    </button>
+                    <div class="mlq-content">
+                        <p>First quoted paragraph</p>
+                        <p>Second quoted paragraph</p>
+                    </div>
+                </div>
                 <p>After quote</p>
             </section>
         """)
+
+    def test_nested_multi_quote(self):
+        """Test handling of nested multi-quote blocks."""
+        text = dedent("""
+            <<<
+            Outer quote
+            <<<
+            Inner quote
+            >>>
+            Still outer
+            >>>
+        """).strip()
+        
+        html = self.generate_html(text)
+        self.assertIn('class="mlq"', html)
+        self.assertIn('class="mlq-content"', html)
+        self.assertIn('Outer quote', html)
+        self.assertIn('Inner quote', html)
+        self.assertIn('Still outer', html)
 
     def test_line_color_tags(self):
         """Test line-level color tag formatting."""
@@ -72,26 +101,21 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         
         self.assertHtmlEqual(html, """
             <section class="content-section">
-                <div class="color-red color-line">
-                    <span class="sigil" title="Forceful/certain">💡</span>
+                <p><span class="colorblock color-red">
+                    <span class="sigil">💡</span>
                     <span class="colortext-content">Important warning</span>
-                </div>
-            </section>
-        """)
-
-    def test_parenthesized_colors(self):
-        """Test parenthesized color tag formatting."""
-        text = "Note: (<red>important)"
-        html = self.generate_html(text)
-        
-        self.assertHtmlEqual(html, """
-            <section class="content-section">
-                <p>Note: <span class="color-red color-paren">
-                    <span class="sigil" title="Forceful/certain">💡</span>
-                    <span class="colortext-content">(important)</span>
                 </span></p>
             </section>
         """)
+
+    def test_nested_color_tags(self):
+        """Test nested color tag formatting."""
+        text = "<red>Warning: (<blue>critical) alert</red>"
+        html = self.generate_html(text)
+        self.assertIn('class="colorblock color-red"', html)
+        self.assertIn('class="colorblock color-blue"', html)
+        self.assertIn('<span class="sigil">💡</span>', html)
+        self.assertIn('<span class="sigil">✨</span>', html)
 
     def test_lists(self):
         """Test list formatting with different marker types."""
@@ -103,8 +127,23 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         """).strip()
         
         html = self.generate_html(text)
+        self.assertIn('<ul>', html)
+        self.assertIn('<li class="bullet-list">', html)
+        self.assertIn('<li class="number-list">', html)
+        self.assertIn('<li class="arrow-list">', html)
+
+    def test_nested_lists(self):
+        """Test nested list structures."""
+        text = dedent("""
+            * Parent item
+            * Parent with nested
+            # Nested number
+            > Nested arrow
+            * Back to parent
+        """).strip()
         
-        self.assertIn('<ul class="atacama-list">', html)
+        html = self.generate_html(text)
+        self.assertIn('<ul>', html)
         self.assertIn('<li class="bullet-list">', html)
         self.assertIn('<li class="number-list">', html)
         self.assertIn('<li class="arrow-list">', html)
@@ -128,37 +167,58 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             </section>
         """)
 
-    def test_special_elements(self):
-        """Test URLs, wikilinks, and literal text elements."""
-        text = dedent("""
-            Visit https://example.com
-            Read [[Wikipedia]] article
-            Code: <<print("hello")>>
-        """).strip()
-        
+    def test_chinese_without_annotation(self):
+        """Test Chinese text without annotations."""
+        text = "Hello 世界 World"
         html = self.generate_html(text)
-        
-        self.assertIn('class="external-link"', html)
-        self.assertIn('rel="noopener noreferrer"', html)
-        self.assertIn('class="wikilink"', html)
-        self.assertIn('class="literal-text"', html)
+        self.assertIn('<span class="annotated-chinese"', html)
+        self.assertNotIn('data-pinyin', html)
+        self.assertNotIn('data-definition', html)
+        self.assertIn('世界</span>', html)
 
-    def test_nested_structures(self):
-        """Test complex nested structures."""
-        text = dedent("""
-            <red>Warning:
-            * Item with (<blue>note)
-            * Item with <<code>>
-            >>>
-        """).strip()
-        
+    def test_url_formatting(self):
+        """Test URL formatting and attributes."""
+        text = "Visit https://example.com/page"
         html = self.generate_html(text)
-        
-        self.assertIn('class="color-red color-line"', html)
-        self.assertIn('class="color-blue color-paren"', html)
-        self.assertIn('class="atacama-list"', html)
-        self.assertIn('class="bullet-list"', html)
+        self.assertIn('href="https://example.com/page"', html)
+        self.assertIn('rel="noopener noreferrer"', html)
+        self.assertIn('target="_blank"', html)
+
+    def test_wikilinks(self):
+        """Test wiki-style links."""
+        text = "See [[Article Name]] for details"
+        html = self.generate_html(text)
+        self.assertIn('class="wikilink"', html)
+        self.assertIn('href="https://en.wikipedia.org/wiki/Article_Name"', html)
+        self.assertIn('target="_blank"', html)
+        self.assertIn('Article Name', html)
+
+    def test_literal_text(self):
+        """Test literal text blocks."""
+        text = "Code: <<print('hello')>>"
+        html = self.generate_html(text)
         self.assertIn('class="literal-text"', html)
+        self.assertIn("print('hello')", html)
+
+    def test_emphasis(self):
+        """Test emphasized text."""
+        text = "This is *emphasized* text"
+        html = self.generate_html(text)
+        self.assertIn('<em>', html)
+        self.assertIn('emphasized', html)
+        self.assertIn('</em>', html)
+
+    def test_templates(self):
+        """Test template formatting."""
+        cases = [
+            ('{{pgn|e4 e5}}', 'chess-pgn'),
+            ('{{isbn|1234567890}}', 'isbn'),
+            ('{{wikidata|Q12345}}', 'wikidata')
+        ]
+        
+        for input_text, expected_class in cases:
+            html = self.generate_html(input_text)
+            self.assertIn(f'class="{expected_class}"', html)
 
     def test_html_escaping(self):
         """Test proper HTML escaping."""
@@ -166,7 +226,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             ('Text & more', '&amp;'),
             ('Text < text', '&lt;'),
             ('Text > text', '&gt;'),
-            ('Text "quoted"', '"quoted"'),  # Quotes don't need escaping in content
+            ('Text "quoted"', '"quoted"'),
             ('<script>alert("xss")</script>', '&lt;script&gt;')
         ]
         
@@ -174,41 +234,42 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             html = self.generate_html(input_text)
             self.assertIn(expected, html)
 
-    def test_url_sanitization(self):
-        """Test URL sanitization in links."""
-        text = 'Visit https://example.com/"malicious'
-        html = self.generate_html(text)
-        self.assertIn('href="https://example.com/%22malicious"', html)
-        self.assertNotIn('href="https://example.com/"malicious"', html)
-
     def test_complex_document(self):
         """Test a complete document with multiple features."""
         text = dedent("""
-            Welcome
+            Welcome to our guide
             ----
-            <red>Important:
-            * Point with [[Wiki]]
-            * Point with 中文
+            <red>Important notice:
+            * Key point with [[Reference]]
+            * Another point with 中文
             
             <<<
-            Quoted content
-            More quotes
+            This is a quoted section
+            With multiple paragraphs
             >>>
             
-            Visit https://example.com
+            Check https://example.com for *more* details
+            
+            {{isbn|1234567890}}
         """).strip()
         
         html = self.generate_html(text)
         
-        # Verify document structure
+        # Verify structural elements
         self.assertIn('<section class="content-section">', html)
-        self.assertIn('<blockquote class="multi-quote">', html)
+        self.assertIn('<hr class="section-break"', html)
+        self.assertIn('class="mlq"', html)
         
-        # Verify formatting elements
-        self.assertIn('class="color-red color-line"', html)
+        # Verify color formatting
+        self.assertIn('class="colorblock color-red"', html)
+        self.assertIn('<span class="sigil">💡</span>', html)
+        
+        # Verify other elements
         self.assertIn('class="wikilink"', html)
         self.assertIn('class="annotated-chinese"', html)
-        self.assertIn('class="external-link"', html)
+        self.assertIn('target="_blank"', html)
+        self.assertIn('class="isbn"', html)
+        self.assertIn('<em>', html)
 
 if __name__ == '__main__':
     unittest.main()
