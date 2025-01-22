@@ -45,7 +45,7 @@ class TestAtacamaLexer(unittest.TestCase):
         """Lexer should properly tokenize color tags at line start."""
         text = "<red>Important warning\nNormal text"
         self.assert_token_values(text, [
-            (TokenType.COLOR_BLOCK_TAG, "<red>"),
+            (TokenType.COLOR_TAG, "<red>"),
             (TokenType.TEXT, "Important warning"),
             (TokenType.NEWLINE, "\n"),
             (TokenType.TEXT, "Normal text")
@@ -57,7 +57,7 @@ class TestAtacamaLexer(unittest.TestCase):
         self.assert_token_values(text, [
             (TokenType.TEXT, "Note: "),
             (TokenType.PARENTHESIS_START, "("),
-            (TokenType.COLOR_INLINE_TAG, "<red>"),
+            (TokenType.COLOR_TAG, "<red>"),
             (TokenType.TEXT, "important"),
             (TokenType.PARENTHESIS_END, ")")
         ])
@@ -69,7 +69,7 @@ class TestAtacamaLexer(unittest.TestCase):
             (TokenType.PARENTHESIS_START, "("),
             (TokenType.PARENTHESIS_START, "("),
             (TokenType.PARENTHESIS_START, "("),
-            (TokenType.COLOR_INLINE_TAG, "<red>"),
+            (TokenType.COLOR_TAG, "<red>"),
             (TokenType.TEXT, "deep"),
             (TokenType.PARENTHESIS_END, ")"),
             (TokenType.PARENTHESIS_END, ")"),
@@ -182,8 +182,7 @@ class TestAtacamaLexer(unittest.TestCase):
         tokens = list(tokenize(text))
         # Verify specific important characteristics
         self.assertTrue(any(t.type == TokenType.SECTION_BREAK for t in tokens))
-        self.assertTrue(any(t.type == TokenType.COLOR_BLOCK_TAG for t in tokens))
-        self.assertTrue(any(t.type == TokenType.COLOR_INLINE_TAG for t in tokens))
+        self.assertTrue(any(t.type == TokenType.COLOR_TAG for t in tokens))
         self.assertTrue(any(t.type == TokenType.BULLET_LIST_MARKER for t in tokens))
         self.assertTrue(any(t.type == TokenType.CHINESE_TEXT for t in tokens))
         self.assertTrue(any(t.type == TokenType.URL for t in tokens))
