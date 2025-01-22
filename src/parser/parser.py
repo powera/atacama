@@ -1,22 +1,24 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Iterator
 from enum import Enum, auto
 from .lexer import Token, TokenType
 
 class NodeType(Enum):
     """Types of nodes in the Abstract Syntax Tree."""
-    DOCUMENT = auto()     # Root node
-    SECTION = auto()      # Content between section breaks
-    MULTI_QUOTE = auto()  # Multi-paragraph quote block
-    PARAGRAPH = auto()    # Regular paragraph
-    LIST = auto()         # List container
-    LIST_ITEM = auto()    # Single list item
-    COLOR_BLOCK = auto()  # Color-formatted content
-    CHINESE = auto()      # Chinese text requiring annotation
+    DOCUMENT = auto()    # Root node
+    SECTION = auto()     # Content between section breaks
+    MLQ = auto()         # Multi-line quote block
+    PARAGRAPH = auto()   # Regular paragraph
+    LIST = auto()        # List container
+    LIST_ITEM = auto()   # Single list item
+    COLOR_BLOCK = auto() # Color-formatted content
+    CHINESE = auto()     # Chinese text requiring annotation
     URL = auto()         # URL link
     WIKILINK = auto()    # Wiki-style link
     LITERAL = auto()     # Literal text block
     TEXT = auto()        # Plain text content
+    EMPHASIS = auto()    # Emphasized text
+    TEMPLATE = auto()    # Template blocks (pgn, isbn, etc)
 
 class Node:
     """Base class for all AST nodes."""
@@ -106,9 +108,9 @@ class AtacamaParser:
         blocks = []
         
         while self.peek() and self.peek().type != TokenType.SECTION_BREAK:
-            # Try to parse a multi-quote block first (second highest priority)
-            if self.peek().type == TokenType.MULTI_QUOTE_START:
-                blocks.append(self.parse_multi_quote())
+            # Try to parse an MLQ block first
+            if self.peek().type == TokenType.MLQ_START:
+                blocks.append(self.parse_mlq())
             else:
                 block = self.parse_block()
                 if block:
@@ -123,17 +125,17 @@ class AtacamaParser:
         section.children = blocks
         return section
     
-    def parse_multi_quote(self) -> Node:
-        """Parse a multi-paragraph quote block."""
-        self.expect(TokenType.MULTI_QUOTE_START)
-        quote = Node(type=NodeType.MULTI_QUOTE)
+    def parse_mlq(self) -> Node:
+        """Parse a multi-line quote block."""
+        self.expect(TokenType.MLQ_START)
+        quote = Node(type=NodeType.MLQ)
         
-        while self.peek() and self.peek().type != TokenType.MULTI_QUOTE_END:
+        while self.peek() and self.peek().type != TokenType.MLQ_END:
             if block := self.parse_block():
                 quote.children.append(block)
         
         if self.peek():
-            self.expect(TokenType.MULTI_QUOTE_END)
+            self.expect(TokenType.MLQ_END)
         
         return quote
     
@@ -149,7 +151,7 @@ class AtacamaParser:
             return self.parse_list()
             
         # Handle line-level color tags
-        if self.peek().type == TokenType.COLOR_LINE_TAG:
+        if self.peek().type == TokenType.COLOR_BLOCK_TAG:
             return self.parse_color_line()
             
         return self.parse_paragraph()
@@ -186,7 +188,7 @@ class AtacamaParser:
     
     def parse_color_line(self) -> Node:
         """Parse a line-level color block."""
-        token = self.expect(TokenType.COLOR_LINE_TAG)
+        token = self.expect(TokenType.COLOR_BLOCK_TAG)
         color = token.value.strip('<>')
         
         content = self.parse_inline_content()
@@ -227,6 +229,20 @@ class AtacamaParser:
                 self.consume()
                 flush_text()
                 break
+
+            elif token.type == TokenType.EMPHASIS:
+                flush_text()
+                nodes.append(Node(
+                    type=NodeType.EMPHASIS,
+                    token=self.consume()
+                ))
+                
+            elif token.type in {TokenType.TEMPLATE_PGN, TokenType.TEMPLATE_ISBN, TokenType.TEMPLATE_WIKIDATA}:
+                flush_text()
+                nodes.append(Node(
+                    type=NodeType.TEMPLATE,
+                    token=self.consume()
+                ))
             
             elif token.type == TokenType.PARENTHESIS_START:
                 flush_text()
@@ -276,7 +292,7 @@ class AtacamaParser:
         self.current_paren_depth += 1
         
         # Check for color tag
-        if self.peek() and self.peek().type == TokenType.COLOR_PAREN_TAG:
+        if self.peek() and self.peek().type == TokenType.COLOR_INLINE_TAG:
             token = self.consume()
             color = token.value.strip('<>')
             content = self.parse_inline_content()
