@@ -181,13 +181,31 @@ class AtacamaLexer:
         self.advance()
         return None
 
+    def check_effective_line_start(self) -> bool:
+        """
+        Check if we're at the effective start of a line, ignoring whitespace and list markers.
+        Returns True if only whitespace and list markers precede current position on this line.
+        """
+        # Scan backwards to start of line
+        pos = self.pos - 1
+        while pos >= 0 and self.text[pos] != '\n':
+            # Skip list markers and whitespace
+            if self.text[pos] in {'*', '#', '>'} and (pos == 0 or self.text[pos-1].isspace()):
+                pos -= 1
+                continue
+            if not self.text[pos].isspace():
+                return False
+            pos -= 1
+        return True
+
     def handle_color_tag(self) -> Optional[Token]:
         """Process color tags with context awareness."""
         if self.current_char != '<':
             return None
             
-        start_pos = self.pos
+        start_pos = self.pos 
         line, col = self.line, self.column
+        at_effective_start = self.check_effective_line_start()
         
         self.advance()  # Skip '<'
         tag = []
@@ -202,10 +220,9 @@ class AtacamaLexer:
             
             if tag_name in self.VALID_COLORS:
                 tag_str = f'<{tag_name}>'
-                # Determine tag type based on context
-                if self.at_line_start or (self.in_parentheses > 0 and self.text[self.pos-len(tag_str)-1] == '('):
+                if at_effective_start or (self.in_parentheses > 0 and self.text[start_pos-1] == '('):
                     return Token(
-                        TokenType.COLOR_BLOCK_TAG if self.at_line_start else TokenType.COLOR_INLINE_TAG,
+                        TokenType.COLOR_BLOCK_TAG if at_effective_start else TokenType.COLOR_INLINE_TAG,
                         tag_str,
                         line,
                         col
