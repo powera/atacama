@@ -79,22 +79,40 @@ class AtacamaLexer:
         self.text: str = ""
         self.pos: int = 0
         self.line: int = 1
-        self.column: int = 1
+        self.column: int = 0
         self.current_char: Optional[str] = None
+        self.last_newline_pos: int = 0
 
         # Context tracking
         self.in_parentheses: int = 0
-        self.at_line_start: bool = True
+        
+        # Token buffering
+        self.buffered_token: Optional[Token] = None
+        self.text_buffer: List[str] = []
+        self.buffer_start_line: int = 1
+        self.buffer_start_col: int = 0
 
     def init(self, text: str) -> None:
         """Initialize or reset the lexer with new input."""
         self.text = text
         self.pos = 0
         self.line = 1
-        self.column = 1
-        self.in_parentheses = 0
-        self.at_line_start = True
+        self.column = 0
+        self.in_parentheses = 0 
+        self.last_newline_pos = 0
+        self.buffered_token = None
+        self.text_buffer = []
+        self.buffer_start_line = 1
+        self.buffer_start_col = 0
         self.advance()
+
+    def is_at_line_start(self) -> bool:
+        """Check if current position is at the start of a line."""
+        # Check characters between last newline and current position
+        for i in range(self.last_newline_pos, self.pos - 1):
+            if not self.text[i].isspace():
+                return False
+        return True
 
     def advance(self) -> None:
         """Advance to the next character and update position tracking."""
@@ -104,14 +122,13 @@ class AtacamaLexer:
             
             if self.current_char == '\n':
                 self.line += 1
-                self.column = 1
-                self.at_line_start = True
+                self.column = 0
+                self.last_newline_pos = self.pos
             else:
                 self.column += 1
-                if not self.current_char.isspace():
-                    self.at_line_start = False
         else:
             self.current_char = None
+
 
     def peek(self, offset: int = 1) -> Optional[str]:
         """Look ahead in the input stream without advancing."""
@@ -138,7 +155,7 @@ class AtacamaLexer:
 
     def handle_list_marker(self) -> Optional[Token]:
         """Process list markers at the start of lines."""
-        if not self.at_line_start:
+        if not self.is_at_line_start():
             return None
             
         line, col = self.line, self.column
@@ -257,8 +274,7 @@ class AtacamaLexer:
         line, col = self.line, self.column
         char = self.current_char
         
-        if (char == '<' and self.peek() == '<' and self.peek(2) == '<' and 
-            (self.at_line_start or self.peek(3) == '\n')):
+        if (char == '<' and self.peek() == '<' and self.peek(2) == '<'):
             self.advance()
             self.advance()
             self.advance()
@@ -323,115 +339,127 @@ class AtacamaLexer:
             
         return None
 
+    def buffer_text(self) -> Optional[Token]:
+        """Buffer regular text until a token boundary is reached."""
+        if not self.current_char:
+            return None
+            
+        line, column = self.line, self.column
+        text = []
+
+        while self.current_char and not (
+            self.current_char == '\n' or  # Break on newlines
+            self.current_char in '()[]' or  # Break on brackets
+            (self.current_char == '<' and self.peek() in {'<', '/'}) or
+            (self.current_char == '{' and self.peek() == '{') or
+            (self.current_char == '[' and self.peek() == '[') or
+            (self.is_at_line_start() and self.current_char in '*#>') or  # List markers at start
+            (self.current_char == '*' and not self.peek().isspace()) or
+            (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p') or
+            ('\u4e00' <= self.current_char <= '\u9fff')
+        ):
+            text.append(self.current_char)
+            self.advance()
+
+        if text:
+            return Token(TokenType.TEXT, ''.join(text), line, column)
+        return None
+
     def get_next_token(self) -> Optional[Token]:
         """Get the next token from the input stream."""
+        # First, return any buffered token from a previous call
+        if self.buffered_token:
+            token = self.buffered_token
+            self.buffered_token = None
+            return token
+
         while self.current_char is not None:
-            line, column = self.line, self.column
+            # If we're starting a new buffer, remember the position
+            if not self.text_buffer:
+                self.buffer_start_line = self.line
+                self.buffer_start_col = self.column
 
-            # Skip non-significant whitespace except newlines
-            while self.current_char and self.current_char.isspace() and self.current_char != '\n':
-                self.advance()
-
-            # Return None if we've hit the end
-            if self.current_char is None:
-                return None
-
-            # Handle newlines
+            # First check for newlines since they always break text
             if self.current_char == '\n':
+                # If we have buffered text, save the newline and return the text
+                if self.text_buffer:
+                    self.buffered_token = Token(TokenType.NEWLINE, '\n', self.line, self.column)
+                    text = ''.join(self.text_buffer)
+                    self.text_buffer = []
+                    self.advance()
+                    return Token(TokenType.TEXT, text, self.buffer_start_line, self.buffer_start_col)
+                # Otherwise just return the newline
                 self.advance()
-                return Token(TokenType.NEWLINE, '\n', line, column)
+                return Token(TokenType.NEWLINE, '\n', self.line, self.column)
 
-            # Check first character to determine which handlers to try
+            # Try all specific token handlers
+            token = None
             if self.current_char == '-':
-                if token := self.handle_section_break():
-                    return token
-                    
+                token = self.handle_section_break()
             elif self.current_char == '<':
-                # MLQ blocks, color tags, or literal text
                 if self.peek() == '<':
                     if self.peek(2) == '<':
-                        if token := self.handle_mlq():
-                            return token
+                        token = self.handle_mlq()
                     else:
-                        if token := self.handle_literal():
-                            return token
+                        token = self.handle_literal()
                 else:
-                    if token := self.handle_color_tag():
-                        return token
-                        
+                    token = self.handle_color_tag()
             elif self.current_char == '>':
                 if self.peek() == '>':
                     if self.peek(2) == '>':
-                        if token := self.handle_mlq():
-                            return token
+                        token = self.handle_mlq()
                     else:
-                        if token := self.handle_literal():
-                            return token
-                        
-            elif self.at_line_start and self.current_char in '*#>':
-                if token := self.handle_list_marker():
-                    return token
-                    
+                        token = self.handle_literal()
+                elif self.is_at_line_start():
+                    token = self.handle_list_marker()
+            elif self.current_char in '*#' and self.is_at_line_start():
+                token = self.handle_list_marker()
             elif self.current_char == '{' and self.peek() == '{':
-                if token := self.handle_template():
-                    return token
-                    
-            elif self.current_char == '*' and not self.peek().isspace():
-                if token := self.handle_emphasis():
-                    return token
-                    
+                token = self.handle_template()
+            elif self.current_char == '*':
+                token = self.handle_emphasis()
             elif self.current_char == 'h' and self.peek() == 't':
-                if token := self.handle_url():
-                    return token
-                    
+                token = self.handle_url()
             elif '\u4e00' <= self.current_char <= '\u9fff':
-                if token := self.handle_chinese():
-                    return token
-                    
+                token = self.handle_chinese()
             elif self.current_char == '(':
                 self.in_parentheses += 1
                 self.advance()
-                return Token(TokenType.PARENTHESIS_START, '(', line, column)
-                
+                token = Token(TokenType.PARENTHESIS_START, '(', self.line, self.column)
             elif self.current_char == ')':
                 self.in_parentheses = max(0, self.in_parentheses - 1)
                 self.advance()
-                return Token(TokenType.PARENTHESIS_END, ')', line, column)
-                
+                token = Token(TokenType.PARENTHESIS_END, ')', self.line, self.column)
             elif self.current_char == '[' and self.peek() == '[':
                 self.advance()
                 self.advance()
-                return Token(TokenType.WIKILINK_START, '[[', line, column)
-                
+                token = Token(TokenType.WIKILINK_START, '[[', self.line, self.column)
             elif self.current_char == ']' and self.peek() == ']':
                 self.advance()
                 self.advance()
-                return Token(TokenType.WIKILINK_END, ']]', line, column)
+                token = Token(TokenType.WIKILINK_END, ']]', self.line, self.column)
 
-            # Collect regular text until we hit a token start
-            text = []
-            while self.current_char and not (
-                self.current_char == '\n' or  # Break on newlines
-                self.current_char in '()[]' or  # Break on brackets
-                (self.current_char == '<' and self.peek() in {'<', '/'}) or
-                (self.current_char == '{' and self.peek() == '{') or
-                (self.current_char == '[' and self.peek() == '[') or
-                (self.at_line_start and self.current_char in '*#>') or  # List markers at start
-                (self.current_char == '*' and not self.peek().isspace()) or
-                (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p') or
-                ('\u4e00' <= self.current_char <= '\u9fff')
-            ):
-                text.append(self.current_char)
-                self.advance()
-                
-            if text:
-                return Token(TokenType.TEXT, ''.join(text), line, column)
+            # If we found a token
+            if token:
+                if self.text_buffer:
+                    # Save the token and return the buffered text
+                    self.buffered_token = token
+                    text = ''.join(self.text_buffer)
+                    self.text_buffer = []
+                    return Token(TokenType.TEXT, text, self.buffer_start_line, self.buffer_start_col)
+                return token
 
-            # Skip any unrecognized characters
+            # If we didn't find a token, add current char to buffer
+            self.text_buffer.append(self.current_char)
             self.advance()
 
-        return None
+        # End of input - return any remaining buffered text
+        if self.text_buffer:
+            text = ''.join(self.text_buffer)
+            self.text_buffer = []
+            return Token(TokenType.TEXT, text, self.buffer_start_line, self.buffer_start_col)
 
+        return None
 
     def tokenize(self, text: str) -> Generator[Token, None, None]:
         """Convert input text into a stream of tokens."""

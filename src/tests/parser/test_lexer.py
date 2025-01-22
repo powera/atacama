@@ -110,9 +110,9 @@ class TestAtacamaLexer(unittest.TestCase):
         """).strip()
         
         self.assert_tokens(text, [
-            TokenType.BULLET_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT, TokenType.NEWLINE,
-            TokenType.NUMBER_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT, TokenType.NEWLINE,
-            TokenType.ARROW_LIST_MARKER, TokenType.WHITESPACE, TokenType.TEXT
+            TokenType.BULLET_LIST_MARKER, TokenType.TEXT, TokenType.NEWLINE,
+            TokenType.NUMBER_LIST_MARKER, TokenType.TEXT, TokenType.NEWLINE,
+            TokenType.ARROW_LIST_MARKER, TokenType.TEXT
         ])
 
     def test_chinese_text(self):
@@ -189,11 +189,12 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_invalid_color_tags(self):
         """Test handling of invalid or misplaced color tags."""
-        # Color tag in middle of line without parentheses
+        # Color tag in middle of line not processed, but still lexed as tag
         text = "Start <red>not valid"
         tokens = list(tokenize(text))
-        self.assertEqual(len(tokens), 2)  # Should treat as text
+        self.assertEqual(len(tokens), 3)
         self.assertEqual(tokens[0].type, TokenType.TEXT)
+        self.assertEqual(tokens[1].type, TokenType.COLOR_TAG)
 
         # Invalid color name
         text = "<invalid>text"
