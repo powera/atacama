@@ -8,7 +8,7 @@ from email.header import decode_header
 from typing import Optional
 
 from common.models import Email
-from common.colorscheme import ColorScheme
+from parser.colorscheme import ColorScheme
 
 logger = logging.getLogger(__name__)
 color_processor = ColorScheme()

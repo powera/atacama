@@ -8,7 +8,7 @@ maintaining separation between parsing and output generation.
 from typing import Dict, Optional, List
 from .parser import Node, NodeType, ColorNode, ListItemNode
 from .lexer import Token, TokenType
-from common.colorblocks import (
+from parser.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
     create_list_container, create_multiline_block, create_literal_text,
     create_url_link, create_wiki_link, create_emphasis

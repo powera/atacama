@@ -1,5 +1,5 @@
 import unittest
-from common.colorscheme import ColorScheme
+from parser.colorscheme import ColorScheme
 
 class TestLists(unittest.TestCase):
     """Test list processing functionality."""

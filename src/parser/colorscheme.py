@@ -12,7 +12,7 @@ from common.models import Email
 from common.quotes import save_quotes
 import common.chess
 
-from common.colorblocks import *  # Import HTML generation functions
+from parser.colorblocks import *  # Import HTML generation functions
 
 class ColorScheme:
     """Color scheme definitions and content processing using regex patterns."""

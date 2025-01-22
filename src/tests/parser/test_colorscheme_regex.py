@@ -1,5 +1,5 @@
 import unittest
-from common.colorscheme import ColorScheme
+from parser.colorscheme import ColorScheme
 
 class TestColorPatterns(unittest.TestCase):
     """Test color pattern regex matching."""
