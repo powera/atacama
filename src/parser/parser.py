@@ -207,6 +207,9 @@ class AtacamaParser:
                 else:
                     self.consume()
         
+        if self.peek() and self.peek().type == TokenType.NEWLINE:
+            self.consume()
+
         return ListItemNode(marker_type=marker_types[marker_token.type], 
                           token=marker_token,
                           children=children)
