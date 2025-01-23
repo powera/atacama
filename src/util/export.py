@@ -52,7 +52,7 @@ def serialize_message(message: Email) -> Dict[str, Any]:
         'llm_annotations': json.loads(message.llm_annotations) if message.llm_annotations else None
     }
 
-def export_messages(output_path: str, pretty: bool = False) -> None:
+def export_messages(output_path: str, pretty: bool = True) -> None:
     """
     Export all messages from the database to a JSON file.
     

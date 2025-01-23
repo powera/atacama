@@ -4,11 +4,10 @@ import logging
 
 from sqlalchemy.orm import joinedload
   
+from common.channel_config import get_channel_manager, AccessLevel
 from common.database import db
 from common.models import Email, Quote, email_quotes
 from parser.colorscheme import ColorScheme
-from common.channel_config import get_channel_manager, AccessLevel
-
 color_processor = ColorScheme()
 
 logger = logging.getLogger(__name__)
