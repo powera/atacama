@@ -103,8 +103,9 @@ class HTMLGenerator:
         # Add final section
         if current_section:
             sections.append(self._wrap_section(current_section))
-            
-        return '\n'.join(sections)
+        
+        section_divider = self._generate_hr(None)
+        return section_divider.join(sections)
     
     def _wrap_section(self, contents: List[str]) -> str:
         """Wrap a section's contents in a section tag."""

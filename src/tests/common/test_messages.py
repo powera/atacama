@@ -18,12 +18,14 @@ from common.messages import (
 )
 from common.models import User, Email
 from common.channel_config import ChannelConfig, AccessLevel
+import constants
 
 class TestMessages(unittest.TestCase):
     """Test suite for messages module."""
     
     def setUp(self):
         """Set up test fixtures."""
+        constants.init_testing()
         self.app = Flask(__name__)
         self.app_context = self.app.app_context()
         self.user = User(

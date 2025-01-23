@@ -34,9 +34,11 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             <section class="content-section">
                 <p>First section</p>
             </section>
+            <hr class="section-break" />
             <section class="content-section">
                 <p>Second section</p>
             </section>
+            <hr class="section-break" />
             <section class="content-section">
                 <p>Third section</p>
             </section>
@@ -110,7 +112,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_nested_color_tags(self):
         """Test nested color tag formatting."""
-        text = "<red>Warning: (<blue>critical) alert</red>"
+        text = "<red>Warning: (<blue>critical) alert"
         html = self.generate_html(text)
         self.assertIn('class="colorblock color-red"', html)
         self.assertIn('class="colorblock color-blue"', html)
@@ -211,7 +213,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
     def test_templates(self):
         """Test template formatting."""
         cases = [
-            ('{{pgn|e4 e5}}', 'chess-pgn'),
+            ('{{pgn|rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2}}', 'chess-board'),
             ('{{isbn|1234567890}}', 'isbn'),
             ('{{wikidata|Q12345}}', 'wikidata')
         ]

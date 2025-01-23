@@ -20,10 +20,15 @@ CORE_FILES = {
     'src/common/logging_config.py',
     'src/common/telemetry.py',
     'src/common/auth.py',
-    'src/common/colorscheme.py',
-    'src/common/colorblocks.py',
     'src/constants.py',
     
+    # Parser
+    'src/parser/colorscheme.py',
+    'src/parser/colorblocks.py',
+    'src/parser/lexer.py',
+    'src/parser/parser.py',
+    'src/parser/html_generator.py',
+
     # API integrations
     'src/common/openai_client.py',
     

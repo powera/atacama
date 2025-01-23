@@ -21,13 +21,7 @@ class TemplateTests(unittest.TestCase):
             
     def tearDown(self):
         """Clean up after tests by dropping all tables."""
-        with self.app.app_context():
-            # Drop all tables
-            Base.metadata.drop_all(db._engine)
-            # Dispose engine to close connections
-            if db._engine:
-                db._engine.dispose()
-            db.initialized = False
+        db.cleanup()
 
     def create_test_user(self) -> Dict[str, Any]:
         """Helper to create a test user and return user data."""
