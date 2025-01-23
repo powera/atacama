@@ -342,6 +342,9 @@ class AtacamaParser:
         elif token.type == TokenType.TEMPLATE:
             return Node(type=NodeType.TEMPLATE, token=self.consume())
 
+        elif token.type == TokenType.WIKILINK_START:
+            return self.parse_wikilink()
+
         elif token.type == TokenType.PARENTHESIS_START:
             # Delegate to the existing parse_paren_content method for handling parentheses
             return self.parse_paren_content()
