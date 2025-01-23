@@ -342,6 +342,10 @@ class AtacamaParser:
         elif token.type in {TokenType.TEMPLATE_PGN, TokenType.TEMPLATE_ISBN, TokenType.TEMPLATE_WIKIDATA}:
             return Node(type=NodeType.TEMPLATE, token=self.consume())
 
+        elif token.type == TokenType.PARENTHESIS_START:
+            # Delegate to the existing parse_paren_content method for handling parentheses
+            return self.parse_paren_content()
+
         return None
 
 def parse(tokens: Iterator[Token]) -> Node:
