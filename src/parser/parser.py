@@ -127,7 +127,7 @@ class AtacamaParser:
                 if wikilink := self.parse_wikilink():
                     document.children.append(wikilink)
 
-            elif token.type in {TokenType.TEMPLATE_PGN, TokenType.TEMPLATE_ISBN, TokenType.TEMPLATE_WIKIDATA}:
+            elif token.type == TokenType.TEMPLATE:
                 document.children.append(Node(type=NodeType.TEMPLATE, token=self.consume()))
 
             elif token.type == TokenType.PARENTHESIS_START:
@@ -271,7 +271,7 @@ class AtacamaParser:
             return Node(type=NodeType.TEXT, token=start_token, children=children)
         
         # No closing parenthesis - convert to text
-        text_content = '(' + ''.join(t.value for t in content_tokens)
+        text_content = '(' + ''.join(t.value for t in content_tokens)  # )
         return Node(type=NodeType.TEXT, token=start_token)
 
     def parse_wikilink(self) -> Optional[Node]:
@@ -339,7 +339,7 @@ class AtacamaParser:
         elif token.type == TokenType.EMPHASIS:
             return Node(type=NodeType.EMPHASIS, token=self.consume())
             
-        elif token.type in {TokenType.TEMPLATE_PGN, TokenType.TEMPLATE_ISBN, TokenType.TEMPLATE_WIKIDATA}:
+        elif token.type == TokenType.TEMPLATE:
             return Node(type=NodeType.TEMPLATE, token=self.consume())
 
         elif token.type == TokenType.PARENTHESIS_START:

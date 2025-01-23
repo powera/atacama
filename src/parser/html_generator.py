@@ -193,11 +193,11 @@ class HTMLGenerator:
     def _generate_template(self, node: Node) -> str:
         """Generate HTML for template blocks."""
         content = node.token.value
-        if node.token.type == TokenType.TEMPLATE_PGN:
+        if node.token.template_name == "pgn":
             return common.chess.fen_to_board(content)
-        elif node.token.type == TokenType.TEMPLATE_ISBN:
+        elif node.token.template_name == "isbn":
             return f'<span class="isbn">{content}</span>'
-        elif node.token.type == TokenType.TEMPLATE_WIKIDATA:
+        elif node.token.template_name == "wikidata":
             return f'<span class="wikidata">{content}</span>'
         return content
 

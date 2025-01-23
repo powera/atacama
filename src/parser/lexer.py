@@ -26,9 +26,7 @@ class TokenType(Enum):
 
     # Special inline formatting
     EMPHASIS = auto()       # *emphasized text*
-    TEMPLATE_PGN = auto()   # {{pgn|...}}
-    TEMPLATE_ISBN = auto()  # {{isbn|...}}
-    TEMPLATE_WIKIDATA = auto()  # {{wikidata|...}}
+    TEMPLATE = auto()       # template, like {{pgn|...}}
     
     # Special content
     CHINESE_TEXT = auto()
@@ -48,10 +46,13 @@ class Token:
     value: str
     line: int
     column: int
+    template_name: Optional[str] = None  # For template tokens
     
     def __repr__(self) -> str:
         """Readable representation for debugging."""
-        return f"Token({self.type.name}, '{self.value}', line={self.line}, col={self.column})"
+        template_info = f", template={self.template_name}" if self.template_name else ""
+        return f"Token({self.type.name}, '{self.value}', line={self.line}, col={self.column}{template_info})"
+    
 
 class LexerError(Exception):
     """Exception raised for lexical analysis errors."""
@@ -256,14 +257,13 @@ class AtacamaLexer:
             self.advance()  # Skip first }
             self.advance()  # Skip second }
             
-            template_type = {
-                'pgn': TokenType.TEMPLATE_PGN,
-                'isbn': TokenType.TEMPLATE_ISBN,
-                'wikidata': TokenType.TEMPLATE_WIKIDATA
-            }.get(template_name)
-            
-            if template_type:
-                return Token(template_type, ''.join(content), start_line, start_col)
+            return Token(
+                type=TokenType.TEMPLATE,
+                value=''.join(content),
+                line=start_line,
+                column=start_col,
+                template_name=template_name
+            )
                 
         return None
 
