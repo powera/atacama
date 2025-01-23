@@ -114,9 +114,12 @@ class HTMLGenerator:
         content = '\n'.join(contents)
         return f'<section class="content-section">\n{content}\n</section>'
     
+    def sanitize_html(self, text: str):
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
     def _generate_text(self, node: Node) -> str:
         """Generate HTML for plain text content."""
-        return node.token.value if node.token else ''
+        return self.sanitize_html(node.token.value) if node.token else ''
     
     def _generate_newline(self, node: Node) -> str:
         """Generate HTML for a line break."""

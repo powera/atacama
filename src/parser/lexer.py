@@ -222,7 +222,8 @@ class AtacamaLexer:
                     
         # Invalid tag - reset and return None
         self.pos = start_pos
-        self.advance()
+        self.line, self.column = line, col
+        self.current_char = "<"
         return None
 
     def handle_template(self) -> Optional[Token]:
