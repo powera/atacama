@@ -45,15 +45,51 @@ class HTMLGenerator:
         sections = []
         current_section = []
         
+        # Track list state
+        current_list_items = []
+        current_list_type = None
+        
         for child in node.children:
             if child.type == NodeType.HR and current_section:
+                # End any open list before section break
+                if current_list_items:
+                    current_section.append(create_list_container(current_list_items))
+                    current_list_items = []
+                    current_list_type = None
+                
                 # End current section and start a new one
                 sections.append(self._wrap_section(current_section))
                 current_section = []
+            elif child.type == NodeType.LIST_ITEM:
+                item_type = child.marker_type
+                item_content = ''.join(self.generate(c) for c in child.children)
+                
+                if current_list_type is None:
+                    # Starting new list
+                    current_list_type = item_type
+                    current_list_items = [create_list_item(item_content, item_type)]
+                elif current_list_type == item_type:
+                    # Continue current list
+                    current_list_items.append(create_list_item(item_content, item_type))
+                else:
+                    # Different list type - end current list and start new one
+                    current_section.append(create_list_container(current_list_items))
+                    current_list_items = [create_list_item(item_content, item_type)]
+                    current_list_type = item_type
             else:
+                # Non-list content - end any open list
+                if current_list_items:
+                    current_section.append(create_list_container(current_list_items))
+                    current_list_items = []
+                    current_list_type = None
+                
                 content = self.generate(child)
                 if content:
                     current_section.append(content)
+        
+        # Handle any remaining list items
+        if current_list_items:
+            current_section.append(create_list_container(current_list_items))
         
         # Add final section
         if current_section:
@@ -110,8 +146,7 @@ class HTMLGenerator:
     def _generate_list_item(self, node: ListItemNode) -> str:
         """Generate HTML for a list item."""
         content = ''.join(self.generate(child) for child in node.children)
-        items = [create_list_item(content, node.marker_type)]
-        return create_list_container(items)
+        return create_list_item(content, node.marker_type)
     
     def _generate_chinese(self, node: Node) -> str:
         """Generate HTML for Chinese text with annotations."""
