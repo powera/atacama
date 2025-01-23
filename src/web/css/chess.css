@@ -127,3 +127,46 @@
         -1.5px  1.5px 0 #fff,
          1.5px  1.5px 0 #fff;
 }
+
+/* Invalid PGN display */
+.invalid-pgn {
+    background: var(--board-bg);
+    color: var(--label-color);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin: 1rem 0;
+    font-family: monospace;
+}
+
+/* FEN display container */
+.chess-fen {
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+/* FEN toggle button */
+.fen-toggle {
+    background: var(--board-bg);
+    color: var(--label-color);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: calc(var(--cell-size) * 0.4);
+}
+
+.fen-toggle:hover {
+    background: var(--dark-square);
+}
+
+/* FEN text display */
+.fen-text {
+    margin: 0.5rem 0 0;
+    padding: 0.5rem;
+    background: var(--board-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: calc(var(--cell-size) * 0.4);
+}

@@ -183,6 +183,15 @@ class AtacamaViewer {
             if (e.target.closest('.mlq-collapse')) {
                 this.handleMlqCollapse(e);
             }
+            if (e.target.closest('.fen-toggle')) {
+                const button = e.target.closest('.fen-toggle');
+                const fenText = button.nextElementSibling;
+                if (fenText && fenText.classList.contains('fen-text')) {
+                    const isHidden = fenText.style.display === 'none';
+                    fenText.style.display = isHidden ? 'block' : 'none';
+                    button.textContent = isHidden ? 'Hide position (FEN)' : 'Show position (FEN)';
+                }
+            }
         });
 
         document.addEventListener('keydown', this.handleKeyDown);
