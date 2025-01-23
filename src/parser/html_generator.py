@@ -13,6 +13,7 @@ from parser.colorblocks import (
     create_list_container, create_multiline_block, create_literal_text,
     create_url_link, create_wiki_link, create_emphasis
 )
+import common.chess  # fen_to_board
 
 class HTMLGenerator:
     """
@@ -182,7 +183,7 @@ class HTMLGenerator:
         """Generate HTML for template blocks."""
         content = node.token.value
         if node.token.type == TokenType.TEMPLATE_PGN:
-            return f'<div class="chess-pgn">{content}</div>'
+            return common.chess.fen_to_board(content)
         elif node.token.type == TokenType.TEMPLATE_ISBN:
             return f'<span class="isbn">{content}</span>'
         elif node.token.type == TokenType.TEMPLATE_WIKIDATA:

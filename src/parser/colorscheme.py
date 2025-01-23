@@ -186,7 +186,7 @@ class ColorScheme:
         # Process structured blocks
         content = self.process_multiline_blocks(content)
         content = self.process_lists(content)
-        content = self.pgn_pattern.sub(common.chess.fen_to_board, content)
+        content = self.pgn_pattern.sub(common.chess.fen_to_board_old, content)
         content = self.process_colors(content, message, db_session)
         content = self.literal_pattern.sub(lambda m: create_literal_text(m.group(1).strip()), content)
         
