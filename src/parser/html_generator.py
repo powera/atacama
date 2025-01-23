@@ -14,6 +14,7 @@ from parser.colorblocks import (
     create_url_link, create_wiki_link, create_emphasis
 )
 import common.chess  # fen_to_board
+import common.quotes  # save_quotes
 
 class HTMLGenerator:
     """
@@ -26,13 +27,17 @@ class HTMLGenerator:
     text, emphasized text, and templates.
     """
     
-    def __init__(self, annotations: Optional[Dict] = None):
+       def __init__(self, annotations: Optional[Dict] = None, 
+                 db_session: Optional[Session] = None,
+                 message: Optional[Email] = None):
         """Initialize the HTML generator with optional Chinese text annotations."""
         self.annotations = annotations or {}
+        self.db_session = db_session
+        self.message = message
         self.in_list = False
         self.current_list_items = []
         self.current_list_type = None
-    
+
     def generate(self, node: Node) -> str:
         """Generate HTML from an AST node."""
         if not node:
@@ -142,6 +147,13 @@ class HTMLGenerator:
     def _generate_color_block(self, node: ColorNode) -> str:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)
+
+        # Handle quote storage for yellow/quote blocks
+        if node.color in ('yellow', 'quote') and content:
+            common.quotes.save_quotes(
+                [{'text': content.strip(), 'quote_type': 'reference'}], 
+                self.message, self.db_session)
+
         return create_color_block(node.color, content, node.is_line)
     
     def _generate_list_item(self, node: ListItemNode) -> str:
