@@ -53,6 +53,14 @@ def create_app(testing: bool = False) -> Flask:
     :param testing: Whether to configure app for testing
     :return: Configured Flask app
     """
+    # Initialize system state before creating app
+    if testing:
+        constants.init_testing()
+
+    # For production, initialization should already be done by launch.py
+    if not constants.INITIALIZED:
+        raise RuntimeError("System not initialized. In production, launch.py must initialize the system.")
+
     app = Flask(__name__)
     
     if not testing:
@@ -92,14 +100,19 @@ def create_app(testing: bool = False) -> Flask:
 
     return app
 
-# Create the default app instance
-app = create_app()
+# The app instance will be created when needed
+app = None
+
+def get_app():
+    """Get or create the Flask application instance."""
+    global app
+    if app is None:
+        app = create_app()
+    return app
 
 def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     """Run the server and start the email fetcher daemon."""
-    if not db.initialize():
-        logger.error("Database initialization failed, cannot start web server")
-        return
-        
+    # Database initialization will happen automatically when needed
+    # since system is already initialized by create_app()
     logger.info(f"Starting message processor server on {host}:{port}")
-    serve(app, host=host, port=port)
+    serve(get_app(), host=host, port=port)

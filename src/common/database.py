@@ -6,41 +6,46 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional, Generator
 
+import constants
 from common.logging_config import get_logger
-from constants import DB_PATH
-
 logger = get_logger(__name__)
+
+class DatabaseError(Exception):
+    """Custom exception for database-related errors."""
+    pass
 
 class Database:
     """Manages database connections and provides session management utilities."""
     
-    def __init__(self, db_url: str = f'sqlite:///{DB_PATH}'):
-        """
-        Initialize database connection.
-        
-        :param db_url: SQLAlchemy database URL
-        """
-        self.db_url = db_url
+    def __init__(self):
+        """Initialize database connection state."""
         self._engine = None
         self._session_factory = None
         self.initialized = False
-        self.is_test = False
 
-    def initialize(self, test=False) -> bool:
+    def initialize(self) -> bool:
         """
         Initialize database engine and create tables.
         
         :return: True if initialization successful, False otherwise
+        :raises: DatabaseError if system not initialized
         """
+        if not constants.INITIALIZED:
+            raise DatabaseError(
+                "Cannot initialize database before system initialization. "
+                "Call either constants.init_testing() or constants.init_production()"
+            )
+
         if self.initialized:
             return True
         
-        if test:
-            self.is_test = True
-            self.db_url = "sqlite:///:memory:"
-
         try:
-            self._engine = create_engine(self.db_url)
+            if constants.TESTING:
+                db_url = constants._TEST_DB_PATH
+            else:
+                db_url = f'sqlite:///{constants._PROD_DB_PATH}'
+            
+            self._engine = create_engine(db_url)
             
             # Import here to avoid circular imports
             from common.models import Base
@@ -64,10 +69,17 @@ class Database:
                 session.query(...)
         
         :yield: SQLAlchemy session
+        :raises: DatabaseError if database not initialized
         :raises: SQLAlchemyError if database operations fail
         """
+        if not constants.INITIALIZED:
+            raise DatabaseError(
+                "Cannot create database session before system initialization. "
+                "Call either constants.init_testing() or constants.init_production()"
+            )
+            
         if not self.initialized and not self.initialize():
-            raise RuntimeError("Database not initialized")
+            raise DatabaseError("Database initialization failed")
             
         session = self._session_factory()
         try:
@@ -85,10 +97,25 @@ class Database:
         Get session factory for manual session management.
         
         :return: SQLAlchemy sessionmaker if initialized, None otherwise
+        :raises: DatabaseError if system not initialized
         """
+        if not constants.INITIALIZED:
+            raise DatabaseError(
+                "Cannot get session factory before system initialization. "
+                "Call either constants.init_testing() or constants.init_production()"
+            )
+            
         if not self.initialized and not self.initialize():
             return None
         return self._session_factory
+
+    def cleanup(self) -> None:
+        """Clean up database connections and reset state."""
+        if self._engine:
+            self._engine.dispose()
+        self._engine = None
+        self._session_factory = None
+        self.initialized = False
 
 # Global database instance
 db = Database()

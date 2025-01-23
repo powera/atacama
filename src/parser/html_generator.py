@@ -13,8 +13,11 @@ from parser.colorblocks import (
     create_list_container, create_multiline_block, create_literal_text,
     create_url_link, create_wiki_link, create_emphasis
 )
+from sqlalchemy.orm import Session
+
 import common.chess  # fen_to_board
 import common.quotes  # save_quotes
+from common.models import Email, Quote
 
 class HTMLGenerator:
     """
@@ -27,7 +30,7 @@ class HTMLGenerator:
     text, emphasized text, and templates.
     """
     
-       def __init__(self, annotations: Optional[Dict] = None, 
+    def __init__(self, annotations: Optional[Dict] = None, 
                  db_session: Optional[Session] = None,
                  message: Optional[Email] = None):
         """Initialize the HTML generator with optional Chinese text annotations."""

@@ -15,12 +15,9 @@ class TemplateTests(unittest.TestCase):
         self.app.config.update({
             'TESTING': True,
             'SERVER_NAME': 'test.local',
-            'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'  # Use in-memory database
         })
         self.client = self.app.test_client()
         
-        with self.app.app_context():
-            db.initialize(test=True)  # This will create tables in the test database
             
     def tearDown(self):
         """Clean up after tests by dropping all tables."""

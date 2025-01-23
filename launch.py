@@ -17,6 +17,9 @@ def run_web_server(host: str = '0.0.0.0', port: int = 5000) -> None:
     :param host: Host address to bind to
     :param port: Port number to listen on
     """
+    import constants
+    constants.init_production()
+
     from web.server import run_server
     run_server(host=host, port=port)
 
