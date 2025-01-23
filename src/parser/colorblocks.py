@@ -35,7 +35,7 @@ def create_color_block(color: str, content: str, is_line: bool = False) -> str:
     sigil, class_name, desc = COLORS[color]
     
     # Handle nested colors (with parentheses) vs line-level colors
-    if not is_line and not content.startswith('('):
+    if not is_line and not content.startswith('('):  # )
         content = f"({content})"
         
     return (
@@ -45,27 +45,21 @@ def create_color_block(color: str, content: str, is_line: bool = False) -> str:
         f'</span>'
     )
 
-def create_chinese_annotation(hanzi: str, pinyin: Optional[str] = None, 
-                            definition: Optional[str] = None) -> str:
+def create_chinese_annotation(hanzi: str) -> str:
     """
     Generate HTML for annotated Chinese text.
     
     :param hanzi: Chinese characters
-    :param pinyin: Optional pinyin pronunciation 
-    :param definition: Optional English definition
     :return: HTML span with optional data attributes
     """
-    # Escape quotes in attributes
-    if pinyin:
-        pinyin = pinyin.replace('"', '&quot;')
-    if definition:
-        definition = definition.replace('&', '&amp;').replace('"', '&quot;')
+    import common.pinyin
+    metadata = common.pinyin.default_processor.get_annotation(hanzi)
     
     attrs = []
-    if pinyin:
-        attrs.append(f'data-pinyin="{pinyin}"')
-    if definition:
-        attrs.append(f'data-definition="{definition}"')
+    if metadata.pinyin:
+        attrs.append(f'data-pinyin="{metadata.pinyin}"')
+    if metadata.definition:
+        attrs.append(f'data-definition="{metadata.definition}"')
         
     attr_str = ' ' + ' '.join(attrs) if attrs else ''
     return f'<span class="annotated-chinese"{attr_str}>{hanzi}</span>'

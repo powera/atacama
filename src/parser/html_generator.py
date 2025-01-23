@@ -30,11 +30,10 @@ class HTMLGenerator:
     text, emphasized text, and templates.
     """
     
-    def __init__(self, annotations: Optional[Dict] = None, 
+    def __init__(self,
                  db_session: Optional[Session] = None,
                  message: Optional[Email] = None):
         """Initialize the HTML generator with optional Chinese text annotations."""
-        self.annotations = annotations or {}
         self.db_session = db_session
         self.message = message
         self.in_list = False
@@ -171,13 +170,6 @@ class HTMLGenerator:
     def _generate_chinese(self, node: Node) -> str:
         """Generate HTML for Chinese text with annotations."""
         text = node.token.value
-        if text in self.annotations:
-            ann = self.annotations[text]
-            return create_chinese_annotation(
-                hanzi=text,
-                pinyin=ann["pinyin"],
-                definition=ann["definition"]
-            )
         return create_chinese_annotation(hanzi=text)
     
     def _generate_url(self, node: Node) -> str:
@@ -210,16 +202,15 @@ class HTMLGenerator:
         return content
 
 
-def generate_html(ast: Node, annotations: Optional[Dict] = None) -> str:
+def generate_html(ast: Node) -> str:
     """
     Convenience function to generate HTML from an AST.
     
     Args:
         ast: Root node of the AST
-        annotations: Optional dictionary of Chinese text annotations
         
     Returns:
         Generated HTML string
     """
-    generator = HTMLGenerator(annotations)
+    generator = HTMLGenerator()
     return generator.generate(ast)

@@ -7,11 +7,11 @@ from parser.html_generator import generate_html, HTMLGenerator
 class TestAtacamaHTMLGenerator(unittest.TestCase):
     """Test suite for the Atacama HTML generator implementation."""
 
-    def generate_html(self, text, annotations=None):
+    def generate_html(self, text):
         """Helper to process text through the full pipeline."""
         tokens = tokenize(text)
         ast = parse(tokens)
-        return generate_html(ast, annotations)
+        return generate_html(ast)
 
     def assertHtmlEqual(self, actual, expected):
         """Compare HTML strings ignoring whitespace differences."""
@@ -151,31 +151,12 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         self.assertIn('<li class="arrow-list">', html)
 
     def test_chinese_text(self):
-        """Test Chinese text with annotations."""
-        text = "Hello 世界 World"
-        annotations = {
-            "世界": {
-                "pinyin": "Shì Jiè",
-                "definition": "world"
-            }
-        }
-        
-        html = self.generate_html(text, annotations)
-        self.assertHtmlEqual(html, """
-            <section class="content-section">
-                <p>Hello <span class="annotated-chinese" 
-                    data-pinyin="Shì Jiè" 
-                    data-definition="world">世界</span> World</p>
-            </section>
-        """)
-
-    def test_chinese_without_annotation(self):
-        """Test Chinese text without annotations."""
+        """Test Chinese text."""
         text = "Hello 世界 World"
         html = self.generate_html(text)
         self.assertIn('<span class="annotated-chinese"', html)
-        self.assertNotIn('data-pinyin', html)
-        self.assertNotIn('data-definition', html)
+        self.assertIn('data-pinyin', html)
+        self.assertIn('data-definition', html)
         self.assertIn('世界</span>', html)
 
     def test_url_formatting(self):

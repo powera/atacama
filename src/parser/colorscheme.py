@@ -7,7 +7,6 @@ from sqlalchemy.orm.session import Session
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
-from common.pinyin import annotate_chinese
 from common.models import Email
 from common.quotes import save_quotes
 import common.chess
@@ -54,20 +53,10 @@ class ColorScheme:
         """Basic HTML escaping while preserving our special tags."""
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
-    def wrap_chinese(self, text: str, annotations: Optional[Dict] = None) -> str:
+    def wrap_chinese(self, text: str) -> str:
         """Process Chinese text with annotations."""
-        if annotations is None:
-            annotations = annotate_chinese(text)
-            
         def replacer(match: Match) -> str:
             hanzi = match.group(0)
-            if annotations and hanzi in annotations:
-                ann = annotations[hanzi]
-                return create_chinese_annotation(
-                    hanzi=hanzi,
-                    pinyin=ann["pinyin"],
-                    definition=ann["definition"]
-                )
             return create_chinese_annotation(hanzi=hanzi)
             
         return self.chinese_pattern.sub(replacer, text)
