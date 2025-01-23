@@ -52,26 +52,41 @@ class HTMLGenerator:
         """Generate HTML for the root document node."""
         sections = []
         current_section = []
-        
+        current_paragraph = []
+
         # Track list state
         current_list_items = []
         current_list_type = None
-        
+
+        def wrap_and_append_paragraph():
+            if current_paragraph:
+                para_content = ''.join(current_paragraph)
+                if para_content.strip():
+                    current_section.append(f"<p>{para_content}</p>")
+                current_paragraph.clear()
+
         for child in node.children:
             if child.type == NodeType.HR and current_section:
+                # End current paragraph if any
+                wrap_and_append_paragraph()
+
                 # End any open list before section break
                 if current_list_items:
                     current_section.append(create_list_container(current_list_items))
                     current_list_items = []
                     current_list_type = None
-                
+
                 # End current section and start a new one
                 sections.append(self._wrap_section(current_section))
                 current_section = []
+
             elif child.type == NodeType.LIST_ITEM:
+                # End current paragraph before list
+                wrap_and_append_paragraph()
+
                 item_type = child.marker_type
                 item_content = ''.join(self.generate(c) for c in child.children)
-                
+
                 if current_list_type is None:
                     # Starting new list
                     current_list_type = item_type
@@ -84,25 +99,32 @@ class HTMLGenerator:
                     current_section.append(create_list_container(current_list_items))
                     current_list_items = [create_list_item(item_content, item_type)]
                     current_list_type = item_type
+
+            elif child.type == NodeType.NEWLINE:
+                # End current paragraph
+                wrap_and_append_paragraph()
+
             else:
-                # Non-list content - end any open list
+                # Non-list content - end any open list first
                 if current_list_items:
                     current_section.append(create_list_container(current_list_items))
                     current_list_items = []
                     current_list_type = None
-                
+
                 content = self.generate(child)
                 if content:
-                    current_section.append(content)
-        
-        # Handle any remaining list items
+                    current_paragraph.append(content)
+
+        # Handle any remaining content
+        wrap_and_append_paragraph()
+
         if current_list_items:
             current_section.append(create_list_container(current_list_items))
-        
+
         # Add final section
         if current_section:
             sections.append(self._wrap_section(current_section))
-        
+
         section_divider = self._generate_hr(None)
         return section_divider.join(sections)
     
