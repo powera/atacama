@@ -358,3 +358,57 @@ def parse(tokens: Iterator[Token]) -> Node:
     """
     parser = AtacamaParser(tokens)
     return parser.parse()
+
+
+def display_ast(node: Node, return_string: bool = False, indent: int = 0) -> Optional[str]:
+    """
+    Display or return a text representation of an AST node and its children.
+    
+    :param node: Root node of the AST to display
+    :param return_string: If True, return the display string instead of printing
+    :param indent: Current indentation level (used recursively)
+    :return: String representation if return_string=True, None otherwise
+    """
+    if not node:
+        return "" if return_string else None
+        
+    # Create indentation prefix
+    prefix = "  " * indent
+    
+    # Build node representation
+    parts = []
+    parts.append(f"{prefix}{node.type.name}")
+    
+    # Add node-specific details
+    if isinstance(node, ColorNode):
+        parts[-1] += f" (color={node.color}, line={node.is_line})"
+    elif isinstance(node, ListItemNode):
+        parts[-1] += f" (marker={node.marker_type})"
+    elif node.token and node.token.value:
+        parts[-1] += f": {repr(node.token.value)}"
+        
+    # Add position if available
+    if node.token:
+        parts[-1] += f" @ L{node.token.line}:C{node.token.column}"
+        
+    # Process children recursively
+    for child in node.children:
+        child_str = display_ast(child, return_string=True, indent=indent + 1)
+        if child_str:
+            parts.append(child_str)
+            
+    result = "\n".join(parts)
+    
+    if return_string:
+        return result
+    else:
+        print(result)
+        return None
+
+def print_ast(node: Node) -> None:
+    """
+    Convenience function to print an AST.
+    
+    :param node: Root node of the AST to display
+    """
+    display_ast(node, return_string=False)
