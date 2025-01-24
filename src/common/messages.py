@@ -124,6 +124,7 @@ def get_message_by_id(message_id: int) -> Optional[Email]:
     :return: Email object if found and accessible, None otherwise
     """
     with db.session() as db_session:
+        db_session.expire_on_commit = False  # Keep object usable after commit
         message = db_session.query(Email).options(
             joinedload(Email.parent),
             joinedload(Email.children),

@@ -7,7 +7,7 @@ from common.database import db
 from common.models import Email
 from common.messages import get_message_by_id
 import common.openai_client
-from telemetry import LLMUsage
+from common.telemetry import LLMUsage
 
 def analyze_email(email_id: int, model: str = "gpt-4o-2024-11-20") -> Tuple[str, LLMUsage]:
     """
