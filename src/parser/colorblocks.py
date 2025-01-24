@@ -108,7 +108,7 @@ def create_literal_text(content: str) -> str:
     :param content: Text content
     :return: HTML span with literal-text class
     """
-    return f'<span class="literal-text">{content}</span>'
+    return f'<span class="literal-text">{content.strip()}</span>'
 
 def _detect_youtube_url(url: str) -> Tuple[bool, Optional[str]]:
     """
