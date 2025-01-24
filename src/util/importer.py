@@ -33,7 +33,8 @@ def generate_message_hash(msg_data: Dict[str, Any]) -> str:
     :param msg_data: Message data from import file
     :return: SHA-256 hash of key message fields
     """
-    author_email = msg_data.get('author', {}).get('email', '')
+    author = msg_data.get('author', None)
+    author_email = author.get('email', '') if author else ''
     hash_content = f"{msg_data['subject']}|{msg_data['content']}|{author_email}"
     return hashlib.sha256(hash_content.encode('utf-8')).hexdigest()
 
@@ -45,7 +46,8 @@ def find_duplicate_message(db_session, msg_data: Dict[str, Any]) -> Optional[Ema
     :param msg_data: Message data from import
     :return: Existing Email object if found, None otherwise
     """
-    author_email = msg_data.get('author', {}).get('email', '')
+    author = msg_data.get('author', None)
+    author_email = author.get('email', '') if author else ''
     return db_session.query(Email).join(Email.author).filter(
         Email.subject == msg_data['subject'],
         Email.content == msg_data['content'],
