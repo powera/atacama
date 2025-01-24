@@ -140,7 +140,18 @@ class HTMLGenerator:
 
     def _generate_text(self, node: Node) -> str:
         """Generate HTML for plain text content."""
-        return self.sanitize_html(node.token.value) if node.token else ''
+        if not node.token:
+            return ''
+        if node.children:
+            # Handle text with nested content (like parentheses)
+            content = []
+            content.append(self.sanitize_html(node.token.value))
+            for child in node.children:
+                child_content = self.generate(child)
+                if child_content:
+                    content.append(child_content)
+            return ''.join(content)
+        return self.sanitize_html(node.token.value)
     
     def _generate_newline(self, node: Node) -> str:
         """Generate HTML for a line break."""
