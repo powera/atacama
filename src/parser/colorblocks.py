@@ -147,7 +147,7 @@ def create_url_link(url: str) -> str:
             f'<span class="colorblock youtube-embed-container">'
             f'<span class="sigil">📺</span>'
             f'<span class="colortext-content">'
-            f'<div class="youtube-player" data-video-id="{video_id}"></div>'
+            f'<span class="youtube-player" data-video-id="{video_id}"></span>'
             f'</span>'
             f'</span>'
         )

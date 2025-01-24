@@ -133,7 +133,8 @@ class HTMLGenerator:
         if not contents:
             return ""
         content = '\n'.join(contents)
-        return f'<section class="content-section">\n{content}\n</section>'
+        #return f'<section class="content-section">\n{content}\n</section>'
+        return content
     
     def sanitize_html(self, text: str):
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
