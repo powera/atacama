@@ -33,6 +33,7 @@ def serialize_message(message: Email) -> Dict[str, Any]:
         'content': message.content,
         'processed_content': message.processed_content,
         'created_at': message.created_at.isoformat(),
+        'channel': message.channel,
         'parent_id': message.parent_id,
         'author': {
             'id': message.author.id,
@@ -88,8 +89,6 @@ def export_messages(output_path: str, pretty: bool = True) -> None:
                 json.dump(data, f, ensure_ascii=False)
                 
         logger.info(f"Successfully exported {len(messages)} messages to {output_path}")
-        
-
 
 def main() -> None:
     """Main entry point for the export script."""
