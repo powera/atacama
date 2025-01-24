@@ -224,7 +224,7 @@ class HTMLGenerator:
         return content
 
 
-def generate_html(ast: Node) -> str:
+def generate_html(ast: Node, **kwargs) -> str:
     """
     Convenience function to generate HTML from an AST.
     
@@ -234,5 +234,5 @@ def generate_html(ast: Node) -> str:
     Returns:
         Generated HTML string
     """
-    generator = HTMLGenerator()
+    generator = HTMLGenerator(**kwargs)
     return generator.generate(ast)

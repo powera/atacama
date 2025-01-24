@@ -7,8 +7,8 @@ from sqlalchemy.orm import joinedload
 from common.channel_config import get_channel_manager, AccessLevel
 from common.database import db
 from common.models import Email, Quote, email_quotes
-from parser.colorscheme import ColorScheme
-color_processor = ColorScheme()
+
+import parser
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ def reprocess_message(message_id: int):
                 ).first():
                     session.delete(quote)
 
-            message.processed_content = color_processor.process_content(
+            message.processed_content = parser.process_message(
                 message.content,
                 message=message,
                 db_session=session,

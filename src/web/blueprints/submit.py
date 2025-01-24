@@ -12,10 +12,8 @@ from common.models import Email, get_or_create_user
 
 import parser
 import parser.colorblocks
-from parser.colorscheme import ColorScheme
 
 logger = get_logger(__name__)
-color_processor = ColorScheme()
 submit_bp = Blueprint('submit', __name__)
 
 @submit_bp.route('/api/preview', methods=['POST'])
@@ -122,7 +120,7 @@ def handle_submit():
         db_session.add(message)
 
         # Process content with access to the message object
-        message.processed_content = color_processor.process_content(
+        message.processed_content = parser.process_message(
             content,
             message=message,
             db_session=db_session
