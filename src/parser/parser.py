@@ -87,98 +87,107 @@ class AtacamaParser:
         return self.consume()
 
     def parse(self) -> Node:
-        """
-        Parse tokens into an AST.
-        Handles all token types and recovers from malformed input.
-        """
+        """Parse tokens into an AST."""
         document = Node(type=NodeType.DOCUMENT)
         
         while token := self.peek():
-            if token.type == TokenType.TEXT:
-                document.children.append(Node(type=NodeType.TEXT, token=self.consume()))
-
-            elif token.type == TokenType.NEWLINE:
-                document.children.append(Node(type=NodeType.NEWLINE, token=self.consume()))
-
-            elif token.type == TokenType.SECTION_BREAK:
+            if token.type == TokenType.SECTION_BREAK:
                 document.children.append(Node(type=NodeType.HR, token=self.consume()))
-
-            elif token.type == TokenType.MLQ_START:
+                continue
+                
+            if token.type == TokenType.MLQ_START:
                 if mlq := self.parse_mlq():
                     document.children.append(mlq)
-
-            elif token.type in {TokenType.BULLET_LIST_MARKER, 
-                              TokenType.NUMBER_LIST_MARKER,
-                              TokenType.ARROW_LIST_MARKER}:
+                continue
+                
+            if token.type in {TokenType.BULLET_LIST_MARKER, 
+                            TokenType.NUMBER_LIST_MARKER,
+                            TokenType.ARROW_LIST_MARKER}:
                 if list_item := self.parse_list_item():
                     document.children.append(list_item)
-
-            elif token.type == TokenType.COLOR_TAG:
-                if color := self.parse_color_line():
-                    document.children.append(color)
-
-            elif token.type == TokenType.CHINESE_TEXT:
-                document.children.append(Node(type=NodeType.CHINESE, token=self.consume()))
-
-            elif token.type == TokenType.URL:
-                document.children.append(Node(type=NodeType.URL, token=self.consume()))
-
-            elif token.type == TokenType.WIKILINK_START:
-                if wikilink := self.parse_wikilink():
-                    document.children.append(wikilink)
-
-            elif token.type == TokenType.TEMPLATE:
-                document.children.append(Node(type=NodeType.TEMPLATE, token=self.consume()))
-
-            elif token.type == TokenType.PARENTHESIS_START:
-                if paren := self.parse_paren_content():
-                    document.children.append(paren)
-
-            elif token.type == TokenType.LITERAL_START:
-                if literal := self.parse_literal():
-                    document.children.append(literal)
-
-            elif token.type == TokenType.EMPHASIS:
-                document.children.append(Node(type=NodeType.EMPHASIS, token=self.consume()))
-
+                continue
+                
+            # Handle all other content types through unified inline parsing
+            if node := self.parse_inline_content():
+                document.children.append(node)
             else:
-                # Convert unexpected tokens to text
-                document.children.append(Node(type=NodeType.TEXT, token=self.consume()))
+                self.consume()  # Skip invalid token
 
         return document
 
+    def parse_inline_content(self) -> Optional[Node]:
+        """
+        Parse all types of inline content including text, formatting, and special elements.
+        This is the main parsing function that handles all content types consistently.
+        """
+        token = self.peek()
+        if not token:
+            return None
+
+        # Handle basic text content
+        if token.type == TokenType.TEXT:
+            return Node(type=NodeType.TEXT, token=self.consume())
+            
+        # Handle newlines
+        if token.type == TokenType.NEWLINE:
+            return Node(type=NodeType.NEWLINE, token=self.consume())
+
+        # Handle color tags
+        if token.type == TokenType.COLOR_TAG:
+            return self.parse_color_block()
+
+        # Handle Chinese text
+        if token.type == TokenType.CHINESE_TEXT:
+            return Node(type=NodeType.CHINESE, token=self.consume())
+
+        # Handle URLs
+        if token.type == TokenType.URL:
+            return Node(type=NodeType.URL, token=self.consume())
+
+        # Handle wiki links
+        if token.type == TokenType.WIKILINK_START:
+            return self.parse_wikilink()
+
+        # Handle templates
+        if token.type == TokenType.TEMPLATE:
+            return Node(type=NodeType.TEMPLATE, token=self.consume())
+
+        # Handle emphasis
+        if token.type == TokenType.EMPHASIS:
+            return Node(type=NodeType.EMPHASIS, token=self.consume())
+
+        # Handle literal text blocks
+        if token.type == TokenType.LITERAL_START:
+            return self.parse_literal()
+
+        # Handle parenthesized content
+        if token.type == TokenType.PARENTHESIS_START:
+            return self.parse_paren_content()
+
+        return None
+
     def parse_mlq(self) -> Optional[Node]:
-        """
-        Parse a multi-line quote block.
-        Returns text node if no valid end marker found.
-        """
+        """Parse a multi-line quote block."""
         start_token = self.expect(TokenType.MLQ_START)
         if not start_token:
             return None
             
         mlq = Node(type=NodeType.MLQ, token=start_token)
-        content_tokens = []
         
         while self.peek() and self.peek().type != TokenType.MLQ_END:
-            if token := self.peek():
-                if token.type == TokenType.NEWLINE:
-                    mlq.children.append(Node(type=NodeType.NEWLINE, token=self.consume()))
-                elif token.type == TokenType.TEXT:
-                    mlq.children.append(Node(type=NodeType.TEXT, token=self.consume()))
-                else:
-                    if node := self.parse_inline():
-                        mlq.children.append(node)
-                    else:
-                        self.consume()
-            content_tokens.append(token)
+            if node := self.parse_inline_content():
+                mlq.children.append(node)
+            else:
+                self.consume()
                 
-        # Check for proper end marker
         if self.expect(TokenType.MLQ_END):
             return mlq
             
         # No end marker - convert to text
-        text_content = '<<<' + ''.join(t.value for t in content_tokens)
-        return Node(type=NodeType.TEXT, token=start_token)
+        return Node(type=NodeType.TEXT, token=start_token, 
+                   children=[Node(type=NodeType.TEXT, token=Token(
+                       TokenType.TEXT, '<<<', start_token.line, start_token.column
+                   ))])
 
     def parse_list_item(self) -> Optional[ListItemNode]:
         """Parse a list item with its marker."""
@@ -199,13 +208,10 @@ class AtacamaParser:
             TokenType.NEWLINE, TokenType.SECTION_BREAK,
             TokenType.BULLET_LIST_MARKER, TokenType.NUMBER_LIST_MARKER, TokenType.ARROW_LIST_MARKER
         }:
-            if node := self.parse_inline():
+            if node := self.parse_inline_content():
                 children.append(node)
             else:
-                if self.peek() and self.peek().type == TokenType.TEXT:
-                    children.append(Node(type=NodeType.TEXT, token=self.consume()))
-                else:
-                    self.consume()
+                self.consume()
         
         if self.peek() and self.peek().type == TokenType.NEWLINE:
             self.consume()
@@ -214,71 +220,60 @@ class AtacamaParser:
                           token=marker_token,
                           children=children)
 
-    def parse_color_line(self) -> Optional[ColorNode]:
-        """Parse a line-level color block."""
+    def parse_color_block(self) -> Optional[ColorNode]:
+        """Parse a color-formatted block."""
         token = self.expect(TokenType.COLOR_TAG)
         if not token:
             return None
             
         color = token.value.strip('<>')
         children = []
+        is_line = not self.current_paren_depth  # Line-level if not in parentheses
         
-        while self.peek() and self.peek().type not in {TokenType.NEWLINE, TokenType.SECTION_BREAK}:
-            if node := self.parse_inline():
-                children.append(node)
-            elif self.peek().type == TokenType.TEXT:
-                children.append(Node(type=NodeType.TEXT, token=self.consume()))
-            else:
-                self.consume()
-                
-        return ColorNode(color=color, is_line=True, token=token, children=children)
+        # For line-level color blocks, parse until newline or section break
+        if is_line:
+            while self.peek() and self.peek().type not in {TokenType.NEWLINE, TokenType.SECTION_BREAK}:
+                if node := self.parse_inline_content():
+                    children.append(node)
+                else:
+                    self.consume()
+        
+        return ColorNode(color=color, is_line=is_line, token=token, children=children)
 
     def parse_paren_content(self) -> Optional[Node]:
-        """
-        Parse parenthesized content, including color tags.
-        Maintains proper nesting depth and recovers from errors.
-        """
+        """Parse parenthesized content, including nested color tags."""
         start_token = self.expect(TokenType.PARENTHESIS_START)
         if not start_token:
             return None
             
         self.current_paren_depth += 1
-        content_tokens = [start_token]
         
         # Check for color tag
         color_token = None
         if self.peek() and self.peek().type == TokenType.COLOR_TAG:
             color_token = self.consume()
-            content_tokens.append(color_token)
         
         children = []
         while self.peek() and self.peek().type != TokenType.PARENTHESIS_END:
-            if node := self.parse_inline():
+            if node := self.parse_inline_content():
                 children.append(node)
-            elif self.peek().type == TokenType.TEXT:
-                children.append(Node(type=NodeType.TEXT, token=self.consume()))
             else:
-                token = self.consume()
-                if token:
-                    children.append(Node(type=NodeType.TEXT, token=token))
+                self.consume()
         
-        # Check for proper closing
         end_token = self.expect(TokenType.PARENTHESIS_END)
+        self.current_paren_depth -= 1
+        
         if end_token:
-            self.current_paren_depth -= 1
             if color_token:
                 color = color_token.value.strip('<>')
                 return ColorNode(color=color, is_line=False, token=color_token, children=children)
-            # Create nodes for the parenthetical structure
-            container = Node(type=NodeType.TEXT, token=start_token)
-            if children:
-                container.children = children
-            # Add the closing parenthesis as a child
+            
+            # Plain parenthetical - wrap in text nodes
+            container = Node(type=NodeType.TEXT, token=start_token, children=children)
             container.children.append(Node(type=NodeType.TEXT, token=end_token))
             return container
-        
-        # No closing parenthesis - convert to text
-        text_content = '(' + ''.join(t.value for t in content_tokens)
+            
+        # No closing parenthesis - return as text
         return Node(type=NodeType.TEXT, token=start_token)
 
     def parse_wikilink(self) -> Optional[Node]:
@@ -288,14 +283,10 @@ class AtacamaParser:
             return None
             
         node = Node(type=NodeType.WIKILINK, token=start_token)
-        content_tokens = []
         
         while self.peek() and self.peek().type != TokenType.WIKILINK_END:
-            content_tokens.append(self.peek())
-            if inline := self.parse_inline():
+            if inline := self.parse_inline_content():
                 node.children.append(inline)
-            elif self.peek().type == TokenType.TEXT:
-                node.children.append(Node(type=NodeType.TEXT, token=self.consume()))
             else:
                 self.consume()
         
@@ -303,7 +294,6 @@ class AtacamaParser:
             return node
             
         # No end marker - convert to text
-        text_content = '[[' + ''.join(t.value for t in content_tokens)
         return Node(type=NodeType.TEXT, token=start_token)
 
     def parse_literal(self) -> Optional[Node]:
@@ -313,14 +303,10 @@ class AtacamaParser:
             return None
             
         node = Node(type=NodeType.LITERAL, token=start_token)
-        content_tokens = []
         
         while self.peek() and self.peek().type != TokenType.LITERAL_END:
-            content_tokens.append(self.peek())
-            if inline := self.parse_inline():
+            if inline := self.parse_inline_content():
                 node.children.append(inline)
-            elif self.peek().type == TokenType.TEXT:
-                node.children.append(Node(type=NodeType.TEXT, token=self.consume()))
             else:
                 self.consume()
                 
@@ -328,35 +314,8 @@ class AtacamaParser:
             return node
             
         # No end marker - convert to text
-        text_content = '<<' + ''.join(t.value for t in content_tokens)
         return Node(type=NodeType.TEXT, token=start_token)
 
-    def parse_inline(self) -> Optional[Node]:
-        """Parse special inline elements like Chinese text, URLs, etc."""
-        token = self.peek()
-        if not token:
-            return None
-
-        if token.type == TokenType.CHINESE_TEXT:
-            return Node(type=NodeType.CHINESE, token=self.consume())
-            
-        elif token.type == TokenType.URL:
-            return Node(type=NodeType.URL, token=self.consume())
-            
-        elif token.type == TokenType.EMPHASIS:
-            return Node(type=NodeType.EMPHASIS, token=self.consume())
-            
-        elif token.type == TokenType.TEMPLATE:
-            return Node(type=NodeType.TEMPLATE, token=self.consume())
-
-        elif token.type == TokenType.WIKILINK_START:
-            return self.parse_wikilink()
-
-        elif token.type == TokenType.PARENTHESIS_START:
-            # Delegate to the existing parse_paren_content method for handling parentheses
-            return self.parse_paren_content()
-
-        return None
 
 def parse(tokens: Iterator[Token]) -> Node:
     """
