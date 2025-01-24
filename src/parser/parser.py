@@ -253,13 +253,14 @@ class AtacamaParser:
         
         children = []
         while self.peek() and self.peek().type != TokenType.PARENTHESIS_END:
-            content_tokens.append(self.peek())
             if node := self.parse_inline():
                 children.append(node)
             elif self.peek().type == TokenType.TEXT:
                 children.append(Node(type=NodeType.TEXT, token=self.consume()))
             else:
-                self.consume()
+                token = self.consume()
+                if token:
+                    children.append(Node(type=NodeType.TEXT, token=token))
         
         # Check for proper closing
         end_token = self.expect(TokenType.PARENTHESIS_END)
@@ -268,10 +269,16 @@ class AtacamaParser:
             if color_token:
                 color = color_token.value.strip('<>')
                 return ColorNode(color=color, is_line=False, token=color_token, children=children)
-            return Node(type=NodeType.TEXT, token=start_token, children=children)
+            # Create nodes for the parenthetical structure
+            container = Node(type=NodeType.TEXT, token=start_token)
+            if children:
+                container.children = children
+            # Add the closing parenthesis as a child
+            container.children.append(Node(type=NodeType.TEXT, token=end_token))
+            return container
         
         # No closing parenthesis - convert to text
-        text_content = '(' + ''.join(t.value for t in content_tokens)  # )
+        text_content = '(' + ''.join(t.value for t in content_tokens)
         return Node(type=NodeType.TEXT, token=start_token)
 
     def parse_wikilink(self) -> Optional[Node]:
