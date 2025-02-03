@@ -129,7 +129,7 @@ def navigation() -> str:
             {
                 'name': 'Submit Message',
                 'description': 'Create a new message',
-                'url': url_for('submit.submit_message')
+                'url': url_for('submit.show_submit_form')
             }
         ]
         
@@ -154,7 +154,7 @@ def navigation() -> str:
                     'description': 'Manage user access and permissions',
                     'url': url_for('admin.list_users'),
                 }
-            ]
+            ])
     
     return render_template(
         'nav.html',
