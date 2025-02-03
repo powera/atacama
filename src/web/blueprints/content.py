@@ -140,7 +140,7 @@ def navigation() -> str:
                 {
                     'name': 'Admin Dashboard',
                     'description': 'Manage users and permissions',
-                    'url': url_for('admin.admin_dashboard')
+                    'url': url_for('admin.list_users')
                 }
             ]
             nav_items['main'].extend([
@@ -149,11 +149,6 @@ def navigation() -> str:
                     'description': 'View system metrics and diagnostics',
                     'url': url_for('debug.debug_info'),
                 },
-                {
-                    'name': 'User Management',
-                    'description': 'Manage user access and permissions',
-                    'url': url_for('admin.list_users'),
-                }
             ])
     
     return render_template(
