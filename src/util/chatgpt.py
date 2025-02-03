@@ -9,7 +9,7 @@ from common.messages import get_message_by_id
 import common.openai_client
 from common.telemetry import LLMUsage
 
-def analyze_email(email_id: int, model: str = "gpt-4o-2024-11-20") -> Tuple[str, LLMUsage]:
+def analyze_email(email_id: int, model: str = "gpt-4o-mini-2024-07-18") -> Tuple[str, LLMUsage]:
     """
     Retrieve and analyze an email using the specified LLM model.
     
@@ -30,13 +30,28 @@ def analyze_email(email_id: int, model: str = "gpt-4o-2024-11-20") -> Tuple[str,
     
     # Set up analysis prompting
     context = """You are analyzing an email message. Please provide:
-1. A brief summary of the main content
+1. A one-paragraph summary of the main content
 2. Key topics or themes discussed
-3. Any notable writing style characteristics
-4. Important references or links mentioned
-5. Overall tone and purpose of the message"""
+3. Cultural references that may not be understood by all readers
+4. Confusing or vague topics
+5. Material that might not be suitable for publication, due to its tone or subject
 
-    prompt = f"""Analyze this email message:
+There are "color" tags with the following meanings:
+Xantham / 🔥 / Sarcastic or overconfident tone
+Red / 💡 / Forceful and certain statements
+Orange / ⚔️ / Counterpoint or contrasting perspective
+Yellow/Quote / 💬 / Direct quotations
+Green / ⚙️ / Technical explanations
+Teal / 🤖 / Artificial Intelligence or computational output
+Blue / ✨ / "Voice from beyond" or ethereal commentary
+Violet / 📣 / Serious, authoritative tone
+Music / 🎵 / Musical references or lyrical content
+Mogue / 🌎 / Actions taken or global perspectives
+Gray / 💭 / Past stories or reflective content
+Hazel / 🎭 / Storytelling and narrative content
+"""
+
+    prompt = f"""Analyze this message:
 
 Subject: {message.subject}
 
