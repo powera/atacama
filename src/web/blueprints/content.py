@@ -306,7 +306,7 @@ def message_stream(older_than_id: Optional[int] = None,
             current_user_id=user_id,
             current_channel=channel,
             available_channels=channels,
-            channel_configs=channel_manager.channels
+            channel_manager=channel_manager
         )
 
 @content_bp.route('/sitemap.xml')

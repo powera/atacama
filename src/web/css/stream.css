@@ -117,6 +117,10 @@
     margin: 0;
 }
 
+.channel-item.private {
+    background: var(--color-annotation-bg);
+}
+
 .channel-link {
     display: inline-block;
     padding: var(--spacing-base) var(--spacing-large);

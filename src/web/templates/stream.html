@@ -19,13 +19,11 @@
                         <a href="{{ url_for('content.message_stream') }}" class="channel-link">All</a>
                     </li>
                     {% for channel in available_channels %}
-                        {% if channel != 'private' %}
-                            <li class="channel-item {% if current_channel == channel %}active{% endif %}">
-                                <a href="{{ url_for('content.message_stream', channel=channel) }}" class="channel-link">
-                                    {{ channel|title }}
-                                </a>
-                            </li>
-                        {% endif %}
+                        <li class="channel-item {% if not channel_manager.channels[channel].is_public %}private{%endif%} {% if current_channel == channel %}active{% endif %}">
+                            <a href="{{ url_for('content.message_stream', channel=channel) }}" class="channel-link">
+                                {{ channel|title }}
+                            </a>
+                        </li>
                     {% endfor %}
                 </ul>
             </nav>
