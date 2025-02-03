@@ -1,0 +1,47 @@
+core_files:
+    # base database info
+  - path: src/common/database.py
+    description: Database connection management
+  - path: src/common/models.py
+    description: SQLAlchemy models
+
+    # Parser - headers only
+  - path: src/parser/lexer.py
+    description: Lexical analysis
+    header_only: true
+  - path: src/parser/parser.py
+    description: AST parsing
+    header_only: true
+  - path: src/parser/html_generator.py 
+    description: HTML output generation
+    header_only: true
+    
+    # Core utilities and configuration
+  - path: src/common/logging_config.py
+  - path: src/common/telemetry.py
+  - path: src/common/auth.py
+  - path: src/constants.py
+    
+    # API integrations
+  - path: src/common/openai_client.py
+    
+    # Channel management
+  - path: src/common/channel_config.py
+  - path: src/common/messages.py
+
+templates:
+  # Core CSS files
+  - path: src/web/css/common.css
+  - path: src/web/css/atacama.css
+
+  # Core JS files
+  - path: src/web/js/atacama.js
+
+  # Additional HTML/CSS
+  - path: src/web/templates/chain.html
+  - path: src/web/templates/message.html
+  - path: src/web/templates/stream.html
+  - path: src/web/templates/submit.html
+  - path: src/web/css/stream.css
+  - path: src/web/css/submit.css
+  - path: src/web/css/chess.css
