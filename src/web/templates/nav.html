@@ -9,32 +9,77 @@
     <div class="container">
         <h1>Site Navigation</h1>
 
+        {% if nav_items.main %}
         <section class="nav-section">
             <h2>Main Pages</h2>
             <ul class="nav-list">
-                <li><a href="/">Home</a></li>
-                <li><a href="/submit">Submit Message</a></li>
-                <li><a href="/quotes">Quote Archive</a></li>
-                <li><a href="/channels">Channel Preferences</a></li>
-            </ul>
-        </section>
-
-        <section class="nav-section">
-            <h2>Channel Streams</h2>
-            <ul class="nav-list">
-                <li><a href="/stream">All Channels</a></li>
-                {% for name, config in channels %}
+                {% for item in nav_items.main %}
                 <li>
-                    <a href="{{ url_for('content.message_stream', channel=name) }}">
-                        {{ name|title }} Channel
-                        {% if config.description %}
-                        <span class="channel-description">{{ config.description }}</span>
+                    <a href="{{ item.url }}">
+                        {{ item.name }}
+                        {% if item.description %}
+                        <span class="channel-description">{{ item.description }}</span>
                         {% endif %}
                     </a>
                 </li>
                 {% endfor %}
             </ul>
         </section>
+        {% endif %}
+
+        {% if nav_items.channels %}
+        <section class="nav-section">
+            <h2>Channel Streams</h2>
+            <ul class="nav-list">
+                {% for channel in nav_items.channels %}
+                <li>
+                    <a href="{{ channel.url }}">
+                        {{ channel.name|title }} Channel
+                        {% if channel.config.description %}
+                        <span class="channel-description">{{ channel.config.description }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
+        {% if nav_items.user %}
+        <section class="nav-section">
+            <h2>User Pages</h2>
+            <ul class="nav-list">
+                {% for item in nav_items.user %}
+                <li>
+                    <a href="{{ item.url }}">
+                        {{ item.name }}
+                        {% if item.description %}
+                        <span class="channel-description">{{ item.description }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
+        {% if nav_items.admin %}
+        <section class="nav-section">
+            <h2>Administration</h2>
+            <ul class="nav-list">
+                {% for item in nav_items.admin %}
+                <li>
+                    <a href="{{ item.url }}">
+                        {{ item.name }}
+                        {% if item.description %}
+                        <span class="channel-description">{{ item.description }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
 
         <style>
             .nav-section {
