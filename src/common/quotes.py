@@ -8,7 +8,7 @@ This module handles all quote-related functionality including:
 - Quote type validation and processing
 """
 
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 import re
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from logging import getLogger
 
 import common.openai_client
 from common.models import Quote, Email, email_quotes
+from common.telemetry import LLMUsage
 
 logger = getLogger(__name__)
 
@@ -38,7 +39,6 @@ class QuoteValidationError(Exception):
     pass
 
 def generate_quote_metadata(
-    self,
     quote_text: str,
     model: str = common.openai_client.DEFAULT_MODEL) -> Tuple[Dict[str, Any], LLMUsage]:
     """
@@ -84,7 +84,8 @@ Format the response as valid JSON."""
                     "context": {"type": "string"},
                     "time_period": {"type": "string"}
                 },
-                "required": ["author_type", "context", "time_period"]
+                "required": ["author_type", "speaker", "context", "time_period"],
+                "additionalProperties": False,
             },
             "interpretation": {"type": "string"},
             "keywords": {"type": "array", "items": {"type": "string"}},
@@ -92,7 +93,8 @@ Format the response as valid JSON."""
             "literary_devices": {"type": "array", "items": {"type": "string"}}
         },
         "required": ["theme", "tone", "attribution", "interpretation", "keywords", 
-                    "related_topics", "literary_devices"]
+                    "related_topics", "literary_devices"],
+        "additionalProperties": False,
     }
 
     completion_text, metadata, usage = common.openai_client.generate_chat(
