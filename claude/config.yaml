@@ -17,17 +17,24 @@ core_files:
     header_only: true
     
     # Core utilities and configuration
-  - path: src/common/logging_config.py
-  - path: src/common/telemetry.py
   - path: src/common/auth.py
+    description: decorators for web request auth
+  - path: src/common/logging_config.py
   - path: src/constants.py
     
     # API integrations
   - path: src/common/openai_client.py
+    header_only: true
+  - path: src/common/telemetry.py
+    header_only: true
     
     # Channel management
   - path: src/common/channel_config.py
   - path: src/common/messages.py
+    header_only: true
+
+    # Web server
+  - path: src/web/server.py
 
 templates:
   # Core CSS files
