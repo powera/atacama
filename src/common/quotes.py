@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from logging import getLogger
 
+import common.openai_client
 from common.models import Quote, Email, email_quotes
 
 logger = getLogger(__name__)
@@ -35,6 +36,73 @@ class QuoteExtractionError(Exception):
 class QuoteValidationError(Exception):
     """Raised when quote validation fails"""
     pass
+
+def generate_quote_metadata(
+    self,
+    quote_text: str,
+    model: str = common.openai_client.DEFAULT_MODEL) -> Tuple[Dict[str, Any], LLMUsage]:
+    """
+    Generate metadata about a quote using the ChatGPT API.
+    
+    :param quote_text: The text of the quote to analyze
+    :param model: The model to use for generation
+    :return: Tuple of (metadata dict, LLM usage stats)
+    """
+
+    prompt = f"""Analyze this quote and provide metadata in JSON format:
+
+Quote: "{quote_text}"
+
+Provide the following fields:
+- theme: The main theme or topic (e.g. "love", "persistence", "technology")
+- tone: The emotional tone (e.g. "inspirational", "humorous", "critical")
+- attribution: Object containing:
+  - author_type: "historical" for real people, "fictional" for characters
+  - speaker: The character/person who speaks the quote (if different from author)
+  - context: Publication/work where quote appears, or historical context
+  - time_period: Historical or fictional time period of the quote
+- interpretation: A brief interpretation of the quote's meaning
+- keywords: List of 3-5 relevant keywords
+- related_topics: List of 2-3 related topics or themes
+- literary_devices: List of any notable literary devices used (metaphor, irony, etc.)
+
+For fictional works, distinguish between the actual author and any fictional speakers.
+Format the response as valid JSON."""
+
+    # Request structured output via JSON schema
+    # Enhanced JSON schema to handle attribution
+    schema = {
+        "type": "object",
+        "properties": {
+            "theme": {"type": "string"},
+            "tone": {"type": "string"},
+            "attribution": {
+                "type": "object",
+                "properties": {
+                    "author_type": {"type": "string", "enum": ["historical", "fictional"]},
+                    "speaker": {"type": "string"},
+                    "context": {"type": "string"},
+                    "time_period": {"type": "string"}
+                },
+                "required": ["author_type", "context", "time_period"]
+            },
+            "interpretation": {"type": "string"},
+            "keywords": {"type": "array", "items": {"type": "string"}},
+            "related_topics": {"type": "array", "items": {"type": "string"}},
+            "literary_devices": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["theme", "tone", "attribution", "interpretation", "keywords", 
+                    "related_topics", "literary_devices"]
+    }
+
+    completion_text, metadata, usage = common.openai_client.generate_chat(
+        prompt=prompt,
+        model=model,
+        json_schema=schema
+    )
+    
+    return metadata, usage
+
 
 def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:
     """
