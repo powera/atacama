@@ -6,6 +6,8 @@ core_files:
     description: SQLAlchemy models
 
     # Parser - headers only
+  - path: src/parser/colorblocks.py
+    description: HTML generation for various tags
   - path: src/parser/lexer.py
     description: Lexical analysis
     header_only: true
