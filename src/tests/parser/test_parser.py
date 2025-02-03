@@ -43,7 +43,7 @@ class TestAtacamaParser(unittest.TestCase):
         self.assert_node_type(ast, NodeType.DOCUMENT)
         
         # Should have text, HR, text nodes
-        self.assertEqual(len(ast.children), 4)  # text, newline, HR, text
+        self.assertEqual(len(ast.children), 5)  # text, newline, HR, newline, text
         self.assert_node_type(ast.children[2], NodeType.HR)
 
     def test_multi_quote_blocks(self):

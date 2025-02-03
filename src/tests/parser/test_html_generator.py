@@ -31,17 +31,11 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         
         html = self.generate_html(text)
         self.assertHtmlEqual(html, """
-            <section class="content-section">
-                <p>First section</p>
-            </section>
+            <p>First section</p>
             <hr class="section-break" />
-            <section class="content-section">
-                <p>Second section</p>
-            </section>
+            <p>Second section</p>
             <hr class="section-break" />
-            <section class="content-section">
-                <p>Third section</p>
-            </section>
+            <p>Third section</p>
         """)
 
     def test_empty_document(self):
@@ -62,7 +56,6 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         
         html = self.generate_html(text)
         self.assertHtmlEqual(html, """
-            <section class="content-section">
                 <p>Before quote</p>
                 <div class="mlq">
                     <button type="button" class="mlq-collapse" aria-label="Toggle visibility">
@@ -74,7 +67,6 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
                     </div>
                 </div>
                 <p>After quote</p>
-            </section>
         """)
 
     def test_nested_multi_quote(self):
@@ -102,12 +94,10 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         html = self.generate_html(text)
         
         self.assertHtmlEqual(html, """
-            <section class="content-section">
-                <p><span class="colorblock color-red">
-                    <span class="sigil">💡</span>
-                    <span class="colortext-content">Important warning</span>
-                </span></p>
-            </section>
+            <p><span class="colorblock color-red">
+                <span class="sigil">💡</span>
+                <span class="colortext-content">Important warning</span>
+            </span></p>
         """)
 
     def test_nested_color_tags(self):
@@ -239,7 +229,6 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         html = self.generate_html(text)
         
         # Verify structural elements
-        self.assertIn('<section class="content-section">', html)
         self.assertIn('<hr class="section-break"', html)
         self.assertIn('class="mlq"', html)
         

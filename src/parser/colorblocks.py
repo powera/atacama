@@ -39,10 +39,10 @@ def create_color_block(color: str, content: str, is_line: bool = False) -> str:
         content = f"({content})"
         
     return (
-        f'<span class="colorblock color-{class_name}">'
-        f'<span class="sigil">{sigil}</span>'
-        f'<span class="colortext-content">{content}</span>'
-        f'</span>'
+        f'''<span class="colorblock color-{class_name}">
+    <span class="sigil">{sigil}</span>
+    <span class="colortext-content">{content}</span>
+  </span>'''
     )
 
 def create_chinese_annotation(hanzi: str) -> str:
