@@ -27,7 +27,9 @@ class TokenType(Enum):
     # Special inline formatting
     EMPHASIS = auto()       # *emphasized text*
     TEMPLATE = auto()       # template, like {{pgn|...}}
-    
+    TITLE_START = auto()    # [# Title Format #]
+    TITLE_END = auto()
+
     # Special content
     CHINESE_TEXT = auto()
     URL = auto()
@@ -349,15 +351,10 @@ class AtacamaLexer:
         text = []
 
         while self.current_char and not (
-            self.current_char == '\n' or  # Break on newlines
-            self.current_char in '()[]' or  # Break on brackets
-            (self.current_char == '<' and self.peek() in {'<', '/'}) or
-            (self.current_char == '{' and self.peek() == '{') or
-            (self.current_char == '[' and self.peek() == '[') or
-            (self.is_at_line_start() and self.current_char in '*#>') or  # List markers at start
-            (self.current_char == '*' and not self.peek().isspace()) or
-            (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p') or
-            ('\u4e00' <= self.current_char <= '\u9fff')
+            self.current_char == '\n' or  # Always break on newlines
+            self.current_char in '<>*#-[]{}()' or  # Potential token starts/ends
+            ('\u4e00' <= self.current_char <= '\u9fff') or  # Chinese characters
+            (self.current_char == 'h' and self.peek() == 't' and self.peek(2) == 't' and self.peek(3) == 'p')
         ):
             text.append(self.current_char)
             self.advance()
@@ -423,6 +420,14 @@ class AtacamaLexer:
                 token = self.handle_url()
             elif '\u4e00' <= self.current_char <= '\u9fff':
                 token = self.handle_chinese()
+            elif self.current_char == '[' and self.peek() == '#':
+                self.advance()  # consume [
+                self.advance()  # consume #
+                token = Token(TokenType.TITLE_START, '[#', self.line, self.column)
+            elif self.current_char == '#' and self.peek() == ']':
+                self.advance()  # consume #
+                self.advance()  # consume ]
+                token = Token(TokenType.TITLE_END, '#]', self.line, self.column)
             elif self.current_char == '(':
                 self.in_parentheses += 1
                 self.advance()
