@@ -188,8 +188,8 @@ class HTMLGenerator:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)
 
-        # Handle quote storage for yellow/quote blocks
-        if node.color in ('yellow', 'quote') and content:
+        # Handle quote storage for yellow/quote blocks if db_session present
+        if node.color in ('yellow', 'quote') and content and self.db_session:
             common.quotes.save_quotes(
                 [{'text': content.strip(), 'quote_type': 'reference'}], 
                 self.message, self.db_session)
