@@ -2,6 +2,13 @@ __pycache__
 *.swp
 data/cedict/cedict_1_0_ts_utf-8_mdbg.txt
 
+# Mac files
+.DS_Store
+.DS_Store?
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
 # Never store keys
 keys/
 
