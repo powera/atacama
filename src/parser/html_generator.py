@@ -223,7 +223,12 @@ class HTMLGenerator:
     def _generate_emphasis(self, node: Node) -> str:
         """Generate HTML for emphasized text."""
         return create_emphasis(node.token.value)
-    
+
+    def _generate_title(self, node: Node) -> str:
+        """Generate HTML for an inline title tag."""
+        content = ''.join(self.generate(child) for child in node.children)
+        return f'<span class="inline-title">{content}</span>'
+
     def _generate_template(self, node: Node) -> str:
         """Generate HTML for template blocks."""
         content = node.token.value

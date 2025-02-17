@@ -21,9 +21,10 @@ class NodeType(Enum):
     LIST_ITEM = auto()   # List item with marker
     CHINESE = auto()     # Chinese text requiring annotation
     URL = auto()         # URL link
-    WIKILINK = auto()    # Wiki-style link
-    LITERAL = auto()     # Literal text block
-    EMPHASIS = auto()    # Emphasized text
+    WIKILINK = auto()    # Wiki-style link ( [[ foo ]] )
+    LITERAL = auto()     # Literal text block ( << foo >> )
+    EMPHASIS = auto()    # Emphasized text ( *foo* )
+    TITLE = auto()       # In-line title text [# Foo #]
     TEMPLATE = auto()    # Template blocks (pgn, isbn, etc)
 
 class Node:
@@ -147,6 +148,13 @@ class AtacamaParser:
         # Handle wiki links
         if token.type == TokenType.WIKILINK_START:
             return self.parse_wikilink()
+
+        # Handle title text
+        if token.type == TokenType.TITLE_START:
+            return self.parse_bracketed_content(
+                start_type=TokenType.TITLE_START,
+                end_type=TokenType.TITLE_END,
+                node_type=NodeType.TITLE)
 
         # Handle templates
         if token.type == TokenType.TEMPLATE:
@@ -327,6 +335,47 @@ class AtacamaParser:
                       children=text_node.children)
                       
         # No end marker - return as text with children
+        return text_node
+
+    def parse_bracketed_content(self, start_type: TokenType, end_type: TokenType, node_type: NodeType) -> Optional[Node]:
+        """
+        Parse content between matching bracket-style markers.
+        Used for wikilinks, literal blocks, and title text.
+
+        :param start_type: Expected start token type
+        :param end_type: Expected end token type  
+        :param node_type: Type of node to create if successfully parsed
+        :return: Parsed node or None if invalid
+        """
+        start_token = self.expect(start_type)
+        if not start_token:
+            return None
+
+        # Create text node in case we need to fall back
+        text_node = Node(type=NodeType.TEXT, token=Token(
+            TokenType.TEXT,
+            start_token.value,
+            start_token.line,
+            start_token.column
+        ))
+
+        # Collect content until end marker
+        while self.peek() and self.peek().type != end_type and self.peek().type != TokenType.NEWLINE:
+            if inline := self.parse_inline_content():
+                text_node.children.append(inline)
+            else:
+                if curr_token := self.consume():
+                    text_node.children.append(Node(
+                        type=NodeType.TEXT,
+                        token=curr_token
+                    ))
+
+        # If we find the end marker, return proper node type
+        if self.expect(end_type):
+            return Node(type=node_type, token=start_token,
+                      children=text_node.children)
+
+        # No end marker - return as text with children  
         return text_node
 
 

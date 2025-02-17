@@ -234,6 +234,17 @@ em {
     padding: 0 0.2em;
 }
 
+/* Inline title text */
+.inline-title {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: var(--color-text-secondary);
+    padding: 0 0.3em;
+    border-bottom: 2px solid var(--color-primary);
+    display: inline-block;
+    margin: 0 0.2em;
+}
+
 /* Chinese annotation system */
 .annotated-chinese {
     position: relative;
