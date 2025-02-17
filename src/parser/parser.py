@@ -302,19 +302,32 @@ class AtacamaParser:
         if not start_token:
             return None
             
-        node = Node(type=NodeType.LITERAL, token=start_token)
+        # Treat unclosed literal as plain text
+        text_node = Node(type=NodeType.TEXT, token=Token(
+            TokenType.TEXT, 
+            start_token.value,
+            start_token.line,
+            start_token.column
+        ))
         
+        # Continue parsing the rest of the content
         while self.peek() and self.peek().type != TokenType.LITERAL_END:
             if inline := self.parse_inline_content():
-                node.children.append(inline)
+                text_node.children.append(inline)
             else:
-                self.consume()
+                if curr_token := self.consume():
+                    text_node.children.append(Node(
+                        type=NodeType.TEXT,
+                        token=curr_token
+                    ))
                 
+        # If we find the end marker, convert to proper literal block
         if self.expect(TokenType.LITERAL_END):
-            return node
-            
-        # No end marker - convert to text
-        return Node(type=NodeType.TEXT, token=start_token)
+            return Node(type=NodeType.LITERAL, token=start_token, 
+                      children=text_node.children)
+                      
+        # No end marker - return as text with children
+        return text_node
 
 
 def parse(tokens: Iterator[Token]) -> Node:
