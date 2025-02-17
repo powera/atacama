@@ -9,3 +9,5 @@ python-dotenv>=0.19.0
 pypinyin>=0.53.0
 jieba>=0.42.1
 tomli>=2.2.1
+tomli_w>=1.2.0
+coverage>=7.6.12
