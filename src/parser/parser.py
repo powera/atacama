@@ -302,7 +302,7 @@ class AtacamaParser:
         if not start_token:
             return None
             
-        # Create a basic text node for the literal marker
+        # Treat unclosed literal as plain text
         text_node = Node(type=NodeType.TEXT, token=Token(
             TokenType.TEXT, 
             start_token.value,
@@ -310,24 +310,25 @@ class AtacamaParser:
             start_token.column
         ))
         
-        # Look for literal end marker
-        while self.peek() and self.peek().type != TokenType.LITERAL_END:
+        # Continue parsing the rest of the content
+        while self.peek() and self.peek().type != TokenType.LITERAL_END and self.peek().type != TokenType.NEWLINE:
             if inline := self.parse_inline_content():
-                if self.peek() and self.peek().type == TokenType.LITERAL_END:
-                    # We found a proper literal block, convert it
-                    self.consume()  # Consume end marker
-                    return Node(type=NodeType.LITERAL, token=start_token,
-                              children=[inline])
-                # Not a proper literal, stop parsing and return token
-                return text_node
+                text_node.children.append(inline)
             else:
-                self.consume()
+                if curr_token := self.consume():
+                    text_node.children.append(Node(
+                        type=NodeType.TEXT,
+                        token=curr_token
+                    ))
                 
+        # If we find the end marker, convert to proper literal block
         if self.expect(TokenType.LITERAL_END):
-            return Node(type=NodeType.LITERAL, token=start_token)
-            
-        # No end marker - just return the marker as text
+            return Node(type=NodeType.LITERAL, token=start_token, 
+                      children=text_node.children)
+                      
+        # No end marker - return as text with children
         return text_node
+
 
 def parse(tokens: Iterator[Token]) -> Node:
     """
