@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 from typing import Optional, List, Dict
-from sqlalchemy import String, Text, DateTime, ForeignKey, Integer, Table, Column, event
+from sqlalchemy import String, Text, DateTime, ForeignKey, Boolean, Integer, Table, Column, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, joinedload, validates
 import enum
 
@@ -35,6 +35,8 @@ class User(Base):
 
     # One-to-many relationship with emails
     emails: Mapped[List["Email"]] = relationship("Email", back_populates="author")
+    # One-to-many relationship with articles
+    articles: Mapped[List["Article"]] = relationship("Article", back_populates="author")
 
 class Quote(Base):
     """Stores tracked quotes and their metadata."""
@@ -51,6 +53,9 @@ class Quote(Base):
     
     # Many-to-many relationship with emails where the quote appears
     emails: Mapped[List["Email"]] = relationship("Email", secondary='email_quotes', back_populates="quotes")
+    # Many-to-many relationship with articles where the quote appears
+    articles: Mapped[List["Article"]] = relationship("Article", secondary='article_quotes', back_populates="quotes")
+
 
 class Email(Base):
     """Email model storing both original and processed content."""
@@ -116,6 +121,77 @@ email_quotes = Table('email_quotes', Base.metadata,
     Column('quote_id', Integer, ForeignKey('quotes.id')),
     Column('created_at', DateTime, default=datetime.utcnow)
                      )
+
+
+class Article(Base):
+    """Article model for permanent content."""
+    __tablename__ = 'articles'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    content: Mapped[str] = mapped_column(Text)
+    processed_content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    last_modified_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    channel: Mapped[str] = mapped_column(String, default=None, server_default='private')
+    published: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
+
+    author_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id'))
+    author: Mapped[Optional["User"]] = relationship("User", back_populates="articles", lazy="selectin")
+    
+    # Annotation storage as JSON
+    llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {type: str, content: str}}
+    
+    # Quote relationships
+    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='article_quotes', lazy="selectin", back_populates="articles")
+
+    @validates('channel')
+    def validate_channel(self, key, channel):
+        """Validate channel value against configuration."""
+        if channel is None:
+            channel = get_channel_manager().default_channel
+            
+        channel = channel.lower()
+        if channel not in get_channel_manager().get_channel_names():
+            raise ValueError(f"Invalid channel: {channel}")
+        return channel
+
+    @validates('slug')
+    def validate_slug(self, key, slug):
+        """Validate slug format."""
+        if not slug or not isinstance(slug, str):
+            raise ValueError("Slug must be a non-empty string")
+        # TODO: Add more comprehensive slug validation
+        return slug.lower()
+
+    def __init__(self, **kwargs):
+        """Initialize article with default channel if none provided."""
+        if 'channel' not in kwargs:
+            kwargs['channel'] = get_channel_manager().default_channel
+        if 'last_modified_at' not in kwargs:
+            kwargs['last_modified_at'] = datetime.utcnow()
+        super().__init__(**kwargs)
+
+    @property
+    def requires_auth(self) -> bool:
+        """Whether this article requires authentication to view."""
+        config = get_channel_manager().get_channel_config(self.channel)
+        return config.requires_auth if config else True
+
+    @property
+    def is_public(self) -> bool:
+        """Whether this article is publicly viewable."""
+        config = get_channel_manager().get_channel_config(self.channel)
+        return config.is_public if config else False
+
+# Association table for article-quote relationships
+article_quotes = Table('article_quotes', Base.metadata,
+    Column('article_id', Integer, ForeignKey('articles.id')),
+    Column('quote_id', Integer, ForeignKey('quotes.id')),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
 
 def get_or_create_user(db_session, request_user) -> User:
     """Get existing user or create new one."""

@@ -86,6 +86,9 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.content import content_bp
     app.register_blueprint(content_bp)
 
+    from web.blueprints.articles import articles_bp
+    app.register_blueprint(articles_bp)
+
     from web.blueprints.submit import submit_bp
     app.register_blueprint(submit_bp)
 

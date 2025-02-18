@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Articles - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/stream.css">
+    <link rel="stylesheet" href="/css/chess.css">
+    <script src="/js/atacama.js"></script>
+</head>
+<body>
+    <div class="stream-container">
+        <header class="stream-header">
+            <h1>{% if current_channel %}{{ current_channel|title }} Articles{% else %}All Articles{% endif %}</h1>
+            
+            <nav class="channel-navigation">
+                <ul class="channel-list">
+                    {% for channel in available_channels %}
+                        {% if channel != 'private' %}
+                            <li class="channel-item {% if current_channel == channel %}active{% endif %}">
+                                <a href="{{ url_for('articles.article_stream', channel=channel) }}" class="channel-link">
+                                    {{ channel|title }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
+        </header>
+        
+        {% for article in articles %}
+            <article class="stream-message message">
+                <header class="message-header">
+                    <div class="message-header-main">
+                        <a href="{{ url_for('articles.view_article', slug=article.slug) }}" class="message-title">
+                            {{ article.title }}
+                        </a>
+                        {% if article.channel != 'private' %}
+                            <span class="message-channel">{{ article.channel|title }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="message-timestamp">{{ article.published_at.strftime('%Y-%m-%d') }}</span>
+                </header>
+                <div class="message-body">
+                    <div class="message-main">
+                        {{ article.processed_content | safe }}
+                    </div>
+                    <div class="message-sidebar"></div>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</body>
+</html>
