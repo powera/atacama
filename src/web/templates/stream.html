@@ -24,7 +24,7 @@
                 {% for group, channels in channel_groups.items() %}
                     {% if channels %}
                         <div class="channel-group">
-                            <h2 class="channel-group-heading">{{ group }}</h2>
+                            <span class="channel-group-heading">{{ group }}</span>
                             <ul class="channel-list">
                                 {% for channel in channels %}
                                     {% if channel != 'private' %}
