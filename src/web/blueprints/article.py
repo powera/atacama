@@ -33,7 +33,7 @@ def view_article(slug: str):
         # Get channel configuration for display
         channel_config = get_channel_manager().get_channel_config(article.channel)
         
-        return render_template('article.html',
+        return render_template('articles/article.html',
                            article=article,
                            channel_config=channel_config)
 
@@ -55,7 +55,7 @@ def article_stream(channel: str):
             .order_by(Article.published_at.desc())\
             .all()
             
-        return render_template('article_stream.html',
+        return render_template('articles/article_stream.html',
                            articles=articles,
                            current_channel=channel,
                            available_channels=channel_manager.get_channel_names(),
@@ -71,7 +71,7 @@ def list_drafts():
             .order_by(Article.last_modified_at.desc())\
             .all()
             
-        return render_template('drafts.html', articles=drafts)
+        return render_template('articles/drafts.html', articles=drafts)
 
 @articles_bp.route('/p/<slug>/edit', methods=['GET', 'POST'])
 @require_auth
@@ -121,13 +121,13 @@ def edit_article(slug: str):
                 
             except Exception as e:
                 logger.error(f"Error updating article: {str(e)}")
-                return render_template('edit_article.html',
+                return render_template('articles/edit_article.html',
                                    error=str(e),
                                    article=article,
                                    channels=get_channel_manager().channels)
         
         # GET request - show form
-        return render_template('edit_article.html',
+        return render_template('articles/edit_article.html',
                            article=article,
                            channels=get_channel_manager().channels)
 
@@ -172,12 +172,12 @@ def submit_article():
                 
         except Exception as e:
             logger.error(f"Error creating article: {str(e)}")
-            return render_template('submit_article.html', 
+            return render_template('articles/submit_article.html', 
                                error=str(e),
                                channels=get_channel_manager().channels)
     
     # GET request - show form
-    return render_template('submit_article.html',
+    return render_template('articles/submit_article.html',
                        channels=get_channel_manager().channels)
 
 # TODO: Add admin routes for article management when admin system is implemented
