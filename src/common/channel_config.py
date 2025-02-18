@@ -7,7 +7,7 @@ import tomli
 
 import constants
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
@@ -23,6 +23,7 @@ class ChannelConfig:
     """Channel configuration data structure."""
     description: str
     access_level: AccessLevel
+    group: str = "General"  # Default group for backwards compatibility
     domain_restriction: Optional[str] = None
     requires_admin: bool = False
 
@@ -47,6 +48,7 @@ class ChannelManager:
         """
         self.config_path = config_path
         self.channels: Dict[str, ChannelConfig] = {}
+        self.valid_groups: List[str] = []
         self.default_channel = ""
         self.default_preferences: List[str] = []
         self._load_config()
@@ -56,6 +58,12 @@ class ChannelManager:
         try:
             with open(self.config_path, 'rb') as f:
                 config = tomli.load(f)
+            
+            # Load valid groups first
+            groups_config = config.get('groups', {})
+            self.valid_groups = groups_config.get('valid_groups', ['General'])
+            if 'General' not in self.valid_groups:
+                self.valid_groups.append('General')  # Ensure General is always valid
                 
             # Load channel configurations
             channel_configs = config.get('channels', {})
@@ -65,10 +73,16 @@ class ChannelManager:
                 except ValueError:
                     logger.error(f"Invalid access_level for channel {name}")
                     raise
+                
+                # Validate group
+                group = settings.get('group', 'General')
+                if group not in self.valid_groups:
+                    raise ValueError(f"Invalid group '{group}' for channel '{name}'. Valid groups are: {', '.join(self.valid_groups)}")
                     
                 self.channels[name] = ChannelConfig(
                     description=settings.get('description', ''),
                     access_level=access_level,
+                    group=group,
                     domain_restriction=settings.get('domain_restriction'),
                     requires_admin=settings.get('requires_admin', False)
                 )
@@ -96,6 +110,20 @@ class ChannelManager:
         for channel in self.default_preferences:
             if channel not in self.channels:
                 raise ValueError(f"Default preference channel '{channel}' not found in channel list")
+
+    def get_channel_groups(self) -> Dict[str, List[str]]:
+        """
+        Get channels organized by group, maintaining group order from config.
+        
+        :return: Dictionary mapping group names to lists of channel names, 
+                ordered according to valid_groups
+        """
+        groups: Dict[str, List[str]] = {group: [] for group in self.valid_groups}
+        for name, config in self.channels.items():
+            groups[config.group].append(name)
+        
+        # Sort channels within each group
+        return {group: sorted(channels) for group, channels in groups.items() if channels}
                 
     def get_channel_names(self) -> List[str]:
         """Get list of all channel names."""

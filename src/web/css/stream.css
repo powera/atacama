@@ -1,9 +1,11 @@
+/* Base container layout */
 .stream-container {
     max-width: 95vw;
     margin: 0 auto;
     padding: var(--spacing-base);
 }
 
+/* Message styling */
 .stream-message {
     margin: var(--spacing-large) 0;
     padding: var(--spacing-base);
@@ -12,6 +14,7 @@
     background: var(--color-background);
 }
 
+/* Chain view styling */
 .chain-container {
     max-width: 95vw;
     margin: 0 auto;
@@ -64,46 +67,39 @@
     justify-content: space-between;
 }
 
-/* High contrast specific styles */
-[data-theme="high-contrast"] .stream-container {
-    max-width: 95vw; /* Wider container for two-column layout */
-}
-
-[data-theme="high-contrast"] .message-header {
-    border-bottom: 1px solid var(--color-text);
-    padding-bottom: var(--spacing-base);
-}
-
-/* Message sidebars in stream view should not be sticky */
-[data-theme="high-contrast"] .message-sidebar {
-    position: relative;
-    max-height: none;
-    border-left: 2px solid var(--color-text);
-}
-
-/* Mobile responsive adjustments */
-@media screen and (max-width: 1024px) {
-    [data-theme="high-contrast"] .stream-message {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-base);
-    }
-
-    [data-theme="high-contrast"] .message-sidebar {
-        border-left: none;
-        border-top: 2px solid var(--color-text);
-        padding-top: var(--spacing-base);
-    }
-}
-
-
-
-/* Channel */
-
+/* Channel navigation structure */
 .channel-navigation {
     margin: var(--spacing-large) 0;
     border-bottom: 1px solid var(--color-border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-large);
 }
 
+/* Channel groups */
+.channel-groups-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-large);
+    margin-top: var(--spacing-base);
+}
+
+.channel-category {
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-base);
+}
+
+.channel-category-name {
+    font-size: var(--font-size-small);
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--spacing-base) 0;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Channel list */
 .channel-list {
     list-style: none;
     padding: 0;
@@ -151,7 +147,8 @@
     border-radius: var(--border-radius);
 }
 
-/* Dark theme adjustments */
+/* Theme-specific adjustments */
+/* Dark theme */
 [data-theme="dark"] .channel-link {
     color: var(--color-text);
 }
@@ -161,8 +158,31 @@
     color: var(--color-primary);
 }
 
-/* High contrast theme adjustments */
+/* High contrast theme */
+[data-theme="high-contrast"] .stream-container {
+    max-width: 95vw;
+}
+
+[data-theme="high-contrast"] .message-header {
+    border-bottom: 1px solid var(--color-text);
+    padding-bottom: var(--spacing-base);
+}
+
+[data-theme="high-contrast"] .message-sidebar {
+    position: relative;
+    max-height: none;
+    border-left: 2px solid var(--color-text);
+}
+
 [data-theme="high-contrast"] .channel-navigation {
+    border-bottom: 2px solid var(--color-text);
+}
+
+[data-theme="high-contrast"] .channel-category {
+    border: 2px solid var(--color-text);
+}
+
+[data-theme="high-contrast"] .channel-category-name {
     border-bottom: 2px solid var(--color-text);
 }
 
@@ -174,8 +194,29 @@
     border: 2px solid currentColor;
 }
 
-/* Mobile responsive adjustments */
+/* Responsive design */
+@media screen and (max-width: 1024px) {
+    [data-theme="high-contrast"] .stream-message {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-base);
+    }
+
+    [data-theme="high-contrast"] .message-sidebar {
+        border-left: none;
+        border-top: 2px solid var(--color-text);
+        padding-top: var(--spacing-base);
+    }
+
+    .channel-groups-container {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media screen and (max-width: 768px) {
+    .channel-navigation {
+        grid-template-columns: 1fr;
+    }
+
     .channel-list {
         gap: 0.5rem;
     }

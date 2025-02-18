@@ -14,18 +14,32 @@
             <h1>{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}</h1>
             
             <nav class="channel-navigation">
-                <ul class="channel-list">
-                    <li class="channel-item {% if not current_channel %}active{% endif %}">
-                        <a href="{{ url_for('content.message_stream') }}" class="channel-link">All</a>
-                    </li>
-                    {% for channel in available_channels %}
-                        <li class="channel-item {% if not channel_manager.channels[channel].is_public %}private{%endif%} {% if current_channel == channel %}active{% endif %}">
-                            <a href="{{ url_for('content.message_stream', channel=channel) }}" class="channel-link">
-                                {{ channel|title }}
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <div class="channel-list-header">
+                    <a href="{{ url_for('content.message_stream') }}" 
+                       class="channel-link {% if not current_channel %}active{% endif %}">
+                        All Messages
+                    </a>
+                </div>
+                
+                {% for group, channels in channel_groups.items() %}
+                    {% if channels %}
+                        <div class="channel-group">
+                            <h2 class="channel-group-heading">{{ group }}</h2>
+                            <ul class="channel-list">
+                                {% for channel in channels %}
+                                    {% if channel != 'private' %}
+                                        <li class="channel-item {% if current_channel == channel %}active{% endif %}">
+                                            <a href="{{ url_for('content.message_stream', channel=channel) }}" 
+                                               class="channel-link">
+                                                {{ channel|title }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                {% endfor %}
             </nav>
         </header>
         
