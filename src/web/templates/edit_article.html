@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Article - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/submit.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/chess.css">
+    <script src="/js/atacama.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Edit Article</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('articles.edit_article', slug=article.slug) }}">
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" required value="{{ article.title }}">
+            </div>
+
+            {% if channels %}
+            <div class="form-group">
+                <label for="channel">Channel:</label>
+                <select name="channel" id="channel" required>
+                    {% for name, config in channels.items() %}
+                        <option value="{{ name }}" {% if name == article.channel %}selected{% endif %}>
+                            {{ name|title }} - {{ config.description }}
+                            {% if config.requires_auth %}(Private){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="content">Content:</label>
+                <textarea id="content" name="content" rows="20" required>{{ article.content }}</textarea>
+                <div class="preview-controls">
+                    <button type="button" id="previewButton" class="secondary">Preview</button>
+                </div>
+            </div>
+
+            <div id="previewArea" class="message-preview" style="display: none;">
+                <h3>Preview</h3>
+                <div id="previewContent" class="message-body">
+                    <div class="message-main"></div>
+                    <div class="message-sidebar"></div>
+                </div>
+            </div>
+
+            {% if not article.published %}
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="publish" value="true">
+                    Publish now
+                </label>
+                <small class="help-text">The article will be immediately visible to readers</small>
+            </div>
+            {% endif %}
+            
+            <div class="button-group">
+                <button type="submit">Save Changes</button>
+                <a href="{{ url_for('articles.view_article', slug=article.slug) }}" class="button secondary">Cancel</a>
+            </div>
+        </form>
+        
+        {% if colors %}
+        <div class="info-box">
+            <h3>Color Tags</h3>
+            <p>You can use the following color tags in your article:</p>
+            <ul>
+                {% for color_name, (sigil, class_name, description) in colors.items() %}
+                <li><code>&lt;{{ color_name }}&gt;</code> {{ sigil }} - <span class="color-{{ class_name }}">{{ description }}</span></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('previewButton')?.addEventListener('click', async function() {
+            const content = document.getElementById('content').value;
+            const previewArea = document.getElementById('previewArea');
+            const previewContent = document.getElementById('previewContent').querySelector('.message-main');
+
+            try {
+                const response = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Preview request failed');
+                }
+
+                const data = await response.json();
+                previewContent.innerHTML = data.processed_content;
+                previewArea.style.display = 'block';
+
+                // Initialize Atacama viewer for preview content
+                new AtacamaViewer().initialize(); 
+            } catch (error) {
+                console.error('Preview error:', error);
+                previewContent.innerHTML = '<div class="error">Error generating preview</div>';
+                previewArea.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

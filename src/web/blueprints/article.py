@@ -61,6 +61,76 @@ def article_stream(channel: str):
                            available_channels=channel_manager.get_channel_names(),
                            channel_config=channel_manager.get_channel_config(channel))
 
+@articles_bp.route('/drafts')
+@require_auth
+def list_drafts():
+    """List unpublished articles for the current user."""
+    with db.session() as session:
+        drafts = session.query(Article)\
+            .filter_by(author=g.user, published=False)\
+            .order_by(Article.last_modified_at.desc())\
+            .all()
+            
+        return render_template('drafts.html', articles=drafts)
+
+@articles_bp.route('/p/<slug>/edit', methods=['GET', 'POST'])
+@require_auth
+def edit_article(slug: str):
+    """Edit an existing article."""
+    with db.session() as session:
+        article = session.query(Article).filter_by(slug=slug).first()
+        
+        if not article:
+            abort(404)
+            
+        # Only allow author to edit
+        if article.author_id != g.user.id:
+            abort(403)
+            
+        if request.method == 'POST':
+            try:
+                # Get user input
+                title = request.form.get('title')
+                content = request.form.get('content')
+                channel = request.form.get('channel')
+                publish = request.form.get('publish') == 'true'
+                
+                # Update article
+                article.title = title
+                article.content = content
+                article.channel = channel
+                
+                # Handle publishing
+                if publish and not article.published:
+                    article.published = True
+                    article.published_at = datetime.utcnow()
+                
+                # Parse content
+                from parser.parser import parse
+                from parser.lexer import tokenize
+                from parser.html_generator import generate_html
+                
+                tokens = tokenize(content)
+                ast = parse(tokens)
+                article.processed_content = generate_html(ast)
+                
+                article.last_modified_at = datetime.utcnow()
+                session.commit()
+                
+                return redirect(url_for('articles.view_article', slug=article.slug))
+                
+            except Exception as e:
+                logger.error(f"Error updating article: {str(e)}")
+                return render_template('edit_article.html',
+                                   error=str(e),
+                                   article=article,
+                                   channels=get_channel_manager().channels)
+        
+        # GET request - show form
+        return render_template('edit_article.html',
+                           article=article,
+                           channels=get_channel_manager().channels)
+
 @articles_bp.route('/submit/article', methods=['GET', 'POST'])
 @require_auth
 def submit_article():
