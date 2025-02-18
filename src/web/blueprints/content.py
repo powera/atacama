@@ -208,6 +208,7 @@ def message_stream(older_than_id: Optional[int] = None,
         
         # Get available channels
         channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+        channel_groups = get_channel_manager().get_channel_groups()
 
         return render_template(
             'stream.html',
@@ -216,6 +217,7 @@ def message_stream(older_than_id: Optional[int] = None,
             older_than_id=messages[-1].id if messages and has_more else None,
             current_user_id=user_id,
             current_channel=channel,
+            channel_groups=channel_groups,
             available_channels=channels,
             channel_manager=channel_manager
         )

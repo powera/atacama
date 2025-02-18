@@ -1,58 +1,108 @@
 # Atacama Channel Configuration
 
+[groups]
+valid_groups = [
+    "Recreation",
+    "Media", 
+    "Civics",
+    "Religion",
+    "Technology",
+    "Atacama",
+    "Personal",
+    "General"  # Always include General as fallback
+]
+
+# Default public channel
+[channels.misc]
+description = "Miscellaneous topics"
+access_level = "public"
+group = "General"
+
 # Default internal channel
 [channels.private]
 description = "Default private channel"
 access_level = "private"
+group = "General"
 
 # For testing and experimentation
 [channels.sandbox]
 description = "For testing and experimentation"
 access_level = "private"
+group = "Atacama"
 
 # Public channels
 [channels.sports]
 description = "Sports discussion"
 access_level = "public"
+group = "Recreation"
 
 # Political discussion with domain restriction
 [channels.politics]
 description = "Political discussion"
 access_level = "restricted"
 requires_admin = true
+group = "Civics"
 
 [channels.religion]
 description = "Religious discussion"
 access_level = "public"
+group = "Religion"
 
 [channels.chess]
 description = "Chess discussion and games"
 access_level = "public"
+group = "Recreation"
 
 [channels.books]
 description = "Book discussion and reviews"
 access_level = "public"
+group = "Media"
 
 [channels.television]
 description = "TV shows and media"
 access_level = "public"
+group = "Media"
 
 [channels.tech]
 description = "Technology discussion"
 access_level = "public"
+group = "Technology"
 
 [channels.llm]
-description = "Language model discussion"
+description = "Large Language Model discussion"
 access_level = "public"
-
-[channels.misc]
-description = "Miscellaneous topics"
-access_level = "public"
+group = "Technology"
 
 [channels.orinoco]
 description = "Orinoco project"
 access_level = "restricted"
 requires_admin = true
+group = "Atacama"
+
+[channels.linaja]
+description = "Linaja"
+access_level = "private"
+group = "Personal"
+
+[channels.atacama]
+description = "On Atacama Development"
+access_level = "private"
+group = "Atacama"
+
+[channels.cities]
+description = "Project Journal"
+access_level = "private"
+group = "Personal"
+
+[channels.usconst]
+description = "US Constitution"
+access_level = "private"
+group = "Civics"
+
+[channels.theology]
+description = "Theology (as opposed to religion)"
+access_level = "private"
+group = "Religion"
 
 [defaults]
 # Default channel for new messages
