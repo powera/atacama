@@ -21,13 +21,13 @@
                     </a>
                 </div>
                 
-                {% for group, channels in channel_groups.items() %}
+                {% for group, channels in channel_manager.get_channel_groups().items() %}
                     {% if channels %}
                         <div class="channel-group">
                             <span class="channel-group-heading">{{ group }}</span>
                             <ul class="channel-list">
                                 {% for channel in channels %}
-                                    {% if channel != 'private' %}
+                                    {% if channel in available_channels %}
                                         <li class="channel-item {% if current_channel == channel %}active{% endif %}">
                                             <a href="{{ url_for('content.message_stream', channel=channel) }}" 
                                                class="channel-link">

@@ -91,7 +91,7 @@ group = "Atacama"
 
 [channels.cities]
 description = "Project Journal"
-access_level = "private"
+access_level = "public"
 group = "Personal"
 
 [channels.usconst]
