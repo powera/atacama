@@ -71,6 +71,7 @@ def show_submit_form():
             recent_messages=recent_messages,
             colors=parser.colorblocks.COLORS,
             channels=channel_manager.channels,
+            channel_manager=channel_manager,
             default_channel=channel_manager.default_channel)
 
 @submit_bp.route('/submit', methods=['POST'])

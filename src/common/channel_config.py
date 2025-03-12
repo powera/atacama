@@ -21,6 +21,7 @@ class AccessLevel(enum.Enum):
 @dataclass
 class ChannelConfig:
     """Channel configuration data structure."""
+    name: str
     description: str
     access_level: AccessLevel
     group: str = "General"  # Default group for backwards compatibility
@@ -38,14 +39,13 @@ class ChannelConfig:
         """Whether the channel is publicly viewable."""
         return self.access_level == AccessLevel.PUBLIC
 
-    def get_display_name(self, channel_name: str) -> str:
+    def get_display_name(self) -> str:
         """
         Get the display name for this channel.
 
-        :param channel_name: The actual channel name as used in the system
         :return: The configured display name or title-cased channel name
         """
-        return self.display_name or channel_name.title()
+        return self.display_name or self.name.title()
 
 class ChannelManager:
     """Manages channel configuration and validation."""
@@ -90,6 +90,7 @@ class ChannelManager:
                     raise ValueError(f"Invalid group '{group}' for channel '{name}'. Valid groups are: {', '.join(self.valid_groups)}")
                     
                 self.channels[name] = ChannelConfig(
+                    name=name,
                     description=settings.get('description', ''),
                     access_level=access_level,
                     group=group,
@@ -162,7 +163,9 @@ class ChannelManager:
         :return: The configured display name or title-cased channel name
         """
         config = self.get_channel_config(channel_name)
-        return config.get_display_name()
+        if config:
+            return config.get_display_name()
+        return channel_name.title()
 
     def check_system_access(self, channel_name: str, email: Optional[str] = None, 
                          has_admin_access: bool = False) -> bool:

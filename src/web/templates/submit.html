@@ -27,7 +27,7 @@
                 <select name="channel" id="channel" required>
                     {% for name, config in channels.items() %}
                         <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
-                            {{ name|title }} - {{ config.description }}
+                            {{ config.get_display_name() }} - {{ config.description }}
                             {% if config.requires_auth %}(Private){% endif %}
                         </option>
                     {% endfor %}

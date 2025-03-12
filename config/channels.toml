@@ -15,6 +15,7 @@ valid_groups = [
 # Default public channel
 [channels.misc]
 description = "Miscellaneous topics"
+display_name = "Miscellany"
 access_level = "public"
 group = "General"
 
@@ -70,6 +71,7 @@ group = "Technology"
 
 [channels.llm]
 description = "Large Language Model discussion"
+display_name = "LLM"
 access_level = "public"
 group = "Technology"
 
@@ -96,6 +98,7 @@ group = "Personal"
 
 [channels.usconst]
 description = "US Constitution"
+display_name = "US Constitution"
 access_level = "public"
 group = "Civics"
 

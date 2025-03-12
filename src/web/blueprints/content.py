@@ -104,6 +104,7 @@ def get_message(message_id: int) -> Response:
                 raw_content=message.content,
                 quotes=message.quotes,
                 channel=message.channel,
+                channel_manager=channel_manager,
                 channel_config=channel_config
             )
                 
@@ -155,6 +156,7 @@ def view_chain(message_id: int) -> Response:
             messages=chain,
             target_id=message_id,
             channel=chain[0].channel if chain else None,
+            channel_manager=channel_manager,
             channel_config=channel_config
         )
     

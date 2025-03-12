@@ -20,12 +20,12 @@
                     <div class="chain-metadata">
                         <span class="chain-stats">{{ messages|length }} messages in chain</span>
                         {% if messages %}
-                            <span class="chain-channel">{{ messages[0].channel|title }} Channel</span>
+                            <span class="chain-channel">{{ channel_manager.get_display_name(messages[0].channel) }} Channel</span>
                         {% endif %}
                     </div>
                     {% if messages %}
                         <a href="{{ url_for('content.message_stream', channel=messages[0].channel) }}" class="channel-link">
-                            View All {{ messages[0].channel|title }} Messages
+                            View All {{ channel_manager.get_display_name(messages[0].channel) }} Messages
                         </a>
                     {% endif %}
                 </div>
@@ -46,7 +46,7 @@
                             {{ message.subject or '(No Subject)' }}
                         </a>
                         {% if message.channel != 'private' %}
-                            <span class="message-channel">{{ message.channel|title }}</span>
+                            <span class="message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
                         {% endif %}
                     </div>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>

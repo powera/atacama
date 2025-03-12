@@ -25,7 +25,7 @@
                     Received: {{ created_at }}
                     {% if message.channel != 'private' %}
                         <br>
-                        Channel: <a href="{{ url_for('content.message_stream', channel=message.channel) }}">{{ message.channel|title }}</a>
+                        Channel: <a href="{{ url_for('content.message_stream', channel=message.channel) }}">{{ channel_manager.get_display_name(message.channel) }}</a>
                         {% if channel_config and channel_config.description %}
                             - {{ channel_config.description }}
                         {% endif %}

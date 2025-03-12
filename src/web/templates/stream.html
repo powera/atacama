@@ -11,7 +11,7 @@
 <body>
     <div class="stream-container">
         <header class="stream-header">
-            <h1>{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}</h1>
+            <h1>{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
             
             <nav class="channel-navigation">
                 <div class="channel-list-header">
@@ -31,7 +31,7 @@
                                         <li class="channel-item {% if current_channel == channel %}active{% endif %}">
                                             <a href="{{ url_for('content.message_stream', channel=channel) }}" 
                                                class="channel-link">
-                                                {{ channel|title }}
+                                                {{ channel_manager.get_display_name(channel) }}
                                             </a>
                                         </li>
                                     {% endif %}
@@ -51,7 +51,7 @@
                             {{ message.subject or '(No Subject)' }}
                         </a>
                         {% if message.channel != 'private' %}
-                            <span class="message-channel">{{ message.channel|title }}</span>
+                            <span class="message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
                         {% endif %}
                     </div>
                     <span class="message-timestamp">{{ message.created_at_formatted }}</span>
