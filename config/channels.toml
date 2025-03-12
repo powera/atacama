@@ -86,7 +86,7 @@ group = "Personal"
 
 [channels.atacama]
 description = "On Atacama Development"
-access_level = "private"
+access_level = "public"
 group = "Atacama"
 
 [channels.cities]
@@ -96,13 +96,33 @@ group = "Personal"
 
 [channels.usconst]
 description = "US Constitution"
-access_level = "private"
+access_level = "public"
 group = "Civics"
 
 [channels.theology]
 description = "Theology (as opposed to religion)"
 access_level = "private"
 group = "Religion"
+
+[channels.education]
+description = "Education Policy"
+access_level = "public"
+group = "Civics"
+
+[channels.gardening]
+description = "Gardening"
+access_level = "public"
+group = "Recreation"
+
+[channels.weather]
+description = "Weather"
+access_level = "public"
+group = "Personal"
+
+[channels.restaurants]
+description = "Restaurants"
+access_level = "public"
+group = "Personal"
 
 [defaults]
 # Default channel for new messages
