@@ -4,6 +4,7 @@ import re
 from typing import Dict, Optional, List, Tuple
 
 # Color definitions with their sigils and descriptions
+# 'TAGNAME': ('SIGIL', 'CSS Class', 'Short description')
 COLORS = {
     'xantham': ('🔥', 'xantham', 'sarcastic, overconfident'),
     'red': ('💡', 'red', 'forceful, certain'),
@@ -11,6 +12,9 @@ COLORS = {
     'yellow': ('💬', 'yellow', 'quotes'),
     'quote': ('💬', 'quote', 'quotes'),
     'green': ('⚙️', 'green', 'technical explanations'),
+    'acronym': ('⚙️', 'green', 'explanations of inline acronyms'),
+    'context': ('⚙️', 'green', 'additional context for a post'),
+    'resource': ('⚙️', 'green', 'a link with additional commentary'),
     'teal': ('🤖', 'teal', 'LLM output'),
     'blue': ('✨', 'blue', 'voice from beyond'),
     'violet': ('📣', 'violet', 'serious'),
