@@ -42,6 +42,13 @@ def validate_fen(fen: str) -> Tuple[bool, Optional[str]]:
     return True, None
 
 def fen_to_board(fen: str) -> str:
+    return f"""
+<div id="chess-mount-point" data-fen="{fen}">
+  <div class="loading-spinner">Loading chess board...</div>
+</div>
+ """
+
+def fen_to_board_old(fen: str) -> str:
     """
     Convert FEN chess position notation into HTML board representation.
     

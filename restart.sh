@@ -9,6 +9,13 @@ cd /home/atacama/atacama/
 # Pull latest changes from git
 git pull
 
+# Build React components
+echo "Building React components..."
+cd src/web/react
+npm ci --production
+npm run build
+cd ../../..  # Return to project root
+
 # Restart the systemd service
 sudo systemctl restart atacama.service
 

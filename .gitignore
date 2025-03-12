@@ -17,3 +17,9 @@ venv/
 
 # Claude core for uploading
 claude/staging/
+
+# React/NodeJS files
+src/web/react/node_modules
+src/web/static/js/react
+.env
+*.local.js
