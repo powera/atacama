@@ -73,7 +73,8 @@ class AtacamaLexer:
     # Valid color names in the Atacama system
     VALID_COLORS: Set[str] = {
         'xantham', 'red', 'orange', 'yellow', 'quote', 'green',
-        'teal', 'blue', 'violet', 'music', 'mogue', 'gray', 'hazel'
+        'teal', 'blue', 'violet', 'music', 'mogue', 'gray', 'hazel',
+        'acronym', 'context', 'resource',
     }
 
     def __init__(self):
