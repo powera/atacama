@@ -14,6 +14,120 @@
     background: var(--color-background);
 }
 
+/* Primary navigation with All Messages and current channel */
+.primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.primary-nav .channel-link {
+    padding: var(--spacing-small) var(--spacing-base);
+    color: var(--color-text);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.primary-nav .channel-link.active {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.primary-nav .channel-link:hover {
+    border-bottom-color: var(--color-border);
+}
+
+/* Channel navigation structure */
+.channel-navigation {
+    margin: var(--spacing-large) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Dropdown styles */
+.channel-dropdown {
+    position: relative;
+    margin-left: auto;
+}
+
+.dropdown-toggle {
+    padding: var(--spacing-small) var(--spacing-base);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-toggle::after {
+    content: "▼";
+    font-size: 0.7em;
+    margin-left: 0.5em;
+}
+
+.dropdown-toggle:hover {
+    background-color: var(--color-annotation-bg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 250px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    z-index: 1000;
+    display: none;
+    padding: var(--spacing-base);
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-group {
+    margin-bottom: var(--spacing-base);
+}
+
+.dropdown-group:last-child {
+    margin-bottom: 0;
+}
+
+.dropdown-group-heading {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.dropdown-item {
+    display: block;
+    padding: 0.5rem;
+    text-decoration: none;
+    color: var(--color-text);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: var(--color-annotation-bg);
+}
+
+.dropdown-item.active {
+    background-color: rgba(var(--color-primary-rgb), 0.1);
+    color: var(--color-primary);
+}
+
 /* Chain view styling */
 .chain-container {
     max-width: 95vw;
@@ -67,86 +181,6 @@
     justify-content: space-between;
 }
 
-/* Channel navigation structure */
-.channel-navigation {
-    margin: var(--spacing-large) 0;
-    border-bottom: 1px solid var(--color-border);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-large);
-}
-
-/* Channel groups */
-.channel-group-heading {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-}
-
-.channel-groups-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-large);
-    margin-top: var(--spacing-base);
-}
-
-.channel-category {
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-base);
-}
-
-.channel-category-name {
-    font-size: var(--font-size-small);
-    text-transform: uppercase;
-    color: var(--color-text-secondary);
-    margin: 0 0 var(--spacing-base) 0;
-    padding-bottom: 0.5em;
-    border-bottom: 1px solid var(--color-border);
-}
-
-/* Channel list */
-.channel-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.channel-item {
-    margin: 0;
-}
-
-.channel-item.private {
-    background: var(--color-annotation-bg);
-}
-
-.channel-link {
-    display: inline-block;
-    padding: var(--spacing-small) var(--spacing-base);
-    color: var(--color-text);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.2s ease;
-}
-
-.channel-item.active .channel-link {
-    border-bottom-color: var(--color-primary);
-    color: var(--color-primary);
-}
-
-.channel-link:hover {
-    border-bottom-color: var(--color-border);
-}
-
-.channel-description {
-    font-size: var(--font-size-small);
-}
-
 .message-channel {
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
@@ -161,8 +195,8 @@
     color: var(--color-text);
 }
 
-[data-theme="dark"] .channel-item.active .channel-link {
-    border-bottom-color: var(--color-primary);
+[data-theme="dark"] .channel-link.active, 
+[data-theme="dark"] .dropdown-item.active {
     color: var(--color-primary);
 }
 
@@ -186,16 +220,13 @@
     border-bottom: 2px solid var(--color-text);
 }
 
-[data-theme="high-contrast"] .channel-category {
-    border: 2px solid var(--color-text);
-}
-
-[data-theme="high-contrast"] .channel-category-name {
+[data-theme="high-contrast"] .dropdown-group-heading {
     border-bottom: 2px solid var(--color-text);
 }
 
-[data-theme="high-contrast"] .channel-link {
-    border-bottom-width: 3px;
+[data-theme="high-contrast"] .dropdown-toggle,
+[data-theme="high-contrast"] .dropdown-menu {
+    border: 2px solid var(--color-text);
 }
 
 [data-theme="high-contrast"] .message-channel {
@@ -214,21 +245,29 @@
         border-top: 2px solid var(--color-text);
         padding-top: var(--spacing-base);
     }
-
-    .channel-groups-container {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media screen and (max-width: 768px) {
-    .channel-navigation {
-        grid-template-columns: 1fr;
+    .primary-nav {
+        flex-wrap: wrap;
     }
-
-    .channel-list {
-        gap: 0.5rem;
+    
+    .channel-dropdown {
+        margin-left: 0;
+        margin-top: 0.5rem;
+        width: 100%;
     }
-
+    
+    .dropdown-toggle {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .dropdown-menu {
+        width: 100%;
+        max-width: 100%;
+    }
+    
     .channel-link {
         padding: var(--spacing-base);
     }

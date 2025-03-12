@@ -12,35 +12,45 @@
     <div class="stream-container">
         <header class="stream-header">
             <h1>{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
-            
+        
+
             <nav class="channel-navigation">
-                <div class="channel-list-header">
+                <div class="primary-nav">
                     <a href="{{ url_for('content.message_stream') }}" 
                        class="channel-link {% if not current_channel %}active{% endif %}">
                         All Messages
                     </a>
-                </div>
-                
-                {% for group, channels in channel_manager.get_channel_groups().items() %}
-                    {% if channels %}
-                        <div class="channel-group">
-                            <span class="channel-group-heading">{{ group }}</span>
-                            <ul class="channel-list">
-                                {% for channel in channels %}
-                                    {% if channel in available_channels %}
-                                        <li class="channel-item {% if current_channel == channel %}active{% endif %}">
-                                            <a href="{{ url_for('content.message_stream', channel=channel) }}" 
-                                               class="channel-link">
-                                                {{ channel_manager.get_display_name(channel) }}
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        </div>
+                    
+                    {% if current_channel %}
+                    <a href="{{ url_for('content.message_stream', channel=current_channel) }}" 
+                       class="channel-link active">
+                        {{ channel_manager.get_display_name(current_channel) }}
+                    </a>
                     {% endif %}
-                {% endfor %}
+                    
+                    <div class="channel-dropdown">
+                        <button class="dropdown-toggle">Select Channel</button>
+                        <div class="dropdown-menu">
+                            {% for group, channels in channel_manager.get_channel_groups().items() %}
+                                {% if channels %}
+                                    <div class="dropdown-group">
+                                        <div class="dropdown-group-heading">{{ group }}</div>
+                                        {% for channel in channels %}
+                                            {% if channel in available_channels %}
+                                                <a href="{{ url_for('content.message_stream', channel=channel) }}" 
+                                                   class="dropdown-item {% if current_channel == channel %}active{% endif %}">
+                                                    {{ channel_manager.get_display_name(channel) }}
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </nav>
+    
         </header>
         
         {% for message in messages %}
@@ -78,6 +88,26 @@
         {% endif %}
     </div>
 
+    <script>
+        // Add dropdown toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownToggle = document.querySelector('.dropdown-toggle');
+            const dropdownMenu = document.querySelector('.dropdown-menu');
+            
+            if (dropdownToggle && dropdownMenu) {
+                dropdownToggle.addEventListener('click', function() {
+                    dropdownMenu.classList.toggle('show');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!event.target.closest('.channel-dropdown')) {
+                        dropdownMenu.classList.remove('show');
+                    }
+                });
+            }
+        });
+    </script>
 <script src="/static/js/react/chess.js"></script>
 </body>
 </html>
