@@ -26,6 +26,7 @@ class ChannelConfig:
     group: str = "General"  # Default group for backwards compatibility
     domain_restriction: Optional[str] = None
     requires_admin: bool = False
+    display_name: Optional[str] = None
 
     @property
     def requires_auth(self) -> bool:
@@ -36,6 +37,15 @@ class ChannelConfig:
     def is_public(self) -> bool:
         """Whether the channel is publicly viewable."""
         return self.access_level == AccessLevel.PUBLIC
+
+    def get_display_name(self, channel_name: str) -> str:
+        """
+        Get the display name for this channel.
+
+        :param channel_name: The actual channel name as used in the system
+        :return: The configured display name or title-cased channel name
+        """
+        return self.display_name or channel_name.title()
 
 class ChannelManager:
     """Manages channel configuration and validation."""
@@ -84,7 +94,8 @@ class ChannelManager:
                     access_level=access_level,
                     group=group,
                     domain_restriction=settings.get('domain_restriction'),
-                    requires_admin=settings.get('requires_admin', False)
+                    requires_admin=settings.get('requires_admin', False),
+                    display_name=settings.get('display_name', None)
                 )
                 
             # Load defaults
@@ -143,6 +154,16 @@ class ChannelManager:
         """
         return self.channels.get(channel_name)
         
+    def get_display_name(self, channel_name: str) -> str:
+        """
+        Get the display name for a channel.
+        
+        :param channel_name: The channel name
+        :return: The configured display name or title-cased channel name
+        """
+        config = self.get_channel_config(channel_name)
+        return config.get_display_name()
+
     def check_system_access(self, channel_name: str, email: Optional[str] = None, 
                          has_admin_access: bool = False) -> bool:
         """
