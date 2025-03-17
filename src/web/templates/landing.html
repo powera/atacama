@@ -9,6 +9,78 @@
     <link rel="stylesheet" href="/css/landing.css">
     <link rel="stylesheet" href="/css/atacama.css">
     <script src="/js/atacama.js" defer></script>
+    <style>
+        /* Admin actions styling */
+        .rechannel-form {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rechannel-form select {
+            padding: 0.3rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+
+        .rechannel-button {
+            padding: 0.3rem 0.6rem;
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .rechannel-button:hover {
+            background-color: rgba(0, 116, 217, 0.8);
+        }
+
+        .admin-indicator {
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.4rem;
+            background-color: #f8d7da;
+            color: #721c24;
+            border-radius: var(--border-radius);
+        }
+
+        /* Dark theme adjustments */
+        [data-theme="dark"] .admin-indicator {
+            background-color: #721c24;
+            color: #f8d7da;
+        }
+
+        /* High contrast theme adjustments */
+        [data-theme="high-contrast"] .rechannel-button {
+            border: 2px solid var(--color-text);
+        }
+        
+        /* Add channel column class for narrow display */
+        .channel-column {
+            min-width: 150px;
+        }
+        
+        /* Responsive adjustments */
+        @media screen and (max-width: 768px) {
+            .rechannel-form {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .rechannel-form select {
+                width: 100%;
+            }
+            
+            .rechannel-button {
+                margin-top: 0.3rem;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -40,8 +112,11 @@
                             <th scope="col">ID</th>
                             <th scope="col">Subject</th>
                             <th scope="col">Preview</th>
-                            <th scope="col">Channel</th>
+                            <th scope="col" class="channel-column">Channel</th>
                             <th scope="col">Received</th>
+                            {% if is_admin %}
+                            <th scope="col">Re-Channel</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -56,7 +131,7 @@
                             <td data-label="Preview" class="message-preview">
                                 {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
                             </td>
-                            <td data-label="Channel">
+                            <td data-label="Channel" class="channel-column">
                                 <a href="/stream/channel/{{ message.channel }}" class="channel-link">
                                     {{ message.channel|title }}
                                 </a>
@@ -64,6 +139,20 @@
                             <td data-label="Received" class="timestamp">
                                 {{ message.created_at_formatted }}
                             </td>
+                            {% if is_admin %}
+                            <td data-label="Admin">
+                                <form action="{{ url_for('admin.rechannel_message', message_id=message.id) }}" method="POST" class="rechannel-form">
+                                    <select name="new_channel" id="new_channel_{{ message.id }}" required>
+                                        {% for channel_name, config in channel_configs.items() %}
+                                            <option value="{{ channel_name }}" {% if channel_name == message.channel %}selected{% endif %}>
+                                                {{ channel_name|title }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="rechannel-button">Change</button>
+                                </form>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -87,6 +176,7 @@
             <a href="/submit" class="button">Submit Message</a>
             <a href="/quotes" class="button">View Quotes</a>
             <a href="/channels" class="button">Channel Preferences</a>
+	    <a href="/nav" class="button">Additional Navigation</a>
         </nav>
         {% endif %}
     </div>

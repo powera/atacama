@@ -36,6 +36,8 @@ from common.navigation import navigable
 from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
 
+from web.blueprints.admin import is_admin
+
 logger = get_logger(__name__)
 
 content_bp = Blueprint('content', __name__)
@@ -319,6 +321,7 @@ def landing_page():
             db_status=db_status,
             messages=messages,
             user=session.get('user'),
+            is_admin=is_admin(),
             available_channels=channels,
             channel_configs=channel_manager.channels
         )

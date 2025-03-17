@@ -16,7 +16,7 @@ from common.auth import require_auth
 from common.channel_config import AccessLevel, get_channel_manager
 from common.database import db
 from common.logging_config import get_logger
-from common.models import User
+from common.models import User, Email
 from common.navigation import navigable
 
 logger = get_logger(__name__)
@@ -167,3 +167,39 @@ def revoke_access(user_id: int):
         flash(f'Revoked {channel} access from {user.email}')
         
     return redirect(url_for('admin.list_users'))
+
+@admin_bp.route('/admin/messages/<int:message_id>/rechannel', methods=['POST'])
+@require_auth
+def rechannel_message(message_id: int):
+    """Change the channel of a message."""
+    if not is_admin():
+        flash('Admin access required')
+        return redirect(url_for('content.landing_page'))
+        
+    new_channel = request.form.get('new_channel')
+    if not new_channel:
+        flash('New channel is required')
+        return redirect(url_for('content.get_message', message_id=message_id))
+        
+    new_channel = new_channel.lower()
+    channel_config = get_channel_manager().get_channel_config(new_channel)
+    if not channel_config:
+        flash('Invalid channel')
+        return redirect(url_for('content.get_message', message_id=message_id))
+        
+    with db.session() as db_session:
+        # Use SQLAlchemy 2.0 style query
+        stmt = select(Email).where(Email.id == message_id)
+        message = db_session.execute(stmt).scalar_one_or_none()
+        
+        if not message:
+            flash('Message not found')
+            return redirect(url_for('content.landing_page'))
+            
+        old_channel = message.channel
+        message.channel = new_channel
+        
+        db_session.commit()
+        flash(f'Message re-channeled from {old_channel} to {new_channel}')
+        
+    return redirect(url_for('content.get_message', message_id=message_id))
