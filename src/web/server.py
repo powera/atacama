@@ -104,6 +104,9 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.admin import admin_bp
     app.register_blueprint(admin_bp)
 
+    from web.blueprints.statistics import statistics_bp
+    app.register_blueprint(statistics_bp)
+
     from web.blueprints.debug import debug_bp
     app.register_blueprint(debug_bp)
 

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Channel Statistics - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/stream.css">
+    <script src="/js/atacama.js"></script>
+    <style>
+        .stats-container {
+            max-width: 95vw;
+            margin: 0 auto;
+            padding: var(--spacing-base);
+        }
+        
+        .stats-header {
+            margin-bottom: var(--spacing-large);
+        }
+        
+        .stats-card {
+            margin-bottom: var(--spacing-large);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-base);
+            background: var(--color-background);
+        }
+        
+        .stats-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--spacing-base);
+            margin-bottom: var(--spacing-base);
+        }
+        
+        .channel-name {
+            font-size: var(--font-size-large);
+            color: var(--color-primary);
+        }
+        
+        .access-badge {
+            padding: 0.2em 0.5em;
+            border-radius: var(--border-radius);
+            font-size: var(--font-size-small);
+        }
+        
+        .access-badge.public {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .access-badge.private {
+            background-color: #FFC107;
+            color: black;
+        }
+        
+        .access-badge.restricted {
+            background-color: #F44336;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-base);
+        }
+        
+        .stat-box {
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-base);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+        
+        .stat-label {
+            color: var(--color-text-secondary);
+            margin-top: 0.5em;
+        }
+        
+        .author-list {
+            margin-top: var(--spacing-base);
+        }
+        
+        .author-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5em 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        .author-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-card {
+            margin-bottom: var(--spacing-large);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-base);
+            background: var(--color-background);
+        }
+        
+        .channel-groups {
+            margin-top: var(--spacing-large);
+        }
+        
+        .group-container {
+            margin-bottom: var(--spacing-large);
+        }
+        
+        .group-title {
+            font-size: var(--font-size-large);
+            margin-bottom: var(--spacing-base);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--spacing-small);
+        }
+        
+        @media screen and (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .access-badge {
+                margin-top: var(--spacing-small);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stats-container">
+        <header class="stats-header">
+            <h1>Channel Statistics</h1>
+            
+            <div class="channel-navigation">
+                <div class="channel-list-header">
+                    <a href="{{ url_for('content.message_stream') }}" class="channel-link">
+                        Back to Message Stream
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <div class="summary-card">
+            <h2>Overall Summary</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value">{{ channel_stats|length }}</div>
+                    <div class="stat-label">Total Channels</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ channel_stats|sum(attribute='total_count') }}</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">{{ channel_stats|sum(attribute='month_count') }}</div>
+                    <div class="stat-label">Messages (30 days)</div>
+                </div>
+            </div>
+        </div>
+        
+        {% if activity_data %}
+        <div class="summary-card">
+            <h2>Activity Timeline (Last 30 Days)</h2>
+            <div style="width: 100%; height: 200px;">
+                <!-- Simple bar chart representation -->
+                <div style="display: flex; justify-content: space-between; height: 180px; align-items: flex-end;">
+                    {% for date, count in activity_data.items() %}
+                    <div title="{{ date }}: {{ count }} messages" style="width: 10px; margin: 0 1px; background-color: var(--color-primary); height: {{ (count / activity_data.values()|max * 180)|int }}px;"></div>
+                    {% endfor %}
+                </div>
+                <div style="font-size: 0.8em; color: var(--color-text-secondary); text-align: center; margin-top: 5px;">
+                    {{ activity_data.keys()|list|first }} to {{ activity_data.keys()|list|last }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <h2>Channels by Group</h2>
+        
+        {% set groups = channel_stats|groupby('group') %}
+        {% for group_name, channels in groups %}
+        <div class="group-container">
+            <h3 class="group-title">{{ group_name }}</h3>
+            
+            {% for channel in channels %}
+            <div class="stats-card">
+                <div class="stats-card-header">
+                    <div class="channel-name">{{ channel.display_name }}</div>
+                    <span class="access-badge {{ channel.access_level }}">{{ channel.access_level|title }}</span>
+                </div>
+                
+                <p>{{ channel.description }}</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value">{{ channel.total_count }}</div>
+                        <div class="stat-label">Total Messages</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ channel.month_count }}</div>
+                        <div class="stat-label">Last 30 Days</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">{{ channel.week_count }}</div>
+                        <div class="stat-label">Last 7 Days</div>
+                    </div>
+                </div>
+                
+                {% if channel.latest_date %}
+                <div style="margin-top: var(--spacing-base);">
+                    <strong>Latest message:</strong> {{ channel.latest_date.strftime('%Y-%m-%d %H:%M:%S') }}
+                </div>
+                {% endif %}
+                
+                {% if channel.authors %}
+                <div class="author-list">
+                    <h4>Top Contributors</h4>
+                    {% for author in channel.authors %}
+                    <div class="author-item">
+                        <div>{{ author.name }} ({{ author.email }})</div>
+                        <div>{{ author.count }} messages</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div style="margin-top: var(--spacing-base); text-align: right;">
+                    <a href="{{ url_for('content.message_stream', channel=channel.name) }}" class="channel-link">
+                        View {{ channel.display_name }} Channel
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
