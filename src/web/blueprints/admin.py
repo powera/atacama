@@ -17,6 +17,7 @@ from common.channel_config import AccessLevel, get_channel_manager
 from common.database import db
 from common.logging_config import get_logger
 from common.models import User
+from common.navigation import navigable
 
 logger = get_logger(__name__)
 
@@ -57,6 +58,7 @@ def is_admin() -> bool:
 
 @admin_bp.route('/admin/users')
 @require_auth
+@navigable(name="List Users", category="admin")
 def list_users():
     """Show list of users and their channel access."""
     if not is_admin():

@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from common.auth import require_auth
 from common.channel_config import get_channel_manager
 from common.messages import check_channel_access
+from common.navigation import get_navigation_items
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
@@ -23,37 +24,8 @@ def navigation() -> str:
     """
     channel_manager = get_channel_manager()
     
-    # Build navigation structure
-    nav_items = {
-        'main': [],
-        'channels': [],
-        'admin': [],
-        'user': []
-    }
-
-    # Main navigation items
-    nav_items['main'] = [
-        {
-            'name': 'Home',
-            'description': 'Service information and recent messages',
-            'url': url_for('content.landing_page')
-        },
-        {
-            'name': 'All Messages',
-            'description': 'View the full message stream',
-            'url': url_for('content.message_stream')
-        },
-        {
-            'name': 'All Articles',
-            'description': 'View published articles',
-            'url': url_for('articles.article_stream', channel='public')
-        },
-        {
-            'name': 'Quote Archive',
-            'description': 'Browse all tracked quotes',
-            'url': url_for('quotes.list_quotes')
-        }
-    ]
+    # Get registered navigation items
+    nav_items = get_navigation_items(g.user)
     
     # Get accessible channels
     for channel in channel_manager.channels:
@@ -73,49 +45,6 @@ def navigation() -> str:
                     }
                 ]
             })
-    
-    # Add user-specific pages if authenticated
-    if g.user:
-        nav_items['user'] = [
-            {
-                'name': 'Channel Preferences',
-                'description': 'Manage your channel subscriptions',
-                'url': url_for('content.channel_preferences')
-            },
-            {
-                'name': 'Submit Message',
-                'description': 'Create a new message',
-                'url': url_for('submit.show_submit_form')
-            },
-            {
-                'name': 'Submit Article',
-                'description': 'Create a new article',
-                'url': url_for('articles.submit_article')
-            },
-            {
-                'name': 'Draft Articles',
-                'description': 'View and edit your unpublished articles',
-                'url': url_for('articles.list_drafts')
-            }
-        ]
-        
-        # Add admin pages if user has admin access
-        admin_channels = json.loads(g.user.admin_channel_access or '{}')
-        if admin_channels:
-            nav_items['admin'] = [
-                {
-                    'name': 'Admin Dashboard',
-                    'description': 'Manage users and permissions',
-                    'url': url_for('admin.list_users')
-                }
-            ]
-            nav_items['main'].extend([
-                {
-                    'name': 'System Status',
-                    'description': 'View system metrics and diagnostics',
-                    'url': url_for('debug.debug_info'),
-                },
-            ])
     
     return render_template(
         'nav.html',

@@ -9,6 +9,7 @@ from common.channel_config import get_channel_manager
 from common.database import db
 from common.logging_config import get_logger
 from common.models import Email, get_or_create_user
+from common.navigation import navigable
 
 import parser
 import parser.colorblocks
@@ -51,6 +52,7 @@ def preview_message():
 
 @submit_bp.route('/submit', methods=['GET'])
 @require_auth
+@navigable(name="Submit new message", category="main")
 def show_submit_form():
     """
     Display the message submission form.

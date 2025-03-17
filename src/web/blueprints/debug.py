@@ -20,6 +20,7 @@ from common.database import db
 from common.channel_config import get_channel_manager
 from common.messages import check_channel_access
 from common.logging_config import get_logger
+from common.navigation import navigable
 
 logger = get_logger(__name__)
 
@@ -110,6 +111,7 @@ def get_channel_stats():
 
 @debug_bp.route('/debug')
 @require_auth
+@navigable(name="Debug Information", category="admin")
 def debug_info():
     """Display debug information dashboard."""
     uptime = time.time() - SERVER_START_TIME

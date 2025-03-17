@@ -28,6 +28,8 @@ def require_auth(f):
                                
         _populate_user()
         return f(*args, **kwargs)
+
+    decorated_function.__auth_required__ = True
     return decorated_function
 
 def optional_auth(f):

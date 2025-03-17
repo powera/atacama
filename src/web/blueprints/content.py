@@ -32,6 +32,7 @@ from common.messages import (
     check_channel_access,
     get_user_allowed_channels
 )
+from common.navigation import navigable
 from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger
 
@@ -42,6 +43,9 @@ content_bp = Blueprint('content', __name__)
 
 @content_bp.route('/channels', methods=['GET', 'POST'])
 @require_auth
+@navigable(name="Channel Preferences",
+           description="Change which channels are in the stream view",
+           category="user")
 def channel_preferences():
     """
     Show and update channel preferences for the logged-in user.
@@ -275,6 +279,7 @@ def sitemap() -> Response:
 
 @content_bp.route('/details')
 @optional_auth
+@navigable(name="Message List", category="admin")
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     channel_manager = get_channel_manager()

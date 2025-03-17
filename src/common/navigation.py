@@ -1,0 +1,135 @@
+"""Navigation tracking and decorator utilities."""
+
+import inspect
+from functools import wraps
+from typing import Dict, List, Callable, Any, Optional
+
+# Store for registered navigable routes
+# Structure: {blueprint_name: [{route_info}, {route_info}, ...]}
+_navigable_routes = {}
+
+def navigable(name: str, description: str = "", category: str = "main", 
+              order: int = 100, requires_auth: Optional[bool] = None, 
+              requires_admin: bool = False) -> Callable:
+    """
+    Decorator to mark a route as navigable and include it in the site navigation.
+    
+    :param name: Display name for the navigation link
+    :param description: Description of the route
+    :param category: Navigation category ("main", "channels", "admin", "user", etc.)
+    :param order: Sort order within the category (lower numbers appear first)
+    :param requires_auth: Whether this route requires authentication (auto-detected if None)
+    :param requires_admin: Whether this route requires admin privileges
+    :return: Decorated route function
+    """
+    def decorator(route_func: Callable) -> Callable:
+        # Get the blueprint name from the function
+        blueprint_name = route_func.__module__.split('.')[-1]
+        
+        # Store the original endpoint name
+        endpoint = f"{blueprint_name}.{route_func.__name__}"
+        
+        # Auto-detect authentication requirements if not specified
+        needs_auth = requires_auth
+        if needs_auth is None:
+            # Check if the function or any wrapper has '__auth_required__' attribute
+            # or if the function name is 'decorated_function' from require_auth
+            # or if the function's closure contains 'require_auth'
+            func = route_func
+            while hasattr(func, '__wrapped__'):
+                if (hasattr(func, '__auth_required__') or 
+                    func.__name__ == 'decorated_function'):
+                    needs_auth = True
+                    break
+                func = func.__wrapped__
+            
+            # If we still can't determine, check the source code or module
+            if needs_auth is None:
+                # Default to False if we can't determine
+                needs_auth = False
+                
+                # Try to check if it's wrapped with require_auth from source inspection
+                try:
+                    source = inspect.getsource(route_func)
+                    if "@require_auth" in source:
+                        needs_auth = True
+                except (IOError, TypeError):
+                    pass
+        
+        # Register this route to our navigable routes store
+        if blueprint_name not in _navigable_routes:
+            _navigable_routes[blueprint_name] = []
+            
+        _navigable_routes[blueprint_name].append({
+            'endpoint': endpoint,
+            'name': name,
+            'description': description,
+            'category': category,
+            'order': order,
+            'requires_auth': needs_auth,
+            'requires_admin': requires_admin,
+            'view_func': route_func.__name__
+        })
+        
+        @wraps(route_func)
+        def wrapped_func(*args: Any, **kwargs: Any) -> Any:
+            return route_func(*args, **kwargs)
+            
+        return wrapped_func
+        
+    return decorator
+
+def get_navigable_routes() -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Get all registered navigable routes.
+    
+    :return: Dictionary of navigable route information by category
+    """
+    return _navigable_routes
+
+def get_navigation_items(user: Optional[Any] = None) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Get navigation items organized by category, filtered by user permissions.
+    
+    :param user: Current user object for permission checking
+    :return: Dictionary of navigation items by category
+    """
+    from flask import url_for
+    
+    # Initialize navigation structure
+    nav_items = {
+        'main': [],
+        'channels': [],
+        'admin': [],
+        'user': []
+    }
+    
+    # Build navigation from registered routes
+    for blueprint, routes in _navigable_routes.items():
+        for route in routes:
+            # Skip items requiring auth if no user
+            if route['requires_auth'] and user is None:
+                continue
+                
+            # Skip admin routes if user has no admin access
+            if route['requires_admin'] and (user is None or not hasattr(user, 'admin_channel_access') or 
+                                          not user.admin_channel_access):
+                continue
+            
+            category = route['category']
+            # Ensure category exists
+            if category not in nav_items:
+                nav_items[category] = []
+                
+            nav_items[category].append({
+                'name': route['name'],
+                'description': route['description'],
+                'url': url_for(route['endpoint']),
+                'order': route['order']
+            })
+    
+    # Sort each category by order
+    for category in nav_items:
+        nav_items[category] = sorted(nav_items[category], key=lambda x: x.get('order', 100))
+        
+    return nav_items
