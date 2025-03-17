@@ -284,7 +284,9 @@ class AtacamaViewer {
         const icon = button.querySelector('.mlq-collapse-icon');
         
         block.classList.toggle('collapsed');
-        icon.textContent = block.classList.contains('collapsed') ? '+' : '−';
+        if (!/\p{Emoji}/u.test(icon.textContent)) {
+            icon.textContent = block.classList.contains('collapsed') ? '+' : '−';
+        }
     }
 
     /**

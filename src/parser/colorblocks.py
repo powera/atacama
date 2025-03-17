@@ -100,8 +100,8 @@ def create_multiline_block(paragraphs: List[str], color=None) -> str:
         sigil, class_name, desc = COLORS[color]
         color_div = f" color-{class_name}"
     else:
-        color_div = ""
         sigil = "-"
+        color_div = ""
     return (
         f'<div class="mlq{color_div}">'
         f'<button type="button" class="mlq-collapse" aria-label="Toggle visibility">'
