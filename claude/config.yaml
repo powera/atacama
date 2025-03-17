@@ -21,6 +21,8 @@ core_files:
     # Core utilities and configuration
   - path: src/common/auth.py
     description: decorators for web request auth
+  - path: src/common/navigation.py
+    description: decorators to register pages for sitemap etc
   - path: src/common/logging_config.py
   - path: src/constants.py
     
