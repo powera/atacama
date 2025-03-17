@@ -86,6 +86,9 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.content import content_bp
     app.register_blueprint(content_bp)
 
+    from web.blueprints.feeds import feeds_bp
+    app.register_blueprint(feeds_bp)
+
     from web.blueprints.nav import nav_bp
     app.register_blueprint(nav_bp)
 

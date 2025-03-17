@@ -228,56 +228,6 @@ def message_stream(older_than_id: Optional[int] = None,
             channel_manager=channel_manager
         )
 
-@content_bp.route('/sitemap.xml')
-def sitemap() -> Response:
-    """
-    Generate sitemap.xml containing all public URLs.
-    
-    :return: XML response containing sitemap
-    """
-    channel_manager = get_channel_manager()
-    
-    with db.session() as db_session:
-        messages = db_session.query(Email).order_by(Email.created_at.desc()).all()
-        urls = []
-        base_url = request.url_root.rstrip('/')
-        
-        urls.append({
-            'loc': f"{base_url}/",
-            'lastmod': datetime.utcnow().strftime('%Y-%m-%d')
-        })
-        
-        # Add public channel pages
-        for channel_name, config in channel_manager.channels.items():
-            if config.access_level == AccessLevel.PUBLIC:
-                urls.append({
-                    'loc': f"{base_url}/stream/channel/{channel_name}",
-                    'lastmod': datetime.utcnow().strftime('%Y-%m-%d')
-                })
-        
-        # Add public messages
-        for message in messages:
-            config = channel_manager.get_channel_config(message.channel)
-            if config and config.access_level == AccessLevel.PUBLIC:
-                urls.append({
-                    'loc': f"{base_url}/messages/{message.id}",
-                    'lastmod': message.created_at.strftime('%Y-%m-%d')
-                })
-        
-        sitemap_xml = render_template_string('''<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    {%- for url in urls %}
-    <url>
-        <loc>{{ url.loc | e }}</loc>
-        <lastmod>{{ url.lastmod }}</lastmod>
-    </url>
-    {%- endfor %}
-</urlset>''', urls=urls)
-        
-        response = make_response(sitemap_xml)
-        response.headers['Content-Type'] = 'application/xml'
-        return response
-
 
 @content_bp.route('/details')
 @optional_auth
