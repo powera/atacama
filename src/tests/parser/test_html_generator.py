@@ -69,6 +69,36 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
                 <p>After quote</p>
         """)
 
+    def test_colored_multi_quote_blocks(self):
+        """Test colored multi-paragraph quote block formatting."""
+        text = dedent("""
+            Before quote
+            <red> <<<
+            First quoted paragraph
+            Second quoted paragraph
+            >>>
+            After quote
+        """).strip()
+        
+        html = self.generate_html(text)
+        
+        # Check for both color and MLQ elements
+        self.assertIn('class="color-red"', html)
+        self.assertIn('class="mlq"', html)
+        self.assertIn('class="mlq-content"', html)
+        self.assertIn('class="mlq-collapse"', html)
+        
+        # Verify that the MLQ is inside the color div
+        self.assertRegex(html, r'<div class="color-red">\s*<div class="mlq">')
+        
+        # Check content is present
+        self.assertIn('First quoted paragraph', html)
+        self.assertIn('Second quoted paragraph', html)
+        
+        # The surrounding structure should be correct
+        self.assertIn('<p>Before quote</p>', html)
+        self.assertIn('<p>After quote</p>', html)
+
     def test_nested_multi_quote(self):
         """Test handling of nested multi-quote blocks."""
         text = dedent("""

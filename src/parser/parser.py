@@ -95,7 +95,12 @@ class AtacamaParser:
             if token.type == TokenType.SECTION_BREAK:
                 document.children.append(Node(type=NodeType.HR, token=self.consume()))
                 continue
-                
+
+            # Handle "<red> <<<" syntax.  Only at start of lines.
+            if colored_mlq := self.parse_colored_mlq():
+                document.children.append(colored_mlq)
+                continue
+
             if token.type == TokenType.MLQ_START:
                 if mlq := self.parse_mlq():
                     document.children.append(mlq)
@@ -196,6 +201,43 @@ class AtacamaParser:
                    children=[Node(type=NodeType.TEXT, token=Token(
                        TokenType.TEXT, '<<<', start_token.line, start_token.column
                    ))])
+
+    def parse_colored_mlq(self) -> Optional[Node]:
+        """Parse a color tag at line start followed by an MLQ block."""
+        # Check for color tag
+        token = self.peek()
+        if not token or token.type != TokenType.COLOR_TAG:
+            return None
+
+        # Save current position in case we need to backtrack
+        saved_position = self.position
+
+        # Parse color tag
+        color_token = self.consume()
+        color = color_token.value.strip('<>')
+
+        # Skip any whitespace
+        whitespace_tokens = []
+        while self.peek() and self.peek().type == TokenType.TEXT and self.peek().value.isspace():
+            whitespace_tokens.append(self.consume())
+
+        # Check for MLQ start
+        if not self.peek() or self.peek().type != TokenType.MLQ_START:
+            # Not followed by MLQ, backtrack and return None
+            self.position = saved_position
+            return None
+
+        # Parse MLQ block
+        mlq = self.parse_mlq()
+        if not mlq:
+            # Failed to parse MLQ, backtrack and return None
+            self.position = saved_position
+            return None
+
+        # Add color attribute to the MLQ node
+        mlq.color = color
+        
+        return mlq
 
     def parse_list_item(self) -> Optional[ListItemNode]:
         """Parse a list item with its marker."""

@@ -182,8 +182,8 @@ class HTMLGenerator:
         if not paragraphs:
             return ''
             
-        return create_multiline_block(paragraphs)
-    
+        return create_multiline_block(paragraphs, getattr(node, "color", None))
+
     def _generate_color_block(self, node: ColorNode) -> str:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)

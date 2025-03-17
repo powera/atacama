@@ -202,5 +202,64 @@ class TestAtacamaLexer(unittest.TestCase):
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].type, TokenType.TEXT)
 
+    def test_colored_multi_quote_blocks(self):
+        """Lexer should handle color-prefixed MLQ blocks."""
+        text = dedent("""
+            Before
+            <red> <<<
+            Quoted text
+            More quoted
+            >>>
+            After
+        """).strip()
+        
+        tokens = list(tokenize(text))
+        
+        # Verify the overall token sequence is correct
+        self.assert_tokens(text, [
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.COLOR_TAG,  # The lexer phase does not handle any logic.
+            TokenType.TEXT,  # Whitespace
+            TokenType.MLQ_START,
+            TokenType.NEWLINE,
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.MLQ_END,
+            TokenType.NEWLINE,
+            TokenType.TEXT
+        ])
+
+    def test_invalid_tag_soup(self):
+        """Lexer should not worry about invalid tags"""
+        text = dedent("""
+            Before
+            <red> <<< #] #] (((
+            Quoted text
+        """).strip()
+        
+        tokens = list(tokenize(text))
+        
+        # Verify the overall token sequence is correct
+        self.assert_tokens(text, [
+            TokenType.TEXT,
+            TokenType.NEWLINE,
+            TokenType.COLOR_TAG,
+            TokenType.TEXT,  # Whitespace
+            TokenType.MLQ_START,
+            TokenType.TEXT,  # Whitespace
+            TokenType.TITLE_END,
+            TokenType.TEXT,  # Whitespace
+            TokenType.TITLE_END,
+            TokenType.TEXT,  # Whitespace
+            TokenType.PARENTHESIS_START,
+            TokenType.PARENTHESIS_START,
+            TokenType.PARENTHESIS_START,
+            TokenType.NEWLINE,
+            TokenType.TEXT,
+            ])
+
 if __name__ == '__main__':
     unittest.main()

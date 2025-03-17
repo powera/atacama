@@ -69,6 +69,38 @@ class TestAtacamaParser(unittest.TestCase):
         text_children = [n for n in mlq.children if n.type == NodeType.TEXT]
         self.assertGreater(len(text_children), 0)
 
+    def test_colored_multi_quote_blocks(self):
+        """Parser should handle colored multi-line quote blocks."""
+        text = dedent("""
+            Before quote
+            <red> <<<
+            First quoted line
+            Second quoted line
+            >>>
+            After quote
+        """).strip()
+        
+        ast = self.parse_text(text)
+        self.assert_node_type(ast, NodeType.DOCUMENT)
+        
+        # Check for ColorNode that contains an MLQ
+        color_nodes = [n for n in ast.children if isinstance(n, ColorNode)]
+        self.assertEqual(len(color_nodes), 1)
+        
+        # Verify color node attributes
+        color_node = color_nodes[0]
+        self.assertEqual(color_node.color, "red")
+        self.assertTrue(color_node.is_line)
+        
+        # Verify it contains an MLQ node
+        self.assertEqual(len(color_node.children), 1)
+        self.assert_node_type(color_node.children[0], NodeType.MLQ)
+        
+        # Verify MLQ content
+        mlq = color_node.children[0]
+        text_children = [n for n in mlq.children if n.type == NodeType.TEXT]
+        self.assertGreater(len(text_children), 0)
+
     def test_unclosed_mlq(self):
         """Parser should handle unclosed MLQ blocks gracefully."""
         text = dedent("""

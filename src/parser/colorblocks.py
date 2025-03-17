@@ -87,7 +87,7 @@ def create_list_container(items: List[str]) -> str:
     """
     return f'<ul>\n{chr(10).join(items)}\n</ul>'
 
-def create_multiline_block(paragraphs: List[str]) -> str:
+def create_multiline_block(paragraphs: List[str], color=None) -> str:
     """
     Generate HTML for a collapsible multi-line block.
     
@@ -95,11 +95,17 @@ def create_multiline_block(paragraphs: List[str]) -> str:
     :return: HTML for collapsible block
     """
     content_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
-    
+   
+    if color:
+        sigil, class_name, desc = COLORS[color]
+        color_div = f" color-{class_name}"
+    else:
+        color_div = ""
+        sigil = "-"
     return (
-        f'<div class="mlq">'
+        f'<div class="mlq{color_div}">'
         f'<button type="button" class="mlq-collapse" aria-label="Toggle visibility">'
-        f'<span class="mlq-collapse-icon">−</span>'
+        f'<span class="mlq-collapse-icon">{sigil}</span>'
         f'</button>'
         f'<div class="mlq-content">{content_html}</div>'
         f'</div>'
