@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="/css/stream.css">
     <link rel="stylesheet" href="/css/chess.css">
     <script src="/js/atacama.js"></script>
+    {% if current_channel and channel_config and channel_config.is_public and not older_than_id %}
+    <link rel="alternate" type="application/rss+xml" title="Atacama - {{ current_channel|title }} Channel" href="/channel/{{ current_channel }}/feed.xml">
+    {% endif %}
+    {% if not current_channel and not older_than_id %}
+    <link rel="alternate" type="application/rss+xml" title="Atacama - All Messages" href="/feed.xml">
+    {% endif %}
 </head>
 <body>
     <div class="stream-container">
