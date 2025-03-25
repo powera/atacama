@@ -181,6 +181,7 @@ class AtacamaLexer:
             return None
             
         # Remember start position
+        start_pos = self.pos 
         start_line, start_col = self.line, self.column
         self.advance()  # Skip opening *
         
@@ -195,8 +196,9 @@ class AtacamaLexer:
             return Token(TokenType.EMPHASIS, ''.join(text), start_line, start_col)
             
         # Not valid emphasis, reset and return None
-        self.pos = start_col
-        self.advance()
+        self.pos = start_pos
+        self.line, self.column = start_line, start_col
+        self.current_char = "*"
         return None
 
     def handle_color_tag(self) -> Optional[Token]:
