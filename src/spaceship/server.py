@@ -18,6 +18,7 @@ app = Flask(__name__)
 BASE_DIR = '/home/atacama/atacama/src/spaceship'
 IMAGE_PATH = os.path.join(BASE_DIR, 'current.png')
 TEMP_PATH = os.path.join(BASE_DIR, 'temp.png')
+GREENLAND_DIR = '/home/atacama/greenland/output/'
 UPDATE_INTERVAL = 300  # 5 minutes
 
 class XPlanetGenerator(threading.Thread):
@@ -146,6 +147,20 @@ def serve_image():
     except Exception as e:
         logger.error(f"Error serving image: {str(e)}")
         return "Image not available", 503
+
+@app.route('/greenland/<path:filename>')
+def serve_greenland_files(filename):
+    """
+    Serve static files from the greenland directory.
+    
+    :param filename: Path to the file within the greenland directory
+    :return: The requested file
+    """
+    try:
+        return send_from_directory(GREENLAND_DIR, filename)
+    except Exception as e:
+        logger.error(f"Error serving file from greenland directory: {str(e)}")
+        return f"File '{filename}' not found", 404
 
 def run_server(host: str = '0.0.0.0', port: int = 8998) -> None:
     """
