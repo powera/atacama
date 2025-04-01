@@ -18,7 +18,7 @@ app = Flask(__name__)
 BASE_DIR = '/home/atacama/atacama/src/spaceship'
 IMAGE_PATH = os.path.join(BASE_DIR, 'current.png')
 TEMP_PATH = os.path.join(BASE_DIR, 'temp.png')
-GREENLAND_DIR = '/home/atacama/greenland/output/'
+GREENLAND_DIR = '/home/atacama/greenland_output/'
 UPDATE_INTERVAL = 300  # 5 minutes
 
 class XPlanetGenerator(threading.Thread):
@@ -147,6 +147,15 @@ def serve_image():
     except Exception as e:
         logger.error(f"Error serving image: {str(e)}")
         return "Image not available", 503
+
+@app.route('/greenland/')
+def serve_greenland_index():
+    """Serve the model_summary.html as the default page for /greenland/"""
+    try:
+        return send_from_directory(GREENLAND_DIR, 'model_summary.html')
+    except Exception as e:
+        logger.error(f"Error serving greenland index page: {str(e)}")
+        return "Model summary not available", 503
 
 @app.route('/greenland/<path:filename>')
 def serve_greenland_files(filename):
