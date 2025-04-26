@@ -182,22 +182,38 @@ def view_chain(message_id: int) -> Response:
 @content_bp.route('/')
 @content_bp.route('/stream')
 @content_bp.route('/stream/older/<int:older_than_id>')
-@content_bp.route('/stream/user/<int:user_id>')
-@content_bp.route('/stream/user/<int:user_id>/older/<int:older_than_id>')
-@content_bp.route('/stream/channel/<path:channel>')
-@content_bp.route('/stream/channel/<path:channel>/older/<int:older_than_id>')
+@content_bp.route('/stream/before/<string:tsdate>/')
+@content_bp.route('/stream/before/<string:tsdate>/<string:tstime>/')
+@content_bp.route('/stream/channel/<string:channel>')
+@content_bp.route('/stream/channel/<string:channel>/older/<int:older_than_id>')
+@content_bp.route('/stream/channel/<string:channel>/before/<string:tsdate>/')
+@content_bp.route('/stream/channel/<string:channel>/before/<string:tsdate>/<string:tstime>/')
 @optional_auth
-def message_stream(older_than_id: Optional[int] = None, 
-                  user_id: Optional[int] = None,
-                  channel: Optional[str] = None) -> str:
+def message_stream(older_than_id: Optional[int] = None,
+                  channel: Optional[str] = None,
+                  tsdate: Optional[str] = None, tstime: Optional[str] = None) -> str:
     """
     Show a stream of messages with optional filtering.
     
     :param older_than_id: Optional ID to paginate from
-    :param user_id: Optional user ID to filter by
     :param channel: Optional channel name to filter by
     :return: Rendered template response
     """
+    older_than_timestamp = None
+    
+    # Handle timestamp-based filtering
+    if tsdate:
+        if not tstime:
+            # If time is not provided, default to end of day
+            tstime = '235959'
+        try:
+            # Parse timestamp from URL format YYYY-MM-DD and HHMMSS
+            timestamp_str = f"{tsdate} {tstime[:2]}:{tstime[2:4]}:{tstime[4:6]}"
+            older_than_timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError, IndexError):
+            # If timestamp is invalid, ignore it
+            pass
+
     channel_manager = get_channel_manager()
     
     # Check channel access before querying
@@ -210,19 +226,40 @@ def message_stream(older_than_id: Optional[int] = None,
         messages, has_more = get_filtered_messages(
             db_session,
             older_than_id=older_than_id,
-            user_id=user_id,
-            channel=channel
+            older_than_timestamp=older_than_timestamp,
+            channel=channel,
+            limit=10
         )
         
         # Get available channels
         channels = get_user_allowed_channels(g.user, ignore_preferences=False)
 
+        # Determine pagination style for next page
+        # If current page uses ID-based pagination, continue with that
+        use_id_pagination = older_than_id is not None
+        
+        # For pagination, get the appropriate value from the oldest message
+        older_than_next_id = None
+        older_than_next_tsdate = None
+        older_than_next_tstime = None
+        
+        if messages and has_more:
+            if use_id_pagination:
+                older_than_next_id = messages[-1].id
+            else:
+                # Format timestamp as YYYYMMDD-HHMMSS for URL
+                dt = messages[-1].created_at
+                older_than_next_tsdate = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
+                older_than_next_tstime = "{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
+
         return render_template(
             'stream.html',
             messages=messages,
             has_more=has_more,
-            older_than_id=messages[-1].id if messages and has_more else None,
-            current_user_id=user_id,
+            older_than_id=older_than_next_id,
+            older_than_tsdate=older_than_next_tsdate,
+            older_than_tstime=older_than_next_tstime,
+            use_id_pagination=use_id_pagination,
             current_channel=channel,
             available_channels=channels,
             channel_manager=channel_manager

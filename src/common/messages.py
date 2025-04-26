@@ -185,6 +185,7 @@ def get_message_chain(message_id: int) -> List[Email]:
 def get_filtered_messages(
     db_session,
     older_than_id: Optional[int] = None,
+    older_than_timestamp: Optional[datetime] = None,
     user_id: Optional[int] = None,
     channel: Optional[str] = None,
     limit: int = 10
@@ -193,20 +194,29 @@ def get_filtered_messages(
     Retrieve messages with filtering and pagination.
     Respects user preferences for stream views.
     
+    Either older_than_id or older_than_timestamp can be specified, but not both.
+    If neither is specified, the most recent messages are returned.
+
     :param db_session: Database session
     :param older_than_id: Get messages older than this ID
+    :param older_than_timestamp: Get messages older than this timestamp
     :param user_id: Filter by author user ID
     :param channel: Filter by channel name
     :param limit: Maximum messages to return
     :return: Tuple of (messages, has_more)
     """
+    if older_than_id is not None and older_than_timestamp is not None:
+        raise ValueError("Cannot specify both older_than_id and older_than_timestamp")
+        
     query = db_session.query(Email).options(
         joinedload(Email.quotes),
         joinedload(Email.author)
     )
 
-    if older_than_id:
+    if older_than_id is not None:
         query = query.filter(Email.id < older_than_id)
+    elif older_than_timestamp is not None:
+        query = query.filter(Email.created_at < older_than_timestamp)
 
     if user_id:
         query = query.filter(Email.author_id == user_id)
@@ -227,8 +237,12 @@ def get_filtered_messages(
         allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
         query = query.filter(Email.channel.in_(allowed_channels))
 
-    # Get one extra to check if there are more
-    messages = query.order_by(Email.id.desc()).limit(limit + 1).all()
+    if older_than_id is not None:
+        # Get one extra to check if there are more
+        messages = query.order_by(Email.id.desc()).limit(limit + 1).all()
+    else:
+        # Get one extra to check if there are more
+        messages = query.order_by(Email.created_at.desc()).limit(limit + 1).all()
 
     has_more = len(messages) > limit
     messages = messages[:limit]
