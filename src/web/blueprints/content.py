@@ -250,7 +250,7 @@ def message_stream(older_than_id: Optional[int] = None,
                 # Format timestamp as YYYYMMDD-HHMMSS for URL
                 dt = messages[-1].created_at
                 older_than_next_tsdate = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
-                older_than_next_tstime = "{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
+                older_than_next_tstime = f"{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
 
         return render_template(
             'stream.html',
