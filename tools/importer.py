@@ -105,6 +105,8 @@ def normalize_tags(content: str) -> str:
     # First clean Gutenberg blocks
     content = clean_gutenberg_blocks(content)
     
+    # hack for mogue324
+    content = content.replace("mogue324", "mogue")
     # Replace old-style tags with Atacama color tags
     for old_tag, new_tag in TAG_MAPPING.items():
         content = content.replace(old_tag, new_tag)
@@ -254,14 +256,14 @@ def import_post(
         normalized_content = normalize_tags(content)
         normalized_content = handle_indented_text(normalized_content)
         
-        # Determine channel
-        channel = determine_channel_by_content(title, normalized_content, categories, tags)
-        
         # Check for duplicates
         if is_duplicate_post(title, normalized_content):
             logger.warning(f"Skipping duplicate post: {title}")
             return False
             
+        # Determine channel
+        channel = determine_channel_by_content(title, normalized_content, categories, tags)
+        
         # Interactive approval
         if interactive:
             print("\n" + "="*80)
