@@ -89,7 +89,10 @@ def clean_gutenberg_blocks(content: str) -> str:
     
     # Fix double newlines
     content = re.sub(r'\n{3,}', '\n\n', content)
-    
+   
+    # Replace "more" tag with Atacama equivalent
+    content = re.sub(r'<!--\s*more\s*-->', '--MORE--', content)
+
     # Trim whitespace
     content = content.strip()
     
