@@ -86,11 +86,6 @@ description = "Linaja"
 access_level = "private"
 group = "Personal"
 
-[channels.restaurants]
-description = "Restaurants"
-access_level = "public"
-group = "Personal"
-
 [channels.atacama]
 description = "On Atacama Development"
 access_level = "public"
