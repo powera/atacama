@@ -148,8 +148,15 @@ def reprocess_message(message_id: int):
 
             message.processed_content = parser.process_message(
                 message.content,
+                message=message, 
+                db_session=session,
+            )
+            # Process content with access to the message object
+            message.preview_content = parser.process_message(
+                message.content,
                 message=message,
                 db_session=session,
+                truncated=True
             )
             
             # Commit happens automatically at the end of the context manager
