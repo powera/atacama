@@ -14,7 +14,8 @@ class NodeType(Enum):
     """Types of nodes in the Abstract Syntax Tree."""
     DOCUMENT = auto()    # Root node containing all content
     TEXT = auto()        # Plain text content
-    NEWLINE = auto()     # Line break 
+    NEWLINE = auto()     # Line break
+    MORE_TAG = auto()    # More tag (section break)
     HR = auto()          # Horizontal rule (section break)
     MLQ = auto()         # Multi-line quote block
     COLOR_BLOCK = auto() # Color-formatted content
@@ -94,6 +95,10 @@ class AtacamaParser:
         while token := self.peek():
             if token.type == TokenType.SECTION_BREAK:
                 document.children.append(Node(type=NodeType.HR, token=self.consume()))
+                continue
+
+            if token.type == TokenType.MORE_TAG:
+                document.children.append(Node(type=NodeType.MORE_TAG, token=self.consume()))
                 continue
 
             # Handle "<red> <<<" syntax.  Only at start of lines.

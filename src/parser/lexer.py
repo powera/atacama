@@ -31,6 +31,7 @@ class TokenType(Enum):
     TEMPLATE = auto()       # template, like {{pgn|...}}
     TITLE_START = auto()    # [# Title Format #]
     TITLE_END = auto()
+    MORE_TAG = auto()       # --MORE-- tag
 
     # Special content
     CHINESE_TEXT = auto()
@@ -131,11 +132,19 @@ class AtacamaLexer:
         else:
             self.current_char = None
 
+    def advance_n(self, n: int) -> None:
+        """Advance the lexer by N characters."""
+        for _ in range(n):
+            self.advance()
 
     def peek(self, offset: int = 1) -> Optional[str]:
         """Look ahead in the input stream without advancing."""
         peek_pos = self.pos - 1 + offset
         return self.text[peek_pos] if peek_pos < len(self.text) else None
+
+    def peek_n(self, n: int) -> Optional[str]:
+        """Retur the next N characters without advancing."""
+        return self.text[self.pos:self.pos + n] if self.pos + n < len(self.text) else None
 
     def handle_section_break(self) -> Optional[Token]:
         """Process potential section break markers."""
@@ -145,13 +154,19 @@ class AtacamaLexer:
         start_line, start_col = self.line, self.column
         dashes = 0
         
+        # Handle --MORE-- tag
+        if self.peek_n(7) == '-MORE--':
+            print("MORE")
+            self.advance_n(8)  # Skip MORE--)
+            return Token(TokenType.MORE_TAG, '--MORE--', start_line, start_col)
+        
         while self.current_char == '-':
             dashes += 1
             self.advance()
             
         if dashes == 4 and (self.current_char is None or self.current_char.isspace()):
             return Token(TokenType.SECTION_BREAK, '----', start_line, start_col)
-            
+
         # Not a section break, return as text
         return Token(TokenType.TEXT, '-' * dashes, start_line, start_col)
 

@@ -32,13 +32,15 @@ class HTMLGenerator:
     
     def __init__(self,
                  db_session: Optional[Session] = None,
-                 message: Optional[Email] = None):
+                 message: Optional[Email] = None,
+                 truncated: Optional[bool] = False):
         """Initialize the HTML generator with optional Chinese text annotations."""
         self.db_session = db_session
         self.message = message
         self.in_list = False
         self.current_list_items = []
         self.current_list_type = None
+        self.truncated = truncated
 
     def generate(self, node: Node) -> str:
         """Generate HTML from an AST node."""
@@ -79,6 +81,24 @@ class HTMLGenerator:
                 # End current section and start a new one
                 sections.append(self._wrap_section(current_section))
                 current_section = []
+
+            elif child.type == NodeType.MORE_TAG:
+                # End current paragraph before more tag
+                wrap_and_append_paragraph()
+
+                # End any open list before section break
+                if current_list_items:
+                    current_section.append(create_list_container(current_list_items))
+                    current_list_items = []
+                    current_list_type = None
+
+                # End current section and start a new one
+                sections.append(self._wrap_section(current_section))
+                current_section = []
+                sections.append(self._wrap_section(['<p class="readmore">Read More ...</p>']))
+                if self.truncated:
+                    # End processing
+                    break
 
             elif child.type == NodeType.LIST_ITEM:
                 # End current paragraph before list

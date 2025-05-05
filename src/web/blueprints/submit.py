@@ -128,7 +128,13 @@ def handle_submit():
             message=message,
             db_session=db_session
         )
-
+        # Process content with access to the message object
+        message.preview_content = parser.process_message(
+            content,
+            message=message,
+            db_session=db_session,
+            truncated=True
+        )
         db_session.commit()
         message_id = message.id  # Get ID before session closes
     
