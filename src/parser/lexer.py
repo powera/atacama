@@ -155,8 +155,8 @@ class AtacamaLexer:
         dashes = 0
         
         # Handle --MORE-- tag
+        # TODO: Change so we are checking for the whole tag
         if self.peek_n(7) == '-MORE--':
-            print("MORE")
             self.advance_n(8)  # Skip MORE--)
             return Token(TokenType.MORE_TAG, '--MORE--', start_line, start_col)
         
