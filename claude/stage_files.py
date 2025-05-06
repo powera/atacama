@@ -145,6 +145,51 @@ def process_file(src_path: Path, dest_path: Path, header_only: bool = False) -> 
         print(f"Error processing {src_path}: {str(e)}")
         return False
 
+def concatenate_files(staging_dir, output_file='concatenated_files.txt'):
+    """
+    Concatenate all files in the staging directory to a single file,
+    with project_files.txt being first.
+    
+    Args:
+        staging_dir: Path to directory containing the staged files
+        output_file: Path to output file
+    """
+    staging_path = Path(staging_dir)
+    output_path = Path(output_file)
+    
+    # Get all files in staging directory
+    all_files = list(staging_path.glob('*'))
+    
+    # Start with project_files.txt if it exists
+    project_files_path = staging_path / 'project_files.txt'
+    if project_files_path in all_files:
+        all_files.remove(project_files_path)
+        file_order = [project_files_path] + all_files
+    else:
+        file_order = all_files
+        print("Warning: project_files.txt not found in staging directory")
+    
+    # Open output file for writing
+    with open(output_path, 'w', encoding='utf-8') as outfile:
+        for file_path in file_order:
+            if file_path.is_file():
+                # Write file header/metadata
+                outfile.write('\n\n')
+                outfile.write('=' * 80 + '\n')
+                outfile.write(f'FILE: {file_path.name}\n')
+                outfile.write('=' * 80 + '\n\n')
+                
+                # Write file content
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as infile:
+                        content = infile.read()
+                        outfile.write(content)
+                except UnicodeDecodeError:
+                    outfile.write(f"[Binary file or non-UTF-8 encoding: {file_path.name}]\n")
+    
+    print(f"Successfully concatenated {len(file_order)} files to {output_path}")
+    return output_path
+
 def update_claude_core() -> None:
     """Update claude_core directory with flattened files and file listing."""
     claude_core = Path.cwd() / 'claude' / 'staging'
@@ -192,7 +237,9 @@ def update_claude_core() -> None:
             print(f"\nCreated file listing: {list_path}")
         
         print(f"\nSuccessfully processed {processed} files to {claude_core}")
-        
+       
+        concatenate_files(claude_core)
+        print(f"\nSuccessfully concatenated files.")
     except Exception as e:
         print(f"Error updating claude core: {str(e)}")
         raise
