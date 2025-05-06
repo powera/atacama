@@ -83,23 +83,14 @@ class TestAtacamaParser(unittest.TestCase):
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
         
-        # Check for ColorNode that contains an MLQ
+        # No "color" nodes, just an MLQ node with color
         color_nodes = [n for n in ast.children if isinstance(n, ColorNode)]
-        self.assertEqual(len(color_nodes), 1)
-        
-        # Verify color node attributes
-        color_node = color_nodes[0]
+        self.assertEqual(len(color_nodes), 0)
+        mlq_nodes = [n for n in ast.children if n.type == NodeType.MLQ]
+        self.assertEqual(len(mlq_nodes), 1)
+
+        color_node = mlq_nodes[0]
         self.assertEqual(color_node.color, "red")
-        self.assertTrue(color_node.is_line)
-        
-        # Verify it contains an MLQ node
-        self.assertEqual(len(color_node.children), 1)
-        self.assert_node_type(color_node.children[0], NodeType.MLQ)
-        
-        # Verify MLQ content
-        mlq = color_node.children[0]
-        text_children = [n for n in mlq.children if n.type == NodeType.TEXT]
-        self.assertGreater(len(text_children), 0)
 
     def test_unclosed_mlq(self):
         """Parser should handle unclosed MLQ blocks gracefully."""

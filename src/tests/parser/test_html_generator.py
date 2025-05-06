@@ -83,13 +83,9 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         html = self.generate_html(text)
         
         # Check for both color and MLQ elements
-        self.assertIn('class="color-red"', html)
-        self.assertIn('class="mlq"', html)
+        self.assertIn('class="mlq color-red"', html)
         self.assertIn('class="mlq-content"', html)
         self.assertIn('class="mlq-collapse"', html)
-        
-        # Verify that the MLQ is inside the color div
-        self.assertRegex(html, r'<div class="color-red">\s*<div class="mlq">')
         
         # Check content is present
         self.assertIn('First quoted paragraph', html)
