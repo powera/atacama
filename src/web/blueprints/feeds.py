@@ -187,85 +187,127 @@ def clean_html_for_rss(html_content: str) -> str:
     """
     Clean HTML content for RSS feeds by handling color tags and other formatting.
     
+    This implementation uses a more robust approach to handle nested tags
+    without relying on BeautifulSoup to minimize dependencies.
+    
     :param html_content: Original HTML content from processed message
     :return: Cleaned HTML suitable for RSS feeds
     """
     # Create a copy of the content to work with
     cleaned = html_content
     
-    # Replace color blocks with their content or appropriate representation
-    def expand_color_block(match):
-        # Extract the content within the colorblock
-        full_match = match.group(0)
-        content_match = re.search(r'<span class="colortext-content">(.*?)</span>', full_match, re.DOTALL)
-        sigil_match = re.search(r'<span class="sigil">(.*?)</span>', full_match, re.DOTALL)
+    # Step 1: Process colorblocks - use a two-phase approach
+    # First, extract the content and sigil together
+    def process_colorblock(match):
+        block = match.group(0)
+        sigil = ""
+        content = ""
         
+        # Extract sigil
+        sigil_match = re.search(r'<span class="sigil">(.*?)</span>', block)
+        if sigil_match:
+            sigil = sigil_match.group(1)
+            
+        # Extract content
+        content_match = re.search(r'<span class="colortext-content">(.*?)</span>', block, re.DOTALL)
         if content_match:
-            # Get the color class
-            color_class_match = re.search(r'class="colorblock color-(.*?)"', full_match)
-            color_name = color_class_match.group(1) if color_class_match else "unknown"
-            
-            # Find the sigil for this color (emoji)
-            sigil = ""
-            if sigil_match:
-                sigil = sigil_match.group(1)
-            
-            # Extract the content
             content = content_match.group(1)
             
-            # Format as [color_name: content] with sigil
-            return f"{sigil} {content}"
-        return full_match
+        # Create a simplified representation with sigil and content
+        return f'<span class="rss-cleaned">{sigil} {content}</span>'
     
-    # Replace colorblocks with their content
-    cleaned = re.sub(r'<span class="colorblock.*?">.*?<span class="colortext-content">.*?</span>\s*</span>', 
-                     expand_color_block, cleaned, flags=re.DOTALL)
+    # Process color blocks
+    pattern = r'<span class="colorblock.*?">.*?<span class="colortext-content">.*?</span>\s*</span>'
+    cleaned = re.sub(pattern, process_colorblock, cleaned, flags=re.DOTALL)
     
-    # Handle YouTube embeds
-    def handle_youtube_embed(match):
-        video_id_match = re.search(r'data-video-id="(.*?)"', match.group(0))
+    # Step 2: Handle inline color blocks (like <span class="color-red">...)
+    def process_inline_color(match):
+        block = match.group(0)
+        content = re.sub(r'<[^>]*>', '', block)  # Strip HTML tags to get text content
+        return content
+    
+    pattern = r'<span class="color-[^"]*">[^<]*</span>'
+    cleaned = re.sub(pattern, process_inline_color, cleaned)
+    
+    # Step 3: Handle YouTube embeds
+    def process_youtube(match):
+        block = match.group(0)
+        video_id_match = re.search(r'data-video-id="([^"]*)"', block)
         if video_id_match:
             video_id = video_id_match.group(1)
             return f'<p><a href="https://www.youtube.com/watch?v={video_id}">YouTube Video: {video_id}</a></p>'
         return ''
     
-    cleaned = re.sub(r'<span class="youtube-player".*?</span>', handle_youtube_embed, cleaned)
+    # Find youtube players and replace them
+    pattern = r'<span class="youtube-player"[^>]*>[^<]*</span>'
+    cleaned = re.sub(pattern, process_youtube, cleaned)
     
-    # Handle Chinese annotations
-    def handle_chinese_annotation(match):
-        # Extract Chinese characters and any annotations
-        chinese = match.group(0)
-        pinyin_match = re.search(r'data-pinyin="(.*?)"', chinese)
-        definition_match = re.search(r'data-definition="(.*?)"', chinese)
-        
-        # Extract the Chinese text
-        text_match = re.search(r'>([^<]+)</span>', chinese)
-        
-        if text_match:
-            text = text_match.group(1)
-            annotations = []
+    # Also handle the container
+    pattern = r'<span class="colorblock youtube-embed-container">.*?</span>'
+    cleaned = re.sub(pattern, process_youtube, cleaned, flags=re.DOTALL)
+    
+    # Step 4: Handle Chinese annotations
+    def process_chinese(match):
+        block = match.group(0)
+        text_match = re.search(r'>([^<]+)</span>', block)
+        if not text_match:
+            return block
             
-            if pinyin_match:
-                annotations.append(f"pinyin: {pinyin_match.group(1)}")
-            if definition_match:
-                annotations.append(f"def: {definition_match.group(1)}")
-                
-            if annotations:
-                return f"{text} ({', '.join(annotations)})"
-            return text
-        return match.group(0)
+        text = text_match.group(1)
+        
+        pinyin = ""
+        pinyin_match = re.search(r'data-pinyin="([^"]*)"', block)
+        if pinyin_match:
+            pinyin = pinyin_match.group(1)
+            
+        definition = ""
+        definition_match = re.search(r'data-definition="([^"]*)"', block)
+        if definition_match:
+            definition = definition_match.group(1)
+            
+        result = text
+        annotations = []
+        if pinyin:
+            annotations.append(f"pinyin: {pinyin}")
+        if definition:
+            annotations.append(f"def: {definition}")
+            
+        if annotations:
+            result = f"{text} ({', '.join(annotations)})"
+            
+        return result
     
-    cleaned = re.sub(r'<span class="annotated-chinese".*?</span>', handle_chinese_annotation, cleaned)
+    pattern = r'<span class="annotated-chinese"[^>]*>[^<]*</span>'
+    cleaned = re.sub(pattern, process_chinese, cleaned)
     
-    # Multi-line quotations
-    def handle_mlq(match):
-        # Extract the content from the MLQ
-        content_match = re.search(r'<div class="mlq-content">(.*?)</div>', match.group(0), re.DOTALL)
+    # Step 5: Handle multi-line quotations
+    def process_mlq(match):
+        block = match.group(0)
+        content_match = re.search(r'<div class="mlq-content">(.*?)</div>', block, re.DOTALL)
         if content_match:
-            return f'<blockquote>{content_match.group(1)}</blockquote>'
+            content = content_match.group(1)
+            # Keep any HTML formatting within the content but wrap in blockquote
+            return f'<blockquote>{content}</blockquote>'
         return ''
     
-    cleaned = re.sub(r'<div class="mlq">.*?<div class="mlq-content">.*?</div>\s*</div>', 
-                     handle_mlq, cleaned, flags=re.DOTALL)
+    pattern = r'<div class="mlq">.*?<div class="mlq-content">.*?</div>\s*</div>'
+    cleaned = re.sub(pattern, process_mlq, cleaned, flags=re.DOTALL)
+    
+    # Step 6: Clean up any remaining "rss-cleaned" spans
+    cleaned = re.sub(r'<span class="rss-cleaned">(.*?)</span>', r'\1', cleaned)
+    
+    # Step 7: Clean up any remaining button/control elements
+    cleaned = re.sub(r'<button[^>]*>.*?</button>', '', cleaned, flags=re.DOTALL)
+    
+    # Step 8: Handle literal text blocks
+    pattern = r'<span class="literal-text">(.*?)</span>'
+    cleaned = re.sub(pattern, r'<code>\1</code>', cleaned)
+    
+    # Convert double line breaks to paragraph markers for better RSS display
+    cleaned = re.sub(r'<br\s*/?>\s*<br\s*/?>', '</p><p>', cleaned)
+    
+    # Ensure content is wrapped in paragraphs for RSS readers
+    if not cleaned.strip().startswith('<'):
+        cleaned = f'<p>{cleaned}</p>'
     
     return cleaned
