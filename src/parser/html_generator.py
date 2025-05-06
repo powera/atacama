@@ -6,12 +6,13 @@ maintaining separation between parsing and output generation.
 """
 
 from typing import Dict, Optional, List
-from .parser import Node, NodeType, ColorNode, ListItemNode
-from .lexer import Token, TokenType
+from parser.parser import Node, NodeType, ColorNode, ListItemNode
+from parser.lexer import Token, TokenType
 from parser.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
     create_list_container, create_multiline_block, create_literal_text,
-    create_url_link, create_wiki_link, create_emphasis
+    create_url_link, create_wiki_link, create_emphasis, create_inline_title,
+    create_template_html
 )
 from sqlalchemy.orm import Session
 
@@ -34,12 +35,9 @@ class HTMLGenerator:
                  db_session: Optional[Session] = None,
                  message: Optional[Email] = None,
                  truncated: Optional[bool] = False):
-        """Initialize the HTML generator with optional Chinese text annotations."""
+        """Initialize the HTML generator."""
         self.db_session = db_session
         self.message = message
-        self.in_list = False
-        self.current_list_items = []
-        self.current_list_type = None
         self.truncated = truncated
 
     def generate(self, node: Node) -> str:
@@ -47,113 +45,101 @@ class HTMLGenerator:
         if not node:
             return ""
             
-        method = getattr(self, f'_generate_{node.type.name.lower()}')
+        method_name = f'_generate_{node.type.name.lower()}'
+        method = getattr(self, method_name, self._generate_unknown) # Added fallback for unknown types
         return method(node)
-    
+
+    def _generate_unknown(self, node: Node) -> str:
+        """Fallback for unknown node types, treating as text if possible."""
+        if node.token and node.token.value:
+            return self.sanitize_html(node.token.value)
+        return ""
+
     def _generate_document(self, node: Node) -> str:
         """Generate HTML for the root document node."""
-        sections = []
-        current_section = []
-        current_paragraph = []
+        final_html_segments = []
+        current_paragraph_parts = []
+        current_list_items_for_ul = []  # Stores full <li> HTML strings
+        active_list_marker_type = None  # e.g., 'bullet', 'number' from ListItemNode.marker_type
 
-        # Track list state
-        current_list_items = []
-        current_list_type = None
+        def flush_paragraph():
+            nonlocal current_paragraph_parts
+            if current_paragraph_parts:
+                content = "".join(current_paragraph_parts)
+                if content.strip(): # Avoid empty <p></p>
+                    final_html_segments.append(f"<p>{content}</p>")
+                current_paragraph_parts = []
 
-        def wrap_and_append_paragraph():
-            if current_paragraph:
-                para_content = ''.join(current_paragraph)
-                if para_content.strip():
-                    current_section.append(f"<p>{para_content}</p>")
-                current_paragraph.clear()
+        def flush_list():
+            nonlocal current_list_items_for_ul, active_list_marker_type
+            if current_list_items_for_ul:
+                final_html_segments.append(create_list_container(current_list_items_for_ul))
+                current_list_items_for_ul = []
+            active_list_marker_type = None
 
-        for child in node.children:
-            if child.type == NodeType.HR and current_section:
-                # End current paragraph if any
-                wrap_and_append_paragraph()
-
-                # End any open list before section break
-                if current_list_items:
-                    current_section.append(create_list_container(current_list_items))
-                    current_list_items = []
-                    current_list_type = None
-
-                # End current section and start a new one
-                sections.append(self._wrap_section(current_section))
-                current_section = []
-
-            elif child.type == NodeType.MORE_TAG:
-                # End current paragraph before more tag
-                wrap_and_append_paragraph()
-
-                # End any open list before section break
-                if current_list_items:
-                    current_section.append(create_list_container(current_list_items))
-                    current_list_items = []
-                    current_list_type = None
-
-                # End current section and start a new one
-                sections.append(self._wrap_section(current_section))
-                current_section = []
-                sections.append(self._wrap_section(['<p class="readmore">Read More ...</p>']))
+        for child_node in node.children:
+            if child_node.type == NodeType.HR:
+                flush_paragraph()
+                flush_list()
+                final_html_segments.append(self.generate(child_node)) # Calls _generate_hr
+            
+            elif child_node.type == NodeType.MORE_TAG:
+                flush_paragraph()
+                flush_list()
+                final_html_segments.append('<p class="readmore">Read More ...</p>')
                 if self.truncated:
-                    # End processing
-                    break
+                    break 
+            
+            elif child_node.type == NodeType.LIST_ITEM:
+                flush_paragraph()  # End current paragraph before starting/continuing a list
+                
+                # ListItemNode's children make up the content of the <li>
+                item_content_html = "".join(self.generate(c) for c in child_node.children)
+                
+                # child_node here is a ListItemNode, which has a marker_type attribute
+                if active_list_marker_type != child_node.marker_type: # If list type changes or new list starts
+                    flush_list()  # Finalize previous list if any
+                    active_list_marker_type = child_node.marker_type
+                
+                # create_list_item (from colorblocks) generates the actual <li>...</li> HTML
+                current_list_items_for_ul.append(create_list_item(item_content_html, child_node.marker_type))
 
-            elif child.type == NodeType.LIST_ITEM:
-                # End current paragraph before list
-                wrap_and_append_paragraph()
+            elif child_node.type == NodeType.NEWLINE:
+                # A NEWLINE at this level means it's time to end the current paragraph.
+                # If this NEWLINE is meant to be a <br /> within a line of text, 
+                # self.generate(child_node) will handle it when it's part of current_paragraph_parts.
+                flush_paragraph()
+                # It could also be that this NEWLINE is from the parser and should become a <br />
+                # if it's not just a structural separator.
+                # If the intent is for explicit <br /> tags from NEWLINE nodes at this level:
+                # generated_br = self.generate(child_node) # This would call _generate_newline
+                # final_html_segments.append(generated_br) # Or append to current_paragraph_parts if context demands
 
-                item_type = child.marker_type
-                item_content = ''.join(self.generate(c) for c in child.children)
+            else:  # Default case for other elements like MLQ, TEXT, COLOR_BLOCK etc.
+                flush_list()  # Any non-list item means current list (if any) must end.
+                
+                generated_content = self.generate(child_node)
+                
+                # Distinguish block-level vs. inline-level to correctly form paragraphs
+                if child_node.type in {NodeType.MLQ}: # Add other block types if necessary
+                    flush_paragraph()  # Ensure current paragraph is written before this block
+                    if generated_content:
+                        final_html_segments.append(generated_content)
+                elif generated_content: # Inline content, add to current paragraph
+                    current_paragraph_parts.append(generated_content)
 
-                if current_list_type is None:
-                    # Starting new list
-                    current_list_type = item_type
-                    current_list_items = [create_list_item(item_content, item_type)]
-                elif current_list_type == item_type:
-                    # Continue current list
-                    current_list_items.append(create_list_item(item_content, item_type))
-                else:
-                    # Different list type - end current list and start new one
-                    current_section.append(create_list_container(current_list_items))
-                    current_list_items = [create_list_item(item_content, item_type)]
-                    current_list_type = item_type
-
-            elif child.type == NodeType.NEWLINE:
-                # End current paragraph
-                wrap_and_append_paragraph()
-
-            else:
-                # Non-list content - end any open list first
-                if current_list_items:
-                    current_section.append(create_list_container(current_list_items))
-                    current_list_items = []
-                    current_list_type = None
-
-                content = self.generate(child)
-                if content:
-                    current_paragraph.append(content)
-
-        # Handle any remaining content
-        wrap_and_append_paragraph()
-
-        if current_list_items:
-            current_section.append(create_list_container(current_list_items))
-
-        # Add final section
-        if current_section:
-            sections.append(self._wrap_section(current_section))
-
-        section_divider = " " + self._generate_hr(None) + " "
-        return section_divider.join(sections)
+        # After loop, flush any remaining paragraph or list
+        flush_paragraph()
+        flush_list()
+        
+        return "\n".join(final_html_segments)
     
     def _wrap_section(self, contents: List[str]) -> str:
-        """Wrap a section's contents in a section tag."""
+        """Wrap a section's contents in a section tag (currently a no-op for the tag itself)."""
         if not contents:
             return ""
         content = '\n'.join(contents)
-        #return f'<section class="content-section">\n{content}\n</section>'
+        #return f'<section class="content-section">\n{content}\n</section>' # Original was commented out
         return content
     
     def sanitize_html(self, text: str):
@@ -163,15 +149,17 @@ class HTMLGenerator:
         """Generate HTML for plain text content."""
         if not node.token:
             return ''
+        # If a TEXT node has children, it's likely from constructs like resolved parentheses
+        # e.g. TEXT(token='(', children=[Node(TEXT, token='content'), Node(TEXT, token=')')])
         if node.children:
-            # Handle text with nested content (like parentheses)
-            content = []
-            content.append(self.sanitize_html(node.token.value))
+            content_parts = []
+            if node.token.value: # Ensure token value itself is added if present
+                 content_parts.append(self.sanitize_html(node.token.value))
             for child in node.children:
-                child_content = self.generate(child)
-                if child_content:
-                    content.append(child_content)
-            return ''.join(content)
+                child_html = self.generate(child)
+                if child_html:
+                    content_parts.append(child_html)
+            return ''.join(content_parts)
         return self.sanitize_html(node.token.value)
     
     def _generate_newline(self, node: Node) -> str:
@@ -181,26 +169,36 @@ class HTMLGenerator:
     def _generate_hr(self, node: Node) -> str:
         """Generate HTML for a horizontal rule (section break)."""
         return '<hr class="section-break" />'
+
+    def _generate_more_tag(self, node: Node) -> str:
+        """MORE_TAG nodes are handled structurally in _generate_document, may not produce direct output here."""
+        return "" # Or specific HTML if it had a visual representation beyond "Read More..."
     
     def _generate_mlq(self, node: Node) -> str:
         """Generate HTML for a multi-line quote block."""
         paragraphs = []
-        current_paragraph = []
+        current_paragraph_parts = []
         
         for child in node.children:
-            if child.type == NodeType.NEWLINE and current_paragraph:
-                paragraphs.append(''.join(current_paragraph))
-                current_paragraph = []
+            # Check if child is a NEWLINE separating paragraphs within MLQ
+            if child.type == NodeType.NEWLINE:
+                if current_paragraph_parts: # Finalize current paragraph
+                    paragraphs.append("".join(current_paragraph_parts))
+                    current_paragraph_parts = []
             else:
                 content = self.generate(child)
                 if content:
-                    current_paragraph.append(content)
+                    current_paragraph_parts.append(content)
         
-        if current_paragraph:
-            paragraphs.append(''.join(current_paragraph))
+        if current_paragraph_parts: # Add last paragraph
+            paragraphs.append("".join(current_paragraph_parts))
             
-        if not paragraphs:
-            return ''
+        if not paragraphs: # Handle empty MLQ, e.g. "<<< >>>"
+            # Check if node has a color attribute (for "<<< <red> >>>" which is unusual but to consider)
+            # For an empty MLQ, create_multiline_block might still produce the structure.
+            # If the parser ensures non-empty content for MLQ children or handles empty MLQs,
+            # this 'if not paragraphs' might be less critical.
+             pass # create_multiline_block will handle an empty list of paragraphs if needed
             
         return create_multiline_block(paragraphs, getattr(node, "color", None))
 
@@ -208,8 +206,7 @@ class HTMLGenerator:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)
 
-        # Handle quote storage for yellow/quote blocks if db_session present
-        if node.color in ('yellow', 'quote') and content and self.db_session:
+        if node.color in ('yellow', 'quote') and content and self.db_session and self.message:
             common.quotes.save_quotes(
                 [{'text': content.strip(), 'quote_type': 'reference'}], 
                 self.message, self.db_session)
@@ -217,17 +214,28 @@ class HTMLGenerator:
         return create_color_block(node.color, content, node.is_line)
     
     def _generate_list_item(self, node: ListItemNode) -> str:
-        """Generate HTML for a list item."""
-        content = ''.join(self.generate(child) for child in node.children)
-        return create_list_item(content, node.marker_type)
+        """
+        Generate HTML for a list item's content.
+        The actual <li> tag is created by create_list_item in colorblocks.py,
+        called from _generate_document. This method should ideally not be called directly
+        by the main dispatch if _generate_document handles LIST_ITEM nodes specially.
+        However, if it were called, it would generate the inner content.
+        """
+        # This method is somewhat redundant if _generate_document handles LIST_ITEM nodes
+        # by directly processing their children and marker_type.
+        # For robustness, if called, it should generate the content of the list item.
+        return ''.join(self.generate(child) for child in node.children)
     
     def _generate_chinese(self, node: Node) -> str:
         """Generate HTML for Chinese text with annotations."""
-        text = node.token.value
-        return create_chinese_annotation(hanzi=text)
+        if not node.token or not node.token.value:
+            return ""
+        return create_chinese_annotation(hanzi=node.token.value)
     
     def _generate_url(self, node: Node) -> str:
         """Generate HTML for a URL with proper attributes."""
+        if not node.token or not node.token.value:
+            return ""
         return create_url_link(node.token.value)
 
     def _generate_wikilink(self, node: Node) -> str:
@@ -242,23 +250,28 @@ class HTMLGenerator:
     
     def _generate_emphasis(self, node: Node) -> str:
         """Generate HTML for emphasized text."""
+        if not node.token or not node.token.value:
+            return ""
         return create_emphasis(node.token.value)
 
     def _generate_title(self, node: Node) -> str:
         """Generate HTML for an inline title tag."""
         content = ''.join(self.generate(child) for child in node.children)
-        return f'<span class="inline-title">{content}</span>'
+        return create_inline_title(content) # Uses function from colorblocks
 
     def _generate_template(self, node: Node) -> str:
         """Generate HTML for template blocks."""
+        if not node.token:
+            return ""
         content = node.token.value
-        if node.token.template_name == "pgn":
+        template_name = node.token.template_name
+        
+        if template_name == "pgn":
             return common.chess.fen_to_board(content)
-        elif node.token.template_name == "isbn":
-            return f'<span class="isbn">{content}</span>'
-        elif node.token.template_name == "wikidata":
-            return f'<span class="wikidata">{content}</span>'
-        return content
+        # Delegate other known templates to colorblocks
+        # Ensure content is passed, as create_template_html expects it.
+        # If template_name is None or not handled by create_template_html, it returns content.
+        return create_template_html(template_name, content)
 
 
 def generate_html(ast: Node, **kwargs) -> str:
@@ -267,6 +280,7 @@ def generate_html(ast: Node, **kwargs) -> str:
     
     Args:
         ast: Root node of the AST
+        **kwargs: Arguments to pass to HTMLGenerator constructor (db_session, message, truncated)
         
     Returns:
         Generated HTML string
