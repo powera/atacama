@@ -116,8 +116,6 @@ class AtacamaLexer:
             return Token(TokenType.NEWLINE, val, tok_line, tok_col)
         return None
 
-    # _try_handle_whitespace removed
-
     def _try_handle_section_break_or_more(self, tok_line: int, tok_col: int) -> Optional[Token]:
         if self.current_char == '-':
             if self._match_and_consume("--MORE--"):

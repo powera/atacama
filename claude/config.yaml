@@ -10,7 +10,6 @@ core_files:
     description: HTML generation for various tags
   - path: src/parser/lexer.py
     description: Lexical analysis
-    header_only: true
   - path: src/parser/parser.py
     description: AST parsing
     header_only: true

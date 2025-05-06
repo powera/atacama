@@ -81,7 +81,9 @@ class AtacamaParser:
     def expect(self, token_type: TokenType) -> Optional[Token]:
         """
         Consume next token if it matches expected type.
-        Returns None and creates text node if no match, allowing for graceful recovery.
+        Returns None if the next token does not match the expected type or if there are no more tokens.
+        The caller is responsible for handling the None case, often by creating a TEXT node
+        for graceful recovery.
         """
         token = self.peek()
         if not token or token.type != token_type:
@@ -122,8 +124,11 @@ class AtacamaParser:
             if node := self.parse_inline_content():
                 document.children.append(node)
             else:
-                self.consume()  # Skip invalid token
-
+                # If parse_inline_content returns None, the token is unhandled at this level.
+                # Consume it and add as a TEXT node to the document for robustness.
+                unhandled_token_at_doc_level = self.consume()
+                if unhandled_token_at_doc_level:
+                    document.children.append(Node(type=NodeType.TEXT, token=unhandled_token_at_doc_level))
         return document
 
     def parse_inline_content(self) -> Optional[Node]:
@@ -182,7 +187,7 @@ class AtacamaParser:
         if token.type == TokenType.PARENTHESIS_START:
             return self.parse_paren_content()
 
-        return None
+        return None # Token type not recognized for inline content by this dispatcher
 
     def parse_mlq(self) -> Optional[Node]:
         """Parse a multi-line quote block."""
@@ -190,64 +195,72 @@ class AtacamaParser:
         if not start_token:
             return None
             
-        mlq = Node(type=NodeType.MLQ, token=start_token)
+        # Create a text node based on start_token for fallback
+        text_node_for_fallback = Node(type=NodeType.TEXT, token=Token(
+            TokenType.TEXT,
+            start_token.value, # This is '<<<'
+            start_token.line,
+            start_token.column
+        ))
         
+        parsed_children = []
         while self.peek() and self.peek().type != TokenType.MLQ_END:
             if node := self.parse_inline_content():
-                mlq.children.append(node)
+                parsed_children.append(node)
             else:
-                self.consume()
+                # If parse_inline_content returns None, consume the unhandled token
+                # and add it as a raw text node to preserve content.
+                unhandled_token = self.consume()
+                if unhandled_token:
+                    parsed_children.append(Node(type=NodeType.TEXT, token=unhandled_token))
                 
         if self.expect(TokenType.MLQ_END):
-            return mlq
-            
-        # No end marker - convert to text
-        return Node(type=NodeType.TEXT, token=start_token, 
-                   children=[Node(type=NodeType.TEXT, token=Token(
-                       TokenType.TEXT, '<<<', start_token.line, start_token.column
-                   ))])
+            # Successfully parsed MLQ
+            mlq_node = Node(type=NodeType.MLQ, token=start_token)
+            mlq_node.children = parsed_children
+            return mlq_node
+        else:
+            # No end marker - return as text, appending parsed children to the start_token's text representation
+            text_node_for_fallback.children.extend(parsed_children)
+            return text_node_for_fallback
 
     def parse_colored_mlq(self) -> Optional[Node]:
         """Parse a color tag at line start followed by an MLQ block."""
-        # Check for color tag
         token = self.peek()
         if not token or token.type != TokenType.COLOR_TAG:
             return None
 
-        # Save current position in case we need to backtrack
         saved_position = self.position
-
-        # Parse color tag
         color_token = self.consume()
         color = color_token.value.strip('<>')
 
-        # Skip any whitespace
         whitespace_tokens = []
         while self.peek() and self.peek().type == TokenType.TEXT and self.peek().value.isspace():
             whitespace_tokens.append(self.consume())
 
-        # Check for MLQ start
         if not self.peek() or self.peek().type != TokenType.MLQ_START:
-            # Not followed by MLQ, backtrack and return None
             self.position = saved_position
             return None
 
-        # Parse MLQ block
         mlq = self.parse_mlq()
-        if not mlq:
-            # Failed to parse MLQ, backtrack and return None
+        if not mlq: # This implies parse_mlq itself might have returned a fallback TEXT node
+            self.position = saved_position # Revert if MLQ parsing (even fallback) wasn't what we wanted here
+            return None
+        
+        # If parse_mlq returned a valid MLQ node (not its text fallback)
+        if mlq.type == NodeType.MLQ:
+            mlq.color = color # Add color attribute to the MLQ node
+            return mlq
+        else: # parse_mlq returned a text fallback, meaning the MLQ wasn't properly closed.
+              # In this context, the colored_mlq construct is invalid. Backtrack.
             self.position = saved_position
             return None
 
-        # Add color attribute to the MLQ node
-        mlq.color = color
-        
-        return mlq
 
     def parse_list_item(self) -> Optional[ListItemNode]:
         """Parse a list item with its marker."""
         marker_token = self.peek()
-        if not marker_token:
+        if not marker_token: # Should not happen if called correctly
             return None
             
         marker_types = {
@@ -256,6 +269,10 @@ class AtacamaParser:
             TokenType.ARROW_LIST_MARKER: 'arrow'
         }
         
+        # Ensure the token type is a valid list marker before consuming
+        if marker_token.type not in marker_types:
+            return None # Should not happen based on call site in parse()
+
         self.consume()  # Consume marker
         children = []
         
@@ -266,10 +283,12 @@ class AtacamaParser:
             if node := self.parse_inline_content():
                 children.append(node)
             else:
-                self.consume()
+                unhandled_token = self.consume()
+                if unhandled_token:
+                    children.append(Node(type=NodeType.TEXT, token=unhandled_token))
         
         if self.peek() and self.peek().type == TokenType.NEWLINE:
-            self.consume()
+            self.consume() # Consume trailing newline for the list item
 
         return ListItemNode(marker_type=marker_types[marker_token.type], 
                           token=marker_token,
@@ -279,7 +298,7 @@ class AtacamaParser:
         """Parse a color-formatted block."""
         token = self.expect(TokenType.COLOR_TAG)
         if not token:
-            return None
+            return None # Should not happen if called from parse_inline_content correctly
             
         color = token.value.strip('<>')
         children = []
@@ -291,7 +310,12 @@ class AtacamaParser:
                 if node := self.parse_inline_content():
                     children.append(node)
                 else:
-                    self.consume()
+                    unhandled_token = self.consume()
+                    if unhandled_token:
+                        children.append(Node(type=NodeType.TEXT, token=unhandled_token))
+        # If not is_line (i.e., parenthesized like '(<red> content )'),
+        # this function only creates the ColorNode. The content *within* the parentheses
+        # (after the color tag) is parsed by parse_paren_content's loop.
         
         return ColorNode(color=color, is_line=is_line, token=token, children=children)
 
@@ -303,86 +327,66 @@ class AtacamaParser:
             
         self.current_paren_depth += 1
         
-        # Check for color tag
-        color_token = None
+        color_token_for_paren = None
+        # Check if the very next token is a color tag, e.g. '(<red> ...)'
         if self.peek() and self.peek().type == TokenType.COLOR_TAG:
-            color_token = self.consume()
+            color_token_for_paren = self.consume()
         
-        children = []
+        children_within_paren = []
         while self.peek() and self.peek().type != TokenType.PARENTHESIS_END:
             if node := self.parse_inline_content():
-                children.append(node)
+                children_within_paren.append(node)
             else:
-                self.consume()
+                # Unhandled token inside parentheses
+                unhandled_token = self.consume()
+                if unhandled_token:
+                    children_within_paren.append(Node(type=NodeType.TEXT, token=unhandled_token))
         
         end_token = self.expect(TokenType.PARENTHESIS_END)
-        self.current_paren_depth -= 1
+        self.current_paren_depth -= 1 # Decrement depth regardless of finding end_token or not
         
         if end_token:
-            if color_token:
-                color = color_token.value.strip('<>')
-                return ColorNode(color=color, is_line=False, token=color_token, children=children)
+            if color_token_for_paren:
+                # Case: (<color> child1 child2 )
+                color = color_token_for_paren.value.strip('<>')
+                return ColorNode(color=color, is_line=False, token=color_token_for_paren, children=children_within_paren)
+            else:
+                # Case: ( child1 child2 )
+                # Represent as: TEXT(token='(') with children: [child1, child2, ..., TEXT(token=')')]
+                container = Node(type=NodeType.TEXT, token=start_token) 
+                container.children = children_within_paren 
+                container.children.append(Node(type=NodeType.TEXT, token=end_token)) 
+                return container
+        else:
+            # No closing parenthesis - fallback to text.
+            # The start_token ('(') becomes text. Append collected children.
+            # If there was a color_token_for_paren, it's effectively part of the children now if it was consumed.
+            # We need to ensure color_token_for_paren is also prepended if it was consumed.
+            text_fallback_node = Node(type=NodeType.TEXT, token=Token(
+                TokenType.TEXT, start_token.value, start_token.line, start_token.column
+            ))
             
-            # Plain parenthetical - wrap in text nodes
-            container = Node(type=NodeType.TEXT, token=start_token, children=children)
-            container.children.append(Node(type=NodeType.TEXT, token=end_token))
-            return container
-            
-        # No closing parenthesis - return as text
-        return Node(type=NodeType.TEXT, token=start_token)
+            if color_token_for_paren: # If we consumed a color tag but didn't find closing paren
+                text_fallback_node.children.append(Node(type=NodeType.TEXT, token=color_token_for_paren))
+
+            text_fallback_node.children.extend(children_within_paren)
+            return text_fallback_node
 
     def parse_wikilink(self) -> Optional[Node]:
-        """Parse a wiki-style link."""
-        start_token = self.expect(TokenType.WIKILINK_START)
-        if not start_token:
-            return None
-            
-        node = Node(type=NodeType.WIKILINK, token=start_token)
-        
-        while self.peek() and self.peek().type != TokenType.WIKILINK_END:
-            if inline := self.parse_inline_content():
-                node.children.append(inline)
-            else:
-                self.consume()
-        
-        if self.expect(TokenType.WIKILINK_END):
-            return node
-            
-        # No end marker - convert to text
-        return Node(type=NodeType.TEXT, token=start_token)
+        """Parse a wiki-style link. Reuses parse_bracketed_content."""
+        return self.parse_bracketed_content(
+            start_type=TokenType.WIKILINK_START,
+            end_type=TokenType.WIKILINK_END,
+            node_type=NodeType.WIKILINK
+        )
 
     def parse_literal(self) -> Optional[Node]:
-        """Parse a literal text block."""
-        start_token = self.expect(TokenType.LITERAL_START)
-        if not start_token:
-            return None
-            
-        # Treat unclosed literal as plain text
-        text_node = Node(type=NodeType.TEXT, token=Token(
-            TokenType.TEXT, 
-            start_token.value,
-            start_token.line,
-            start_token.column
-        ))
-        
-        # Continue parsing the rest of the content
-        while self.peek() and self.peek().type != TokenType.LITERAL_END and self.peek().type != TokenType.NEWLINE:
-            if inline := self.parse_inline_content():
-                text_node.children.append(inline)
-            else:
-                if curr_token := self.consume():
-                    text_node.children.append(Node(
-                        type=NodeType.TEXT,
-                        token=curr_token
-                    ))
-                
-        # If we find the end marker, convert to proper literal block
-        if self.expect(TokenType.LITERAL_END):
-            return Node(type=NodeType.LITERAL, token=start_token, 
-                      children=text_node.children)
-                      
-        # No end marker - return as text with children
-        return text_node
+        """Parse a literal text block. Reuses parse_bracketed_content."""
+        return self.parse_bracketed_content(
+            start_type=TokenType.LITERAL_START,
+            end_type=TokenType.LITERAL_END,
+            node_type=NodeType.LITERAL
+        )
 
     def parse_bracketed_content(self, start_type: TokenType, end_type: TokenType, node_type: NodeType) -> Optional[Node]:
         """
@@ -392,38 +396,43 @@ class AtacamaParser:
         :param start_type: Expected start token type
         :param end_type: Expected end token type  
         :param node_type: Type of node to create if successfully parsed
-        :return: Parsed node or None if invalid
+        :return: Parsed node or a TEXT fallback node if brackets are unclosed/malformed.
         """
         start_token = self.expect(start_type)
         if not start_token:
-            return None
+            return None # Should not happen if called correctly
 
-        # Create text node in case we need to fall back
-        text_node = Node(type=NodeType.TEXT, token=Token(
+        # Create a text node based on the start_token's original value, for fallback.
+        # This node will store the start delimiter as text, and then any parsed children.
+        text_fallback_node = Node(type=NodeType.TEXT, token=Token(
             TokenType.TEXT,
-            start_token.value,
+            start_token.value, # e.g., "[[" or "<<" or "[#"
             start_token.line,
             start_token.column
         ))
 
-        # Collect content until end marker
+        # Collect content that is between the start and potential end markers.
+        # These children will be used for the actual 'node_type' if parsing is successful,
+        # OR they will be appended to 'text_fallback_node.children' if parsing fails (e.g. no end marker).
+        parsed_children_for_node = []
         while self.peek() and self.peek().type != end_type and self.peek().type != TokenType.NEWLINE:
-            if inline := self.parse_inline_content():
-                text_node.children.append(inline)
+            if inline_node := self.parse_inline_content():
+                parsed_children_for_node.append(inline_node)
             else:
-                if curr_token := self.consume():
-                    text_node.children.append(Node(
-                        type=NodeType.TEXT,
-                        token=curr_token
-                    ))
+                # Unhandled token within the brackets. Consume and add as raw text.
+                unhandled_token = self.consume()
+                if unhandled_token:
+                    parsed_children_for_node.append(Node(type=NodeType.TEXT, token=unhandled_token))
 
-        # If we find the end marker, return proper node type
-        if self.expect(end_type):
-            return Node(type=node_type, token=start_token,
-                      children=text_node.children)
-
-        # No end marker - return as text with children  
-        return text_node
+        if self.expect(end_type): # Successfully found and consumed the end_type token
+            # Create the proper node with the original start_token and the collected children.
+            return Node(type=node_type, token=start_token, children=parsed_children_for_node)
+        else:
+            # No end marker (or newline encountered first).
+            # Return the text_fallback_node, which contains the start delimiter as text,
+            # and append the children parsed so far.
+            text_fallback_node.children.extend(parsed_children_for_node)
+            return text_fallback_node
 
 
 def parse(tokens: Iterator[Token]) -> Node:
@@ -447,29 +456,25 @@ def display_ast(node: Node, return_string: bool = False, indent: int = 0) -> Opt
     if not node:
         return "" if return_string else None
         
-    # Create indentation prefix
     prefix = "  " * indent
+    parts = [f"{prefix}{node.type.name}"]
     
-    # Build node representation
-    parts = []
-    parts.append(f"{prefix}{node.type.name}")
-    
-    # Add node-specific details
     if isinstance(node, ColorNode):
         parts[-1] += f" (color={node.color}, line={node.is_line})"
     elif isinstance(node, ListItemNode):
         parts[-1] += f" (marker={node.marker_type})"
-    elif node.token and node.token.value:
+    elif node.token and node.token.value is not None: # Check if value is not None
+        # For template nodes, include the template name if available
+        if node.type == NodeType.TEMPLATE and node.token.template_name:
+            parts[-1] += f" (template_name='{node.token.template_name}')"
         parts[-1] += f": {repr(node.token.value)}"
         
-    # Add position if available
     if node.token:
         parts[-1] += f" @ L{node.token.line}:C{node.token.column}"
         
-    # Process children recursively
     for child in node.children:
         child_str = display_ast(child, return_string=True, indent=indent + 1)
-        if child_str:
+        if child_str: # Ensure child_str is not empty or None
             parts.append(child_str)
             
     result = "\n".join(parts)
