@@ -4,14 +4,15 @@
 
 import os
 from pathlib import Path
-
-from flask import Flask
+from flask import Flask, request, g
 from waitress import serve
 from typing import Dict, Any, Optional, List, Tuple
 
 import constants
 
 from common.database import db
+from common.channel_config import init_channel_manager, get_channel_manager
+from common.domain_config import init_domain_manager, get_domain_manager
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -46,6 +47,29 @@ def load_or_create_secret_key() -> str:
         logger.error(f"Failed to access secret key file: {e}")
         raise RuntimeError(f"Could not access secret key directory: {e}")
 
+def before_request_handler():
+    """Handler to process domain and theme information before each request."""
+    # Get host from request
+    host = request.host
+    
+    # Get domain manager
+    domain_manager = get_domain_manager()
+    
+    # Determine current domain based on host
+    domain_key = domain_manager.get_domain_for_host(host)
+    domain_config = domain_manager.get_domain_config(domain_key)
+    
+    # Get theme configuration
+    theme_key = domain_config.theme
+    theme_config = domain_manager.get_theme_config(theme_key)
+    
+    # Store in Flask's g object for access in views and templates
+    g.current_domain = domain_key
+    g.domain_config = domain_config
+    g.theme_config = theme_config
+    g.theme_css_files = theme_config.css_files
+    g.theme_layout = theme_config.layout
+
 def create_app(testing: bool = False) -> Flask:
     """
     Create and configure Flask application instance.
@@ -67,6 +91,26 @@ def create_app(testing: bool = False) -> Flask:
         app.secret_key = load_or_create_secret_key()
     else:
         app.secret_key = 'test-key'
+    
+    # Initialize managers
+    init_channel_manager()
+    init_domain_manager()
+    
+    # Register before request handler for domain/theme processing
+    app.before_request(before_request_handler)
+    
+    # Add template context processor for domain and theme info
+    @app.context_processor
+    def inject_domain_data():
+        return {
+            'current_domain': getattr(g, 'current_domain', 'default'),
+            'domain_config': getattr(g, 'domain_config', None),
+            'theme_config': getattr(g, 'theme_config', None),
+            'theme_css_files': getattr(g, 'theme_css_files', []),
+            'theme_layout': getattr(g, 'theme_layout', 'default'),
+            'domain_manager': get_domain_manager(),
+            'channel_manager': get_channel_manager()
+        }
     
     # Request logging (skip for testing)
     if not testing:

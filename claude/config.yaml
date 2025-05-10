@@ -1,4 +1,13 @@
 core_files:
+    # Core utilities and configuration
+  - path: src/common/auth.py
+    description: decorators for web request auth
+  - path: src/common/navigation.py
+    description: decorators to register pages for sitemap etc
+  - path: src/common/domain_config.py
+  - path: src/common/logging_config.py
+  - path: src/constants.py
+
     # base database info
   - path: src/common/database.py
     description: Database connection management
@@ -9,21 +18,14 @@ core_files:
   - path: src/parser/colorblocks.py
     description: HTML generation for various tags
   - path: src/parser/lexer.py
-    description: Lexical analysis
+    description: Lexing of input text
+    header_only: true
   - path: src/parser/parser.py
     description: AST parsing
     header_only: true
   - path: src/parser/html_generator.py 
     description: HTML output generation
     header_only: true
-    
-    # Core utilities and configuration
-  - path: src/common/auth.py
-    description: decorators for web request auth
-  - path: src/common/navigation.py
-    description: decorators to register pages for sitemap etc
-  - path: src/common/logging_config.py
-  - path: src/constants.py
     
     # API integrations
   - path: src/common/openai_client.py

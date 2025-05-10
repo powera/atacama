@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Shragafeivel{% endblock %}</title>
+    {% for css_file in theme_css_files %}
+    <link rel="stylesheet" href="/css/{{ css_file }}">
+    {% endfor %}
+    <script src="/js/atacama.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="site-banner">
+        <h1 class="site-title">{{ domain_config.name }}</h1>
+        {% if domain_config.description %}
+        <span class="site-description">{{ domain_config.description }}</span>
+        {% endif %}
+    </header>
+    
+    <div class="page-container">
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <aside class="sidebar">
+            <nav class="channel-navigation">
+                {% if user %}
+                <div class="user-info">
+                    <p>Logged in as {{ user.name }}</p>
+                </div>
+                {% endif %}
+                
+                {% for group, channels in channel_manager.get_channel_groups().items() %}
+                    {% if channels %}
+                        <div class="channel-group">
+                            <span class="channel-group-heading">{{ group }}</span>
+                            <ul class="channel-list">
+                                {% for channel in channels %}
+                                    {% if domain_manager.is_channel_allowed(current_domain, channel) and channel in available_channels %}
+                                        <li class="channel-item {% if current_channel == channel %}active{% endif %}">
+                                            <a href="{{ url_for('content.message_stream', channel=channel) }}" 
+                                               class="channel-link">
+                                                {{ channel_manager.get_display_name(channel) }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+        </aside>
+    </div>
+</body>
+</html>

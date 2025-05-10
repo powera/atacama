@@ -127,6 +127,16 @@ description = "Restaurants"
 access_level = "public"
 group = "Personal"
 
+[channels.food]
+description = "Recipes and Food"
+access_level = "public"
+group = "Personal"
+
+[channels.wikipedia]
+description = "Wikipedia"
+access_level = "private"
+group = "Media"
+
 [defaults]
 # Default channel for new messages
 default_channel = "private"

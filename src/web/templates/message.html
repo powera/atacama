@@ -1,15 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ message.subject if message else 'Message' }}</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/atacama.css">
-    <link rel="stylesheet" href="/css/stream.css">
-    <link rel="stylesheet" href="/css/quotes.css">
-    <link rel="stylesheet" href="/css/chess.css">
-    <script src="/js/atacama.js"></script>
-</head>
-<body>
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}{{ message.subject if message else 'Message' }}{% endblock %}
+
+{% block content %}
     {% if error %}
         <div class="error">{{ error }}</div>
     {% elif message %}
@@ -85,7 +78,4 @@
             {% endif %}
         </article>
     {% endif %}
-
-<script src="/static/js/react/atacama-react.js"></script>
-</body>
-</html>
+{% endblock %}

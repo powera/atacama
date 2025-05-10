@@ -16,7 +16,8 @@ from flask import (
     redirect, 
     url_for, 
     flash,
-    g
+    g,
+    abort
 )
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
@@ -34,6 +35,7 @@ from common.messages import (
 )
 from common.navigation import navigable
 from common.channel_config import get_channel_manager, AccessLevel
+from common.domain_config import get_domain_manager
 from common.logging_config import get_logger
 
 from web.blueprints.admin import is_admin
@@ -55,15 +57,28 @@ def channel_preferences():
     :return: Rendered template response
     """
     channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
     
     with db.session() as db_session:
         user = get_or_create_user(db_session, session['user'])
         current_prefs = json.loads(user.channel_preferences or '{}')
         
+        # Filter channels based on domain restrictions
+        filtered_channels = {}
+        for channel_name, config in channel_manager.channels.items():
+            if domain_manager.is_channel_allowed(current_domain, channel_name):
+                filtered_channels[channel_name] = config
+        
         if request.method == 'POST':
             new_prefs = {}
+            # Keep existing preferences for channels not in this domain
             for channel_name in channel_manager.get_channel_names():
-                new_prefs[channel_name] = request.form.get(f'channel_{channel_name}') == 'on'
+                if channel_name in filtered_channels:
+                    new_prefs[channel_name] = request.form.get(f'channel_{channel_name}') == 'on'
+                else:
+                    # Preserve existing preference for channels not in this domain
+                    new_prefs[channel_name] = current_prefs.get(channel_name, False)
                 
             user.channel_preferences = json.dumps(new_prefs)
             db_session.commit()
@@ -73,9 +88,11 @@ def channel_preferences():
         return render_template(
             'channel_preferences.html',
             preferences=current_prefs,
-            channels=channel_manager.channels,
+            channels=filtered_channels,
             user=user,
-            user_email=user.email
+            user_email=user.email,
+            domain_manager=domain_manager,
+            current_domain=current_domain
         )
 
 
@@ -88,11 +105,20 @@ def get_message(message_id: int) -> Response:
     :param message_id: ID of the message to display
     :return: Response containing message data or error
     """
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
+    
     with db.session() as db_session:
         message = db_session.query(Email).get(message_id)
         
         if not message:
             return jsonify({'error': 'Message not found'}), 404
+            
+        # Check channel access for domain
+        if not domain_manager.is_channel_allowed(current_domain, message.channel):
+            if request.headers.get('Accept', '').startswith('text/html'):
+                abort(404, f"Message not available on this domain")
+            return jsonify({'error': 'Message not available on this domain'}), 404
             
         if not check_message_access(message):
             if request.headers.get('Accept', '').startswith('text/html'):
@@ -111,7 +137,9 @@ def get_message(message_id: int) -> Response:
                 quotes=message.quotes,
                 channel=message.channel,
                 channel_manager=channel_manager,
-                channel_config=channel_config
+                channel_config=channel_config,
+                domain_manager=domain_manager,
+                current_domain=current_domain
             )
                 
         return jsonify({
@@ -135,18 +163,19 @@ def view_chain(message_id: int) -> Response:
     :param message_id: ID of the target message
     :return: Response containing chain data or error
     """
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
+    
     chain = get_message_chain(message_id)
     
     if not chain:
         return render_template('chain.html', error="Message or chain not found")
     
-    # (currently) unneeded; access checked in get_message_chain
-    # Check access permissions for all messages in chain
-    #for message in chain:
-    #    if not check_message_access(message):
-    #        if request.headers.get('Accept', '').startswith('text/html'):
-    #            return redirect(url_for('auth.login'))
-    #        return jsonify({'error': 'Authentication required'}), 401
+    # Check domain access for the chain (based on first message's channel)
+    if chain and not domain_manager.is_channel_allowed(current_domain, chain[0].channel):
+        if request.headers.get('Accept', '').startswith('text/html'):
+            abort(404, f"Message chain not available on this domain")
+        return jsonify({'error': 'Message chain not available on this domain'}), 404
     
     # Format timestamps and get channel configuration
     channel_manager = get_channel_manager()
@@ -163,7 +192,9 @@ def view_chain(message_id: int) -> Response:
             target_id=message_id,
             channel=chain[0].channel if chain else None,
             channel_manager=channel_manager,
-            channel_config=channel_config
+            channel_config=channel_config,
+            domain_manager=domain_manager,
+            current_domain=current_domain
         )
     
     return jsonify({
@@ -199,6 +230,7 @@ def message_stream(older_than_id: Optional[int] = None,
     :param channel: Optional channel name to filter by
     :return: Rendered template response
     """
+
     older_than_timestamp = None
     
     # Handle timestamp-based filtering
@@ -215,6 +247,8 @@ def message_stream(older_than_id: Optional[int] = None,
             pass
 
     channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
     
     # Check channel access before querying
     if channel:
@@ -262,7 +296,9 @@ def message_stream(older_than_id: Optional[int] = None,
             use_id_pagination=use_id_pagination,
             current_channel=channel,
             available_channels=channels,
-            channel_manager=channel_manager
+            channel_manager=channel_manager,
+            domain_manager=domain_manager,
+            current_domain=current_domain
         )
 
 
@@ -272,6 +308,8 @@ def message_stream(older_than_id: Optional[int] = None,
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
 
     with db.session() as db_session:
         try:
@@ -291,17 +329,30 @@ def landing_page():
 
             # Filter messages and get available channels
             messages = [msg for msg in messages if check_message_access(msg)]
+            
+            # Further filter messages based on domain restrictions
+            if not domain_manager.get_domain_config(current_domain).allows_all_channels:
+                domain_channels = domain_manager.get_allowed_channels(current_domain)
+                messages = [msg for msg in messages if msg.channel in domain_channels]
+                
             for message in messages:
                 message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
             # Get available channels for user
-            channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+            user_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+            
+            # Filter channels based on domain restrictions
+            if not domain_manager.get_domain_config(current_domain).allows_all_channels:
+                domain_channels = domain_manager.get_allowed_channels(current_domain)
+                available_channels = [c for c in user_channels if c in domain_channels]
+            else:
+                available_channels = user_channels
 
         except Exception as e:
             logger.error(f"Database error in landing page: {str(e)}")
             db_status = f"Error: {str(e)}"
             messages = []
-            channels = []
+            available_channels = []
 
         return render_template(
             'landing.html',
@@ -309,6 +360,8 @@ def landing_page():
             messages=messages,
             user=session.get('user'),
             is_admin=is_admin(),
-            available_channels=channels,
-            channel_configs=channel_manager.channels
+            available_channels=available_channels,
+            channel_configs=channel_manager.channels,
+            domain_manager=domain_manager,
+            current_domain=current_domain
         )

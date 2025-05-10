@@ -1,0 +1,229 @@
+/* Shragafeivel Theme Styles */
+
+/* Base variables */
+:root {
+    --banner-height: 120px;
+    --sidebar-width: 280px;
+    --banner-background: #f0f0f0;
+    --banner-border: #d0d0d0;
+    --main-background: #ffffff;
+    --sidebar-background: #f9f9f9;
+    --sidebar-border: #e0e0e0;
+    --accent-color: #4a5568;
+    --text-color: #2d3748;
+    --muted-text-color: #718096;
+    --link-color: #3182ce;
+    --link-hover-color: #2c5282;
+    --border-radius: 6px;
+}
+
+/* Basic layout */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-color);
+    background-color: var(--main-background);
+    line-height: 1.6;
+}
+
+/* Banner styles */
+.site-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--banner-height);
+    background-color: var(--banner-background);
+    border-bottom: 1px solid var(--banner-border);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.site-banner .site-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin: 0;
+}
+
+.site-banner .site-description {
+    font-size: 1rem;
+    color: var(--muted-text-color);
+    margin-left: 1rem;
+}
+
+/* Main content layout */
+.page-container {
+    display: flex;
+    margin-top: var(--banner-height);
+    min-height: calc(100vh - var(--banner-height));
+}
+
+.main-content {
+    flex: 1;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--sidebar-background);
+    border-left: 1px solid var(--sidebar-border);
+    padding: 2rem 1.5rem;
+    box-sizing: border-box;
+}
+
+/* Navigation styles */
+.channel-navigation {
+    margin-bottom: 2rem;
+    border-bottom: none;
+}
+
+.sidebar .channel-navigation {
+    margin-top: 0;
+    display: block;
+}
+
+.channel-group {
+    margin-bottom: 1.5rem;
+}
+
+.channel-group-heading {
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+    display: block;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sidebar .channel-list {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar .channel-item {
+    margin: 0.5rem 0;
+    display: block;
+}
+
+.sidebar .channel-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-color);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    border: none;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar .channel-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--link-hover-color);
+}
+
+.sidebar .channel-item.active .channel-link {
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: 500;
+}
+
+/* Message styles */
+.stream-message {
+    margin: 0 0 2rem 0;
+    border-radius: var(--border-radius);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.message-title {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.message-title:hover {
+    color: var(--link-hover-color);
+    text-decoration: underline;
+}
+
+.message-body {
+    padding: 1.5rem;
+    background-color: white;
+}
+
+.message-channel {
+    font-size: 0.8rem;
+    color: var(--muted-text-color);
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    background-color: #f0f0f0;
+    margin-left: 0.5rem;
+}
+
+.message-timestamp {
+    font-size: 0.8rem;
+    color: var(--muted-text-color);
+}
+
+/* Modified color block styles to match theme */
+.colorblock, [class^="color-"] {
+    border-radius: 4px;
+    padding: 0.1rem 0.3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .page-container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--sidebar-border);
+    }
+    
+    .sidebar .channel-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .sidebar .channel-item {
+        margin: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .site-banner {
+        height: auto;
+        padding: 1rem;
+        position: static;
+    }
+    
+    .page-container {
+        margin-top: 0;
+    }
+    
+    .main-content {
+        padding: 1rem;
+    }
+}

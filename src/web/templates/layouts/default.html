@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Atacama{% endblock %}</title>
+    {% for css_file in theme_css_files %}
+    <link rel="stylesheet" href="/css/{{ css_file }}">
+    {% endfor %}
+    <script src="/js/atacama.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+
+  <script src="/static/js/react/atacama-react.js"></script>
+</body>
+</html>

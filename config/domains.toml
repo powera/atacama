@@ -1,0 +1,39 @@
+# Domain configuration for Atacama
+# Maps domain names to channel settings and theme configurations
+
+[domains]
+  # Main domain (default)
+  [domains.default]
+    name = "Main Site"
+    channels = [] # Empty list means all channels are accessible
+    theme = "default"
+    
+  [domains.earlyversion]
+    name = "Early Version"
+    channels = []  # All channels
+    theme = default"
+
+  [domains.codepending]
+    name = "Code Pending"
+    channels = ["wikipedia"]
+    theme = "shragafeivel"
+    
+  # Shragafeivel domain
+  [domains.shragafeivel]
+    name = "Shragafeivel"
+    channels = ["religion", "usconst", "chess", "education"]
+    theme = "shragafeivel"
+    # Optional domain-specific settings
+    description = "Shragafeivel Collection"
+    
+# Theme configurations
+[themes]
+  [themes.default]
+    name = "Default"
+    css_files = ["common.css", "atacama.css", "stream.css", "chess.css"]
+    
+  [themes.shragafeivel]
+    name = "Shragafeivel"
+    css_files = ["common.css", "atacama.css", "stream.css", "shragafeivel.css", "chess.css"]
+    layout = "shragafeivel"
+    banner = true
