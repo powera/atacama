@@ -6,6 +6,7 @@ core_files:
     description: decorators to register pages for sitemap etc
   - path: src/common/domain_config.py
   - path: src/common/logging_config.py
+  - path: src/common/user_config.py
   - path: src/constants.py
 
     # base database info

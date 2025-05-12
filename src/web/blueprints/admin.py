@@ -1,13 +1,9 @@
 """Admin functionality for managing user access to restricted channels."""
 
-import enum
 import json
-import os
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List
 
-import tomli
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from sqlalchemy import select
 
@@ -18,43 +14,18 @@ from common.database import db
 from common.logging_config import get_logger
 from common.models import User, Email
 from common.navigation import navigable
+from common.user_config import get_user_config_manager
 
 logger = get_logger(__name__)
 
 admin_bp = Blueprint('admin', __name__)
 
-class AdminRole(enum.Enum):
-    """Define admin permission levels."""
-    SUPER_ADMIN = "super_admin"    # Can manage other admins
-    CHANNEL_ADMIN = "channel_admin" # Can grant channel access
-
-def load_admin_config() -> Dict[str, AdminRole]:
-    """Load admin user configuration from TOML file."""
-    config_path = Path(constants.CONFIG_DIR) / "admin.toml"
-    try:
-        with open(config_path, 'rb') as f:
-            config = tomli.load(f)
-            admins = {}
-            for role, emails in config.get('admins', {}).items():
-                try:
-                    admin_role = AdminRole(role)
-                    for email in emails:
-                        admins[email] = admin_role
-                except ValueError:
-                    logger.error(f"Invalid admin role in config: {role}")
-            return admins
-    except Exception as e:
-        logger.error(f"Error loading admin configuration: {str(e)}")
-        return {}
-
-# Load admin configuration
-ADMIN_USERS = load_admin_config()
-
 def is_admin() -> bool:
     """Check if current user has admin access."""
     if not hasattr(g, 'user') or not g.user:
         return False
-    return g.user.email in ADMIN_USERS
+    user_config_manager = get_user_config_manager()
+    return user_config_manager.is_admin(g.user.email)
 
 @admin_bp.route('/admin/users')
 @require_auth

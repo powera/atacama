@@ -10,7 +10,7 @@ from common.channel_config import get_channel_manager
 
 from common.messages import get_user_allowed_channels
 
-from common.auth import require_auth, optional_auth
+from common.auth import optional_auth, require_auth, require_admin
 
 logger = get_logger(__name__)
 
@@ -60,7 +60,7 @@ def view_widget(slug):
     
 
 @widgets_bp.route('/widget/<string:slug>/edit', methods=['GET', 'POST'])
-@require_auth
+@require_admin
 def edit_widget(slug):
     """Edit a React widget."""
     with db.session() as session:
@@ -114,7 +114,7 @@ def list_widgets():
     
 
 @widgets_bp.route('/widget/new', methods=['GET', 'POST'])
-@require_auth
+@require_admin
 def create_widget():
     """Create a new React widget."""
     if request.method == 'POST':
@@ -151,7 +151,7 @@ def create_widget():
 
 
 @widgets_bp.route('/widget/<string:slug>/publish', methods=['POST'])
-@require_auth
+@require_admin
 def publish_widget(slug):
     """Publish a React widget."""
     with db.session() as session:
