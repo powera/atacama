@@ -188,11 +188,12 @@ def get_filtered_messages(
     older_than_timestamp: Optional[datetime] = None,
     user_id: Optional[int] = None,
     channel: Optional[str] = None,
+    allowed_channels: Optional[List[str]] = None,
     limit: int = 10
 ) -> Tuple[List[Email], bool]:
     """
     Retrieve messages with filtering and pagination.
-    Respects user preferences for stream views.
+    Respects user preferences and domain restrictions for stream views.
     
     Either older_than_id or older_than_timestamp can be specified, but not both.
     If neither is specified, the most recent messages are returned.
@@ -202,6 +203,7 @@ def get_filtered_messages(
     :param older_than_timestamp: Get messages older than this timestamp
     :param user_id: Filter by author user ID
     :param channel: Filter by channel name
+    :param allowed_channels: Explicit list of allowed channels (overrides automatic calculation)
     :param limit: Maximum messages to return
     :return: Tuple of (messages, has_more)
     """
@@ -233,8 +235,9 @@ def get_filtered_messages(
             logger.warning(f"User lacks access to channel: {channel}")
             return [], False
     else:
-        # Filter to allowed channels (respecting preferences)
-        allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+        # Use provided allowed_channels if specified, otherwise calculate them
+        if allowed_channels is None:
+            allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
         query = query.filter(Email.channel.in_(allowed_channels))
 
     if older_than_id is not None:
@@ -252,3 +255,55 @@ def get_filtered_messages(
         message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
     return messages, has_more
+
+
+def get_domain_filtered_messages(
+    db_session,
+    older_than_id: Optional[int] = None,
+    older_than_timestamp: Optional[datetime] = None,
+    user_id: Optional[int] = None,
+    channel: Optional[str] = None,
+    domain: Optional[str] = None,
+    limit: int = 10
+) -> Tuple[List[Email], bool]:
+    """
+    Retrieve messages with filtering and pagination, including domain restrictions.
+    This properly filters channels at the database query level for efficiency.
+    
+    :param db_session: Database session
+    :param older_than_id: Get messages older than this ID
+    :param older_than_timestamp: Get messages older than this timestamp
+    :param user_id: Filter by author user ID
+    :param channel: Filter by channel name
+    :param domain: Current domain for channel filtering
+    :param limit: Maximum messages to return
+    :return: Tuple of (messages, has_more)
+    """
+    from common.domain_config import get_domain_manager
+    
+    # Get user-allowed channels first
+    user_allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+    
+    # Apply domain filtering if necessary
+    if domain and not channel:
+        domain_manager = get_domain_manager()
+        domain_config = domain_manager.get_domain_config(domain)
+        
+        if not domain_config.allows_all_channels:
+            # Filter to only domain-allowed channels
+            domain_filtered_channels = []
+            for ch in user_allowed_channels:
+                if domain_manager.is_channel_allowed(domain, ch):
+                    domain_filtered_channels.append(ch)
+            user_allowed_channels = domain_filtered_channels
+    
+    # Now get messages with the properly filtered channel list
+    return get_filtered_messages(
+        db_session,
+        older_than_id=older_than_id,
+        older_than_timestamp=older_than_timestamp,
+        user_id=user_id,
+        channel=channel,
+        allowed_channels=user_allowed_channels,
+        limit=limit
+    )

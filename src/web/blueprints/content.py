@@ -29,6 +29,7 @@ from common.messages import (
     get_message_by_id,
     get_message_chain,
     get_filtered_messages,
+    get_domain_filtered_messages,
     check_message_access,
     check_channel_access,
     get_user_allowed_channels
@@ -91,6 +92,7 @@ def channel_preferences():
             channels=filtered_channels,
             user=user,
             user_email=user.email,
+            channel_manager=channel_manager,
             domain_manager=domain_manager,
             current_domain=current_domain
         )
@@ -261,11 +263,12 @@ def message_stream(older_than_id: Optional[int] = None,
             return redirect(url_for('auth.login'))
     
     with db.session() as db_session:
-        messages, has_more = get_filtered_messages(
+        messages, has_more = get_domain_filtered_messages(
             db_session,
             older_than_id=older_than_id,
             older_than_timestamp=older_than_timestamp,
             channel=channel,
+            domain=current_domain,
             limit=10
         )
         
@@ -277,10 +280,6 @@ def message_stream(older_than_id: Optional[int] = None,
         for ch in channels:
             if domain_manager.is_channel_allowed(current_domain, ch):
                 domain_allowed_channels.append(ch)
-        
-        # If viewing all channels, filter messages by domain-allowed channels
-        if not channel and not domain_manager.get_domain_config(current_domain).allows_all_channels:
-            messages = [msg for msg in messages if domain_manager.is_channel_allowed(current_domain, msg.channel)]
 
         # Determine pagination style for next page
         # If current page uses ID-based pagination, continue with that
@@ -376,6 +375,7 @@ def landing_page():
             is_admin=is_admin(),
             available_channels=available_channels,
             channel_configs=channel_manager.channels,
+            channel_manager=channel_manager,
             domain_manager=domain_manager,
             current_domain=current_domain
         )
