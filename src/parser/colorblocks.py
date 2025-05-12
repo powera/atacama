@@ -145,14 +145,11 @@ def create_multiline_block(paragraphs: List[str], color: Optional[str] = None) -
 def create_literal_text(content: str) -> str:
     """
     Generate HTML for literal text block.
-    Content is already processed HTML from children nodes.
-    The .strip() might be too aggressive if leading/trailing spaces inside are meaningful.
-    Assuming content is generally well-formed.
     
-    :param content: Text content (already HTML from children)
+    :param content: Text content
     :return: HTML span with literal-text class
     """
-    return f'<span class="literal-text">{content}</span>' # Removed strip()
+    return f'<span class="literal-text">{content.strip()}</span>'
 
 def _detect_youtube_url(url: str) -> Tuple[bool, Optional[str]]:
     """
