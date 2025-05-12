@@ -15,12 +15,14 @@
 
   [domains.codepending]
     name = "Code Pending"
+    domains = ["codepending.com"]
     channels = ["wikipedia"]
     theme = "shragafeivel"
     
   # Shragafeivel domain
   [domains.shragafeivel]
     name = "Shragafeivel"
+    domains = ["shragafeivel.com"]
     channels = ["religion", "usconst", "chess", "education"]
     theme = "shragafeivel"
     # Optional domain-specific settings

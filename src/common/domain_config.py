@@ -25,6 +25,7 @@ class DomainConfig:
     channels: List[str]  # Empty list means all channels
     theme: str
     description: Optional[str] = None
+    domains: List[str] = None  # List of hostnames that map to this domain config
     
     @property
     def allows_all_channels(self) -> bool:
@@ -52,6 +53,7 @@ class DomainManager:
         self.config_path = config_path
         self.domains: Dict[str, DomainConfig] = {}
         self.themes: Dict[str, ThemeConfig] = {}
+        self.host_to_domain: Dict[str, str] = {}  # Maps hosts to domain configs
         self.default_domain = "default"
         self._load_config()
         
@@ -79,9 +81,20 @@ class DomainManager:
                     name=settings.get('name', domain_key),
                     channels=settings.get('channels', []),
                     theme=settings.get('theme', 'default'),
-                    description=settings.get('description')
+                    description=settings.get('description'),
+                    domains=settings.get('domains', [])
                 )
                 
+                # Map each hostname to this domain config
+                if settings.get('domains'):
+                    for hostname in settings.get('domains', []):
+                        if hostname in self.host_to_domain:
+                            # Found duplicate hostname
+                            existing_domain = self.host_to_domain[hostname]
+                            logger.error(f"Duplicate hostname '{hostname}' found in domains '{domain_key}' and '{existing_domain}'")
+                            raise ValueError(f"Duplicate hostname '{hostname}' in multiple domain configurations")
+                        self.host_to_domain[hostname] = domain_key
+                        
             # Validate configuration
             self._validate_config()
             
@@ -119,31 +132,35 @@ class DomainManager:
         if ':' in host:
             host = host.split(':', 1)[0]
             
-        # Remove www. prefix if present
-        if host.startswith('www.'):
-            host = host[4:]
-            
         # Log the host lookup
         logger.debug(f"Looking up domain for host: {host}")
         
-        # Look for direct match first
+        # Check the exact host first
+        if host in self.host_to_domain:
+            domain_key = self.host_to_domain[host]
+            logger.debug(f"Direct host match found: {host} -> {domain_key}")
+            return domain_key
+            
+        # Remove www. prefix and check again
+        if host.startswith('www.'):
+            host_without_www = host[4:]
+            if host_without_www in self.host_to_domain:
+                domain_key = self.host_to_domain[host_without_www]
+                logger.debug(f"Host match found after removing www: {host} -> {domain_key}")
+                return domain_key
+        else:
+            # Check if we have www.host registered
+            host_with_www = 'www.' + host
+            if host_with_www in self.host_to_domain:
+                domain_key = self.host_to_domain[host_with_www]
+                logger.debug(f"Host match found after adding www: {host} -> {domain_key}")
+                return domain_key
+        
+        # Legacy behavior: Look for direct match in domain keys
         if host in self.domains:
-            logger.debug(f"Direct match found for host: {host}")
+            logger.debug(f"Legacy domain key match found for host: {host}")
             return host
             
-        # Check for subdomain matches
-        domain_parts = host.split('.')
-        if len(domain_parts) > 1:
-            base_domain = '.'.join(domain_parts[1:])
-            if base_domain in self.domains:
-                logger.debug(f"Subdomain match found for host: {host} -> {base_domain}")
-                return base_domain
-                
-        # Handle shragafeivel.com specifically
-        if 'shragafeivel.com' in host:
-            logger.debug(f"Special case for shragafeivel.com in host: {host}")
-            return 'shragafeivel'
-                
         # Fall back to default
         logger.debug(f"No match found for host: {host}, using default domain")
         return self.default_domain
