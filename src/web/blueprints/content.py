@@ -379,3 +379,71 @@ def landing_page():
             domain_manager=domain_manager,
             current_domain=current_domain
         )
+    
+
+@content_bp.route('/channel/<string:channel>/message_list')
+@optional_auth
+@navigable(name="Channel Index", category="channels")
+def channel_list(channel: str) -> Response:
+    """
+    Display a paginated list of all messages (titles and dates) in a specific channel.
+    
+    :param channel: Name of the channel to list messages from
+    :return: Rendered template response with message list
+    """
+    channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
+    
+    # Check if channel exists
+    config = channel_manager.get_channel_config(channel)
+    if not config:
+        abort(404, f"Channel '{channel}' not found")
+        
+    # Check domain access for channel
+    if not domain_manager.is_channel_allowed(current_domain, channel):
+        abort(404, f"Channel not available on this domain")
+        
+    # Check authentication if required
+    if config.requires_auth and 'user' not in session:
+        return redirect(url_for('auth.login'))
+    
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 100  # Number of messages per page
+    
+    with db.session() as db_session:
+        # Count total messages in channel  
+        total_count = db_session.query(Email).filter_by(channel=channel).count()
+        
+        # Get messages for current page
+        messages = db_session.query(Email).filter_by(channel=channel)\
+            .order_by(Email.created_at.desc())\
+            .offset((page - 1) * per_page)\
+            .limit(per_page)\
+            .all()
+            
+        # Format timestamps
+        for message in messages:
+            message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            
+        # Calculate pagination info
+        total_pages = (total_count + per_page - 1) // per_page
+        has_prev = page > 1
+        has_next = page < total_pages
+        
+        return render_template(
+            'channel_list.html',
+            channel=channel,
+            channel_config=config,
+            messages=messages,
+            total_count=total_count,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_prev=has_prev,
+            has_next=has_next,
+            channel_manager=channel_manager,
+            domain_manager=domain_manager,
+            current_domain=current_domain
+        )

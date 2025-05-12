@@ -1,0 +1,174 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}{{ channel_manager.get_display_name(channel) }} Channel - Message Index{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <header class="page-header">
+            <h1>{{ channel_manager.get_display_name(channel) }} Channel</h1>
+            <p class="channel-description">
+                {% if channel_config.description %}
+                    {{ channel_config.description }}
+                {% endif %}
+            </p>
+            <div class="channel-stats">
+                <span>Total messages: {{ total_count }}</span>
+                <span> | </span>
+                <span>Page {{ page }} of {{ total_pages }}</span>
+            </div>
+        </header>
+
+        <nav class="channel-navigation">
+            <a href="{{ url_for('content.message_stream', channel=channel) }}" class="channel-link">
+                ← Back to {{ channel_manager.get_display_name(channel) }} Stream
+            </a>
+        </nav>
+
+        <div class="message-list">
+            <table class="message-index">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Title</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message in messages %}
+                    <tr>
+                        <td class="message-date">{{ message.created_at_formatted.split(' ')[0] }}</td>
+                        <td class="message-title">
+                            <a href="{{ url_for('content.get_message', message_id=message.id) }}">
+                                {{ message.subject or '(No Subject)' }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if has_prev %}
+                <a href="{{ url_for('content.channel_list', channel=channel, page=page-1) }}" class="pagination-link">« Previous</a>
+            {% else %}
+                <span class="pagination-disabled">« Previous</span>
+            {% endif %}
+            
+            <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+            
+            {% if has_next %}
+                <a href="{{ url_for('content.channel_list', channel=channel, page=page+1) }}" class="pagination-link">Next »</a>
+            {% else %}
+                <span class="pagination-disabled">Next »</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <style>
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        .channel-description {
+            color: var(--color-text-secondary);
+            margin: 0.5rem 0;
+        }
+        
+        .channel-stats {
+            font-size: var(--font-size-small);
+            color: var(--color-text-secondary);
+        }
+        
+        .channel-navigation {
+            margin: var(--spacing-large) 0;
+        }
+        
+        .message-index {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-large) 0;
+        }
+        
+        .message-index th {
+            background-color: var(--color-background);
+            border-bottom: 2px solid var(--color-border);
+            padding: var(--spacing-base);
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .message-index td {
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--spacing-base);
+        }
+        
+        .message-index tr:hover {
+            background-color: var(--color-annotation-bg);
+        }
+        
+        .message-date {
+            width: 120px;
+            color: var(--color-text-secondary);
+        }
+        
+        .message-title a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+        
+        .message-title a:hover {
+            text-decoration: underline;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: var(--spacing-large) 0;
+            padding: var(--spacing-large) 0;
+        }
+        
+        .pagination-link {
+            padding: var(--spacing-small) var(--spacing-base);
+            background-color: var(--color-background);
+            color: var(--color-primary);
+            text-decoration: none;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s ease;
+        }
+        
+        .pagination-link:hover {
+            background-color: var(--color-annotation-bg);
+        }
+        
+        .pagination-disabled {
+            padding: var(--spacing-small) var(--spacing-base);
+            color: var(--color-text-secondary);
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            color: var(--color-text-secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .message-index {
+                font-size: var(--font-size-small);
+            }
+            
+            .message-date {
+                width: 90px;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+{% endblock %}
