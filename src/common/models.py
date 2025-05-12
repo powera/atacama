@@ -200,7 +200,7 @@ class ReactWidget(Message):
     """React widget model for storing interactive components."""
     __tablename__ = 'react_widgets'
     
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
 
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
