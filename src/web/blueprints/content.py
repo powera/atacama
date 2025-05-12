@@ -252,6 +252,10 @@ def message_stream(older_than_id: Optional[int] = None,
     
     # Check channel access before querying
     if channel:
+        # First check if channel is allowed on this domain
+        if not domain_manager.is_channel_allowed(current_domain, channel):
+            abort(404, f"Channel not available on this domain")
+            
         config = channel_manager.get_channel_config(channel)
         if config and config.requires_auth and 'user' not in session:
             return redirect(url_for('auth.login'))
@@ -267,6 +271,16 @@ def message_stream(older_than_id: Optional[int] = None,
         
         # Get available channels
         channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+        
+        # Filter channels based on domain restrictions
+        domain_allowed_channels = []
+        for ch in channels:
+            if domain_manager.is_channel_allowed(current_domain, ch):
+                domain_allowed_channels.append(ch)
+        
+        # If viewing all channels, filter messages by domain-allowed channels
+        if not channel and not domain_manager.get_domain_config(current_domain).allows_all_channels:
+            messages = [msg for msg in messages if domain_manager.is_channel_allowed(current_domain, msg.channel)]
 
         # Determine pagination style for next page
         # If current page uses ID-based pagination, continue with that
@@ -295,7 +309,7 @@ def message_stream(older_than_id: Optional[int] = None,
             older_than_tstime=older_than_next_tstime,
             use_id_pagination=use_id_pagination,
             current_channel=channel,
-            available_channels=channels,
+            available_channels=domain_allowed_channels,
             channel_manager=channel_manager,
             domain_manager=domain_manager,
             current_domain=current_domain
