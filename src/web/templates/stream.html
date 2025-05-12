@@ -71,9 +71,7 @@
 
     {% if has_more %}
         <div class="stream-navigation">
-            {% if current_user_id %}
-                <a href="{{ url_for('content.message_stream', user_id=current_user_id, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
-            {% elif current_channel %}
+            {% if current_channel %}
                 <a href="{{ url_for('content.message_stream', channel=current_channel, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
             {% else %}
                 <a href="{{ url_for('content.message_stream', older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
