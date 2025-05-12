@@ -196,7 +196,7 @@ article_quotes = Table('article_quotes', Base.metadata,
     Column('created_at', DateTime, default=datetime.utcnow)
 )
 
-class ReactWidget(Base):
+class ReactWidget(Message):
     """React widget model for storing interactive components."""
     __tablename__ = 'react_widgets'
     

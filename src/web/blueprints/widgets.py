@@ -29,8 +29,7 @@ def view_widget(slug):
         channel_manager = get_channel_manager()
         
         # Check if widget requires authentication
-        #if widget.requires_auth and not g.user:
-        if False: # Placeholder for actual authentication check
+        if widget.requires_auth and not g.user:
             flash("Please log in to view this widget.", 'error')
             return render_template('login.html')
         
