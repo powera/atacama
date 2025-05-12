@@ -11,7 +11,7 @@
   [domains.earlyversion]
     name = "Early Version"
     channels = []  # All channels
-    theme = default"
+    theme = "default"
 
   [domains.codepending]
     name = "Code Pending"

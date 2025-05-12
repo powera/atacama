@@ -66,6 +66,7 @@ class TestChannelConfig(ChannelConfigTestBase):
     def test_public_channel(self):
         """Test public channel configuration."""
         config = ChannelConfig(
+            name="public",
             description="Public channel",
             access_level=AccessLevel.PUBLIC
         )
@@ -75,6 +76,7 @@ class TestChannelConfig(ChannelConfigTestBase):
     def test_private_channel(self):
         """Test private channel configuration."""
         config = ChannelConfig(
+            name="private",
             description="Private channel",
             access_level=AccessLevel.PRIVATE
         )
@@ -84,6 +86,7 @@ class TestChannelConfig(ChannelConfigTestBase):
     def test_restricted_channel(self):
         """Test restricted channel with domain."""
         config = ChannelConfig(
+            name="restricted",
             description="Domain restricted channel",
             access_level=AccessLevel.RESTRICTED,
             domain_restriction="example.com"

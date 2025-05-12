@@ -64,7 +64,7 @@ class Email(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     subject: Mapped[Optional[str]] = mapped_column(String)
     content: Mapped[str] = mapped_column(Text)
-    preview_content: Mapped[str] = mapped_column(Text)  # Truncated at --MORE--
+    preview_content: Mapped[str] = mapped_column(Text, nullable=True)  # Truncated at --MORE--
     processed_content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     channel: Mapped[str] = mapped_column(String, default=None, server_default='private')
