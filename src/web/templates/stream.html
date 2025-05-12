@@ -20,6 +20,11 @@
                        class="channel-link active">
                         {{ channel_manager.get_display_name(current_channel) }}
                     </a>
+
+                    <a href="{{ url_for('content.channel_list', channel=current_channel) }}" 
+                       class="channel-link">
+                        View Index
+                    </a>
                     {% endif %}
                     
                     <div class="channel-dropdown">

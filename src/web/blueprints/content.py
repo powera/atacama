@@ -383,7 +383,6 @@ def landing_page():
 
 @content_bp.route('/channel/<string:channel>/message_list')
 @optional_auth
-@navigable(name="Channel Index", category="channels")
 def channel_list(channel: str) -> Response:
     """
     Display a paginated list of all messages (titles and dates) in a specific channel.
