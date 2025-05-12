@@ -1,0 +1,119 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Create Widget - Atacama{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Create New React Widget</h1>
+    
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('widgets.create_widget') }}">
+        <div class="form-group">
+            <label for="slug">Slug (URL path):</label>
+            <input type="text" id="slug" name="slug" required 
+                   pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                   placeholder="my-widget-name"
+                   value="{{ form_data.slug if form_data else '' }}">
+            <small>Lowercase letters, numbers, and hyphens only</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" required
+                   placeholder="My Amazing Widget"
+                   value="{{ form_data.title if form_data else '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" rows="3"
+                      placeholder="A brief description of what this widget does">{{ form_data.description if form_data else '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="channel">Channel:</label>
+            <select name="channel" id="channel" required>
+                {% set allowed_channels = get_user_allowed_channels(user=g.user, ignore_preferences=True) %}
+                {% for channel_name in channel_manager.get_channel_names() %}
+                    {% if channel_name in allowed_channels %}
+                        {% set config = channel_manager.get_channel_config(channel_name) %}
+                        <option value="{{ channel_name }}" 
+                                {% if (form_data and form_data.channel == channel_name) or 
+                                   (not form_data and channel_name == channel_manager.default_channel) %}selected{% endif %}>
+                            {{ config.get_display_name() }} - {{ config.description }}
+                            {% if config.requires_auth %}(Private){% endif %}
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="code">React Component Code:</label>
+            <textarea id="code" name="code" rows="20" 
+                      placeholder="// Your React component code here&#10;const MyWidget = () => {&#10;  return <div>Hello World!</div>;&#10;};">{{ form_data.code if form_data else '' }}</textarea>
+            <div class="code-help">
+                <details>
+                    <summary>Code Template & Examples</summary>
+                    <pre><code>// Basic component template
+const {{ '{{ widget_name }}' }} = () => {
+  const [count, setCount] = React.useState(0);
+  
+  return (
+    &lt;div&gt;
+      &lt;h2&gt;Counter: {count}&lt;/h2&gt;
+      &lt;button onClick={() => setCount(count + 1)}&gt;
+        Increment
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+};
+
+// Component name should match the widget title (spaces removed)</code></pre>
+                </details>
+            </div>
+        </div>
+        
+        <button type="submit" class="button primary">Create Widget</button>
+        <a href="{{ url_for('widgets.list_widgets') }}" class="button secondary">Cancel</a>
+    </form>
+</div>
+
+<style>
+    .code-help {
+        margin-top: 0.5rem;
+    }
+    
+    .code-help details {
+        background: var(--color-background);
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        padding: 0.5rem;
+    }
+    
+    .code-help pre {
+        margin: 0.5rem 0 0 0;
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        overflow-x: auto;
+    }
+    
+    [data-theme="dark"] .code-help pre {
+        background: #2d2d2d;
+    }
+    
+    #code {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 14px;
+    }
+    
+    small {
+        color: var(--color-text-secondary);
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

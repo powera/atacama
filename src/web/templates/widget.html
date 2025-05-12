@@ -1,0 +1,150 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}{{ widget.title }} - Widget{% endblock %}
+
+{% block content %}
+<div class="widget-container">
+    <header class="widget-header">
+        <h1>{{ widget.title }}</h1>
+        {% if widget.description %}
+            <p class="widget-description">{{ widget.description }}</p>
+        {% endif %}
+        <div class="widget-metadata">
+            {% if widget.author %}
+                <span>Created by {{ widget.author.name }}</span>
+            {% endif %}
+            {% if widget.published_at %}
+                <span>Published {{ widget.published_at.strftime('%Y-%m-%d') }}</span>
+            {% endif %}
+            {% if g.user and (g.user.id == widget.author_id or 
+                             (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)) %}
+                <a href="{{ url_for('widgets.edit_widget', slug=widget.slug) }}" 
+                   class="button small">Edit Widget</a>
+            {% endif %}
+        </div>
+    </header>
+    
+    <div id="widget-root" class="widget-mount-point"></div>
+    
+    <div id="widget-error" class="widget-error" style="display: none;">
+        <h2>Widget Error</h2>
+        <p>There was an error loading this widget.</p>
+        <pre id="error-details"></pre>
+    </div>
+</div>
+
+<style>
+    .widget-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .widget-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    .widget-header h1 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .widget-description {
+        color: var(--color-text-secondary);
+        margin: 0.5rem 0;
+    }
+    
+    .widget-metadata {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: var(--color-text-secondary);
+    }
+    
+    .widget-mount-point {
+        min-height: 200px;
+        background: var(--color-card-bg);
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+    }
+    
+    .widget-error {
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px solid var(--color-error);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .widget-error h2 {
+        color: var(--color-error);
+        margin-top: 0;
+    }
+    
+    .widget-error pre {
+        background: var(--color-background);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    
+    .button.small {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<!-- React dependencies - load in proper order -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Tailwind CSS for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script type="text/babel">
+    // Make React hooks available globally
+    const { useState, useEffect, useRef } = React;
+
+    // Set globals
+    window.React = React;
+    window.useState = React.useState;
+    window.useEffect = React.useEffect;
+    
+    // Widget error handling
+    window.addEventListener('error', function(event) {
+        console.error('Widget error:', event.error);
+        document.getElementById('widget-root').style.display = 'none';
+        document.getElementById('widget-error').style.display = 'block';
+        document.getElementById('error-details').textContent = event.error.toString();
+    });
+    
+    try {
+        // Widget code
+        {{ widget.code | safe }}
+        
+        // Mount the widget
+        const componentName = '{{ widget.title }}'.replace(/\s+/g, '');
+        const Component = window[componentName];
+        
+        if (!Component) {
+            throw new Error(`Component ${componentName} not found. Make sure your component name matches the widget title.`);
+        }
+        
+        const root = ReactDOM.createRoot(document.getElementById('widget-root'));
+        root.render(React.createElement(Component));
+    } catch (error) {
+        console.error('Widget initialization error:', error);
+        document.getElementById('widget-root').style.display = 'none';
+        document.getElementById('widget-error').style.display = 'block';
+        document.getElementById('error-details').textContent = error.toString();
+    }
+</script>
+{% endblock %}

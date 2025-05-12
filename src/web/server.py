@@ -99,6 +99,17 @@ def create_app(testing: bool = False) -> Flask:
     # Register before request handler for domain/theme processing
     app.before_request(before_request_handler)
     
+    # Add template context processor for common functions
+    @app.context_processor
+    def inject_access_functions():
+        from common.messages import get_user_allowed_channels, check_channel_access, check_message_access
+        
+        return {
+            'get_user_allowed_channels': get_user_allowed_channels,
+            'check_channel_access': check_channel_access,
+            'check_message_access': check_message_access,
+        }
+
     # Add template context processor for domain and theme info
     @app.context_processor
     def inject_domain_data():
@@ -138,6 +149,9 @@ def create_app(testing: bool = False) -> Flask:
 
     from web.blueprints.article import articles_bp
     app.register_blueprint(articles_bp)
+
+    from web.blueprints.widgets import widgets_bp
+    app.register_blueprint(widgets_bp)
 
     from web.blueprints.submit import submit_bp
     app.register_blueprint(submit_bp)

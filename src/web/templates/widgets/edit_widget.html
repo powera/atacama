@@ -1,0 +1,191 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Edit {{ widget.title }} - Widget{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Edit Widget: {{ widget.title }}</h1>
+    
+    <div class="widget-actions">
+        <a href="{{ url_for('widgets.view_widget', slug=widget.slug) }}" class="button">View Widget</a>
+        {% if widget.published %}
+            <span class="published-badge">Published</span>
+        {% else %}
+            <button type="button" class="button" onclick="publishWidget()">Publish</button>
+        {% endif %}
+    </div>
+    
+    <form method="POST" action="{{ url_for('widgets.edit_widget', slug=widget.slug) }}">
+        <div class="form-group">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" required value="{{ widget.title }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" rows="3">{{ widget.description or '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Slug: <code>{{ widget.slug }}</code></label>
+            <small>URL: {{ url_for('widgets.view_widget', slug=widget.slug, _external=True) }}</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Channel: <strong>{{ channel_manager.get_display_name(widget.channel) }}</strong></label>
+        </div>
+        
+        <div class="form-group">
+            <label for="code">React Component Code:</label>
+            <textarea id="code" name="code" rows="30">{{ widget.code }}</textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="button primary">Save Changes</button>
+            <button type="button" class="button secondary" onclick="previewWidget()">Preview</button>
+            <a href="{{ url_for('widgets.list_widgets') }}" class="button">Back to List</a>
+        </div>
+    </form>
+    
+    <div class="widget-metadata">
+        <p>Created: {{ widget.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        <p>Last modified: {{ widget.last_modified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        {% if widget.author %}
+            <p>Author: {{ widget.author.name }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<div id="preview-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closePreview()">&times;</span>
+        <h2>Widget Preview</h2>
+        <div id="preview-root"></div>
+    </div>
+</div>
+
+<style>
+    .widget-actions {
+        float: right;
+        margin-bottom: 1rem;
+    }
+    
+    .published-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: var(--color-success);
+        color: white;
+        border-radius: var(--border-radius);
+        font-size: 0.9rem;
+    }
+    
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .widget-metadata {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--color-border);
+        color: var(--color-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    #code {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 14px;
+    }
+    
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: var(--color-background);
+        margin: 5% auto;
+        padding: 2rem;
+        border: 1px solid var(--color-border);
+        width: 80%;
+        max-width: 800px;
+        border-radius: var(--border-radius);
+        position: relative;
+    }
+    
+    .close {
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+        font-size: 2rem;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .close:hover {
+        color: var(--color-error);
+    }
+</style>
+
+<script>
+    function previewWidget() {
+        const modal = document.getElementById('preview-modal');
+        const root = document.getElementById('preview-root');
+        const code = document.getElementById('code').value;
+        
+        try {
+            // Clear previous content
+            root.innerHTML = '';
+            
+            // Transform and execute the code
+            const transformedCode = Babel.transform(code, { presets: ['react'] }).code;
+            eval(transformedCode);
+            
+            // Try to render the component
+            const componentName = '{{ widget.title }}'.replace(/\s+/g, '');
+            const Component = eval(componentName);
+            
+            const reactRoot = ReactDOM.createRoot(root);
+            reactRoot.render(React.createElement(Component));
+            
+            modal.style.display = 'block';
+        } catch (error) {
+            alert('Error in widget code: ' + error.message);
+            console.error(error);
+        }
+    }
+    
+    function closePreview() {
+        document.getElementById('preview-modal').style.display = 'none';
+    }
+    
+    function publishWidget() {
+        if (confirm('Are you sure you want to publish this widget?')) {
+            // Add publish functionality here
+            fetch('{{ url_for("widgets.publish_widget", slug=widget.slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Failed to publish widget');
+                }
+            });
+        }
+    }
+</script>
+
+<!-- React dependencies for preview -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+{% endblock %}
