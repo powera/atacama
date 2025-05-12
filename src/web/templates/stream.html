@@ -70,14 +70,25 @@
     {% endfor %}
 
     {% if has_more %}
-        <div class="stream-navigation">
+    <div class="stream-navigation">
+        {% if use_id_pagination %}
+            {# Continue using ID-based pagination if that's what was used for this page #}
             {% if current_channel %}
                 <a href="{{ url_for('content.message_stream', channel=current_channel, older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
             {% else %}
                 <a href="{{ url_for('content.message_stream', older_than_id=older_than_id) }}" class="navigation-link">Show Older Messages</a>
+              {% endif %}
+        {% else %}
+            {# Use timestamp-based pagination for new style #}
+            {% if current_channel %}
+                <a href="{{ url_for('content.message_stream', channel=current_channel, tsdate=older_than_tsdate, tstime=older_than_tstime) }}" class="navigation-link">Show Older Messages</a>
+            {% else %}
+                <a href="{{ url_for('content.message_stream', tsdate=older_than_tsdate, tstime=older_than_tstime) }}" class="navigation-link">Show Older Messages</a>
             {% endif %}
-        </div>
+        {% endif %}
+    </div>
     {% endif %}
+    
 </div>
 <script>
     // Add dropdown toggle functionality
