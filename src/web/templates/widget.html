@@ -109,10 +109,6 @@
 
 <!-- Tailwind CSS for styling -->
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- Recharts React for graphing -->
-{% if "recharts" in extra_modules %}
-<script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
-{% endif %}
 
 <script type="text/babel">
     // Make React hooks available globally
@@ -123,13 +119,6 @@
     window.useRef = React.useRef;
     window.useState = React.useState;
     window.useEffect = React.useEffect;
-
-    {% if "recharts" in extra_modules %}
-    // Instead of listing every component, we just expose everything:
-    Object.keys(Recharts).forEach(key => {
-        window[key] = Recharts[key];
-    });
-    {% endif %}
     
     // Widget error handling
     window.addEventListener('error', function(event) {
