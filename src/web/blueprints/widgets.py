@@ -54,6 +54,7 @@ def view_widget(slug):
         return render_template(
             'widget.html',
             widget=widget,
+            extra_modules=["recharts"],  # Move to database
             channel_config=channel_config
         )
     
