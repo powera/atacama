@@ -8,6 +8,7 @@
     
     <div class="widget-actions">
         <a href="{{ url_for('widgets.view_widget', slug=widget.slug) }}" class="button">View Widget</a>
+        <button type="button" class="button" onclick="buildWidget()">Build Widget</button>
         {% if widget.published %}
             <span class="published-badge">Published</span>
         {% else %}
@@ -35,6 +36,29 @@
             <label>Channel: <strong>{{ channel_manager.get_display_name(widget.channel) }}</strong></label>
         </div>
         
+        <div class="form-group">
+            <label>Dependencies:</label>
+            <div class="dependency-checkboxes">
+                {% set current_deps = widget.dependencies|default('[]')|tojson|safe %}
+                {% for dep, version in [
+                    ('recharts', 'Recharts - for charts'),
+                    ('lodash', 'Lodash - utilities'),
+                    ('d3', 'D3.js - data viz'),
+                    ('axios', 'Axios - HTTP client'),
+                    ('date-fns', 'date-fns - date utilities'),
+                    ('lucide-react', 'Lucide React - icon library')
+                ] %}
+                    <label>
+                        <input type="checkbox" 
+                               name="dependencies" 
+                               value="{{ dep }}"
+                               {% if dep in current_deps %}checked{% endif %}>
+                        {{ version }}
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+
         <div class="form-group">
             <label for="code">React Component Code:</label>
             <textarea id="code" name="code" rows="30">{{ widget.code }}</textarea>
@@ -164,6 +188,24 @@
     function closePreview() {
         document.getElementById('preview-modal').style.display = 'none';
     }
+
+    function buildWidget() {
+        if (confirm('Build this widget? This will compile the React code for production use.')) {
+            fetch('{{ url_for("widgets.build_widget", slug=widget.slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: '{}'
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Failed to build widget');
+                }
+            });
+        }
+    }
     
     function publishWidget() {
         if (confirm('Are you sure you want to publish this widget?')) {
@@ -172,7 +214,8 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: '{}'
             }).then(response => {
                 if (response.ok) {
                     location.reload();

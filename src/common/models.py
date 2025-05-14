@@ -9,6 +9,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from common.channel_config import get_channel_manager
 from common.logging_config import get_logger
+from common.react_compiler import WidgetBuilder
 logger = get_logger(__name__)
 
 class Base(DeclarativeBase):
@@ -205,7 +206,10 @@ class ReactWidget(Message):
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
+
     code: Mapped[str] = mapped_column(Text)  # The React component code
+    compiled_code: Mapped[Optional[str]] = mapped_column(Text)  # Compiled code for browser use
+    dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list of dependencies
 
     published: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -215,6 +219,34 @@ class ReactWidget(Message):
     dependencies: Mapped[Optional[Dict]] = mapped_column(Text)  # External dependencies needed
     config: Mapped[Optional[Dict]] = mapped_column(Text)  # Widget configuration
     
+    def build(self):
+        """Build the widget code into a browser-ready bundle."""
+        builder = WidgetBuilder()
+        widget_name = self.title.replace(' ', '')
+        
+        # Parse dependencies from JSON
+        deps = []
+        if self.dependencies:
+            try:
+                deps = self.dependencies.split(',')
+            except json.JSONDecodeError:
+                logger.error(f"Invalid dependencies list for widget {self.slug}")
+        
+        success, built_code, error = builder.build_widget(
+            self.code, 
+            widget_name,
+            dependencies=deps
+        )
+        
+        if success:
+            logger.info(f"Widget {self.slug} built successfully.")
+            self.compiled_code = built_code
+        else:
+            logger.warning(f"Widget build failed: {error}")
+            self.compiled_code = None
+            
+        return success
+
     __mapper_args__ = {
         'polymorphic_identity': MessageType.WIDGET
     }

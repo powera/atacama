@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request
+from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request, jsonify
 from sqlalchemy import select
 from datetime import datetime
 from common.database import db
@@ -122,6 +122,7 @@ def create_widget():
         code = request.form.get('code', '')
         description = request.form.get('description', '')
         channel = request.form.get('channel', 'private')
+        dependencies = request.form.getlist('dependencies')
         
         # Validate slug uniqueness
         with db.session() as session:
@@ -137,7 +138,8 @@ def create_widget():
                 description=description,
                 channel=channel,
                 author=g.user,
-                published=False
+                published=False,
+                dependencies=",".join(dependencies)
             )
             
             session.add(widget)
@@ -147,6 +149,38 @@ def create_widget():
             return redirect(url_for('widgets.edit_widget', slug=slug))
     
     return render_template('widgets/create.html')
+
+
+@widgets_bp.route('/widget/<string:slug>/build', methods=['POST'])
+@require_admin
+def build_widget(slug):
+    """Build a React widget."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        # Build the widget
+        success = widget.build()
+        session.commit()
+        
+    logger.info(f"Widget {slug} build status: {success}")
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Widget built successfully!'
+        }), 200
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': f'Build failed!  Check server logs.'
+        }), 400
 
 
 @widgets_bp.route('/widget/<string:slug>/publish', methods=['POST'])
@@ -168,4 +202,7 @@ def publish_widget(slug):
         widget.published_at = datetime.utcnow()
         session.commit()
         
-        return {'status': 'success'}, 200
+        return jsonify({
+            'status': 'success',
+            'message': 'Widget published!'
+        }), 200

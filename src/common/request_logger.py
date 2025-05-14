@@ -113,8 +113,8 @@ class RequestLogger:
 
             # Add sanitized request body for POST/PUT requests
             if request.method in ['POST', 'PUT'] and request.is_json:
-                body = request.get_json()
-                if isinstance(body, dict):
+                body = request.get_json(silent=True)  # Won't raise exception
+                if body and isinstance(body, dict):
                     sanitized_body = {
                         k: v for k, v in body.items()
                         if k.lower() not in self.SENSITIVE_PARAMS

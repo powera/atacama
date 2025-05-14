@@ -102,7 +102,9 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- React dependencies - load in proper order -->
+
+{% if not widget.compiled_code %}
+<!-- Load non-compiled code path -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -149,4 +151,32 @@
         document.getElementById('error-details').textContent = error.toString();
     }
 </script>
+{% else %}
+<!-- Load compiled code path -->
+<!-- React (always needed) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!-- The built widget bundle (includes only selected dependencies) -->
+<script>
+    {{ widget.compiled_code | safe }}
+</script>
+
+<!-- Mount the widget -->
+<script>
+    try {
+        const componentName = '{{ widget.title }}'.replace(/\s+/g, '');
+        const Component = window[componentName];
+        
+        if (Component) {
+            const root = ReactDOM.createRoot(document.getElementById('widget-root'));
+            root.render(React.createElement(Component));
+        } else {
+            throw new Error(`Component ${componentName} not found`);
+        }
+    } catch (error) {
+        console.error('Widget mount error:', error);
+    }
+</script>
+{% endif %}
 {% endblock %}
