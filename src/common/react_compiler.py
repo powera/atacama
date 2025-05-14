@@ -45,6 +45,61 @@ class WidgetBuilder:
     def __init__(self, build_dir: str = None):
         self.build_dir = build_dir or os.path.join(tempfile.gettempdir(), 'widget_builds')
         Path(self.build_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Find system NPM and NPX paths
+        self.npm_path = self._find_system_command('npm')
+        self.npx_path = self._find_system_command('npx')
+        
+        if not self.npm_path:
+            raise RuntimeError("npm not found in system PATH. Please install Node.js.")
+        if not self.npx_path:
+            raise RuntimeError("npx not found in system PATH. Please install Node.js.")
+    
+    def _find_system_command(self, command: str) -> Optional[str]:
+        """Find the full path to a system command."""
+        # Common locations for npm/npx
+        common_paths = [
+            f'/usr/bin/{command}',
+            f'/usr/local/bin/{command}',
+            f'/opt/node/bin/{command}',
+            f'/opt/nodejs/bin/{command}',
+            os.path.expanduser(f'~/.nvm/current/bin/{command}'),
+        ]
+        
+        # Check common paths first
+        for path in common_paths:
+            if os.path.exists(path) and os.access(path, os.X_OK):
+                logger.info(f"Found {command} at: {path}")
+                return path
+        
+        # Fallback to using which/whereis
+        try:
+            result = subprocess.run(['/usr/bin/which', command], 
+                                  capture_output=True, text=True, check=True)
+            path = result.stdout.strip()
+            if path and os.path.exists(path):
+                logger.info(f"Found {command} using which: {path}")
+                return path
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+        
+        # Try whereis as last resort
+        try:
+            result = subprocess.run(['/usr/bin/whereis', command], 
+                                  capture_output=True, text=True, check=True)
+            output = result.stdout.strip()
+            # whereis output format: "command: /path/to/command"
+            if ':' in output:
+                paths = output.split(':', 1)[1].split()
+                for path in paths:
+                    if os.path.exists(path) and os.access(path, os.X_OK):
+                        logger.info(f"Found {command} using whereis: {path}")
+                        return path
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+        
+        logger.warning(f"Could not find {command} in system PATH")
+        return None
     
     def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None) -> Tuple[bool, str, str]:
         """
@@ -164,13 +219,13 @@ export default {widget_name};
             with open(os.path.join(src_dir, 'widget.js'), 'w') as f:
                 f.write(wrapped_code)
             
-            # Install dependencies
+            # Install dependencies using full npm path
             logger.info(f"Installing dependencies for widget {widget_name}")
-            subprocess.run(['npm', 'install'], cwd=temp_dir, check=True, capture_output=True)
+            subprocess.run([self.npm_path, 'install'], cwd=temp_dir, check=True, capture_output=True)
             
-            # Build with webpack
+            # Build with webpack using full npx path
             logger.info(f"Building widget {widget_name}")
-            subprocess.run(['npx', 'webpack', '--mode', 'production'], cwd=temp_dir, check=True, capture_output=True)
+            subprocess.run([self.npx_path, 'webpack', '--mode', 'production'], cwd=temp_dir, check=True, capture_output=True)
             
             # Read the built bundle
             bundle_path = os.path.join(temp_dir, 'dist', 'widget.bundle.js')
