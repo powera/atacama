@@ -9,6 +9,10 @@ from typing import Dict, Tuple, List, Optional
 from common.logging_config import get_logger
 logger = get_logger(__name__)
 
+# Hack - to ensure that the PATH is set correctly for subprocess calls
+env = os.environ.copy()
+env['PATH'] = '/usr/local/bin:/usr/bin:/bin:' + env.get('PATH', '')
+
 class WidgetBuilder:
     """Builds React widgets with proper bundling for browser use."""
     
@@ -167,6 +171,7 @@ export default {widget_name};
             # Install dependencies - use --include=dev to ensure dev dependencies are installed
             logger.info(f"Installing dependencies for widget {widget_name}")
             install_result = subprocess.run(['npm', 'install', '--include=dev'], 
+                                            env=env,
                                             cwd=temp_dir, 
                                             capture_output=True, 
                                             text=True)
@@ -178,6 +183,7 @@ export default {widget_name};
             # Build with webpack
             logger.info(f"Building widget {widget_name}")
             build_result = subprocess.run(['npx', 'webpack', '--mode', 'production'], 
+                                          env=env,
                                           cwd=temp_dir, 
                                           capture_output=True, 
                                           text=True)
