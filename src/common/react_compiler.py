@@ -164,13 +164,27 @@ export default {widget_name};
             with open(os.path.join(src_dir, 'widget.js'), 'w') as f:
                 f.write(wrapped_code)
             
-            # Install dependencies
+            # Install dependencies - use --include=dev to ensure dev dependencies are installed
             logger.info(f"Installing dependencies for widget {widget_name}")
-            subprocess.run(['npm', 'install'], cwd=temp_dir, check=True, capture_output=True)
+            install_result = subprocess.run(['npm', 'install', '--include=dev'], 
+                                            cwd=temp_dir, 
+                                            capture_output=True, 
+                                            text=True)
+            
+            if install_result.returncode != 0:
+                logger.error(f"npm install failed: {install_result.stderr}")
+                return False, "", f"npm install failed: {install_result.stderr}"
             
             # Build with webpack
             logger.info(f"Building widget {widget_name}")
-            subprocess.run(['npx', 'webpack', '--mode', 'production'], cwd=temp_dir, check=True, capture_output=True)
+            build_result = subprocess.run(['npx', 'webpack', '--mode', 'production'], 
+                                          cwd=temp_dir, 
+                                          capture_output=True, 
+                                          text=True)
+            
+            if build_result.returncode != 0:
+                logger.error(f"webpack build failed: {build_result.stderr}")
+                return False, "", f"webpack build failed: {build_result.stderr}"
             
             # Read the built bundle
             bundle_path = os.path.join(temp_dir, 'dist', 'widget.bundle.js')
@@ -193,7 +207,12 @@ export default {widget_name};
             
             return True, final_code, ""
             
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Command failed: {e.stderr}"
+            logger.error(error_msg)
+            return False, "", error_msg
         except Exception as e:
+            logger.error(f"Error building widget: {str(e)}")
             return False, "", str(e)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
