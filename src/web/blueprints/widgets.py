@@ -79,7 +79,9 @@ def edit_widget(slug):
             widget.description = request.form.get('description', widget.description)
             widget.code = request.form.get('code', widget.code)
             widget.last_modified_at = datetime.utcnow()
-            widget.dependencies=",".join(request.form.get("dependencies", widget.dependencies).split(","))
+
+            dependencies = request.form.getlist('dependencies') or []
+            widget.dependencies=",".join(dependencies)
             
             session.commit()
             flash("Widget updated successfully!", 'success')
