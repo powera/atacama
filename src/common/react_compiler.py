@@ -45,108 +45,6 @@ class WidgetBuilder:
     def __init__(self, build_dir: str = None):
         self.build_dir = build_dir or os.path.join(tempfile.gettempdir(), 'widget_builds')
         Path(self.build_dir).mkdir(parents=True, exist_ok=True)
-        
-        # Find system NPM and NPX paths
-        self.npm_path = self._find_system_command('npm')
-        self.npx_path = self._find_system_command('npx')
-        
-        if not self.npm_path:
-            raise RuntimeError("npm not found in system PATH. Please install Node.js.")
-        if not self.npx_path:
-            raise RuntimeError("npx not found in system PATH. Please install Node.js.")
-        
-        # Verify npm is actually executable
-        self._verify_npm_installation()
-    
-    def _find_system_command(self, command: str) -> Optional[str]:
-        """Find the full path to a system command."""
-        # Common locations for npm/npx
-        common_paths = [
-            f'/usr/bin/{command}',
-            f'/usr/local/bin/{command}',
-            f'/opt/node/bin/{command}',
-            f'/opt/nodejs/bin/{command}',
-            os.path.expanduser(f'~/.nvm/current/bin/{command}'),
-        ]
-        
-        # Check common paths first
-        for path in common_paths:
-            if os.path.exists(path) and os.access(path, os.X_OK):
-                logger.info(f"Found {command} at: {path}")
-                return path
-        
-        # Fallback to using which/whereis
-        try:
-            result = subprocess.run(['/usr/bin/which', command], 
-                                  capture_output=True, text=True, check=True)
-            path = result.stdout.strip()
-            if path and os.path.exists(path):
-                logger.info(f"Found {command} using which: {path}")
-                return path
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
-        
-        # Try whereis as last resort
-        try:
-            result = subprocess.run(['/usr/bin/whereis', command], 
-                                  capture_output=True, text=True, check=True)
-            output = result.stdout.strip()
-            # whereis output format: "command: /path/to/command"
-            if ':' in output:
-                paths = output.split(':', 1)[1].split()
-                for path in paths:
-                    if os.path.exists(path) and os.access(path, os.X_OK):
-                        logger.info(f"Found {command} using whereis: {path}")
-                        return path
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
-        
-        logger.warning(f"Could not find {command} in system PATH")
-        return None
-    
-    def _verify_npm_installation(self):
-        """Verify that npm is properly installed and executable."""
-        try:
-            # Check if npm path exists
-            if not os.path.exists(self.npm_path):
-                raise RuntimeError(f"NPM path does not exist: {self.npm_path}")
-            
-            # Check if npm is executable
-            if not os.access(self.npm_path, os.X_OK):
-                raise RuntimeError(f"NPM is not executable: {self.npm_path}")
-            
-            # Try to run npm version
-            result = subprocess.run([self.npm_path, '--version'], 
-                                  capture_output=True, text=True, check=True)
-            npm_version = result.stdout.strip()
-            logger.info(f"NPM version: {npm_version}")
-            
-            # Try to run npx version
-            result = subprocess.run([self.npx_path, '--version'], 
-                                  capture_output=True, text=True, check=True)
-            npx_version = result.stdout.strip()
-            logger.info(f"NPX version: {npx_version}")
-            
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to verify npm installation: {e}")
-            logger.error(f"Stdout: {e.stdout}")
-            logger.error(f"Stderr: {e.stderr}")
-            raise RuntimeError(f"NPM verification failed: {e}")
-        except Exception as e:
-            logger.error(f"NPM verification error: {e}")
-            raise
-    
-    def _get_npm_environment(self) -> dict:
-        """Get a minimal, secure environment for running npm commands."""
-        return {
-            'HOME': os.path.expanduser('~'),
-            'USER': os.environ.get('USER', 'atacama'),
-            'PATH': '/usr/local/bin:/usr/bin:/bin',
-            'NODE_ENV': 'production',
-            # Only include what npm actually needs
-            'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
-            'LC_ALL': os.environ.get('LC_ALL', 'C.UTF-8'),
-        }
     
     def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None) -> Tuple[bool, str, str]:
         """
@@ -266,41 +164,13 @@ export default {widget_name};
             with open(os.path.join(src_dir, 'widget.js'), 'w') as f:
                 f.write(wrapped_code)
             
-            # Install dependencies using full npm path
-            logger.info(f"Installing dependencies for widget {widget_name} using npm at: {self.npm_path}")
-            try:
-                # Use minimal, secure environment for npm
-                npm_env = self._get_npm_environment()
-                
-                result = subprocess.run([self.npm_path, 'install'], 
-                                      cwd=temp_dir, 
-                                      check=True, 
-                                      capture_output=True, 
-                                      text=True,
-                                      env=npm_env)
-                logger.debug(f"NPM install stdout: {result.stdout}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"NPM install failed with exit code {e.returncode}")
-                logger.error(f"NPM install stderr: {e.stderr}")
-                logger.error(f"NPM install stdout: {e.stdout}")
-                raise
+            # Install dependencies
+            logger.info(f"Installing dependencies for widget {widget_name}")
+            subprocess.run(['npm', 'install'], cwd=temp_dir, check=True, capture_output=True)
             
-            # Build with webpack using full npx path
-            logger.info(f"Building widget {widget_name} using npx at: {self.npx_path}")
-            try:
-                # Use same minimal environment
-                result = subprocess.run([self.npx_path, 'webpack', '--mode', 'production'], 
-                                      cwd=temp_dir, 
-                                      check=True, 
-                                      capture_output=True, 
-                                      text=True,
-                                      env=npm_env)
-                logger.debug(f"Webpack build stdout: {result.stdout}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Webpack build failed with exit code {e.returncode}")
-                logger.error(f"Webpack build stderr: {e.stderr}")
-                logger.error(f"Webpack build stdout: {e.stdout}")
-                raise
+            # Build with webpack
+            logger.info(f"Building widget {widget_name}")
+            subprocess.run(['npx', 'webpack', '--mode', 'production'], cwd=temp_dir, check=True, capture_output=True)
             
             # Read the built bundle
             bundle_path = os.path.join(temp_dir, 'dist', 'widget.bundle.js')
