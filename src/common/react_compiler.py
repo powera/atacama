@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 from common.logging_config import get_logger
 logger = get_logger(__name__)
@@ -24,26 +24,40 @@ class WidgetBuilder:
         'lucide-react': '^0.263.1',
     }
     
-    # Packages that should be external (not bundled)
-    EXTERNAL_PACKAGES = {
+    # Default external packages
+    DEFAULT_EXTERNAL_PACKAGES = {
         'react': 'React',
         'react-dom': 'ReactDOM'
+    }
+    
+    # Additional known external package mappings
+    EXTERNAL_PACKAGE_MAPPINGS = {
+        'recharts': 'Recharts',
+        'lodash': '_',
+        'd3': 'd3',
+        'chart.js': 'Chart',
+        'axios': 'axios',
+        'date-fns': 'dateFns',
+        'react-chartjs-2': 'ReactChartJS2',
+        'lucide-react': 'lucideReact'
     }
 
     def __init__(self, build_dir: str = None):
         self.build_dir = build_dir or os.path.join(tempfile.gettempdir(), 'widget_builds')
         Path(self.build_dir).mkdir(parents=True, exist_ok=True)
     
-    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None) -> Tuple[bool, str, str]:
+    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None) -> Tuple[bool, str, str]:
         """
         Build a widget with webpack to create a browser-ready bundle.
         
         :param widget_code: The widget source code
         :param widget_name: Name of the widget
         :param dependencies: List of dependencies to include (e.g., ['recharts', 'lodash'])
+        :param external_dependencies: List of dependencies to treat as external (not bundled)
         :return: Tuple of (success, built_code, error_message)
         """
         dependencies = dependencies or []
+        external_dependencies = external_dependencies or []
         temp_dir = tempfile.mkdtemp(dir=self.build_dir)
         
         try:
@@ -67,7 +81,8 @@ class WidgetBuilder:
             }
             
             # Add only requested dependencies
-            for dep in dependencies:
+            all_dependencies = set(dependencies + external_dependencies)
+            for dep in all_dependencies:
                 if dep in self.AVAILABLE_PACKAGES:
                     package_json["dependencies"][dep] = self.AVAILABLE_PACKAGES[dep]
                 else:
@@ -76,7 +91,17 @@ class WidgetBuilder:
             with open(os.path.join(temp_dir, 'package.json'), 'w') as f:
                 json.dump(package_json, f, indent=2)
             
-            # Create webpack.config.js - externalize common libs
+            # Build externals configuration
+            externals = self.DEFAULT_EXTERNAL_PACKAGES.copy()
+            for dep in external_dependencies:
+                if dep in self.EXTERNAL_PACKAGE_MAPPINGS:
+                    externals[dep] = self.EXTERNAL_PACKAGE_MAPPINGS[dep]
+                else:
+                    # Use PascalCase as default for unknown packages
+                    externals[dep] = ''.join(word.capitalize() for word in dep.split('-'))
+                    logger.warning(f"Using default external name '{externals[dep]}' for dependency '{dep}'")
+            
+            # Create webpack.config.js
             webpack_config = f"""
 const path = require('path');
 
@@ -102,7 +127,7 @@ module.exports = {{
             }}
         ]
     }},
-    externals: {json.dumps(self.EXTERNAL_PACKAGES)},
+    externals: {json.dumps(externals)},
     resolve: {{
         extensions: ['.js', '.jsx']
     }},
@@ -153,9 +178,11 @@ export default {widget_name};
                 built_code = f.read()
             
             # Wrap final code to make it available
+            external_deps_comment = f", External: {', '.join(external_dependencies)}" if external_dependencies else ""
             final_code = f"""
 // Widget: {widget_name}
 // Dependencies: {', '.join(dependencies) if dependencies else 'none'}
+// External dependencies: {', '.join(external_dependencies) if external_dependencies else 'none'}
 (function() {{
     {built_code}
     

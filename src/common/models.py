@@ -235,7 +235,7 @@ class ReactWidget(Message):
         success, built_code, error = builder.build_widget(
             self.code, 
             widget_name,
-            dependencies=deps
+            external_dependencies=deps
         )
         
         if success:
