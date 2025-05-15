@@ -1,74 +1,76 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Debug Information - Atacama</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/debug.css">
-</head>
-<body>
-    <div class="debug-container">
-        <h1>System Debug Information</h1>
-        
-        <div class="debug-section">
-            <h2>System Status</h2>
-            <div class="metric-grid">
-                <div class="metric-card">
-                    <div class="metric-title">Server Uptime</div>
-                    <div class="metric-value">{{ uptime }}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">CPU Usage</div>
-                    <div class="metric-value">{{ system_stats.cpu_percent }}%</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Memory Usage</div>
-                    <div class="metric-value">{{ system_stats.memory_percent }}%</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Disk Usage</div>
-                    <div class="metric-value">{{ system_stats.disk_percent }}%</div>
-                </div>
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Debug Information - Atacama{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/debug.css">
+{% endblock %}
+
+{% block content %}
+<div class="debug-container">
+    <h1>System Debug Information</h1>
+    
+    <div class="debug-section">
+        <h2>System Status</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Server Uptime</div>
+                <div class="metric-value">{{ uptime }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">CPU Usage</div>
+                <div class="metric-value">{{ system_stats.cpu_percent }}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Memory Usage</div>
+                <div class="metric-value">{{ system_stats.memory_percent }}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Disk Usage</div>
+                <div class="metric-value">{{ system_stats.disk_percent }}%</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Database Status</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Connection Status</div>
+                <div class="metric-value">{{ db_stats.status }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Database Type</div>
+                <div class="metric-value">{{ db_stats.type|default('Unknown') }}</div>
+            </div>
+            {% for table, count in db_stats.table_stats.items() %}
+            <div class="metric-card">
+                <div class="metric-title">{{ table|replace('_count', '')|title }}</div>
+                <div class="metric-value">{{ count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Channel Configuration</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-title">Default Channel</div>
+                <div class="metric-value">{{ channel_stats.default_channel }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Total Channels</div>
+                <div class="metric-value">{{ channel_stats.channels|length }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Public Channels</div>
+                <div class="metric-value">{{ channel_stats.public_channels|join(', ') }}</div>
             </div>
         </div>
         
-        <div class="debug-section">
-            <h2>Database Status</h2>
-            <div class="metric-grid">
-                <div class="metric-card">
-                    <div class="metric-title">Connection Status</div>
-                    <div class="metric-value">{{ db_stats.status }}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Database Type</div>
-                    <div class="metric-value">{{ db_stats.type|default('Unknown') }}</div>
-                </div>
-                {% for table, count in db_stats.table_stats.items() %}
-                <div class="metric-card">
-                    <div class="metric-title">{{ table|replace('_count', '')|title }}</div>
-                    <div class="metric-value">{{ count }}</div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <div class="debug-section">
-            <h2>Channel Configuration</h2>
-            <div class="metric-grid">
-                <div class="metric-card">
-                    <div class="metric-title">Default Channel</div>
-                    <div class="metric-value">{{ channel_stats.default_channel }}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Total Channels</div>
-                    <div class="metric-value">{{ channel_stats.channels|length }}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-title">Public Channels</div>
-                    <div class="metric-value">{{ channel_stats.public_channels|join(', ') }}</div>
-                </div>
-            </div>
-            
-            <h3>Channel Access</h3>
+        <h3>Channel Access</h3>
+        <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -84,9 +86,9 @@
                         <td>{{ 'Public' if channel in channel_stats.public_channels else 'Private' }}</td>
                         <td>
                             {% if channel_stats.channel_access[channel] %}
-                            <span class="access-granted">✓ Allowed</span>
+                            <span class="success">✓ Allowed</span>
                             {% else %}
-                            <span class="access-denied">✗ No Access</span>
+                            <span class="error">✗ No Access</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -94,9 +96,11 @@
                 </tbody>
             </table>
         </div>
-        
-        <div class="debug-section">
-            <h2>Session Data</h2>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Session Data</h2>
+        <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -114,9 +118,11 @@
                 </tbody>
             </table>
         </div>
-        
-        <div class="debug-section">
-            <h2>Flask Configuration</h2>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Flask Configuration</h2>
+        <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -134,26 +140,28 @@
                 </tbody>
             </table>
         </div>
-        
-        <div class="auto-refresh">
-            <label>
-                <input type="checkbox" id="auto-refresh"> Auto-refresh every 30 seconds
-            </label>
-        </div>
     </div>
     
-    <script>
-        // Auto-refresh functionality
-        let refreshInterval;
-        document.getElementById('auto-refresh').addEventListener('change', function(e) {
-            if (e.target.checked) {
-                refreshInterval = setInterval(() => {
-                    window.location.reload();
-                }, 30000);
-            } else {
-                clearInterval(refreshInterval);
-            }
-        });
-    </script>
-</body>
-</html>
+    <div class="navigation-link auto-refresh">
+        <label>
+            <input type="checkbox" id="auto-refresh"> Auto-refresh every 30 seconds
+        </label>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-refresh functionality
+    let refreshInterval;
+    document.getElementById('auto-refresh').addEventListener('change', function(e) {
+        if (e.target.checked) {
+            refreshInterval = setInterval(() => {
+                window.location.reload();
+            }, 30000);
+        } else {
+            clearInterval(refreshInterval);
+        }
+    });
+</script>
+{% endblock %}

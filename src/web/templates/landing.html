@@ -1,88 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Atacama Message Processor - View and manage messages across channels">
-    <title>Atacama Message Processor</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/landing.css">
-    <link rel="stylesheet" href="/css/atacama.css">
-    <script src="/js/atacama.js" defer></script>
-    <style>
-        /* Admin actions styling */
-        .rechannel-form {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+{% extends "layouts/" + theme_layout + ".html" %}
 
-        .rechannel-form select {
-            padding: 0.3rem;
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius);
-            font-size: 0.9rem;
-        }
+{% block title %}Atacama Message Processor{% endblock %}
 
-        .rechannel-button {
-            padding: 0.3rem 0.6rem;
-            background-color: var(--color-primary);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background-color 0.2s ease;
-        }
+{% block styles %}
+<link rel="stylesheet" href="/css/landing.css">
+{% endblock %}
 
-        .rechannel-button:hover {
-            background-color: rgba(0, 116, 217, 0.8);
-        }
-
-        .admin-indicator {
-            margin-left: 0.5rem;
-            font-size: 0.8rem;
-            padding: 0.2rem 0.4rem;
-            background-color: #f8d7da;
-            color: #721c24;
-            border-radius: var(--border-radius);
-        }
-
-        /* Dark theme adjustments */
-        [data-theme="dark"] .admin-indicator {
-            background-color: #721c24;
-            color: #f8d7da;
-        }
-
-        /* High contrast theme adjustments */
-        [data-theme="high-contrast"] .rechannel-button {
-            border: 2px solid var(--color-text);
-        }
-        
-        /* Add channel column class for narrow display */
-        .channel-column {
-            min-width: 150px;
-        }
-        
-        /* Responsive adjustments */
-        @media screen and (max-width: 768px) {
-            .rechannel-form {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .rechannel-form select {
-                width: 100%;
-            }
-            
-            .rechannel-button {
-                margin-top: 0.3rem;
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
+{% block content %}
     <div class="container">
         <header>
             <h1>Atacama Message Processor</h1>
@@ -91,11 +15,11 @@
             <nav class="channel-nav" aria-label="Channel navigation">
                 {% for channel in available_channels %}
                     {% set config = channel_configs[channel] %}
-                    <a href="/stream/channel/{{ channel }}" 
+                    <a href="{{ url_for('content.message_stream', channel=channel) }}" 
                        class="channel-link"
                        data-access="{{ config.access_level.value }}"
                        title="{{ config.description }}">
-                        {{ channel|title }}
+                        {{ channel_manager.get_display_name(channel) }}
                     </a>
                 {% endfor %}
             </nav>
@@ -124,7 +48,7 @@
                         <tr>
                             <td data-label="ID">{{ message.id }}</td>
                             <td data-label="Subject">
-                                <a href="/messages/{{ message.id }}" class="message-link">
+                                <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-link">
                                     {{ message.subject or '(No Subject)' }}
                                 </a>
                             </td>
@@ -132,8 +56,8 @@
                                 {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
                             </td>
                             <td data-label="Channel" class="channel-column">
-                                <a href="/stream/channel/{{ message.channel }}" class="channel-link">
-                                    {{ message.channel|title }}
+                                <a href="{{ url_for('content.message_stream', channel=message.channel) }}" class="channel-link">
+                                    {{ channel_manager.get_display_name(message.channel) }}
                                 </a>
                             </td>
                             <td data-label="Received" class="timestamp">
@@ -145,7 +69,7 @@
                                     <select name="new_channel" id="new_channel_{{ message.id }}" required>
                                         {% for channel_name, config in channel_configs.items() %}
                                             <option value="{{ channel_name }}" {% if channel_name == message.channel %}selected{% endif %}>
-                                                {{ channel_name|title }}
+                                                {{ channel_manager.get_display_name(channel_name) }}
                                             </option>
                                         {% endfor %}
                                     </select>
@@ -167,30 +91,17 @@
 
         {% if not user %}
         <section class="login-prompt">
-            <p>Please <a href="/login">log in</a> to access additional features and submit messages.</p>
+            <p>Please <a href="{{ url_for('auth.login') }}">log in</a> to access additional features and submit messages.</p>
         </section>
         {% endif %}
 
         {% if user %}
         <nav class="user-navigation">
-            <a href="/submit" class="button">Submit Message</a>
-            <a href="/quotes" class="button">View Quotes</a>
-            <a href="/channels" class="button">Channel Preferences</a>
-	    <a href="/nav" class="button">Additional Navigation</a>
+            <a href="{{ url_for('submit.submit_form') }}" class="button">Submit Message</a>
+            <a href="{{ url_for('quotes.quotes_page') }}" class="button">View Quotes</a>
+            <a href="{{ url_for('content.channel_preferences') }}" class="button">Channel Preferences</a>
+            <a href="{{ url_for('nav.index') }}" class="button">Additional Navigation</a>
         </nav>
         {% endif %}
     </div>
-
-    <script>
-        // Add touch feedback for mobile devices
-        document.querySelectorAll('.message-link, .button, .channel-link').forEach(element => {
-            element.addEventListener('touchstart', function() {
-                this.style.opacity = '0.7';
-            });
-            element.addEventListener('touchend', function() {
-                this.style.opacity = '1';
-            });
-        });
-    </script>
-</body>
-</html>
+{% endblock %}
