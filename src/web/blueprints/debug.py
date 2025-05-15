@@ -21,6 +21,7 @@ from common.channel_config import get_channel_manager
 from common.messages import check_channel_access
 from common.logging_config import get_logger
 from common.navigation import navigable
+from common.models import Article, ReactWidget, Email, Quote, MessageType
 
 logger = get_logger(__name__)
 
@@ -62,7 +63,11 @@ def get_database_stats():
             
             # Get table statistics - handle both SQLite and Postgres
             stats = {}
-            tables = ['emails', 'quotes', 'email_quotes', 'users']
+            tables = [
+                'emails', 'quotes', 'email_quotes', 'users', 
+                'articles', 'article_quotes', 'react_widgets',
+                'messages'
+            ]
             
             for table in tables:
                 try:
@@ -109,6 +114,123 @@ def get_channel_stats():
         'channel_access': channel_access
     }
 
+def get_article_stats():
+    """
+    Get current article statistics.
+    
+    :return: Dictionary containing article counts and status information
+    """
+    try:
+        with db.session() as db_session:
+            # Get total count
+            total_count = db_session.query(Article).count()
+            
+            # Get published articles
+            published_count = db_session.query(Article).filter(Article.published == True).count()
+            
+            # Get draft (unpublished) articles
+            draft_count = db_session.query(Article).filter(Article.published == False).count()
+            
+            # Get articles by channel
+            channels = {}
+            for channel in get_channel_manager().get_channel_names():
+                channel_count = db_session.query(Article).filter(Article.channel == channel).count()
+                channels[channel] = channel_count
+            
+            # Get most recent article
+            most_recent = db_session.query(Article).order_by(Article.created_at.desc()).first()
+            most_recent_data = None
+            if most_recent:
+                most_recent_data = {
+                    'id': most_recent.id,
+                    'title': most_recent.title,
+                    'slug': most_recent.slug,
+                    'created_at': most_recent.created_at,
+                    'published': most_recent.published
+                }
+            
+            return {
+                'total_count': total_count,
+                'published_count': published_count,
+                'draft_count': draft_count,
+                'by_channel': channels,
+                'most_recent': most_recent_data
+            }
+    except Exception as e:
+        logger.error(f"Error getting article stats: {str(e)}")
+        return {
+            'error': str(e)
+        }
+
+def get_widget_stats():
+    """
+    Get current React widget statistics.
+    
+    :return: Dictionary containing widget counts and status information
+    """
+    try:
+        with db.session() as db_session:
+            # Get total count
+            total_count = db_session.query(ReactWidget).count()
+            
+            # Get published widgets
+            published_count = db_session.query(ReactWidget).filter(ReactWidget.published == True).count()
+            
+            # Get draft (unpublished) widgets
+            draft_count = db_session.query(ReactWidget).filter(ReactWidget.published == False).count()
+            
+            # Get most recent widget
+            most_recent = db_session.query(ReactWidget).order_by(ReactWidget.id.desc()).first()
+            most_recent_data = None
+            if most_recent:
+                most_recent_data = {
+                    'id': most_recent.id,
+                    'title': most_recent.title,
+                    'slug': most_recent.slug,
+                    'published': most_recent.published
+                }
+            
+            return {
+                'total_count': total_count,
+                'published_count': published_count,
+                'draft_count': draft_count,
+                'most_recent': most_recent_data
+            }
+    except Exception as e:
+        logger.error(f"Error getting widget stats: {str(e)}")
+        return {
+            'error': str(e)
+        }
+
+def get_content_stats():
+    """
+    Get overall content statistics.
+    
+    :return: Dictionary containing content counts by type
+    """
+    try:
+        with db.session() as db_session:
+            # Count by message type
+            email_count = db_session.query(Email).count()
+            article_count = db_session.query(Article).count()
+            widget_count = db_session.query(ReactWidget).count()
+            
+            # Count quotes
+            quote_count = db_session.query(Quote).count()
+            
+            return {
+                'emails': email_count,
+                'articles': article_count,
+                'widgets': widget_count,
+                'quotes': quote_count,
+                'total_content': email_count + article_count + widget_count
+            }
+    except Exception as e:
+        logger.error(f"Error getting content stats: {str(e)}")
+        return {
+            'error': str(e)
+        }
+
 @debug_bp.route('/debug')
 @require_auth
 @navigable(name="Debug Information", category="admin")
@@ -120,6 +242,9 @@ def debug_info():
     system_stats = get_system_stats()
     db_stats = get_database_stats()
     channel_stats = get_channel_stats()
+    article_stats = get_article_stats()
+    widget_stats = get_widget_stats()
+    content_stats = get_content_stats()
     
     session_data = {
         key: session[key]
@@ -140,6 +265,9 @@ def debug_info():
         system_stats=system_stats,
         db_stats=db_stats,
         channel_stats=channel_stats,
+        article_stats=article_stats,
+        widget_stats=widget_stats,
+        content_stats=content_stats,
         session_data=session_data,
         config=safe_config
     )
@@ -158,7 +286,10 @@ def debug_api():
         'uptime_seconds': uptime,
         'system': get_system_stats(),
         'database': get_database_stats(),
-        'channels': get_channel_stats()
+        'channels': get_channel_stats(),
+        'articles': get_article_stats(),
+        'widgets': get_widget_stats(),
+        'content': get_content_stats()
     })
 
 @debug_bp.route('/debug/login', methods=['GET'])
