@@ -1,129 +1,127 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Submit Message - Atacama</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/submit.css">
-    <link rel="stylesheet" href="/css/atacama.css">
-    <link rel="stylesheet" href="/css/chess.css">
-    <script src="/js/atacama.js"></script>
-</head>
-<body>
-    <div class="container">
-        <h1>Submit Message</h1>
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
+{% extends "layouts/" + theme_layout + ".html" %}
 
-        <form method="POST" action="/submit">
-            <div class="form-group">
-                <label for="subject">Subject:</label>
-                <input type="text" id="subject" name="subject" required>
-            </div>
+{% block title %}Submit Message - Atacama{% endblock %}
 
-            {% if channels %}
-            <div class="form-group">
-                <label for="channel">Channel:</label>
-                <select name="channel" id="channel" required>
-                    {% for name, config in channels.items() %}
-                        <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
-                            {{ config.get_display_name() }} - {{ config.description }}
-                            {% if config.requires_auth %}(Private){% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
+{% block styles %}
+<link rel="stylesheet" href="/css/submit.css">
+{% endblock %}
 
-            <div class="form-group">
-                <label for="parent_id">Parent Message (optional):</label>
-                <select name="parent_id" id="parent_id">
-                    <option value="">No parent message</option>
-                    {% for message in recent_messages %}
-                        <option value="{{ message.id }}">
-                            {{ message.subject or '(No Subject)' }} 
-                            {% if message.author %} by {{ message.author.name }}{% endif %}
-                            - ID: {{ message.id }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+{% block content %}
+<div class="container">
+    <h1>Submit Message</h1>
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
 
-            <div class="form-group">
-                <label for="content">Content:</label>
-                <textarea id="content" name="content" rows="10" required></textarea>
-                <div class="preview-controls">
-                    <button type="button" id="previewButton" class="secondary">Preview</button>
-                </div>
-            </div>
-
-            <div id="previewArea" class="message-preview" style="display: none;">
-                <h3>Preview</h3>
-                <div id="previewContent" class="message-body">
-                    <div class="message-main"></div>
-                    <div class="message-sidebar"></div>
-                </div>
-            </div>
-            
-            <button type="submit">Submit</button>
-        </form>
-        
-        <div class="info-box">
-            <h3>Formatting Help</h3>
-            <p>You can use the following formatting options in your message:</p>
-            <ul>
-                <li><strong>Bold</strong>: Use <code>*text*</code></li>
-                <li><em>Literal Text</em>: Use <code>&lt;&lt; text &gt;&gt;</code>
-                <li><b>Read More</b>: Use <code>--MORE--</code></li>
-                <!-- Add more formatting options as needed -->
-            </ul>
+    <form method="POST" action="/submit">
+        <div class="form-group">
+            <label for="subject">Subject:</label>
+            <input type="text" id="subject" name="subject" required>
         </div>
-        {% if colors %}
-        <div class="info-box">
-            <h3>Color Tags</h3>
-            <p>You can use the following color tags in your message:</p>
-            <ul>
-                {% for color_name, (sigil, class_name, description) in colors.items() %}
-                <li><code>&lt;{{ color_name }}&gt;</code> {{ sigil }} - <span class="color-{{ class_name }}">{{ description }}</span></li>
+
+        {% if channels %}
+        <div class="form-group">
+            <label for="channel">Channel:</label>
+            <select name="channel" id="channel" required>
+                {% for name, config in channels.items() %}
+                    <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
+                        {{ config.get_display_name() }} - {{ config.description }}
+                        {% if config.requires_auth %}(Private){% endif %}
+                    </option>
                 {% endfor %}
-            </ul>
+            </select>
         </div>
         {% endif %}
+
+        <div class="form-group">
+            <label for="parent_id">Parent Message (optional):</label>
+            <select name="parent_id" id="parent_id">
+                <option value="">No parent message</option>
+                {% for message in recent_messages %}
+                    <option value="{{ message.id }}">
+                        {{ message.subject or '(No Subject)' }} 
+                        {% if message.author %} by {{ message.author.name }}{% endif %}
+                        - ID: {{ message.id }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="content">Content:</label>
+            <textarea id="content" name="content" rows="10" required></textarea>
+            <div class="preview-controls">
+                <button type="button" id="previewButton" class="button secondary">Preview</button>
+            </div>
+        </div>
+
+        <div id="previewArea" class="message-preview" style="display: none;">
+            <h3>Preview</h3>
+            <div id="previewContent" class="message-body">
+                <div class="message-main"></div>
+                <div class="message-sidebar"></div>
+            </div>
+        </div>
+        
+        <button type="submit" class="button">Submit</button>
+    </form>
+    
+    <div class="info-box">
+        <h3>Formatting Help</h3>
+        <p>You can use the following formatting options in your message:</p>
+        <ul>
+            <li><strong>Bold</strong>: Use <code>*text*</code></li>
+            <li><em>Literal Text</em>: Use <code>&lt;&lt; text &gt;&gt;</code>
+            <li><b>Read More</b>: Use <code>--MORE--</code></li>
+            <!-- Add more formatting options as needed -->
+        </ul>
     </div>
+    {% if colors %}
+    <div class="info-box">
+        <h3>Color Tags</h3>
+        <p>You can use the following color tags in your message:</p>
+        <ul>
+            {% for color_name, (sigil, class_name, description) in colors.items() %}
+            <li><code>&lt;{{ color_name }}&gt;</code> {{ sigil }} - <span class="color-{{ class_name }}">{{ description }}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
 
-    <script>
-        document.getElementById('previewButton')?.addEventListener('click', async function() {
-            const content = document.getElementById('content').value;
-            const previewArea = document.getElementById('previewArea');
-            const previewContent = document.getElementById('previewContent').querySelector('.message-main');
+{% block scripts %}
+<script>
+    document.getElementById('previewButton')?.addEventListener('click', async function() {
+        const content = document.getElementById('content').value;
+        const previewArea = document.getElementById('previewArea');
+        const previewContent = document.getElementById('previewContent').querySelector('.message-main');
 
-            try {
-                const response = await fetch('/api/preview', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ content })
-                });
+        try {
+            const response = await fetch('/api/preview', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content })
+            });
 
-                if (!response.ok) {
-                    throw new Error('Preview request failed');
-                }
-
-                const data = await response.json();
-                previewContent.innerHTML = data.processed_content;
-                previewArea.style.display = 'block';
-
-                // Initialize Atacama viewer for preview content
-                new AtacamaViewer().initialize(); 
-            } catch (error) {
-                console.error('Preview error:', error);
-                previewContent.innerHTML = '<div class="error">Error generating preview</div>';
-                previewArea.style.display = 'block';
+            if (!response.ok) {
+                throw new Error('Preview request failed');
             }
-        });
-    </script>
 
-    <script src="/static/js/react/atacama-react.js"></script>
-</body>
-</html>
+            const data = await response.json();
+            previewContent.innerHTML = data.processed_content;
+            previewArea.style.display = 'block';
+
+            // Initialize Atacama viewer for preview content
+            const viewer = new AtacamaViewer();
+            viewer.initialize();
+        } catch (error) {
+            console.error('Preview error:', error);
+            previewContent.innerHTML = '<div class="error">Error generating preview</div>';
+            previewArea.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

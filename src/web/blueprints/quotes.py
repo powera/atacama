@@ -33,7 +33,7 @@ def list_quotes():
             quotes = get_quotes_by_type(db_session, quote_type)
         
         return render_template(
-            'quotes.html',
+            'quotes/quotes.html',
             quotes=quotes,
             quote_types=QUOTE_TYPES,
             current_type=quote_type,
@@ -68,14 +68,14 @@ def edit_quote(quote_id: int):
                 
             except QuoteValidationError as e:
                 return render_template(
-                    'edit_quote.html',
+                    'quotes/edit_quote.html',
                     quote=quote,
                     quote_types=QUOTE_TYPES.keys(),
                     error=str(e)
                 )
             
         return render_template(
-            'edit_quote.html',
+            'quotes/edit_quote.html',
             quote=quote,
             quote_types=QUOTE_TYPES.keys()
         )

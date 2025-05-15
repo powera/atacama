@@ -1,0 +1,52 @@
+/* Admin page specific styles */
+.admin-inline-form {
+    display: inline-block;
+    margin-right: var(--spacing-small);
+}
+
+.admin-channel-access {
+    margin-bottom: var(--spacing-small);
+}
+
+.admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-small);
+}
+
+.button.danger {
+    background-color: var(--color-error);
+}
+
+/* Table styles specific to admin pages */
+.table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td {
+    padding: var(--spacing-base);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.table-container th {
+    background-color: var(--color-background);
+    font-weight: 500;
+}
+
+.table-container tr:hover {
+    background-color: var(--color-annotation-bg);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .admin-actions {
+        flex-direction: column;
+    }
+    
+    .admin-inline-form {
+        margin: var(--spacing-small) 0;
+    }
+}

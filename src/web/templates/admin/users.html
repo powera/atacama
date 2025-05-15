@@ -1,20 +1,14 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manage Users - Admin</title>
-    <link rel="stylesheet" href="/css/common.css">
-</head>
-<body>
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Manage Users - Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/admin_users.css">
+{% endblock %}
+
+{% block content %}
     <div class="container">
         <h1>Manage User Access</h1>
-        
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="flash-message">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         
         <div class="table-container">
             <table>
@@ -33,20 +27,20 @@
                             <td>{{ item.user.name }}</td>
                             <td>
                                 {% for channel, granted_at in item.access.items() %}
-                                    <div class="channel-access">
+                                    <div class="admin-channel-access">
                                         {{ channel }} (granted {{ granted_at }})
                                     </div>
                                 {% endfor %}
                             </td>
-                            <td>
+                            <td class="admin-actions">
                                 {% for channel in channels %}
                                     {% if channel not in item.access %}
-                                        <form method="POST" action="{{ url_for('admin.grant_access', user_id=item.user.id) }}" class="inline-form">
+                                        <form method="POST" action="{{ url_for('admin.grant_access', user_id=item.user.id) }}" class="admin-inline-form">
                                             <input type="hidden" name="channel" value="{{ channel }}">
                                             <button type="submit" class="button">Grant {{ channel }}</button>
                                         </form>
                                     {% else %}
-                                        <form method="POST" action="{{ url_for('admin.revoke_access', user_id=item.user.id) }}" class="inline-form">
+                                        <form method="POST" action="{{ url_for('admin.revoke_access', user_id=item.user.id) }}" class="admin-inline-form">
                                             <input type="hidden" name="channel" value="{{ channel }}">
                                             <button type="submit" class="button danger">Revoke {{ channel }}</button>
                                         </form>
@@ -59,25 +53,4 @@
             </table>
         </div>
     </div>
-
-    <style>
-        .inline-form {
-            display: inline-block;
-            margin-right: 0.5rem;
-        }
-        .channel-access {
-            margin-bottom: 0.25rem;
-        }
-        .button.danger {
-            background-color: var(--color-error);
-        }
-        .flash-message {
-            padding: var(--spacing-base);
-            margin-bottom: var(--spacing-large);
-            border-radius: var(--border-radius);
-            background-color: var(--color-primary);
-            color: white;
-        }
-    </style>
-</body>
-</html>
+{% endblock %}

@@ -16,10 +16,35 @@
 .view-link {
     display: inline-block;
     margin-left: 10px;
-    color: #4CAF50;
+    color: var(--color-success);
     text-decoration: none;
 }
 
 .view-link:hover {
     text-decoration: underline;
+}
+
+.message-preview {
+    margin: var(--spacing-large) 0;
+    padding: var(--spacing-base);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+.preview-controls {
+    margin-top: var(--spacing-small);
+    text-align: right;
+}
+
+.info-box {
+    margin-top: var(--spacing-large);
+    padding: var(--spacing-base);
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+.info-box h3 {
+    margin-top: 0;
+    color: var(--color-text);
 }
