@@ -97,10 +97,9 @@
 
         {% if user %}
         <nav class="user-navigation">
-            <a href="{{ url_for('submit.submit_form') }}" class="button">Submit Message</a>
-            <a href="{{ url_for('quotes.quotes_page') }}" class="button">View Quotes</a>
-            <a href="{{ url_for('content.channel_preferences') }}" class="button">Channel Preferences</a>
-            <a href="{{ url_for('nav.index') }}" class="button">Additional Navigation</a>
+            <a href="{{ url_for('submit.show_submit_form') }}" class="button">Submit Message</a>
+            <a href="{{ url_for('quotes.list_quotes') }}" class="button">View Quotes</a>
+            <a href="{{ url_for('nav.navigation') }}" class="button">Additional Navigation</a>
         </nav>
         {% endif %}
     </div>
