@@ -8,7 +8,7 @@ from common.channel_config import get_channel_manager, AccessLevel
 from common.database import db
 from common.models import Email, Quote, email_quotes
 
-import parser
+import aml_parser
 
 logger = logging.getLogger(__name__)
 
@@ -146,13 +146,13 @@ def reprocess_message(message_id: int):
                 ).first():
                     session.delete(quote)
 
-            message.processed_content = parser.process_message(
+            message.processed_content = aml_parser.process_message(
                 message.content,
                 message=message, 
                 db_session=session,
             )
             # Process content with access to the message object
-            message.preview_content = parser.process_message(
+            message.preview_content = aml_parser.process_message(
                 message.content,
                 message=message,
                 db_session=session,

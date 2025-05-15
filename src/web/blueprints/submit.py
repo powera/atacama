@@ -11,8 +11,8 @@ from common.logging_config import get_logger
 from common.models import Email, get_or_create_user
 from common.navigation import navigable
 
-import parser
-import parser.colorblocks
+import aml_parser
+import aml_parser.colorblocks
 
 logger = get_logger(__name__)
 submit_bp = Blueprint('submit', __name__)
@@ -38,7 +38,7 @@ def preview_message():
         return jsonify({'error': 'Content required'}), 400
         
     try:
-        processed_content = parser.process_message(
+        processed_content = aml_parser.process_message(
             data['content']
         )
         
@@ -71,7 +71,7 @@ def show_submit_form():
         return render_template(
             'submit.html',
             recent_messages=recent_messages,
-            colors=parser.colorblocks.COLORS,
+            colors=aml_parser.colorblocks.COLORS,
             channels=channel_manager.channels,
             channel_manager=channel_manager,
             default_channel=channel_manager.default_channel)
@@ -123,13 +123,13 @@ def handle_submit():
         db_session.add(message)
 
         # Process content with access to the message object
-        message.processed_content = parser.process_message(
+        message.processed_content = aml_parser.process_message(
             content,
             message=message,
             db_session=db_session
         )
         # Process content with access to the message object
-        message.preview_content = parser.process_message(
+        message.preview_content = aml_parser.process_message(
             content,
             message=message,
             db_session=db_session,

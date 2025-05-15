@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 
 from common.database import db
 from common.models import Email
-from parser.lexer import tokenize
-from parser.parser import parse
-from parser.html_generator import generate_html
+from aml_parser.lexer import tokenize
+from aml_parser.parser import parse
+from aml_parser.html_generator import generate_html
 
 
 def regenerate_email_content(

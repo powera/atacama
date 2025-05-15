@@ -11,6 +11,10 @@ from common.channel_config import get_channel_manager
 from common.messages import check_channel_access
 from common.logging_config import get_logger
 
+from aml_parser.parser import parse
+from aml_parser.lexer import tokenize
+from aml_parser.html_generator import generate_html
+
 logger = get_logger(__name__)
 
 articles_bp = Blueprint('articles', __name__)
@@ -105,11 +109,6 @@ def edit_article(slug: str):
                     article.published = True
                     article.published_at = datetime.utcnow()
                 
-                # Parse content
-                from parser.parser import parse
-                from parser.lexer import tokenize
-                from parser.html_generator import generate_html
-                
                 tokens = tokenize(content)
                 ast = parse(tokens)
                 article.processed_content = generate_html(ast)
@@ -155,11 +154,6 @@ def submit_article():
                     published_at=datetime.utcnow() if publish else None,
                     author=g.user
                 )
-                
-                # Parse content
-                from parser.parser import parse
-                from parser.lexer import tokenize
-                from parser.html_generator import generate_html
                 
                 tokens = tokenize(content)
                 ast = parse(tokens)

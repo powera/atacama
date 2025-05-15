@@ -1,7 +1,7 @@
 import unittest
 from textwrap import dedent
-from parser.lexer import tokenize, TokenType
-from parser.parser import parse, NodeType, ColorNode, Node, ListItemNode
+from aml_parser.lexer import tokenize, TokenType
+from aml_parser.parser import parse, NodeType, ColorNode, Node, ListItemNode
 
 class TestAtacamaParser(unittest.TestCase):
     """Test suite for the Atacama parser implementation."""

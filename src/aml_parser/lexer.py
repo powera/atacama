@@ -3,7 +3,7 @@ from enum import Enum, auto
 from typing import List, Generator, Optional, Set
 import re
 
-from parser.colorblocks import COLORS
+from aml_parser.colorblocks import COLORS
 
 class TokenType(Enum):
     """Token types for the Atacama formatting system."""

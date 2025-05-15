@@ -19,9 +19,9 @@ from common.models import Email, User
 from common.channel_config import get_channel_manager, AccessLevel
 from common.logging_config import get_logger, configure_logging
 from common.openai_client import generate_chat, generate_text
-import parser.lexer
-import parser.parser
-import parser.html_generator
+import aml_parser.lexer
+import aml_parser.parser
+import aml_parser.html_generator
 
 # Initialize system for database access
 constants.init_production()
@@ -305,7 +305,8 @@ def import_post(
                 channel=channel,
                 author_id=user.id
             )
-            email.processed_content = parser.html_generator.generate_html(parser.parser.parse(parser.lexer.tokenize(normalized_content)))
+            email.processed_content = aml_parser.html_generator.generate_html(
+                aml_parser.parser.parse(aml_parser.lexer.tokenize(normalized_content)))
 
             session.add(email)
             session.commit()

@@ -25,7 +25,7 @@ from common.channel_config import get_channel_manager
 from common.database import db
 import common.messages
 import common.models
-import parser
+import aml_parser
 import web.server  # create_app
 
 # scripts

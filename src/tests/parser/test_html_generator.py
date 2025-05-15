@@ -1,8 +1,8 @@
 import unittest
 from textwrap import dedent
-from parser.lexer import tokenize
-from parser.parser import parse
-from parser.html_generator import generate_html, HTMLGenerator
+from aml_parser.lexer import tokenize
+from aml_parser.parser import parse
+from aml_parser.html_generator import generate_html, HTMLGenerator
 
 class TestAtacamaHTMLGenerator(unittest.TestCase):
     """Test suite for the Atacama HTML generator implementation."""

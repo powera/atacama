@@ -13,9 +13,9 @@ import os
 # Adjust path to import from src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from parser.lexer import tokenize
-from parser.parser import parse, NodeType
-from parser.html_generator import generate_html
+from aml_parser.lexer import tokenize
+from aml_parser.parser import parse, NodeType
+from aml_parser.html_generator import generate_html
 
 
 class ColoredMLQTest(unittest.TestCase):
