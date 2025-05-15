@@ -40,6 +40,7 @@ from common.domain_config import get_domain_manager
 from common.logging_config import get_logger
 
 from web.blueprints.admin import is_admin
+from web.blueprints.errors import handle_error
 
 logger = get_logger(__name__)
 
@@ -171,7 +172,12 @@ def view_chain(message_id: int) -> Response:
     chain = get_message_chain(message_id)
     
     if not chain:
-        return render_template('chain.html', error="Message or chain not found")
+        return handle_error(
+            "404",
+            "Chain Not Found", 
+            "The message chain could not be found. The message may not exist or may not have a chain.",
+            f"Message ID: {message_id}"
+        )
     
     # Check domain access for the chain (based on first message's channel)
     if chain and not domain_manager.is_channel_allowed(current_domain, chain[0].channel):

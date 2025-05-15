@@ -3,55 +3,51 @@
 {% block title %}Message Chain - Atacama{% endblock %}
 
 {% block content %}
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% else %}
-        <div class="chain-container">
-            <div class="chain-navigation">
-                <div class="chain-overview">
-                    <h1>Message Chain</h1>
-                    <div class="chain-metadata">
-                        <span class="chain-stats">{{ messages|length }} messages in chain</span>
-                        {% if messages %}
-                            <span class="chain-channel">{{ channel_manager.get_display_name(messages[0].channel) }} Channel</span>
-                        {% endif %}
-                    </div>
+    <div class="chain-container">
+        <div class="chain-navigation">
+            <div class="chain-overview">
+                <h1>Message Chain</h1>
+                <div class="chain-metadata">
+                    <span class="chain-stats">{{ messages|length }} messages in chain</span>
                     {% if messages %}
-                        <a href="{{ url_for('content.message_stream', channel=messages[0].channel) }}" class="channel-link">
-                            View All {{ channel_manager.get_display_name(messages[0].channel) }} Messages
-                        </a>
+                        <span class="chain-channel">{{ channel_manager.get_display_name(messages[0].channel) }} Channel</span>
                     {% endif %}
                 </div>
+                {% if messages %}
+                    <a href="{{ url_for('content.message_stream', channel=messages[0].channel) }}" class="channel-link">
+                        View All {{ channel_manager.get_display_name(messages[0].channel) }} Messages
+                    </a>
+                {% endif %}
             </div>
-            
-            {% for message in messages %}
-            <article class="message chain-message {% if message.id == target_id %}target-message{% endif %}">
-                {% if not loop.first %}
-                <div class="message-connector connector-top"></div>
-                {% endif %}
-                {% if not loop.last %}
-                <div class="message-connector connector-bottom"></div>
-                {% endif %}
-                
-                <header class="message-header">
-                    <div class="message-header-main">
-                        <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-title">
-                            {{ message.subject or '(No Subject)' }}
-                        </a>
-                        {% if message.channel != 'private' %}
-                            <span class="message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
-                        {% endif %}
-                    </div>
-                    <span class="message-timestamp">{{ message.created_at_formatted }}</span>
-                </header>
-                <div class="message-body">
-                    <div class="message-main">
-                        {{ message.processed_content | safe }}
-                    </div>
-                    <div class="message-sidebar"></div>
-                </div>
-            </article>
-            {% endfor %}
         </div>
-    {% endif %}
+        
+        {% for message in messages %}
+        <article class="message chain-message {% if message.id == target_id %}target-message{% endif %}">
+            {% if not loop.first %}
+            <div class="message-connector connector-top"></div>
+            {% endif %}
+            {% if not loop.last %}
+            <div class="message-connector connector-bottom"></div>
+            {% endif %}
+            
+            <header class="message-header">
+                <div class="message-header-main">
+                    <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-title">
+                        {{ message.subject or '(No Subject)' }}
+                    </a>
+                    {% if message.channel != 'private' %}
+                        <span class="message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
+                    {% endif %}
+                </div>
+                <span class="message-timestamp">{{ message.created_at_formatted }}</span>
+            </header>
+            <div class="message-body">
+                <div class="message-main">
+                    {{ message.processed_content | safe }}
+                </div>
+                <div class="message-sidebar"></div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
 {% endblock %}
