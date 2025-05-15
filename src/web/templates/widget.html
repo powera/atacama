@@ -46,8 +46,24 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- Tailwind CSS for styling -->
+<!-- Improved Tailwind CSS configuration -->
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Configure Tailwind once for all components
+  tailwind.config = {
+    darkMode: ['class', '[data-theme="dark"]'],
+    theme: {
+      extend: {
+        // You can extend the theme here with custom colors that match your AtacamaViewer themes
+        colors: {
+          primary: 'var(--color-primary)',
+          background: 'var(--color-background)',
+          text: 'var(--color-text)',
+        },
+      }
+    }
+  }
+</script>
 
 <script type="text/babel">
     // Make React hooks available globally
@@ -95,8 +111,23 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
 
-<!-- Tailwind CSS-->
+<!-- Improved Tailwind CSS configuration for compiled code -->
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Use the same configuration for compiled code
+  tailwind.config = {
+    darkMode: ['class', '[data-theme="dark"]'],
+    theme: {
+      extend: {
+        colors: {
+          primary: 'var(--color-primary)',
+          background: 'var(--color-background)',
+          text: 'var(--color-text)',
+        },
+      }
+    }
+  }
+</script>
 
 <!-- The built widget bundle (includes only selected dependencies) -->
 <!-- JS other than recharts is not tested and might not work. -->
