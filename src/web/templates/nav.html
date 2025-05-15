@@ -1,143 +1,214 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Site Navigation - Atacama</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/atacama.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Site Navigation</h1>
+{% extends "layouts/" + theme_layout + ".html" %}
 
-        {% if nav_items.main %}
-        <section class="nav-section">
-            <h2>Main Pages</h2>
-            <ul class="nav-list">
-                {% for item in nav_items.main %}
-                <li>
-                    <a href="{{ item.url }}">
-                        {{ item.name }}
-                        {% if item.description %}
-                        <span class="channel-description">{{ item.description }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
+{% block title %}Site Navigation - Atacama{% endblock %}
 
-        {% if nav_items.channels %}
-        <section class="nav-section">
-            <h2>Channel Streams</h2>
-            <ul class="nav-list">
-                {% for channel in nav_items.channels %}
-                <li>
-                    <a href="{{ channel.url }}">
-                        {{ channel.name|title }} Channel
-                        {% if channel.config.description %}
-                        <span class="channel-description">{{ channel.config.description }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
-
-        {% if nav_items.user %}
-        <section class="nav-section">
-            <h2>User Pages</h2>
-            <ul class="nav-list">
-                {% for item in nav_items.user %}
-                <li>
-                    <a href="{{ item.url }}">
-                        {{ item.name }}
-                        {% if item.description %}
-                        <span class="channel-description">{{ item.description }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
-
-        {% if nav_items.admin %}
-        <section class="nav-section">
-            <h2>Administration</h2>
-            <ul class="nav-list">
-                {% for item in nav_items.admin %}
-                <li>
-                    <a href="{{ item.url }}">
-                        {{ item.name }}
-                        {% if item.description %}
-                        <span class="channel-description">{{ item.description }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
-
-        <style>
-            .nav-section {
-                margin-bottom: var(--spacing-large);
-                padding: var(--spacing-base);
-                border: 1px solid var(--color-border);
-                border-radius: var(--border-radius);
-                background: var(--color-background);
-            }
-            
-            .nav-section h2 {
-                margin-top: 0;
-                padding-bottom: var(--spacing-base);
-                border-bottom: 1px solid var(--color-border);
-                font-size: var(--font-size-large);
-            }
-            
-            .nav-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            
-            .nav-list li {
-                margin: var(--spacing-base) 0;
-            }
-            
-            .nav-list a {
-                display: block;
-                padding: var(--spacing-base);
-                color: var(--color-text);
-                text-decoration: none;
-                border-radius: var(--border-radius);
-                transition: background-color 0.2s ease;
-            }
-            
-            .nav-list a:hover {
-                background-color: var(--color-annotation-bg);
-                color: var(--color-primary);
-            }
-            
-            .channel-description {
-                display: block;
-                font-size: var(--font-size-small);
-                color: var(--color-text-secondary);
-                margin-top: 0.25em;
-            }
-            
-            @media screen and (max-width: 768px) {
-                .nav-section {
-                    margin-bottom: var(--spacing-base);
-                }
-                
-                .nav-list a {
-                    padding: calc(var(--spacing-base) * 1.5) var(--spacing-base);
-                }
-            }
-        </style>
+{% block content %}
+<div class="navigation-container">
+    <h1>Site Navigation</h1>
+    
+    <!-- Main Navigation -->
+    {% if nav_items.get('main') %}
+    <div class="nav-section">
+        <h2>Main</h2>
+        <ul class="nav-list">
+            {% for item in nav_items.get('main', []) %}
+            <li>
+                <a href="{{ item.url }}">{{ item.name }}</a>
+                {% if item.description %}
+                <span class="nav-description"> - {{ item.description }}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
     </div>
-</body>
-</html>
+    {% endif %}
+    
+    <!-- Channel Navigation -->
+    {% if nav_items.get('channel_nav') %}
+    <div class="nav-section">
+        <h2>Channels</h2>
+        <div class="channel-nav-container">
+            {% for channel_info in nav_items.get('channel_nav', []) %}
+            <div class="channel-nav-item">
+                <h3>{{ channel_info.name }}</h3>
+                {% if channel_info.description %}
+                <p class="channel-description">{{ channel_info.description }}</p>
+                {% endif %}
+                <ul class="channel-links">
+                    {% for link in channel_info.links %}
+                    <li>
+                        <a href="{{ link.url }}">{{ link.name }}</a>
+                        {% if link.description %}
+                        <span class="link-description"> - {{ link.description }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- User Navigation -->
+    {% if nav_items.get('user') %}
+    <div class="nav-section">
+        <h2>User</h2>
+        <ul class="nav-list">
+            {% for item in nav_items.get('user', []) %}
+            <li>
+                <a href="{{ item.url }}">{{ item.name }}</a>
+                {% if item.description %}
+                <span class="nav-description"> - {{ item.description }}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Admin Navigation -->
+    {% if nav_items.get('admin') %}
+    <div class="nav-section">
+        <h2>Administration</h2>
+        <ul class="nav-list">
+            {% for item in nav_items.get('admin', []) %}
+            <li>
+                <a href="{{ item.url }}">{{ item.name }}</a>
+                {% if item.description %}
+                <span class="nav-description"> - {{ item.description }}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.navigation-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-large);
+}
+
+.nav-section {
+    margin-bottom: calc(var(--spacing-large) * 2);
+}
+
+.nav-section h2 {
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: var(--spacing-base);
+    margin-bottom: var(--spacing-large);
+}
+
+.nav-list {
+    list-style: none;
+    padding: 0;
+}
+
+.nav-list li {
+    margin-bottom: var(--spacing-base);
+    line-height: 1.6;
+}
+
+.nav-list a {
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--color-primary);
+}
+
+.nav-list a:hover {
+    text-decoration: underline;
+}
+
+.nav-description,
+.link-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+}
+
+/* Channel navigation grid */
+.channel-nav-container {
+    display: grid;
+    gap: var(--spacing-large);
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.channel-nav-item {
+    padding: var(--spacing-large);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-card-bg);
+}
+
+.channel-nav-item h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-base);
+    color: var(--color-primary);
+    font-size: 1.2em;
+}
+
+.channel-description {
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin: var(--spacing-base) 0;
+    font-size: var(--font-size-small);
+}
+
+.channel-links {
+    list-style: none;
+    padding: 0;
+}
+
+.channel-links li {
+    margin-bottom: var(--spacing-small);
+    line-height: 1.4;
+}
+
+.channel-links a {
+    text-decoration: none;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.channel-links a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .channel-nav-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .navigation-container {
+        padding: var(--spacing-base);
+    }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .channel-nav-item {
+    background: var(--color-card-bg);
+    border-color: var(--color-border);
+}
+
+/* High contrast adjustments */
+[data-theme="high-contrast"] .nav-section h2 {
+    border-bottom-width: 3px;
+    border-color: var(--color-text);
+}
+
+[data-theme="high-contrast"] .channel-nav-item {
+    border-width: 2px;
+    border-color: var(--color-text);
+}
+
+[data-theme="high-contrast"] .nav-list a,
+[data-theme="high-contrast"] .channel-links a {
+    color: var(--color-text);
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

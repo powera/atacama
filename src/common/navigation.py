@@ -8,6 +8,9 @@ from typing import Dict, List, Callable, Any, Optional
 # Structure: {blueprint_name: [{route_info}, {route_info}, ...]}
 _navigable_routes = {}
 
+# Store for per-channel navigable routes
+_per_channel_routes = {}
+
 def navigable(name: str, description: str = "", category: str = "main", 
               order: int = 100, requires_auth: Optional[bool] = None, 
               requires_admin: bool = False) -> Callable:
@@ -79,6 +82,75 @@ def navigable(name: str, description: str = "", category: str = "main",
         
     return decorator
 
+def navigable_per_channel(name: str, description: str = "", 
+                         channel_param: str = "channel",
+                         order: int = 100, 
+                         requires_auth: Optional[bool] = None, 
+                         requires_admin: bool = False) -> Callable:
+    """
+    Decorator to mark a route as navigable per-channel.
+    These routes will appear in the navigation for each accessible channel.
+    
+    :param name: Display name for the navigation link
+    :param description: Description of the route
+    :param channel_param: Name of the channel parameter in the route (default: "channel")
+    :param order: Sort order within channel navigation (lower numbers appear first)
+    :param requires_auth: Whether this route requires authentication (auto-detected if None)
+    :param requires_admin: Whether this route requires admin privileges
+    :return: Decorated route function
+    """
+    def decorator(route_func: Callable) -> Callable:
+        # Get the blueprint name from the function
+        blueprint_name = route_func.__module__.split('.')[-1]
+        
+        # Store the original endpoint name
+        endpoint = f"{blueprint_name}.{route_func.__name__}"
+        
+        # Auto-detect authentication requirements if not specified
+        needs_auth = requires_auth
+        if needs_auth is None:
+            # Use same auto-detection logic as navigable
+            func = route_func
+            while hasattr(func, '__wrapped__'):
+                if (hasattr(func, '__auth_required__') or 
+                    func.__name__ == 'decorated_function'):
+                    needs_auth = True
+                    break
+                func = func.__wrapped__
+            
+            if needs_auth is None:
+                needs_auth = False
+                
+                try:
+                    source = inspect.getsource(route_func)
+                    if "@require_auth" in source:
+                        needs_auth = True
+                except (IOError, TypeError):
+                    pass
+        
+        # Register this route to our per-channel routes store
+        if blueprint_name not in _per_channel_routes:
+            _per_channel_routes[blueprint_name] = []
+            
+        _per_channel_routes[blueprint_name].append({
+            'endpoint': endpoint,
+            'name': name,
+            'description': description,
+            'channel_param': channel_param,
+            'order': order,
+            'requires_auth': needs_auth,
+            'requires_admin': requires_admin,
+            'view_func': route_func.__name__
+        })
+        
+        @wraps(route_func)
+        def wrapped_func(*args: Any, **kwargs: Any) -> Any:
+            return route_func(*args, **kwargs)
+            
+        return wrapped_func
+        
+    return decorator
+
 def get_navigable_routes() -> Dict[str, List[Dict[str, Any]]]:
     """
     Get all registered navigable routes.
@@ -86,6 +158,14 @@ def get_navigable_routes() -> Dict[str, List[Dict[str, Any]]]:
     :return: Dictionary of navigable route information by category
     """
     return _navigable_routes
+
+def get_per_channel_routes() -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Get all registered per-channel navigable routes.
+    
+    :return: Dictionary of per-channel route information by blueprint
+    """
+    return _per_channel_routes
 
 def get_navigation_items(user: Optional[Any] = None) -> Dict[str, List[Dict[str, Any]]]:
     """
@@ -101,7 +181,8 @@ def get_navigation_items(user: Optional[Any] = None) -> Dict[str, List[Dict[str,
         'main': [],
         'channels': [],
         'admin': [],
-        'user': []
+        'user': [],
+        'per_channel': []  # Routes that should be shown for each channel
     }
     
     # Build navigation from registered routes
@@ -125,6 +206,26 @@ def get_navigation_items(user: Optional[Any] = None) -> Dict[str, List[Dict[str,
                 'name': route['name'],
                 'description': route['description'],
                 'url': url_for(route['endpoint']),
+                'order': route['order']
+            })
+    
+    # Add per-channel routes
+    for blueprint, routes in _per_channel_routes.items():
+        for route in routes:
+            # Skip items requiring auth if no user
+            if route['requires_auth'] and user is None:
+                continue
+                
+            # Skip admin routes if user has no admin access
+            if route['requires_admin'] and (user is None or not hasattr(user, 'admin_channel_access') or 
+                                          not user.admin_channel_access):
+                continue
+                
+            nav_items['per_channel'].append({
+                'name': route['name'],
+                'description': route['description'],
+                'endpoint': route['endpoint'],
+                'channel_param': route['channel_param'],
                 'order': route['order']
             })
     

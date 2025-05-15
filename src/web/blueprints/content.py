@@ -34,7 +34,7 @@ from common.messages import (
     check_channel_access,
     get_user_allowed_channels
 )
-from common.navigation import navigable
+from common.navigation import navigable, navigable_per_channel
 from common.channel_config import get_channel_manager, AccessLevel
 from common.domain_config import get_domain_manager
 from common.logging_config import get_logger
@@ -222,6 +222,9 @@ def view_chain(message_id: int) -> Response:
 @content_bp.route('/stream/channel/<string:channel>/before/<string:tsdate>/')
 @content_bp.route('/stream/channel/<string:channel>/before/<string:tsdate>/<string:tstime>/')
 @optional_auth
+@navigable_per_channel(name="Message Stream",
+                      description="Stream for this channel",
+                      order=100)
 def message_stream(older_than_id: Optional[int] = None,
                   channel: Optional[str] = None,
                   tsdate: Optional[str] = None, tstime: Optional[str] = None) -> str:
@@ -317,7 +320,7 @@ def message_stream(older_than_id: Optional[int] = None,
 
 @content_bp.route('/details')
 @optional_auth
-@navigable(name="Message List", category="admin")
+@navigable(name="Detailed Message List", category="admin")
 def landing_page():
     """Serve the landing page with basic service information and message list."""
     channel_manager = get_channel_manager()
@@ -383,6 +386,9 @@ def landing_page():
 
 @content_bp.route('/channel/<string:channel>/message_list')
 @optional_auth
+@navigable_per_channel(name="Message List",
+                      description="List messages for a channel",
+                      order=100)
 def channel_list(channel: str) -> Response:
     """
     Display a paginated list of all messages (titles and dates) in a specific channel.
