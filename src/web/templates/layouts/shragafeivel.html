@@ -9,6 +9,18 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                        <button type="button" class="flash-close" onclick="this.parentElement.style.display='none';">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
     <header class="site-banner">
         <h1 class="site-title">{{ domain_config.name }}</h1>
         {% if domain_config.description %}
