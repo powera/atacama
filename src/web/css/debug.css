@@ -33,7 +33,7 @@
 
 .metric-title {
     font-size: var(--font-size-small);
-    color: #666;
+    color: var(--color-text-muted);
     margin-bottom: 0.5em;
 }
 

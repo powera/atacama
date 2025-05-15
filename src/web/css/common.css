@@ -24,8 +24,11 @@
     --color-sigil-background: #e5e5e5;
     --color-text: #333333;
     --color-text-secondary: #666666;
+    --color-text-muted: #666666;
     --color-border: #dddddd;
     --color-primary: #0074D9;
+    --color-primary-rgb: 0, 116, 217; /* RGB values for rgba() usage */
+    --color-primary-dark: #0056a4; /* Darker variant of primary color */
     
     /* Component colors */
     --color-header-bg: #f8f9fa;
@@ -61,8 +64,11 @@
     --color-sigil-background: #cccccc;
     --color-text: #e0e0e0;
     --color-text-secondary: #a0a0a0;
+    --color-text-muted: #848484;
     --color-border: #404040;
     --color-primary: #4a9eff;
+    --color-primary-rgb: 74, 158, 255; /* RGB values for rgba() usage */
+    --color-primary-dark: #3a7cd9; /* Darker variant of primary color */
     
     /* Component colors */
     --color-header-bg: #2d2d2d;
@@ -98,8 +104,11 @@
     --color-sigil-background: #d9d9d9;
     --color-text: #000000;
     --color-text-secondary: #000000;
+    --color-text-muted: #000000;
     --color-border: #ffffff;
     --color-primary: #333303;
+    --color-primary-rgb: 51, 51, 3; /* RGB values for rgba() usage */
+    --color-primary-dark: #222202; /* Darker variant of primary color */
     
     /* Maintain high contrast ratios for all colors */
     --color-xantham: #6f3030;

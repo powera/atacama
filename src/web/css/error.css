@@ -21,7 +21,7 @@
 }
 
 .error-message {
-    color: #666;
+    color: var(--color-text-muted);
     margin-bottom: var(--spacing-large);
     line-height: 1.6;
 }
