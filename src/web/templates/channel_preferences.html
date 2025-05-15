@@ -1,199 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Channel Preferences - Atacama</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/atacama.css">
-    <style>
-        .preferences-form {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        
-        .channel-option {
-            display: flex;
-            align-items: flex-start;
-            margin: var(--spacing-base) 0;
-            padding: var(--spacing-base);
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius);
-            background: var(--color-background);
-        }
-        
-        .channel-option:hover {
-            background: var(--color-annotation-bg);
-        }
-        
-        .channel-option input[type="checkbox"] {
-            margin-right: var(--spacing-base);
-            width: 20px;
-            height: 20px;
-        }
-        
-        .channel-option label {
-            flex-grow: 1;
-            font-size: var(--font-size-base);
-            cursor: pointer;
-        }
-        
-        .channel-info {
-            margin-top: 0.5em;
-            font-size: var(--font-size-small);
-            color: var(--color-text-secondary);
-        }
-        
-        .channel-restricted {
-            color: var(--color-text-secondary);
-            font-size: var(--font-size-small);
-            margin-left: var(--spacing-base);
-        }
-        
-        .channel-tag {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 0.8em;
-            margin-left: 0.5em;
-        }
-        
-        .tag-public { background: #e7f5e7; color: #2c662d; }
-        .tag-private { background: #fff3cd; color: #856404; }
-        .tag-restricted { background: #f8d7da; color: #721c24; }
-        
-        [data-theme="dark"] .tag-public { background: #1e3a1e; color: #7cc47d; }
-        [data-theme="dark"] .tag-private { background: #3d3524; color: #ffd866; }
-        [data-theme="dark"] .tag-restricted { background: #3d2427; color: #ea868f; }
-        
-        .unsaved-warning {
-            display: none;
-            background-color: #fff3cd;
-            color: #856404;
-            padding: var(--spacing-base);
-            margin: var(--spacing-base) 0;
-            border: 1px solid #ffeeba;
-            border-radius: var(--border-radius);
-        }
-        
-        [data-theme="dark"] .unsaved-warning {
-            background-color: #2c2a1c;
-            color: #ffd866;
-            border-color: #453e1c;
-        }
-        
-        .form-actions {
-            margin-top: var(--spacing-large);
-            display: flex;
-            justify-content: flex-end;
-            gap: var(--spacing-base);
-        }
-        
-        .button-secondary {
-            background-color: var(--color-background);
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-        }
-        
-        @media screen and (max-width: 768px) {
-            .channel-option {
-                padding: calc(var(--spacing-base) * 1.5) var(--spacing-base);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Channel Preferences</h1>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <form method="POST" class="preferences-form" id="prefsForm">
-            <div class="unsaved-warning" id="unsavedWarning" role="alert" aria-live="polite">
-                You have unsaved changes. Remember to click Save to apply your changes.
-            </div>
-            
-            {% for channel_name, config in channels.items() %}
-                <div class="channel-option">
-                    <input type="checkbox" 
-                           id="channel_{{ channel_name }}"
-                           name="channel_{{ channel_name }}"
-                           {% if preferences.get(channel_name, True) %}checked{% endif %}
-                           {% if config.requires_preference and config.domain_restriction and not user_email.endswith(config.domain_restriction) %}disabled{% endif %}
-                           onchange="checkChanges()"
-                           aria-describedby="desc_{{ channel_name }}">
-                    <label for="channel_{{ channel_name }}">
-                        {{ channel_name|title }}
-                        <span class="channel-tag tag-{{ config.access_level.value }}">
-                            {{ config.access_level.value|title }}
-                        </span>
-                        {% if config.description %}
-                            <div class="channel-info" id="desc_{{ channel_name }}">
-                                {{ config.description }}
-                            </div>
-                        {% endif %}
-                        {% if config.domain_restriction %}
-                            <div class="channel-restricted">
-                                Requires {{ config.domain_restriction }} email
-                            </div>
-                        {% endif %}
-                    </label>
-                </div>
-            {% endfor %}
-            
-            <div class="form-actions">
-                <button type="button" class="button button-secondary" onclick="resetForm()">Reset</button>
-                <button type="submit" class="button">Save Changes</button>
-            </div>
-        </form>
+{% extends "layouts/" + theme_layout + ".html" %}
+{% block title %}Channel Preferences - Atacama{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/css/channel_preferences.css">
+{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>Channel Preferences</h1>
+    <div class="unsaved-warning" id="unsavedWarning" role="alert" aria-live="polite">
+        You have unsaved changes. Remember to click Save to apply your changes.
     </div>
 
-    <script>
-        let originalState = {};
-        
-        function saveOriginalState() {
-            const form = document.getElementById('prefsForm');
-            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                originalState[checkbox.name] = checkbox.checked;
-            });
-        }
-        
-        function checkChanges() {
-            const form = document.getElementById('prefsForm');
-            const warning = document.getElementById('unsavedWarning');
-            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
-            
-            let hasChanges = false;
-            checkboxes.forEach(checkbox => {
-                if (checkbox.checked !== originalState[checkbox.name]) {
-                    hasChanges = true;
-                }
-            });
-            
-            warning.style.display = hasChanges ? 'block' : 'none';
-        }
-        
-        function resetForm() {
-            const form = document.getElementById('prefsForm');
-            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = originalState[checkbox.name];
-            });
-            checkChanges();
-        }
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            saveOriginalState();
-            checkChanges();
+    <form method="POST" class="preferences-form" id="prefsForm">
+        {% for channel_name, config in channels.items() %}
+        <div class="channel-option">
+            <input type="checkbox" id="channel_{{ channel_name }}" name="channel_{{ channel_name }}" {% if
+                preferences.get(channel_name, True) %}checked{% endif %} {% if config.requires_preference and
+                config.domain_restriction and not user_email.endswith(config.domain_restriction) %}disabled{% endif %}
+                onchange="checkChanges()" aria-describedby="desc_{{ channel_name }}">
+            <label for="channel_{{ channel_name }}">
+                {{ channel_manager.get_display_name(channel_name) }}
+                <span class="channel-tag tag-{{ config.access_level.value }}">
+                    {{ config.access_level.value|title }}
+                </span>
+                {% if config.description %}
+                <div class="channel-info" id="desc_{{ channel_name }}">
+                    {{ config.description }}
+                </div>
+                {% endif %}
+                {% if config.domain_restriction %}
+                <div class="channel-restricted">
+                    Requires {{ config.domain_restriction }} email
+                </div>
+                {% endif %}
+            </label>
+        </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="button" class="button button-secondary" onclick="resetForm()">Reset</button>
+            <button type="submit" class="button">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    let originalState = {};
+
+    function saveOriginalState() {
+        const form = document.getElementById('prefsForm');
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            originalState[checkbox.name] = checkbox.checked;
         });
-    </script>
-</body>
-</html>
+    }
+
+    function checkChanges() {
+        const form = document.getElementById('prefsForm');
+        const warning = document.getElementById('unsavedWarning');
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+
+        let hasChanges = false;
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked !== originalState[checkbox.name]) {
+                hasChanges = true;
+            }
+        });
+
+        warning.style.display = hasChanges ? 'block' : 'none';
+    }
+
+    function resetForm() {
+        const form = document.getElementById('prefsForm');
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = originalState[checkbox.name];
+        });
+        checkChanges();
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        saveOriginalState();
+        checkChanges();
+    });
+</script>
+{% endblock %}
