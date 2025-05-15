@@ -26,8 +26,22 @@
       </div>
   {% endif %}
   {% endwith %}
-    {% block content %}{% endblock %}
-    {% block scripts %}{% endblock %}
+  
+  <header class="site-banner">
+    <div class="banner-content">
+      {% block page_title %}
+      <h1 class="site-title">Atacama</h1>
+      {% endblock %}
+    </div>
+  </header>
+  
+  <div class="page-container">
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  
+  {% block scripts %}{% endblock %}
   <script src="/static/js/react/atacama-react.js"></script>
 </body>
 </html>

@@ -452,3 +452,98 @@ button:disabled,
         padding: var(--spacing-small) var(--spacing-base);
     }
 }
+
+
+
+
+/* Site banner and page title styles */
+.site-banner {
+    background-color: var(--color-header-bg);
+    padding: var(--spacing-base) var(--spacing-large);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-large);
+}
+
+.banner-content {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.site-banner .site-title {
+    margin: 0;
+    padding: 0;
+    color: var(--color-primary);
+    font-size: var(--font-size-large);
+    font-weight: 700;
+}
+
+.site-banner .site-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-small);
+    margin-top: 0.25rem;
+}
+
+/* Dark mode adjustments for banner */
+[data-theme="dark"] .site-banner {
+    background-color: var(--color-header-bg);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .site-banner .site-title {
+    color: var(--color-primary);
+}
+
+[data-theme="dark"] .site-banner .site-description {
+    color: var(--color-text-secondary);
+}
+
+/* High contrast mode adjustments for banner */
+[data-theme="high-contrast"] .site-banner {
+    background-color: #000000;
+    border-color: #ffffff;
+    border-width: 2px;
+}
+
+[data-theme="high-contrast"] .site-banner .site-title {
+    color: #ffffff;
+}
+
+[data-theme="high-contrast"] .site-banner .site-description {
+    color: #ffffff;
+}
+
+/* Page container for all layouts */
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-base);
+}
+
+.main-content {
+    margin-bottom: var(--spacing-large);
+}
+
+/* Metadata panel (replacing message-header in message view) */
+.metadata-panel {
+    margin-bottom: var(--spacing-base);
+    padding-bottom: var(--spacing-base);
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .site-banner {
+        padding: var(--spacing-small) var(--spacing-base);
+    }
+    
+    .site-banner .site-title {
+        font-size: calc(var(--font-size-large) * 0.8);
+    }
+    
+    .banner-content {
+        flex-direction: column;
+    }
+}

@@ -27,10 +27,14 @@
         {% endif %}
     {% endwith %}
     <header class="site-banner">
-        <h1 class="site-title">{{ domain_config.name }}</h1>
-        {% if domain_config.description %}
-        <span class="site-description">{{ domain_config.description }}</span>
-        {% endif %}
+        <div class="banner-content">
+            {% block page_title %}
+            <h1 class="site-title">{{ domain_config.name }}</h1>
+            {% if domain_config.description %}
+            <span class="site-description">{{ domain_config.description }}</span>
+            {% endif %}
+            {% endblock %}
+        </div>
     </header>
     
     <div class="page-container">
@@ -47,7 +51,7 @@
                 {% endif %}
                 
                 {% for group, channels in channel_manager.get_channel_groups().items() %}
-                    {% if channels %}
+                    {% if channels and domain_manager.is_channel_allowed(current_domain, channels[0]) and channels[0] in available_channels %}
                         <div class="channel-group">
                             <span class="channel-group-heading">{{ group }}</span>
                             <ul class="channel-list">
@@ -68,7 +72,6 @@
             </nav>
         </aside>
     </div>
-
 
     {% block scripts %}{% endblock %}
 </body>

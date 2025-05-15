@@ -1,12 +1,27 @@
 {% extends "layouts/" + theme_layout + ".html" %}
 
-{% block title %}Message Chain - Atacama{% endblock %}
+{% block title %}
+    {% if messages %}
+        Chain: {{ messages[0].subject or '(No Subject)' }}
+    {% else %}
+        Atacama Message Chain
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+<h1 class="site-title">
+    {% if messages %}
+        Chain: {{ messages[0].subject or '(No Subject)' }}
+    {% else %}
+        Message Chain
+    {% endif %}
+</h1>
+{% endblock %}
 
 {% block content %}
     <div class="chain-container">
         <div class="chain-navigation">
             <div class="chain-overview">
-                <h1>Message Chain</h1>
                 <div class="chain-metadata">
                     <span class="chain-stats">{{ messages|length }} messages in chain</span>
                     {% if messages %}

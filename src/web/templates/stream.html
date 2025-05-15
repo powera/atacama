@@ -2,55 +2,53 @@
 
 {% block title %}{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}{% endblock %}
 
+{% block page_title %}
+<h1 class="site-title">{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
+{% endblock %}
+
 {% block content %}
     <div class="stream-container">
-        <header class="stream-header">
-            <h1>{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
-        
+        <nav class="channel-navigation">
+            <div class="primary-nav">
+                <a href="{{ url_for('content.message_stream') }}" 
+                   class="channel-link {% if not current_channel %}active{% endif %}">
+                    All Messages
+                </a>
+                
+                {% if current_channel %}
+                <a href="{{ url_for('content.message_stream', channel=current_channel) }}" 
+                   class="channel-link active">
+                    {{ channel_manager.get_display_name(current_channel) }}
+                </a>
 
-            <nav class="channel-navigation">
-                <div class="primary-nav">
-                    <a href="{{ url_for('content.message_stream') }}" 
-                       class="channel-link {% if not current_channel %}active{% endif %}">
-                        All Messages
-                    </a>
-                    
-                    {% if current_channel %}
-                    <a href="{{ url_for('content.message_stream', channel=current_channel) }}" 
-                       class="channel-link active">
-                        {{ channel_manager.get_display_name(current_channel) }}
-                    </a>
-
-                    <a href="{{ url_for('content.channel_list', channel=current_channel) }}" 
-                       class="channel-link">
-                        View Index
-                    </a>
-                    {% endif %}
-                    
-                    <div class="channel-dropdown">
-                        <button class="dropdown-toggle">Select Channel</button>
-                        <div class="dropdown-menu">
-                            {% for group, channels in channel_manager.get_channel_groups().items() %}
-                                {% if channels %}
-                                    <div class="dropdown-group">
-                                        <div class="dropdown-group-heading">{{ group }}</div>
-                                        {% for channel in channels %}
-                                            {% if channel in available_channels %}
-                                                <a href="{{ url_for('content.message_stream', channel=channel) }}" 
-                                                   class="dropdown-item {% if current_channel == channel %}active{% endif %}">
-                                                    {{ channel_manager.get_display_name(channel) }}
-                                                </a>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
+                <a href="{{ url_for('content.channel_list', channel=current_channel) }}" 
+                   class="channel-link">
+                    View Index
+                </a>
+                {% endif %}
+                
+                <div class="channel-dropdown">
+                    <button class="dropdown-toggle">Select Channel</button>
+                    <div class="dropdown-menu">
+                        {% for group, channels in channel_manager.get_channel_groups().items() %}
+                            {% if channels %}
+                                <div class="dropdown-group">
+                                    <div class="dropdown-group-heading">{{ group }}</div>
+                                    {% for channel in channels %}
+                                        {% if channel in available_channels %}
+                                            <a href="{{ url_for('content.message_stream', channel=channel) }}" 
+                                               class="dropdown-item {% if current_channel == channel %}active{% endif %}">
+                                                {{ channel_manager.get_display_name(channel) }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 </div>
-            </nav>
-    
-        </header>
+            </div>
+        </nav>
         
     {% for message in messages %}
         <article class="stream-message message">

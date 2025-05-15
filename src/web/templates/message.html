@@ -2,13 +2,17 @@
 
 {% block title %}{{ message.subject if message else 'Message' }}{% endblock %}
 
+{% block page_title %}
+<h1 class="site-title">{{ message.subject if message else 'Message' }}</h1>
+{% if message and message.channel != 'private' %}
+<span class="site-description">{{ channel_manager.get_display_name(message.channel) }}</span>
+{% endif %}
+{% endblock %}
+
 {% block content %}
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% elif message %}
+    {% if message %}
         <article class="message single-view">
-            <header class="message-header">
-                <h1>{{ message.subject }}</h1>
+            <div class="metadata-panel">
                 <div class="metadata">
                     {% if message.author %}
                         <div class="message-author">
@@ -41,7 +45,7 @@
                         </div>
                     {% endif %}
                 </div>
-            </header>
+            </div>
 
             <div class="message-body">
               <div class="message-main">
