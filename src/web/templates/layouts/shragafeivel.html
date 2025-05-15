@@ -2,9 +2,14 @@
 <html>
 <head>
     <title>{% block title %}Shragafeivel{% endblock %}</title>
+
+    {# Global CSS #}
     {% for css_file in theme_css_files %}
     <link rel="stylesheet" href="/css/{{ css_file }}">
     {% endfor %}
+    {# Per-page CSS #}
+    {% block styles %}{% endblock %}
+    
     <script src="/js/atacama.js"></script>
     {% block extra_head %}{% endblock %}
 </head>

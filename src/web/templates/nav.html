@@ -2,6 +2,10 @@
 
 {% block title %}Site Navigation - Atacama{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/css/nav.css">
+{% endblock %}
+
 {% block content %}
 <div class="navigation-container">
     <h1>Site Navigation</h1>
@@ -85,130 +89,4 @@
     {% endif %}
 </div>
 
-<style>
-.navigation-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--spacing-large);
-}
-
-.nav-section {
-    margin-bottom: calc(var(--spacing-large) * 2);
-}
-
-.nav-section h2 {
-    color: var(--color-primary);
-    border-bottom: 2px solid var(--color-border);
-    padding-bottom: var(--spacing-base);
-    margin-bottom: var(--spacing-large);
-}
-
-.nav-list {
-    list-style: none;
-    padding: 0;
-}
-
-.nav-list li {
-    margin-bottom: var(--spacing-base);
-    line-height: 1.6;
-}
-
-.nav-list a {
-    font-weight: 500;
-    text-decoration: none;
-    color: var(--color-primary);
-}
-
-.nav-list a:hover {
-    text-decoration: underline;
-}
-
-.nav-description,
-.link-description {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-small);
-}
-
-/* Channel navigation grid */
-.channel-nav-container {
-    display: grid;
-    gap: var(--spacing-large);
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-.channel-nav-item {
-    padding: var(--spacing-large);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    background: var(--color-card-bg);
-}
-
-.channel-nav-item h3 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-base);
-    color: var(--color-primary);
-    font-size: 1.2em;
-}
-
-.channel-description {
-    color: var(--color-text-secondary);
-    font-style: italic;
-    margin: var(--spacing-base) 0;
-    font-size: var(--font-size-small);
-}
-
-.channel-links {
-    list-style: none;
-    padding: 0;
-}
-
-.channel-links li {
-    margin-bottom: var(--spacing-small);
-    line-height: 1.4;
-}
-
-.channel-links a {
-    text-decoration: none;
-    color: var(--color-primary);
-    font-weight: 500;
-}
-
-.channel-links a:hover {
-    text-decoration: underline;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .channel-nav-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .navigation-container {
-        padding: var(--spacing-base);
-    }
-}
-
-/* Dark theme adjustments */
-[data-theme="dark"] .channel-nav-item {
-    background: var(--color-card-bg);
-    border-color: var(--color-border);
-}
-
-/* High contrast adjustments */
-[data-theme="high-contrast"] .nav-section h2 {
-    border-bottom-width: 3px;
-    border-color: var(--color-text);
-}
-
-[data-theme="high-contrast"] .channel-nav-item {
-    border-width: 2px;
-    border-color: var(--color-text);
-}
-
-[data-theme="high-contrast"] .nav-list a,
-[data-theme="high-contrast"] .channel-links a {
-    color: var(--color-text);
-    text-decoration: underline;
-}
-</style>
 {% endblock %}
