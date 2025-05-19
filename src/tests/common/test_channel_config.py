@@ -93,6 +93,63 @@ class TestChannelConfig(ChannelConfigTestBase):
         )
         self.assertTrue(config.requires_auth)
         self.assertFalse(config.is_public)
+        
+    def test_get_display_name_with_custom_name(self):
+        """Test get_display_name method with custom display name."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.PUBLIC,
+            display_name="Custom Display Name"
+        )
+        self.assertEqual(config.get_display_name(), "Custom Display Name")
+        
+    def test_get_display_name_without_custom_name(self):
+        """Test get_display_name method without custom display name."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.PUBLIC
+        )
+        self.assertEqual(config.get_display_name(), "Test_Channel")
+        
+    def test_default_group_value(self):
+        """Test default group value is set correctly."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.PUBLIC
+        )
+        self.assertEqual(config.group, "General")
+        
+    def test_custom_group_value(self):
+        """Test custom group value is set correctly."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.PUBLIC,
+            group="Custom Group"
+        )
+        self.assertEqual(config.group, "Custom Group")
+        
+    def test_requires_admin_default(self):
+        """Test requires_admin default value."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.RESTRICTED
+        )
+        self.assertFalse(config.requires_admin)
+        
+    def test_requires_admin_custom(self):
+        """Test requires_admin custom value."""
+        config = ChannelConfig(
+            name="test_channel",
+            description="Test channel",
+            access_level=AccessLevel.RESTRICTED,
+            requires_admin=True
+        )
+        self.assertTrue(config.requires_admin)
 
 class TestChannelManager(ChannelConfigTestBase):
     """Test ChannelManager configuration loading and validation."""
