@@ -224,14 +224,11 @@ class ReactWidget(Message):
         builder = WidgetBuilder()
         widget_name = self.title.replace(' ', '')
         
-        # Parse dependencies from JSON
-        deps = []
-        if self.dependencies:
-            try:
-                deps = self.dependencies.split(',')
-            except json.JSONDecodeError:
-                logger.error(f"Invalid dependencies list for widget {self.slug}")
-        
+        # We auto-detect the dependencies
+        all_deps = builder.check_react_libraries(self.code)
+        deps = all_deps["target_libraries"]
+        self.dependencies = ",".join(deps)
+
         success, built_code, error = builder.build_widget(
             self.code, 
             widget_name,

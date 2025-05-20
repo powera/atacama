@@ -3,6 +3,7 @@ import json
 import subprocess
 import tempfile
 import shutil
+import re
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional
 
@@ -22,9 +23,7 @@ class WidgetBuilder:
         'lodash': '^4.17.21',
         'axios': '^1.6.0',
         'd3': '^7.8.5',
-        'chart.js': '^4.4.1',
         'date-fns': '^3.0.0',
-        'react-chartjs-2': '^5.2.0',
         'lucide-react': '^0.263.1',
     }
     
@@ -39,10 +38,8 @@ class WidgetBuilder:
         'recharts': 'Recharts',
         'lodash': '_',
         'd3': 'd3',
-        'chart.js': 'Chart',
         'axios': 'axios',
         'date-fns': 'dateFns',
-        'react-chartjs-2': 'ReactChartJS2',
         'lucide-react': 'lucideReact'
     }
 
@@ -222,3 +219,54 @@ export default {widget_name};
             return False, "", str(e)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def check_react_libraries(self, code):
+        """
+        Checks a React code fragment for library usage.
+        
+        Args:
+            code (str): The React code to analyze
+            
+        Returns:
+            dict: Analysis results with used libraries and their components
+        """
+        # Target libraries to check for
+        target_libraries = [
+            'recharts',
+            'lodash', 
+            'd3', 
+            'axios', 
+            'date-fns', 
+            'lucide-react'
+        ]
+        
+        # Find all import statements
+        import_pattern = r'import\s+.*?from\s+[\'"]([^\'"]*)/?.*?[\'"]'
+        imports = re.findall(import_pattern, code)
+        
+        # Process imports to get base library names
+        found_libraries = []
+        other_libraries = []
+        
+        for imp in imports:
+            # Handle path imports like 'recharts/lib/something'
+            base_lib = imp.split('/')[0]
+            
+            if base_lib in target_libraries and base_lib not in found_libraries:
+                found_libraries.append(base_lib)
+            elif (base_lib not in ['react', 'react-dom'] and 
+                not base_lib.startswith('.') and 
+                base_lib not in other_libraries):
+                other_libraries.append(base_lib)
+    
+        
+        # Generate warnings
+        warnings = []
+        if other_libraries:
+            warnings.append(f"Found {len(other_libraries)} non-target libraries: {', '.join(other_libraries)}")
+        
+        return {
+            'target_libraries': found_libraries,
+            'other_libraries': other_libraries,
+            'warnings': warnings
+        }
