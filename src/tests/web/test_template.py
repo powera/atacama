@@ -4,8 +4,8 @@ from flask import url_for
 from flask.testing import FlaskClient
 from typing import Dict, Any
 
-from common.database import db
-from common.models import Email, User, Base
+from models.database import db
+from models.models import Email, User, Base
 from web.server import create_app
 
 class TemplateTests(unittest.TestCase):

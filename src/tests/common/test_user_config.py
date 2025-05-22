@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import tomli_w
 
-from common.user_config import (
+from common.config.user_config import (
     UserConfigManager,
     AdminRole,
     init_user_config_manager,
@@ -175,8 +175,8 @@ class TestUserConfigManagerSingleton(UserConfigTestBase):
     def test_init_and_get(self):
         """Test initialization and retrieval of global instance."""
         # Clear any existing instance
-        import common.user_config
-        common.user_config._user_config_manager = None
+        import common.config.user_config
+        common.config.user_config._user_config_manager = None
         
         # Initialize with config
         manager1 = init_user_config_manager(self.config_path)
@@ -187,7 +187,7 @@ class TestUserConfigManagerSingleton(UserConfigTestBase):
         self.assertIs(manager1, manager2)
         
         # Test default initialization
-        common.user_config._user_config_manager = None
+        common.config.user_config._user_config_manager = None
         manager3 = get_user_config_manager()
         self.assertIsNotNone(manager3)
 

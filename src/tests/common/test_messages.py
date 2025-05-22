@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock, ANY
 from datetime import datetime
 import json
 
-from common.messages import (
+from models.messages import (
     get_user_email_domain,
     check_admin_approval,
     check_channel_access,
@@ -16,8 +16,8 @@ from common.messages import (
     get_message_chain,
     get_filtered_messages
 )
-from common.models import User, Email
-from common.channel_config import ChannelConfig, AccessLevel
+from models.models import User, Email
+from common.config.channel_config import ChannelConfig, AccessLevel
 import constants
 
 class TestMessages(unittest.TestCase):
@@ -59,7 +59,7 @@ class TestMessages(unittest.TestCase):
         user_no_email = User(id=2, name="No Email")
         self.assertIsNone(get_user_email_domain(user_no_email))
 
-    @patch('common.messages.db.session')
+    @patch('models.messages.db.session')
     def test_check_admin_approval(self, mock_session):
         """Test checking admin channel access."""
         mock_session.return_value.__enter__.return_value.query.return_value.get.return_value = self.user
@@ -71,7 +71,7 @@ class TestMessages(unittest.TestCase):
         mock_session.return_value.__enter__.return_value.query.return_value.get.return_value = None
         self.assertFalse(check_admin_approval(999, "restricted"))
  
-    @patch('common.messages.get_channel_manager')
+    @patch('models.messages.get_channel_manager')
     def test_check_channel_access(self, mock_get_manager):
         """Test checking channel access permissions."""
         mock_manager = MagicMock()
@@ -93,7 +93,7 @@ class TestMessages(unittest.TestCase):
         mock_manager.get_channel_config.return_value = None
         self.assertFalse(check_channel_access("invalid", self.user))
 
-    @patch('common.messages.get_channel_manager')
+    @patch('models.messages.get_channel_manager')
     def test_get_user_allowed_channels(self, mock_get_manager):
         """Test getting list of allowed channels."""
         mock_manager = MagicMock()
@@ -101,7 +101,7 @@ class TestMessages(unittest.TestCase):
         mock_get_manager.return_value = mock_manager
         
         # Mock check_channel_access to respect user preferences
-        with patch('common.messages.check_channel_access') as mock_check_access:
+        with patch('models.messages.check_channel_access') as mock_check_access:
             def check_access_side_effect(channel, user, ignore_preferences=False):
                 if ignore_preferences:
                     return True
@@ -121,21 +121,21 @@ class TestMessages(unittest.TestCase):
     def test_check_message_access(self):
         """Test checking access to specific messages."""
         with self.app_context:
-            with patch('common.messages.check_channel_access') as mock_check:
+            with patch('models.messages.check_channel_access') as mock_check:
                 mock_check.return_value = True
-                with patch('common.messages.g') as mock_g:
+                with patch('models.messages.g') as mock_g:
                     mock_g.user = self.user
                     self.assertTrue(check_message_access(self.message))
                     mock_check.assert_called_with(self.message.channel, self.user, True)
 
-    @patch('common.messages.db.session')
+    @patch('models.messages.db.session')
     def test_get_message_by_id(self, mock_session):
         """Test retrieving message by ID."""
         mock_query = MagicMock()
         mock_query.options.return_value.filter.return_value.first.return_value = self.message
         mock_session.return_value.__enter__.return_value.query.return_value = mock_query
         
-        with patch('common.messages.check_message_access') as mock_check:
+        with patch('models.messages.check_message_access') as mock_check:
             mock_check.return_value = True
             
             result = get_message_by_id(1)
@@ -146,7 +146,7 @@ class TestMessages(unittest.TestCase):
             result = get_message_by_id(999)
             self.assertIsNone(result)
 
-    @patch('common.messages.db.session')
+    @patch('models.messages.db.session')
     def test_get_message_chain(self, mock_session):
         """Test retrieving full message chain."""
         parent = Email(id=2, channel="private")
@@ -158,14 +158,14 @@ class TestMessages(unittest.TestCase):
         mock_query.options.return_value.filter.return_value.first.return_value = self.message
         mock_session.return_value.__enter__.return_value.query.return_value = mock_query
         
-        with patch('common.messages.check_message_access') as mock_check:
+        with patch('models.messages.check_message_access') as mock_check:
             mock_check.return_value = True
             
             chain = get_message_chain(1)
             self.assertEqual(len(chain), 3)
             self.assertEqual([m.id for m in chain], [2, 1, 3])
 
-    @patch('common.messages.get_channel_manager')
+    @patch('models.messages.get_channel_manager')
     def test_get_filtered_messages(self, mock_get_manager):
         """Test retrieving filtered message list."""
         mock_session = MagicMock()
@@ -184,7 +184,7 @@ class TestMessages(unittest.TestCase):
         mock_get_manager.return_value = mock_manager
         
         with self.app_context:
-            with patch('common.messages.g') as mock_g:
+            with patch('models.messages.g') as mock_g:
                 mock_g.user = self.user
                 
                 messages, has_more = get_filtered_messages(

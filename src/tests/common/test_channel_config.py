@@ -6,7 +6,7 @@ from pathlib import Path
 import tomli
 import tomli_w
 
-from common.channel_config import (
+from common.config.channel_config import (
     ChannelManager,
     ChannelConfig,
     AccessLevel,
@@ -260,8 +260,8 @@ class TestChannelManagerSingleton(ChannelConfigTestBase):
     def test_init_and_get(self):
         """Test initialization and retrieval of global instance."""
         # Clear any existing instance
-        import common.channel_config
-        common.channel_config._channel_manager = None
+        import common.config.channel_config
+        common.config.channel_config._channel_manager = None
         
         # Initialize with config
         manager1 = init_channel_manager(self.config_path)

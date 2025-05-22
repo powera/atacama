@@ -8,7 +8,7 @@ import tomli
 import tomli_w
 from unittest.mock import patch, MagicMock
 
-from common.domain_config import (
+from common.config.domain_config import (
     ThemeConfig,
     DomainConfig,
     DomainManager,
@@ -539,8 +539,8 @@ class TestDomainManagerSingleton(DomainManagerTestBase):
     def test_init_domain_manager(self):
         """Test initialization of global domain manager instance."""
         # Clear any existing instance
-        import common.domain_config
-        common.domain_config._domain_manager = None
+        import common.config.domain_config
+        common.config.domain_config._domain_manager = None
         
         # Initialize with config
         manager1 = init_domain_manager(self.config_path)
@@ -553,11 +553,11 @@ class TestDomainManagerSingleton(DomainManagerTestBase):
     def test_get_domain_manager_auto_init(self):
         """Test get_domain_manager auto-initializes if needed."""
         # Clear any existing instance
-        import common.domain_config
-        common.domain_config._domain_manager = None
+        import common.config.domain_config
+        common.config.domain_config._domain_manager = None
         
         # Mock DEFAULT_CONFIG_PATH to use our test config
-        with patch('common.domain_config.DEFAULT_CONFIG_PATH', Path(self.config_path)):
+        with patch('common.config.domain_config.DEFAULT_CONFIG_PATH', Path(self.config_path)):
             # Should auto-initialize
             manager = get_domain_manager()
             self.assertIsNotNone(manager)
@@ -570,8 +570,8 @@ class TestDomainManagerSingleton(DomainManagerTestBase):
     def test_reinitialize_domain_manager(self):
         """Test that reinitializing domain manager creates a new instance."""
         # Clear any existing instance
-        import common.domain_config
-        common.domain_config._domain_manager = None
+        import common.config.domain_config
+        common.config.domain_config._domain_manager = None
         
         # Initialize with config
         manager1 = init_domain_manager(self.config_path)
