@@ -37,26 +37,16 @@
         </div>
         
         <div class="form-group">
-            <label>Dependencies:</label>
-            <div class="dependency-checkboxes">
-                {% set current_deps = widget.dependencies|default('[]')|tojson|safe %}
-                {% for dep, version in [
-                    ('recharts', 'Recharts - for charts'),
-                    ('lodash', 'Lodash - utilities'),
-                    ('d3', 'D3.js - data viz'),
-                    ('axios', 'Axios - HTTP client'),
-                    ('date-fns', 'date-fns - date utilities'),
-                    ('lucide-react', 'Lucide React - icon library')
-                ] %}
-                    <label>
-                        <input type="checkbox" 
-                               name="dependencies" 
-                               value="{{ dep }}"
-                               {% if dep in current_deps %}checked{% endif %}>
-                        {{ version }}
-                    </label>
-                {% endfor %}
+            <label>Available Dependencies:</label>
+            <div class="dependency-list">
+                <div>Recharts (for charts)</div>
+                <div>Lodash (utilities)</div>
+                <div>D3.js (data viz)</div>
+                <div>Axios (HTTP client)</div>
+                <div>date-fns (date utilities)</div>
+                <div>Lucide React (icons)</div>
             </div>
+            <small>Dependencies will be automatically detected from your code imports.</small>
         </div>
 
         <div class="form-group">

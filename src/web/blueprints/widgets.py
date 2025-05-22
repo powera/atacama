@@ -78,9 +78,6 @@ def edit_widget(slug):
             widget.code = request.form.get('code', widget.code)
             widget.last_modified_at = datetime.utcnow()
 
-            dependencies = request.form.getlist('dependencies') or []
-            widget.dependencies=",".join(dependencies)
-            
             session.commit()
             flash("Widget updated successfully!", 'success')
             return redirect(url_for('widgets.view_widget', slug=slug))
@@ -123,7 +120,6 @@ def create_widget():
         code = request.form.get('code', '')
         description = request.form.get('description', '')
         channel = request.form.get('channel', 'private')
-        dependencies = request.form.getlist('dependencies')
         
         # Validate slug uniqueness
         with db.session() as session:
@@ -139,8 +135,7 @@ def create_widget():
                 description=description,
                 channel=channel,
                 author=g.user,
-                published=False,
-                dependencies=",".join(dependencies)
+                published=False
             )
             
             session.add(widget)
