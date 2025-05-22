@@ -3,8 +3,8 @@
 from typing import List
 from sqlalchemy.orm import Session
 
-from common.database import db
-from common.models import Email, Quote
+from models.database import db
+from models import Email, Quote
 
 def get_parent_chain_ids(message_id: int) -> List[int]:
     """

@@ -22,10 +22,10 @@ from flask import (
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 
-from common.auth import require_auth, optional_auth
-from common.database import db
-from common.models import Email, get_or_create_user
-from common.messages import (
+from web.decorators.auth import require_auth, optional_auth
+from models.database import db
+from models.models import Email, get_or_create_user
+from models.messages import (
     get_message_by_id,
     get_message_chain,
     get_filtered_messages,
@@ -34,10 +34,10 @@ from common.messages import (
     check_channel_access,
     get_user_allowed_channels
 )
-from common.navigation import navigable, navigable_per_channel
-from common.channel_config import get_channel_manager, AccessLevel
-from common.domain_config import get_domain_manager
-from common.logging_config import get_logger
+from web.decorators.navigation import navigable, navigable_per_channel
+from common.config.channel_config import get_channel_manager, AccessLevel
+from common.config.domain_config import get_domain_manager
+from common.base.logging_config import get_logger
 
 from web.blueprints.admin import is_admin
 from web.blueprints.errors import handle_error

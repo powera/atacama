@@ -11,8 +11,8 @@ from datetime import datetime
 from typing import Optional, Any
 
 # Import the new models
-from common.models import MessageType
-from common.database import db
+from models import MessageType
+from models.database import db
 
 def ensure_datetime(value: Any) -> Optional[datetime]:
     """Convert various formats to datetime or None."""

@@ -10,10 +10,10 @@ from typing import Dict, Any, Optional, List, Tuple
 
 import constants
 
-from common.database import db
-from common.channel_config import init_channel_manager, get_channel_manager
-from common.domain_config import init_domain_manager, get_domain_manager
-from common.logging_config import get_logger
+from models.database import db
+from common.config.channel_config import init_channel_manager, get_channel_manager
+from common.config.domain_config import init_domain_manager, get_domain_manager
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 def load_or_create_secret_key() -> str:
@@ -102,7 +102,7 @@ def create_app(testing: bool = False) -> Flask:
     # Add template context processor for common functions
     @app.context_processor
     def inject_access_functions():
-        from common.messages import get_user_allowed_channels, check_channel_access, check_message_access
+        from models.messages import get_user_allowed_channels, check_channel_access, check_message_access
         
         return {
             'get_user_allowed_channels': get_user_allowed_channels,
@@ -125,7 +125,7 @@ def create_app(testing: bool = False) -> Flask:
     
     # Request logging (skip for testing)
     if not testing:
-        from common.request_logger import RequestLogger
+        from common.base.request_logger import RequestLogger
         request_logger = RequestLogger(app)
 
     # Register blueprints

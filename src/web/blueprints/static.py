@@ -6,7 +6,7 @@ from typing import Any
 from flask import Blueprint, send_from_directory, Response
 
 import constants
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
 

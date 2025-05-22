@@ -16,9 +16,9 @@ from aml_parser.colorblocks import (
 )
 from sqlalchemy.orm import Session
 
-import common.chess  # fen_to_board
-import common.quotes  # save_quotes
-from common.models import Email, Quote
+from aml_parser.chess import fen_to_board
+from models.quotes import save_quotes
+from models import Email, Quote
 
 class HTMLGenerator:
     """
@@ -207,7 +207,7 @@ class HTMLGenerator:
         content = ''.join(self.generate(child) for child in node.children)
 
         if node.color in ('yellow', 'quote') and content and self.db_session and self.message:
-            common.quotes.save_quotes(
+            save_quotes(
                 [{'text': content.strip(), 'quote_type': 'reference'}], 
                 self.message, self.db_session)
 
@@ -267,7 +267,7 @@ class HTMLGenerator:
         template_name = node.token.template_name
         
         if template_name == "pgn":
-            return common.chess.fen_to_board(content)
+            return fen_to_board(content)
         # Delegate other known templates to colorblocks
         # Ensure content is passed, as create_template_html expects it.
         # If template_name is None or not handled by create_template_html, it returns content.

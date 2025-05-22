@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from enum import Enum, auto
 
 # Configure logging
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 class ModelTier(Enum):

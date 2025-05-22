@@ -7,9 +7,9 @@ import enum
 
 from sqlalchemy.orm import DeclarativeBase
 
-from common.channel_config import get_channel_manager
-from common.logging_config import get_logger
-from common.react_compiler import WidgetBuilder
+from common.config.channel_config import get_channel_manager
+from common.base.logging_config import get_logger
+from react_compiler import WidgetBuilder
 logger = get_logger(__name__)
 
 class Base(DeclarativeBase):

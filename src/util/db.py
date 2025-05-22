@@ -4,9 +4,9 @@ import logging
 
 from sqlalchemy.orm import joinedload
   
-from common.channel_config import get_channel_manager, AccessLevel
-from common.database import db
-from common.models import Email, Quote, email_quotes
+from common.config.channel_config import get_channel_manager, AccessLevel
+from models.database import db
+from models.models import Email, Quote, email_quotes
 
 import aml_parser
 

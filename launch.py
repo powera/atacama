@@ -12,9 +12,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 import constants
-from common.logging_config import configure_logging, get_logger
-from common.channel_config import init_channel_manager
-from common.domain_config import init_domain_manager
+from common.base.logging_config import configure_logging, get_logger
+from common.config.channel_config import init_channel_manager
+from common.config.domain_config import init_domain_manager
 
 def get_log_filename():
     """

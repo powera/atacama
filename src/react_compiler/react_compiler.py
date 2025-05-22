@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Dict, Tuple, List, Optional
 
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 # Hack - to ensure that the PATH is set correctly for subprocess calls

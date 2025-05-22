@@ -1,15 +1,17 @@
 from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request, jsonify
 from sqlalchemy import select
 from datetime import datetime
-from common.database import db
-from common.models import ReactWidget, User
-from common.navigation import navigable
-from common.logging_config import get_logger
-from common.channel_config import get_channel_manager
+from models.database import db
+from models.models import ReactWidget, User
+from models.messages import check_channel_access
+from web.decorators.navigation import navigable
+from common.base.logging_config import get_logger
+from common.config.channel_config import get_channel_manager
+from common.config.domain_config import get_domain_manager
 
-from common.messages import get_user_allowed_channels
+from models.messages import get_user_allowed_channels
 
-from common.auth import optional_auth, require_auth, require_admin
+from web.decorators.auth import optional_auth, require_auth, require_admin
 
 logger = get_logger(__name__)
 
@@ -34,7 +36,6 @@ def view_widget(slug):
             return render_template('login.html')
         
         # Check domain restrictions
-        from common.domain_config import get_domain_manager
         domain_manager = get_domain_manager()
         current_domain = g.current_domain
         
@@ -43,7 +44,6 @@ def view_widget(slug):
             return redirect(url_for('content.message_stream'))
         
         # Check user channel access
-        from common.messages import check_channel_access
         if not check_channel_access(widget.channel, user=g.user, ignore_preferences=True):
             flash("You don't have access to this widget.", 'error')
             return redirect(url_for('content.message_stream'))

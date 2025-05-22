@@ -11,7 +11,7 @@ from typing import Dict, Optional, Tuple, Any, List
 import requests
 
 import constants
-from common.telemetry import LLMUsage
+from common.llm.telemetry import LLMUsage
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

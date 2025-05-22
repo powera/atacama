@@ -1,12 +1,12 @@
 from flask import Blueprint, request, render_template, url_for, redirect
 from sqlalchemy import select
 from typing import Dict, Any
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 
-from common.auth import require_auth
-from common.database import db
-from common.models import Quote
-from common.quotes import (
+from web.decorators.auth import require_auth
+from models.database import db
+from models.models import Quote
+from models.quotes import (
     QUOTE_TYPES,
     get_quotes_by_type,
     update_quote,

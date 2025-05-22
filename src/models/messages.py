@@ -7,10 +7,10 @@ from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
-from common.database import db
-from common.models import Email, User
-from common.channel_config import get_channel_manager, AccessLevel
-from common.logging_config import get_logger
+from models.database import db
+from models import Email, User
+from common.config.channel_config import get_channel_manager, AccessLevel
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 
@@ -279,7 +279,7 @@ def get_domain_filtered_messages(
     :param limit: Maximum messages to return
     :return: Tuple of (messages, has_more)
     """
-    from common.domain_config import get_domain_manager
+    from common.config.domain_config import get_domain_manager
     
     # Get user-allowed channels first
     user_allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=False)

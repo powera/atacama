@@ -3,10 +3,10 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, g, session
 from sqlalchemy.exc import SQLAlchemyError
 
-from common.database import db
-from common.channel_config import get_channel_manager
-from common.logging_config import get_logger
-from common.models import get_or_create_user
+from common.config.channel_config import get_channel_manager
+from common.base.logging_config import get_logger
+from models.database import db
+from models.models import get_or_create_user
 
 logger = get_logger(__name__)
 

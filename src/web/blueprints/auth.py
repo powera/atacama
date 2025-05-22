@@ -8,11 +8,11 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
-from common.auth import require_auth
-from common.database import db
-from common.models import get_or_create_user
-from common.logging_config import get_logger
-from common.channel_config import get_channel_manager
+from web.decorators.auth import require_auth
+from models.database import db
+from models.models import get_or_create_user
+from common.base.logging_config import get_logger
+from common.config.channel_config import get_channel_manager
 
 logger = get_logger(__name__)
 

@@ -4,12 +4,11 @@ import json
 from flask import Blueprint, render_template, url_for, g
 from sqlalchemy.orm import joinedload
 
-from common.auth import require_auth
-from common.channel_config import get_channel_manager
-from common.messages import check_channel_access
-from common.navigation import get_navigation_items
-
-from common.logging_config import get_logger
+from web.decorators.auth import require_auth
+from common.config.channel_config import get_channel_manager
+from models.messages import check_channel_access
+from web.decorators.navigation import get_navigation_items
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 nav_bp = Blueprint('nav', __name__)

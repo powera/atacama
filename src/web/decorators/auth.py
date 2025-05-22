@@ -4,9 +4,9 @@ import os
 from functools import wraps
 from flask import render_template, session, g
 
-from common.database import db
-from common.models import get_or_create_user
-from common.user_config import get_user_config_manager
+from models.database import db
+from models import get_or_create_user
+from common.config.user_config import get_user_config_manager
 
 def _populate_user():
     """Helper to populate g.user from session if logged in."""

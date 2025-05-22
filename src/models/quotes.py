@@ -15,9 +15,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from logging import getLogger
 
-import common.openai_client
-from common.models import Quote, Email, email_quotes
-from common.telemetry import LLMUsage
+from common.llm.openai_client import DEFAULT_MODEL, generate_chat
+from common.llm.telemetry import LLMUsage
+from models.models import Email, email_quotes, Quote
 
 logger = getLogger(__name__)
 
@@ -40,7 +40,7 @@ class QuoteValidationError(Exception):
 
 def generate_quote_metadata(
     quote_text: str,
-    model: str = common.openai_client.DEFAULT_MODEL) -> Tuple[Dict[str, Any], LLMUsage]:
+    model: str = DEFAULT_MODEL) -> Tuple[Dict[str, Any], LLMUsage]:
     """
     Generate metadata about a quote using the ChatGPT API.
     
@@ -97,7 +97,7 @@ Format the response as valid JSON."""
         "additionalProperties": False,
     }
 
-    completion_text, metadata, usage = common.openai_client.generate_chat(
+    completion_text, metadata, usage = generate_chat(
         prompt=prompt,
         model=model,
         json_schema=schema

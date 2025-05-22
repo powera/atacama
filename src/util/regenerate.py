@@ -5,8 +5,8 @@ import difflib
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from common.database import db
-from common.models import Email
+from models.database import db
+from models import Email
 from aml_parser.lexer import tokenize
 from aml_parser.parser import parse
 from aml_parser.html_generator import generate_html

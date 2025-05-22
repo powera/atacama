@@ -4,12 +4,12 @@ from datetime import datetime
 from flask import Blueprint, render_template, abort, g, request, redirect, url_for
 from sqlalchemy import select
 
-from common.auth import require_auth, optional_auth
-from common.database import db
-from common.models import Article
-from common.channel_config import get_channel_manager
-from common.messages import check_channel_access
-from common.logging_config import get_logger
+from common.config.channel_config import get_channel_manager
+from common.base.logging_config import get_logger
+from models.models import Article
+from web.decorators.auth import require_auth, optional_auth
+from models.database import db
+from models.messages import check_channel_access
 
 from aml_parser.parser import parse
 from aml_parser.lexer import tokenize

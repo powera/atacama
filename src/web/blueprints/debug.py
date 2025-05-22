@@ -15,13 +15,13 @@ from flask import Blueprint, render_template, jsonify, current_app, session, req
 from sqlalchemy import text, engine
 
 # Local imports
-from common.auth import require_auth
-from common.database import db
-from common.channel_config import get_channel_manager
-from common.messages import check_channel_access
-from common.logging_config import get_logger
-from common.navigation import navigable
-from common.models import Article, ReactWidget, Email, Quote, MessageType
+from web.decorators.auth import require_auth
+from models.database import db
+from common.config.channel_config import get_channel_manager
+from models.messages import check_channel_access
+from common.base.logging_config import get_logger
+from web.decorators.navigation import navigable
+from models.models import Article, ReactWidget, Email, Quote, MessageType
 
 logger = get_logger(__name__)
 

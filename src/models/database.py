@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional, Generator
 
 import constants
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 class DatabaseError(Exception):
@@ -48,7 +48,7 @@ class Database:
             self._engine = create_engine(db_url)
             
             # Import here to avoid circular imports
-            from common.models import Base
+            from models import Base
             Base.metadata.create_all(self._engine)
             
             self._session_factory = sessionmaker(bind=self._engine)

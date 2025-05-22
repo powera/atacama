@@ -3,11 +3,11 @@
 from typing import Tuple, Optional
 from sqlalchemy.orm import Session
 
-from common.database import db
-from common.models import Email
-from common.messages import get_message_by_id
-import common.openai_client
-from common.telemetry import LLMUsage
+from models.database import db
+from models.models import Email
+from models.messages import get_message_by_id
+from common.llm import openai_client
+from common.llm.telemetry import LLMUsage
 
 def analyze_email(email_id: int, model: str = "gpt-4o-mini-2024-07-18") -> Tuple[str, LLMUsage]:
     """
@@ -58,7 +58,7 @@ Subject: {message.subject}
 {message.content}"""
 
     # Request analysis from the model
-    response, _, usage = common.openai_client.generate_chat(
+    response, _, usage = openai_client.generate_chat(
         prompt=prompt,
         model=model,
         context=context

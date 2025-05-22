@@ -9,7 +9,7 @@ import constants
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Set
 
-from common.logging_config import get_logger
+from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 class AccessLevel(enum.Enum):

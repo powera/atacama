@@ -4,12 +4,12 @@ from flask import Blueprint, request, render_template, url_for, redirect, sessio
 from flask import jsonify, g, flash
 from sqlalchemy.orm import joinedload
 
-from common.auth import require_auth
-from common.channel_config import get_channel_manager
-from common.database import db
-from common.logging_config import get_logger
-from common.models import Email, get_or_create_user
-from common.navigation import navigable
+from web.decorators.auth import require_auth
+from common.config.channel_config import get_channel_manager
+from models.database import db
+from common.base.logging_config import get_logger
+from models.models import Email, get_or_create_user
+from web.decorators.navigation import navigable
 
 import aml_parser
 import aml_parser.colorblocks

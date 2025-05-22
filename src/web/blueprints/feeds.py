@@ -18,11 +18,11 @@ from flask import (
 )
 from sqlalchemy import select
 
-from common.database import db
-from common.models import Email
-from common.channel_config import get_channel_manager, AccessLevel
-from common.domain_config import get_domain_manager
-from common.logging_config import get_logger
+from models.database import db
+from models.models import Email
+from common.config.channel_config import get_channel_manager, AccessLevel
+from common.config.domain_config import get_domain_manager
+from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
 

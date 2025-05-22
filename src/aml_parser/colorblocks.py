@@ -71,8 +71,8 @@ def create_chinese_annotation(hanzi: str) -> str:
     """
     # Ensure common.pinyin is importable; consider error handling or type hinting for default_processor
     try:
-        import common.pinyin
-        metadata = common.pinyin.default_processor.get_annotation(hanzi)
+        from aml_parser import pinyin
+        metadata = pinyin.default_processor.get_annotation(hanzi)
         
         attrs = []
         if metadata.pinyin:
