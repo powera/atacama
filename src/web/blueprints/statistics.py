@@ -9,13 +9,12 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from sqlalchemy import func, select, desc
 
 import constants
-from web.decorators.auth import optional_auth
+from web.decorators import optional_auth, navigable
 from common.config.channel_config import AccessLevel, get_channel_manager
 from models.database import db
 from common.base.logging_config import get_logger
 from models.models import Email, User
 from models.messages import get_user_allowed_channels
-from web.decorators.navigation import navigable
 
 logger = get_logger(__name__)
 

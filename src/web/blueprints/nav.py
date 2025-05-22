@@ -4,10 +4,9 @@ import json
 from flask import Blueprint, render_template, url_for, g
 from sqlalchemy.orm import joinedload
 
-from web.decorators.auth import require_auth
+from web.decorators import require_auth, get_navigation_items
 from common.config.channel_config import get_channel_manager
 from models.messages import check_channel_access
-from web.decorators.navigation import get_navigation_items
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 

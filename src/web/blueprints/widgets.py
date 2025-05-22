@@ -4,14 +4,12 @@ from datetime import datetime
 from models.database import db
 from models.models import ReactWidget, User
 from models.messages import check_channel_access
-from web.decorators.navigation import navigable
+from web.decorators import navigable, optional_auth, require_auth, require_admin
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
 
 from models.messages import get_user_allowed_channels
-
-from web.decorators.auth import optional_auth, require_auth, require_admin
 
 logger = get_logger(__name__)
 

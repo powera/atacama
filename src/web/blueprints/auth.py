@@ -8,7 +8,7 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
-from web.decorators.auth import require_auth
+from web.decorators import require_auth
 from models.database import db
 from models.models import get_or_create_user
 from common.base.logging_config import get_logger

@@ -22,7 +22,7 @@ from flask import (
 from sqlalchemy import text, select
 from sqlalchemy.orm import joinedload
 
-from web.decorators.auth import require_auth, optional_auth
+from web.decorators import require_auth, optional_auth, navigable, navigable_per_channel
 from models.database import db
 from models.models import Email, get_or_create_user
 from models.messages import (
@@ -34,7 +34,6 @@ from models.messages import (
     check_channel_access,
     get_user_allowed_channels
 )
-from web.decorators.navigation import navigable, navigable_per_channel
 from common.config.channel_config import get_channel_manager, AccessLevel
 from common.config.domain_config import get_domain_manager
 from common.base.logging_config import get_logger

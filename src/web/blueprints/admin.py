@@ -8,12 +8,11 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from sqlalchemy import select
 
 import constants
-from web.decorators.auth import require_auth
+from web.decorators import require_auth, navigable
 from common.config.channel_config import AccessLevel, get_channel_manager
 from models.database import db
 from common.base.logging_config import get_logger
 from models.models import User, Email
-from web.decorators.navigation import navigable
 from common.config.user_config import get_user_config_manager
 
 logger = get_logger(__name__)
