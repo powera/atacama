@@ -18,20 +18,29 @@ def setup_test_environment():
     # Set testing flag
     os.environ['TESTING'] = 'true'
     
-    # Add src directory to Python path
+    # Save original working directory
+    original_dir = os.getcwd()
+    
+    # Add src directory to Python path and change working directory
     project_root = os.path.dirname(os.path.abspath(__file__))
     src_dir = os.path.join(project_root, 'src')
     if src_dir not in sys.path:
         sys.path.insert(0, src_dir)
     
-    return temp_db.name
+    # Change the working directory to src to make imports work correctly
+    os.chdir(src_dir)
+    
+    return temp_db.name, original_dir
 
-def cleanup_test_environment(db_path: str):
+def cleanup_test_environment(db_path: str, original_dir: str):
     """Clean up test environment."""
     try:
         os.unlink(db_path)
     except Exception as e:
         print(f"Warning: Could not remove test database: {e}")
+    
+    # Restore the original working directory
+    os.chdir(original_dir)
 
 def discover_test_modules() -> dict:
     """
@@ -46,8 +55,8 @@ def discover_test_modules() -> dict:
         'parser': []
     }
     
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    test_dir = os.path.join(project_root, 'src', 'tests')
+    # Since we've changed the working directory to src, the tests are now in ./tests
+    test_dir = os.path.join(os.getcwd(), 'tests')
     
     # Scan test directories
     for category in categories:
@@ -79,8 +88,8 @@ def run_test_suite(categories: Optional[List[str]] = None,
     Returns:
         bool: True if all tests passed
     """
-    # Set up test database
-    db_path = setup_test_environment()
+    # Set up test database and save original directory
+    db_path, original_dir = setup_test_environment()
     
     try:
         # Initialize coverage if requested
@@ -144,7 +153,7 @@ def run_test_suite(categories: Optional[List[str]] = None,
         return result.wasSuccessful()
         
     finally:
-        cleanup_test_environment(db_path)
+        cleanup_test_environment(db_path, original_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

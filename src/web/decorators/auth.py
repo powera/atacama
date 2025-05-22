@@ -20,13 +20,21 @@ def _populate_user():
         g.user = None
 
 def optional_auth(f):
-    @wraps(f) 
+    """Decorator that optionally populates g.user if a user is logged in, allowing access to both authenticated and unauthenticated users."""
+    @wraps(f)
     def decorated_function(*args, **kwargs):
         _populate_user()
         return f(*args, **kwargs)
     return decorated_function
 
 def require_auth(f):
+    """
+    Decorator to require authentication before accessing a route.
+    
+    If a user is not logged in (i.e., 'user' is not in the session), this
+    redirects to the login page. Otherwise, populate g.user and call the
+    decorated function.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
@@ -40,6 +48,13 @@ def require_auth(f):
     return decorated_function
 
 def require_admin(f):
+    """
+    Decorator that requires admin access before accessing a route.
+    
+    If a user is not logged in (i.e., 'user' is not in the session), this
+    redirects to the login page. Otherwise, populate g.user and check if
+    the user has admin access. If not, return a 403 error.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
