@@ -1,19 +1,21 @@
 """Admin functionality for managing user access to restricted channels."""
 
-import json
-from datetime import datetime
 from typing import Dict, List
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
-from sqlalchemy import select
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 import constants
-from web.decorators import require_auth, navigable
+from common.base.logging_config import get_logger
 from common.config.channel_config import AccessLevel, get_channel_manager
 from models.database import db
-from common.base.logging_config import get_logger
 from models.models import User, Email
-from common.config.user_config import get_user_config_manager
+from models.users import (
+    is_user_admin, get_user_by_id,
+    grant_channel_access_by_id, revoke_channel_access_by_id, get_user_channel_access_by_id,
+    get_all_users
+)
+from models.messages import get_message_by_id
+from web.decorators import require_auth, navigable
 
 logger = get_logger(__name__)
 
@@ -23,8 +25,7 @@ def is_admin() -> bool:
     """Check if current user has admin access."""
     if not hasattr(g, 'user') or not g.user:
         return False
-    user_config_manager = get_user_config_manager()
-    return user_config_manager.is_admin(g.user.email)
+    return is_user_admin(g.user.email)
 
 @admin_bp.route('/admin/users')
 @require_auth
@@ -36,14 +37,13 @@ def list_users():
         return redirect(url_for('content.landing_page'))
         
     with db.session() as db_session:
-        # Use SQLAlchemy 2.0 style query
-        stmt = select(User).order_by(User.email)
-        users = db_session.execute(stmt).scalars().all()
+        # Get all users using the function from models.users
+        users = get_all_users(db_session)
         
         # Get channel access for each user
         user_access = []
         for user in users:
-            access = json.loads(user.admin_channel_access or '{}')
+            access = get_user_channel_access_by_id(db_session, user.id)
             user_access.append({
                 'user': user,
                 'access': access
@@ -82,21 +82,16 @@ def grant_access(user_id: int):
         return redirect(url_for('admin.list_users'))
         
     with db.session() as db_session:
-        # Use SQLAlchemy 2.0 style query
-        stmt = select(User).where(User.id == user_id)
-        user = db_session.execute(stmt).scalar_one_or_none()
+        # Update admin channel access using convenience function
+        success = grant_channel_access_by_id(db_session, user_id, channel)
         
-        if not user:
-            flash('User not found')
-            return redirect(url_for('admin.list_users'))
-            
-        # Update admin channel access
-        access = json.loads(user.admin_channel_access or '{}')
-        access[channel] = datetime.utcnow().isoformat()
-        user.admin_channel_access = json.dumps(access)
-        
-        db_session.commit()
-        flash(f'Granted {channel} access to {user.email}')
+        if success:
+            db_session.commit()
+            # Get user for display purposes only
+            user = get_user_by_id(db_session, user_id)
+            flash(f'Granted {channel} access to {user.email}')
+        else:
+            flash(f'Failed to grant {channel} access (user not found or invalid channel)')
         
     return redirect(url_for('admin.list_users'))
 
@@ -120,21 +115,16 @@ def revoke_access(user_id: int):
         return redirect(url_for('admin.list_users'))
         
     with db.session() as db_session:
-        # Use SQLAlchemy 2.0 style query
-        stmt = select(User).where(User.id == user_id)
-        user = db_session.execute(stmt).scalar_one_or_none()
+        # Update admin channel access using convenience function
+        success = revoke_channel_access_by_id(db_session, user_id, channel)
         
-        if not user:
-            flash('User not found')
-            return redirect(url_for('admin.list_users'))
-            
-        # Update admin channel access
-        access = json.loads(user.admin_channel_access or '{}')
-        access.pop(channel, None)
-        user.admin_channel_access = json.dumps(access)
-        
-        db_session.commit()
-        flash(f'Revoked {channel} access from {user.email}')
+        if success:
+            db_session.commit()
+            # Get user for display purposes only
+            user = get_user_by_id(db_session, user_id)
+            flash(f'Revoked {channel} access from {user.email}')
+        else:
+            flash(f'Failed to revoke {channel} access (user not found or invalid channel)')
         
     return redirect(url_for('admin.list_users'))
 
@@ -158,9 +148,7 @@ def rechannel_message(message_id: int):
         return redirect(url_for('content.get_message', message_id=message_id))
         
     with db.session() as db_session:
-        # Use SQLAlchemy 2.0 style query
-        stmt = select(Email).where(Email.id == message_id)
-        message = db_session.execute(stmt).scalar_one_or_none()
+        message = get_message_by_id(db_session, message_id)
         
         if not message:
             flash('Message not found')

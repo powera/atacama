@@ -24,7 +24,8 @@ from sqlalchemy.orm import joinedload
 
 from web.decorators import require_auth, optional_auth, navigable, navigable_per_channel
 from models.database import db
-from models.models import Email, get_or_create_user
+from models.models import Email
+from models import get_or_create_user
 from models.messages import (
     get_message_by_id,
     get_message_chain,

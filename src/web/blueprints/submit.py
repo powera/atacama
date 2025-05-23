@@ -8,7 +8,8 @@ from web.decorators import require_auth, navigable
 from common.config.channel_config import get_channel_manager
 from models.database import db
 from common.base.logging_config import get_logger
-from models.models import Email, get_or_create_user
+from models.models import Email
+from models import get_or_create_user
 
 import aml_parser
 import aml_parser.colorblocks

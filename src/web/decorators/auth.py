@@ -75,10 +75,3 @@ def require_admin(f):
     decorated_function.__auth_required__ = True
     decorated_function.__admin_required__ = True
     return decorated_function
-
-
-def is_admin() -> bool:
-    """Check if current user has admin access."""
-    if not hasattr(g, 'user') or not g.user:
-        return False
-    

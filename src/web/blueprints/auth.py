@@ -10,7 +10,7 @@ from google.auth.transport import requests
 
 from web.decorators import require_auth
 from models.database import db
-from models.models import get_or_create_user
+from models import get_or_create_user
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 

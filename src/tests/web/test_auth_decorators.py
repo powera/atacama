@@ -5,7 +5,7 @@ import os
 from unittest.mock import patch, MagicMock
 from flask import Flask, g, session, request, render_template
 
-from web.decorators.auth import _populate_user, require_auth, optional_auth, require_admin, is_admin
+from web.decorators.auth import _populate_user, require_auth, optional_auth, require_admin
 from models.models import User
 
 class AuthDecoratorsTests(unittest.TestCase):
@@ -39,9 +39,10 @@ class AuthDecoratorsTests(unittest.TestCase):
         
     def tearDown(self):
         """Clean up after tests."""
-        # Clear Flask globals
-        if hasattr(g, 'user'):
-            delattr(g, 'user')
+        # Clear Flask globals only if we're in an application context
+        with self.app.app_context():
+            if hasattr(g, 'user'):
+                delattr(g, 'user')
     
     def test_populate_user_with_user_in_session(self):
         """Test _populate_user when user is in session."""
@@ -265,7 +266,8 @@ class AuthDecoratorsTests(unittest.TestCase):
             mock_config_manager.return_value = mock_manager
             
             # Set up mock render_template to return a 403 error page
-            mock_render.return_value = ('Forbidden', 403)
+            # Flask expects a tuple with (response, status_code) or a Response object
+            mock_render.return_value = 'Forbidden'
             
             # Create a mock session context manager
             mock_session_instance = MagicMock()
@@ -290,43 +292,6 @@ class AuthDecoratorsTests(unittest.TestCase):
             # Verify that render_template was called with error.html
             mock_render.assert_called_once()
             self.assertEqual(mock_render.call_args[0][0], 'error.html')
-    
-    def test_is_admin_function_with_admin_user(self):
-        """Test is_admin function with an admin user."""
-        # Mock user data
-        mock_user = User(id=1, email="admin@example.com", name="Admin User")
-        
-        # Mock the user_config_manager
-        with patch('web.decorators.auth.get_user_config_manager') as mock_config_manager:
-            # Set up the mock user config manager to return True for is_admin
-            mock_manager = MagicMock()
-            mock_manager.is_admin.return_value = True
-            mock_config_manager.return_value = mock_manager
-            
-            # Set up the Flask context with g.user set to the admin user
-            with self.app.app_context():
-                with self.app.test_request_context():
-                    g.user = mock_user
-                    
-                    # Call the function under test
-                    result = is_admin()
-                    
-                    # Verify that the result is True
-                    self.assertTrue(result)
-                    
-                    # Verify that is_admin was called with the correct email
-                    mock_manager.is_admin.assert_called_once_with(mock_user.email)
-    
-    def test_is_admin_function_with_no_user(self):
-        """Test is_admin function when g.user is not set."""
-        # Set up the Flask context without g.user
-        with self.app.app_context():
-            with self.app.test_request_context():
-                # Call the function under test
-                result = is_admin()
-                
-                # Verify that the result is False
-                self.assertFalse(result)
     
     def test_require_admin_sets_admin_required_attribute(self):
         """Test that require_admin sets the __admin_required__ attribute on the decorated function."""

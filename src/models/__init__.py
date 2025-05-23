@@ -7,7 +7,6 @@ from .models import (
     MessageType,
     ReactWidget,
     Article,
-    get_or_create_user,
     email_quotes,
     article_quotes
 )
@@ -44,4 +43,8 @@ from .quotes import (
     search_quotes,
     update_quote,
     delete_quote
+)
+
+from .users import (
+    get_or_create_user,
 )

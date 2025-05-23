@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
 from models.database import db
-from models.models import get_or_create_user
+from models import get_or_create_user
 
 logger = get_logger(__name__)
 

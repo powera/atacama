@@ -9,6 +9,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
+
 from react_compiler import WidgetBuilder
 logger = get_logger(__name__)
 
@@ -258,11 +259,3 @@ class ReactWidget(Message):
             raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
         return slug.lower()
 
-def get_or_create_user(db_session, request_user) -> User:
-    """Get existing user or create new one."""
-    db_user = db_session.query(User).options(joinedload('*')).filter_by(email=request_user["email"]).first()
-    if not db_user:
-        db_user = User(email=request_user["email"], name=request_user["name"])
-        db_session.add(db_user)
-        db_session.flush()
-    return db_user

@@ -8,100 +8,12 @@ from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
 from models.database import db
-from models import Email, User
+from models import Email, User, Message
+from models.users import (get_user_email_domain, check_admin_approval,
+                         check_channel_access, get_user_allowed_channels)
 from common.config.channel_config import get_channel_manager, AccessLevel
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
-
-
-def get_user_email_domain(user: Optional[User]) -> Optional[str]:
-    """
-    Extract domain from user's email.
-    
-    :param user: User session dictionary
-    :return: Domain string or None if no email
-    """
-    if not user or not user.email:
-        return None
-    return user.email.split('@')[-1]
-
-
-def check_admin_approval(user_id: int, channel: str) -> bool:
-    """
-    Check if user has been granted access to admin-controlled channel.
-    
-    :param user_id: Database ID of user
-    :param channel: Channel name to check
-    :return: True if user has access, False otherwise
-    """
-    with db.session() as db_session:
-        user = db_session.query(User).get(user_id)
-        if not user:
-            return False
-            
-        # Load admin channel access
-        access = json.loads(user.admin_channel_access or '{}')
-        return channel in access
-
-
-def check_channel_access(channel: str, user: Optional[User] = None, 
-                        ignore_preferences: bool = False) -> bool:
-    """
-    Check if user has access to the specified channel.
-    
-    :param channel: Channel name to check access for
-    :param user: Optional User model instance
-    :param ignore_preferences: If True, only check system restrictions
-    :return: True if user can access channel, False otherwise
-    """
-    if channel is None:
-        channel = "private"
-        
-    channel_manager = get_channel_manager()
-    config = channel_manager.get_channel_config(channel)
-    if not config:
-        logger.error(f"No configuration found for channel {channel}")
-        return False
-
-    # First check system access restrictions
-    has_admin_access = user and check_admin_approval(user.id, channel)
-    system_access = channel_manager.check_system_access(
-        channel, 
-        email=user.email if user else None,
-        has_admin_access=has_admin_access
-    )
-    
-    if not system_access:
-        return False
-        
-    # If ignoring preferences or no user, we're done
-    if ignore_preferences or not user:
-        return True
-        
-    # Check user's channel preferences
-    try:
-        prefs = json.loads(user.channel_preferences or '{}')
-        return prefs.get(channel, True)  # Default to enabled if not set
-    except json.JSONDecodeError:
-        logger.error(f"Invalid channel preferences for user {user.id}")
-        return True
-
-
-def get_user_allowed_channels(user: Optional[User] = None, 
-                            ignore_preferences: bool = False) -> List[str]:
-    """
-    Get list of channels the user can access.
-    
-    :param user: Optional User model instance
-    :param ignore_preferences: If True, only check system restrictions
-    :return: List of accessible channel names
-    """
-    allowed = []
-    channel_manager = get_channel_manager()
-    for channel in channel_manager.get_channel_names():
-        if check_channel_access(channel, user, ignore_preferences):
-            allowed.append(channel)
-    return allowed
 
 
 def check_message_access(message: Email, ignore_preferences: bool = True) -> bool:
@@ -307,3 +219,15 @@ def get_domain_filtered_messages(
         allowed_channels=user_allowed_channels,
         limit=limit
     )
+
+
+def get_message_by_id(db_session, message_id: int) -> Optional[Message]:
+    """
+    Retrieve a message by ID.
+    
+    :param db_session: SQLAlchemy session
+    :param message_id: ID of the message to retrieve
+    :return: Email object if found, None otherwise
+    """
+    stmt = select(Message).where(Message.id == message_id)
+    return db_session.execute(stmt).scalar_one_or_none()
