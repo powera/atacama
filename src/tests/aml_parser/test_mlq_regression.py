@@ -10,9 +10,6 @@ import unittest
 import sys
 import os
 
-# Adjust path to import from src
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
 from aml_parser.lexer import tokenize
 from aml_parser.parser import parse, NodeType
 from aml_parser.html_generator import generate_html
