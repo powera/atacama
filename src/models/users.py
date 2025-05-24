@@ -17,6 +17,8 @@ logger = get_logger(__name__)
 
 def is_user_admin(email: str) -> bool:
     """Check if a user is an admin based on their email."""
+    if not email:
+        return False
     user_config_manager = get_user_config_manager()
     return user_config_manager.is_admin(email)
 

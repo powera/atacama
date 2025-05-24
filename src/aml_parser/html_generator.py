@@ -86,9 +86,13 @@ class HTMLGenerator:
             elif child_node.type == NodeType.MORE_TAG:
                 flush_paragraph()
                 flush_list()
-                final_html_segments.append('<p class="readmore">Read More ...</p>')
                 if self.truncated:
-                    break 
+                    # When truncated, show a message suggesting to click the title to read more
+                    final_html_segments.append('<p class="readmore">Click title to read full message...</p>')
+                    break
+                else:
+                    # When showing full content, display a sigil instead
+                    final_html_segments.append('<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>')
             
             elif child_node.type == NodeType.LIST_ITEM:
                 flush_paragraph()  # End current paragraph before starting/continuing a list
@@ -171,8 +175,16 @@ class HTMLGenerator:
         return '<hr class="section-break" />'
 
     def _generate_more_tag(self, node: Node) -> str:
-        """MORE_TAG nodes are handled structurally in _generate_document, may not produce direct output here."""
-        return "" # Or specific HTML if it had a visual representation beyond "Read More..."
+        """
+        Generate HTML for a MORE_TAG node.
+        
+        This is primarily handled in _generate_document for structural flow control,
+        but this method can be called directly if needed.
+        """
+        if self.truncated:
+            return '<p class="readmore">Click title to read full message...</p>'
+        else:
+            return '<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>'
     
     def _generate_mlq(self, node: Node) -> str:
         """Generate HTML for a multi-line quote block."""

@@ -1,46 +1,45 @@
 """Blueprint for handling content pages and message display."""
 
+# Standard library imports
 import json
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+# Third-party imports
 from flask import (
-    Blueprint, 
-    render_template, 
-    jsonify, 
-    request, 
-    session,
-    render_template_string,
-    make_response,
+    Blueprint,
     Response,
-    redirect, 
-    url_for, 
     flash,
     g,
-    abort
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for
 )
-from sqlalchemy import text, select
+from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload
 
-from web.decorators import require_auth, optional_auth, navigable, navigable_per_channel
-from models.database import db
-from models.models import Email
+# Local application imports
+from common.base.logging_config import get_logger
+from common.config.channel_config import AccessLevel, get_channel_manager
+from common.config.domain_config import get_domain_manager
 from models import get_or_create_user
+from models.database import db
 from models.messages import (
+    check_channel_access,
+    check_message_access,
+    get_domain_filtered_messages,
+    get_filtered_messages,
     get_message_by_id,
     get_message_chain,
-    get_filtered_messages,
-    get_domain_filtered_messages,
-    check_message_access,
-    check_channel_access,
     get_user_allowed_channels
 )
-from common.config.channel_config import get_channel_manager, AccessLevel
-from common.config.domain_config import get_domain_manager
-from common.base.logging_config import get_logger
-
-from web.blueprints.admin import is_admin
+from models.models import Email
+from models.users import is_user_admin
 from web.blueprints.errors import handle_error
+from web.decorators import navigable, navigable_per_channel, optional_auth, require_auth
 
 logger = get_logger(__name__)
 
@@ -92,10 +91,7 @@ def channel_preferences():
             preferences=current_prefs,
             channels=filtered_channels,
             user=user,
-            user_email=user.email,
-            channel_manager=channel_manager,
-            domain_manager=domain_manager,
-            current_domain=current_domain
+            user_email=user.email
         )
 
 
@@ -115,22 +111,34 @@ def get_message(message_id: int) -> Response:
         message = db_session.query(Email).get(message_id)
         
         if not message:
-            return jsonify({'error': 'Message not found'}), 404
+            return handle_error(
+                "404",
+                "Message Not Found",
+                "The requested message could not be found.",
+                f"Message ID: {message_id}"
+            )
             
         # Check channel access for domain
         if not domain_manager.is_channel_allowed(current_domain, message.channel):
-            if request.headers.get('Accept', '').startswith('text/html'):
-                abort(404, f"Message not available on this domain")
-            return jsonify({'error': 'Message not available on this domain'}), 404
+            return handle_error(
+                "404",
+                "Message Not Available",
+                "This message is not available on this domain.",
+                f"Message channel {message.channel} not allowed on domain {current_domain}"
+            )
             
         if not check_message_access(message):
             if request.headers.get('Accept', '').startswith('text/html'):
                 return redirect(url_for('auth.login'))
-            return jsonify({'error': 'Authentication required'}), 401
+            return handle_error(
+                "401",
+                "Authentication Required",
+                "You need to be logged in to view this message.",
+                "Message requires authentication"
+            )
         
         if request.headers.get('Accept', '').startswith('text/html'):
-            channel_manager = get_channel_manager()
-            channel_config = channel_manager.get_channel_config(message.channel)
+            channel_config = get_channel_manager().get_channel_config(message.channel)
             
             return render_template(
                 'message.html',
@@ -139,10 +147,7 @@ def get_message(message_id: int) -> Response:
                 raw_content=message.content,
                 quotes=message.quotes,
                 channel=message.channel,
-                channel_manager=channel_manager,
-                channel_config=channel_config,
-                domain_manager=domain_manager,
-                current_domain=current_domain
+                channel_config=channel_config
             )
                 
         return jsonify({
@@ -181,15 +186,17 @@ def view_chain(message_id: int) -> Response:
     
     # Check domain access for the chain (based on first message's channel)
     if chain and not domain_manager.is_channel_allowed(current_domain, chain[0].channel):
-        if request.headers.get('Accept', '').startswith('text/html'):
-            abort(404, f"Message chain not available on this domain")
-        return jsonify({'error': 'Message chain not available on this domain'}), 404
+        return handle_error(
+            "404",
+            "Chain Not Available",
+            "This message chain is not available on this domain.",
+            f"Message channel {chain[0].channel} not allowed on domain {current_domain}"
+        )
     
     # Format timestamps and get channel configuration
-    channel_manager = get_channel_manager()
     channel_config = None
     if chain:
-        channel_config = channel_manager.get_channel_config(chain[0].channel)
+        channel_config = get_channel_manager().get_channel_config(chain[0].channel)
         for message in chain:
             message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
     
@@ -199,10 +206,7 @@ def view_chain(message_id: int) -> Response:
             messages=chain,
             target_id=message_id,
             channel=chain[0].channel if chain else None,
-            channel_manager=channel_manager,
-            channel_config=channel_config,
-            domain_manager=domain_manager,
-            current_domain=current_domain
+            channel_config=channel_config
         )
     
     return jsonify({
@@ -257,7 +261,6 @@ def message_stream(older_than_id: Optional[int] = None,
             # If timestamp is invalid, ignore it
             pass
 
-    channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
     current_domain = g.current_domain
     
@@ -265,9 +268,14 @@ def message_stream(older_than_id: Optional[int] = None,
     if channel:
         # First check if channel is allowed on this domain
         if not domain_manager.is_channel_allowed(current_domain, channel):
-            abort(404, f"Channel not available on this domain")
+            return handle_error(
+                "404",
+                "Channel Not Available",
+                "This channel is not available on this domain.",
+                f"Channel {channel} not allowed on domain {current_domain}"
+            )
             
-        config = channel_manager.get_channel_config(channel)
+        config = get_channel_manager().get_channel_config(channel)
         if config and config.requires_auth and 'user' not in session:
             return redirect(url_for('auth.login'))
     
@@ -317,10 +325,7 @@ def message_stream(older_than_id: Optional[int] = None,
             older_than_tstime=older_than_next_tstime,
             use_id_pagination=use_id_pagination,
             current_channel=channel,
-            available_channels=domain_allowed_channels,
-            channel_manager=channel_manager,
-            domain_manager=domain_manager,
-            current_domain=current_domain
+            available_channels=domain_allowed_channels
         )
 
 
@@ -381,12 +386,9 @@ def landing_page():
             db_status=db_status,
             messages=messages,
             user=session.get('user'),
-            is_admin=is_admin(),
+            is_admin=is_user_admin(g.user.email if g.user else None),
             available_channels=available_channels,
-            channel_configs=channel_manager.channels,
-            channel_manager=channel_manager,
-            domain_manager=domain_manager,
-            current_domain=current_domain
+            channel_configs=channel_manager.channels
         )
     
 
@@ -409,11 +411,21 @@ def channel_list(channel: str) -> Response:
     # Check if channel exists
     config = channel_manager.get_channel_config(channel)
     if not config:
-        abort(404, f"Channel '{channel}' not found")
+        return handle_error(
+            "404",
+            "Channel Not Found",
+            f"Channel '{channel}' not found",
+            f"No configuration for channel {channel}"
+        )
         
     # Check domain access for channel
     if not domain_manager.is_channel_allowed(current_domain, channel):
-        abort(404, f"Channel not available on this domain")
+        return handle_error(
+            "404",
+            "Channel Not Available",
+            "This channel is not available on this domain.",
+            f"Channel {channel} not allowed on domain {current_domain}"
+        )
         
     # Check authentication if required
     if config.requires_auth and 'user' not in session:
@@ -453,8 +465,5 @@ def channel_list(channel: str) -> Response:
             per_page=per_page,
             total_pages=total_pages,
             has_prev=has_prev,
-            has_next=has_next,
-            channel_manager=channel_manager,
-            domain_manager=domain_manager,
-            current_domain=current_domain
+            has_next=has_next
         )

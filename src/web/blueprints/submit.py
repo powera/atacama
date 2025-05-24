@@ -1,18 +1,17 @@
 """Blueprint for message submission and preview functionality."""
 
-from flask import Blueprint, request, render_template, url_for, redirect, session
-from flask import jsonify, g, flash
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 from sqlalchemy.orm import joinedload
-
-from web.decorators import require_auth, navigable
-from common.config.channel_config import get_channel_manager
-from models.database import db
-from common.base.logging_config import get_logger
-from models.models import Email
-from models import get_or_create_user
 
 import aml_parser
 import aml_parser.colorblocks
+from common.base.logging_config import get_logger
+from common.config.channel_config import get_channel_manager
+from models import get_or_create_user
+from models.database import db
+from models.models import Email
+from web.blueprints.errors import handle_error
+from web.decorators import navigable, require_auth
 
 logger = get_logger(__name__)
 submit_bp = Blueprint('submit', __name__)
@@ -31,11 +30,11 @@ def preview_message():
     :raises: HTTP 500 if processing fails
     """
     if not request.is_json:
-        return jsonify({'error': 'Request must be JSON'}), 400
+        return handle_error("400", "Bad Request", "Request must be JSON")
         
     data = request.get_json()
     if not data or 'content' not in data:
-        return jsonify({'error': 'Content required'}), 400
+        return handle_error("400", "Bad Request", "Content required")
         
     try:
         processed_content = aml_parser.process_message(
@@ -48,7 +47,7 @@ def preview_message():
         
     except Exception as e:
         logger.error(f"Error processing preview: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return handle_error("500", "Processing Error", "Failed to process message preview", str(e))
 
 @submit_bp.route('/submit', methods=['GET'])
 @require_auth
@@ -71,10 +70,9 @@ def show_submit_form():
         return render_template(
             'submit.html',
             recent_messages=recent_messages,
-            colors=aml_parser.colorblocks.COLORS,
             channels=channel_manager.channels,
-            channel_manager=channel_manager,
-            default_channel=channel_manager.default_channel)
+            default_channel=channel_manager.default_channel,
+            colors=aml_parser.colorblocks.COLORS)
 
 @submit_bp.route('/submit', methods=['POST'])
 @require_auth
@@ -93,50 +91,56 @@ def handle_submit():
     parent_id = request.form.get('parent_id')
 
     if not subject or not content:
-        return render_template('error.html', error_code=422), 422
+        return handle_error("422", "Validation Error", "Subject and content are required")
 
-    with db.session() as db_session:
-        # Get fresh user object within transaction
-        db_user = get_or_create_user(db_session, session['user'])
+    try:
+        with db.session() as db_session:
+            # Get fresh user object within transaction
+            db_user = get_or_create_user(db_session, session['user'])
+            
+            # Create message
+            message = Email(
+                subject=subject,
+                content=content,
+                author=db_user,
+                channel=channel
+            )
+
+            # Handle message chain if parent_id is provided
+            if parent_id and parent_id.strip():
+                try:
+                    parent_id = int(parent_id)
+                    parent = db_session.query(Email).get(parent_id)
+                    if parent:
+                        message.parent = parent
+                    else:
+                        logger.warning(f"Parent message {parent_id} not found")
+                except ValueError:
+                    logger.warning(f"Invalid parent_id format: {parent_id}")
+
+            # Add message to session before processing content
+            db_session.add(message)
+
+            # Process content with access to the message object
+            message.processed_content = aml_parser.process_message(
+                content,
+                message=message,
+                db_session=db_session
+            )
+            
+            message.preview_content = aml_parser.process_message(
+                content,
+                message=message,
+                db_session=db_session,
+                truncated=True
+            )
+            
+            db_session.commit()
+            message_id = message.id  # Get ID before session closes
         
-        # Create message
-        message = Email(
-            subject=subject,
-            content=content,
-            author=db_user,
-            channel=channel
-        )
-
-        # Handle message chain if parent_id is provided
-        if parent_id and parent_id.strip():
-            try:
-                parent_id = int(parent_id)
-                parent = db_session.query(Email).get(parent_id)
-                if parent:
-                    message.parent = parent
-                else:
-                    logger.warning(f"Parent message {parent_id} not found")
-            except ValueError:
-                logger.warning(f"Invalid parent_id format: {parent_id}")
-
-        # Add message to session before processing content
-        db_session.add(message)
-
-        # Process content with access to the message object
-        message.processed_content = aml_parser.process_message(
-            content,
-            message=message,
-            db_session=db_session
-        )
-        # Process content with access to the message object
-        message.preview_content = aml_parser.process_message(
-            content,
-            message=message,
-            db_session=db_session,
-            truncated=True
-        )
-        db_session.commit()
-        message_id = message.id  # Get ID before session closes
-    
-    flash('Message submitted successfully!', 'success')
-    return redirect(url_for('content.get_message', message_id=message_id))
+        flash('Message submitted successfully!', 'success')
+        return redirect(url_for('content.get_message', message_id=message_id))
+        
+    except Exception as e:
+        logger.error(f"Error submitting message: {str(e)}")
+        return handle_error("500", "Submission Error", "Failed to submit message", str(e))

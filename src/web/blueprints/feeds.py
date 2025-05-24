@@ -1,28 +1,25 @@
 """Blueprint for RSS feeds and sitemaps."""
 
-import json
+from datetime import datetime
 import html
 import re
-from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional
 
 from flask import (
-    Blueprint, 
-    request, 
-    make_response,
-    Response,
-    render_template_string,
-    jsonify,
+    Blueprint,
     g,
-    abort
+    make_response,
+    render_template_string,
+    request,
+    Response
 )
-from sqlalchemy import select
 
+from common.base.logging_config import get_logger
+from common.config.channel_config import AccessLevel, get_channel_manager
+from common.config.domain_config import get_domain_manager
 from models.database import db
 from models.models import Email
-from common.config.channel_config import get_channel_manager, AccessLevel
-from common.config.domain_config import get_domain_manager
-from common.base.logging_config import get_logger
+from web.blueprints.errors import handle_error
 
 logger = get_logger(__name__)
 
@@ -39,7 +36,6 @@ def sitemap() -> Response:
     channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
     current_domain = g.current_domain
-    domain_config = domain_manager.get_domain_config(current_domain)
     
     with db.session() as db_session:
         messages = db_session.query(Email).order_by(Email.created_at.desc()).all()
@@ -109,13 +105,13 @@ def rss_feed(channel: Optional[str] = None) -> Response:
     if channel:
         # Check if channel is allowed on this domain
         if not domain_manager.is_channel_allowed(current_domain, channel):
-            return abort(404, f"Channel not available on this domain")
+            return handle_error("404", "Channel Not Found", "Channel not available on this domain")
         
         config = channel_manager.get_channel_config(channel)
         if not config:
-            return jsonify({'error': 'Channel not found'}), 404
+            return handle_error("404", "Channel Not Found", "The requested channel does not exist")
         if config.access_level != AccessLevel.PUBLIC:
-            return jsonify({'error': 'Channel is not public'}), 403
+            return handle_error("403", "Access Denied", "This channel is not public")
         site_title += f" - {config.get_display_name(channel)}"
         
     with db.session() as db_session:
@@ -138,8 +134,9 @@ def rss_feed(channel: Optional[str] = None) -> Response:
         # Process each message for RSS
         items = []
         for message in public_messages:
-            # Convert HTML to RSS-friendly format
-            content = clean_html_for_rss(message.processed_content)
+            # Use preview_content if available, otherwise use processed_content
+            content_to_clean = message.preview_content if message.preview_content else message.processed_content
+            content = clean_html_for_rss(content_to_clean)
             
             # Add author info if available
             author = ""
@@ -218,10 +215,6 @@ def clean_html_for_rss(html_content: str) -> str:
         sigil_match = re.search(r'<span class="sigil">(.*?)</span>', full_match, re.DOTALL)
         
         if content_match:
-            # Get the color class
-            color_class_match = re.search(r'class="colorblock color-(.*?)"', full_match)
-            color_name = color_class_match.group(1) if color_class_match else "unknown"
-            
             # Find the sigil for this color (emoji)
             sigil = ""
             if sigil_match:
@@ -230,7 +223,7 @@ def clean_html_for_rss(html_content: str) -> str:
             # Extract the content
             content = content_match.group(1)
             
-            # Format as [color_name: content] with sigil
+            # Format with sigil
             return f"{sigil} {content}"
         return full_match
     

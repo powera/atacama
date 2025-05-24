@@ -399,6 +399,59 @@ hr {
     width: 75%;
 }
 
+/* Read more message */
+.readmore {
+    text-align: center;
+    margin: var(--spacing-large) 0;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    font-size: 0.9em;
+    padding: 0.5em;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: var(--border-radius);
+}
+
+[data-theme="high-contrast"] .readmore {
+    border: 1px dashed var(--color-text);
+    padding: 0.7em;
+    font-weight: 500;
+}
+
+/* Content sigil - marks where extended content begins */
+.content-sigil {
+    text-align: center;
+    font-size: 1.5em;
+    color: var(--color-text-secondary);
+    margin: var(--spacing-large) auto;
+    padding: 0.5em 0;
+    letter-spacing: 0.5em;
+    width: 75%;
+    position: relative;
+}
+
+.content-sigil::before,
+.content-sigil::after {
+    content: "";
+    position: absolute;
+    height: 1px;
+    background-color: var(--color-border);
+    width: 30%;
+    top: 50%;
+}
+
+.content-sigil::before {
+    left: 0;
+}
+
+.content-sigil::after {
+    right: 0;
+}
+
+[data-theme="high-contrast"] .content-sigil {
+    border-top: 1px dashed var(--color-text);
+    border-bottom: 1px dashed var(--color-text);
+}
+
 /* Mobile adjustments */
 @media screen and (max-width: 768px) {
     .message {
@@ -413,6 +466,22 @@ hr {
     .annotation-inline.expanded {
         margin: var(--spacing-base) calc(-1 * var(--spacing-base));
         border-radius: 0;
+    }
+    
+    .content-sigil {
+        width: 90%;
+        font-size: 1.2em;
+        margin: var(--spacing-base) auto;
+    }
+    
+    .content-sigil::before,
+    .content-sigil::after {
+        width: 20%;
+    }
+    
+    .readmore {
+        margin: var(--spacing-base) 0;
+        font-size: 0.85em;
     }
     
     .message.single-view .message-body {
