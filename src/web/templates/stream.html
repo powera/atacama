@@ -65,7 +65,7 @@
             </header>
             <div class="message-body">
                 <div class="message-main">
-                    {{ message.processed_content | safe }}
+                    {{ (message.preview_content if message.preview_content else message.processed_content) | safe }}
                 </div>
                 <div class="message-sidebar"></div>
             </div>
