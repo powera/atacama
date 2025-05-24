@@ -160,7 +160,7 @@ def save_quotes(quotes: List[Dict], message: Email, db_session: Session) -> None
             quote = Quote(
                 text=quote_data['text'],
                 quote_type=quote_data.get('quote_type', 'personal'),
-                author=quote_data.get('author'),
+                original_author=quote_data.get('original_author'),
                 source=quote_data.get('source'),
                 date=quote_data.get('date'),
                 commentary=quote_data.get('commentary')
@@ -214,7 +214,7 @@ def search_quotes(
     # Build search conditions
     conditions = [
         Quote.text.ilike(f"%{search_term}%"),
-        Quote.author.ilike(f"%{search_term}%"),
+        Quote.original_author.ilike(f"%{search_term}%"),
         Quote.source.ilike(f"%{search_term}%"),
         Quote.commentary.ilike(f"%{search_term}%")
     ]
@@ -259,7 +259,7 @@ def update_quote(
     # Update fields
     quote.text = quote_data.get('text', quote.text)
     quote.quote_type = quote_data.get('quote_type', quote.quote_type)
-    quote.author = quote_data.get('author', quote.author)
+    quote.original_author = quote_data.get('original_author', quote.original_author)
     quote.source = quote_data.get('source', quote.source)
     quote.date = quote_data.get('date', quote.date)
     quote.commentary = quote_data.get('commentary', quote.commentary)

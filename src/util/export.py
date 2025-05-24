@@ -44,7 +44,7 @@ def serialize_message(message: Email) -> Dict[str, Any]:
             'id': quote.id,
             'text': quote.text,
             'quote_type': quote.quote_type,
-            'author': quote.author,
+            'original_author': quote.original_author,
             'source': quote.source,
             'commentary': quote.commentary,
             'created_at': quote.created_at.isoformat()

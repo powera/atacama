@@ -64,7 +64,7 @@ def get_database_stats():
             stats = {}
             tables = [
                 'emails', 'quotes', 'email_quotes', 'users', 
-                'articles', 'article_quotes', 'react_widgets',
+                'articles', 'react_widgets',
                 'messages'
             ]
             

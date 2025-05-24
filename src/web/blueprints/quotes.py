@@ -55,7 +55,7 @@ def edit_quote(quote_id: int):
                 quote_data = {
                     'text': quote.text,  # Preserve original text
                     'quote_type': request.form.get('quote_type'),
-                    'author': request.form.get('author'),
+                    'original_author': request.form.get('original_author'),
                     'source': request.form.get('source'),
                     'date': request.form.get('date'),
                     'commentary': request.form.get('commentary')

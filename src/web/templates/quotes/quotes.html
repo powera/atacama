@@ -18,8 +18,8 @@
                     <span class="quote-type type-{{ quote.quote_type }}">
                         {{ quote.quote_type }}
                     </span>
-                    {% if quote.author %}
-                    <span>by {{ quote.author }}</span>
+                    {% if quote.original_author %}
+                    <span>by {{ quote.original_author }}</span>
                     {% endif %}
                     {% if quote.source %}
                     <span>from {{ quote.source }}</span>
