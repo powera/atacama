@@ -8,7 +8,7 @@ This module handles all quote-related functionality including:
 - Quote type validation and processing
 """
 
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Tuple, Any, Union
 from datetime import datetime
 import re
 from sqlalchemy.orm import Session
@@ -17,6 +17,8 @@ from logging import getLogger
 
 from common.llm.openai_client import DEFAULT_MODEL, generate_chat
 from common.llm.telemetry import LLMUsage
+from common.llm.types import Schema, SchemaProperty
+from common.llm.lib import to_openai_schema, schema_from_dict
 from models.models import Email, email_quotes, Quote
 
 logger = getLogger(__name__)
@@ -38,72 +40,192 @@ class QuoteValidationError(Exception):
     """Raised when quote validation fails"""
     pass
 
+class LLMUncertainError(Exception):
+    """Raised when the LLM is not confident enough in its analysis"""
+    def __init__(self, confidence: float, message: str = "LLM confidence too low"):
+        self.confidence = confidence
+        self.message = f"{message} (confidence: {confidence:.1%})"
+        super().__init__(self.message)
+
+def _create_quote_metadata_schema() -> Schema:
+    """Create the schema for quote metadata."""
+    return Schema(
+        "QuoteMetadata",
+        "Metadata about a quote including analysis and attribution",
+        {
+            "theme": SchemaProperty("string", "The main theme or topic (e.g. 'love', 'persistence', 'technology')"),
+            "tone": SchemaProperty("string", "The emotional tone (e.g. 'inspirational', 'humorous', 'critical')"),
+            "attribution": SchemaProperty(
+                "object",
+                "Information about the quote's origin",
+                properties={
+                    "author_type": SchemaProperty("string", "Type of author", enum=["historical", "fictional"]),
+                    "speaker": SchemaProperty("string", "The character/person who speaks the quote"),
+                    "context": SchemaProperty("string", "Publication/work where quote appears, or historical context"),
+                    "time_period": SchemaProperty("string", "Historical or fictional time period of the quote")
+                }
+            ),
+            "interpretation": SchemaProperty("string", "A brief interpretation of the quote's meaning"),
+            "keywords": SchemaProperty("array", "Relevant keywords", items={"type": "string"}),
+            "related_topics": SchemaProperty("array", "Related topics or themes", items={"type": "string"}),
+            "literary_devices": SchemaProperty("array", "Notable literary devices used", items={"type": "string"})
+        }
+    )
+
+def _create_quote_details_schema() -> Schema:
+    """Create the schema for quote details extraction."""
+    return Schema(
+        "QuoteDetails",
+        "Detailed information about a quote's origin and type",
+        {
+            "original_author": SchemaProperty("string", "The original author of the quote"),
+            "source": SchemaProperty("string", "The source of the quote (book, speech, etc.)"),
+            "date": SchemaProperty("string", "When the quote was originally made (approximate if unknown)"),
+            "quote_type": SchemaProperty("string", "Type of quote", enum=list(QUOTE_TYPES.keys())),
+            "confidence": SchemaProperty("number", "Confidence score (0-1) of the extraction")
+        }
+    )
+
 def generate_quote_metadata(
     quote_text: str,
-    model: str = DEFAULT_MODEL) -> Tuple[Dict[str, Any], LLMUsage]:
+    model: str = DEFAULT_MODEL
+) -> Tuple[Dict[str, Any], LLMUsage]:
     """
     Generate metadata about a quote using the ChatGPT API.
     
-    :param quote_text: The text of the quote to analyze
-    :param model: The model to use for generation
-    :return: Tuple of (metadata dict, LLM usage stats)
+    Args:
+        quote_text: The text of the quote to analyze
+        model: The model to use for generation
+        
+    Returns:
+        Tuple of (metadata dict, LLM usage stats)
     """
-
-    prompt = f"""Analyze this quote and provide metadata in JSON format:
-
+    schema = _create_quote_metadata_schema()
+    
+    prompt = f"""Analyze this quote and provide metadata in the requested format.
+    
 Quote: "{quote_text}"
 
-Provide the following fields:
-- theme: The main theme or topic (e.g. "love", "persistence", "technology")
-- tone: The emotional tone (e.g. "inspirational", "humorous", "critical")
-- attribution: Object containing:
-  - author_type: "historical" for real people, "fictional" for characters
-  - speaker: The character/person who speaks the quote (if different from author)
-  - context: Publication/work where quote appears, or historical context
-  - time_period: Historical or fictional time period of the quote
-- interpretation: A brief interpretation of the quote's meaning
-- keywords: List of 3-5 relevant keywords
-- related_topics: List of 2-3 related topics or themes
-- literary_devices: List of any notable literary devices used (metaphor, irony, etc.)
+For fictional works, distinguish between the actual author and any fictional speakers."""
 
-For fictional works, distinguish between the actual author and any fictional speakers.
-Format the response as valid JSON."""
-
-    # Request structured output via JSON schema
-    # Enhanced JSON schema to handle attribution
-    schema = {
-        "type": "object",
-        "properties": {
-            "theme": {"type": "string"},
-            "tone": {"type": "string"},
-            "attribution": {
-                "type": "object",
-                "properties": {
-                    "author_type": {"type": "string", "enum": ["historical", "fictional"]},
-                    "speaker": {"type": "string"},
-                    "context": {"type": "string"},
-                    "time_period": {"type": "string"}
-                },
-                "required": ["author_type", "speaker", "context", "time_period"],
-                "additionalProperties": False,
-            },
-            "interpretation": {"type": "string"},
-            "keywords": {"type": "array", "items": {"type": "string"}},
-            "related_topics": {"type": "array", "items": {"type": "string"}},
-            "literary_devices": {"type": "array", "items": {"type": "string"}}
-        },
-        "required": ["theme", "tone", "attribution", "interpretation", "keywords", 
-                    "related_topics", "literary_devices"],
-        "additionalProperties": False,
-    }
-
-    completion_text, metadata, usage = generate_chat(
+    response = generate_chat(
         prompt=prompt,
         model=model,
-        json_schema=schema
+        json_schema=schema,
+        context="You are a literary analysis expert. Provide detailed and accurate metadata about the given quote."
     )
     
-    return metadata, usage
+    return response.structured_data, response.usage
+
+def enrich_quote_with_llm(
+    db_session: Session,
+    quote_id: int,
+    model: str = DEFAULT_MODEL,
+    min_confidence: float = 0.75
+) -> Quote:
+    """
+    Enrich a quote with LLM-extracted metadata and update the database.
+    
+    Args:
+        db_session: Database session
+        quote_id: ID of the quote to enrich
+        model: The model to use for generation
+        min_confidence: Minimum confidence threshold (0-1) to accept the LLM's analysis
+        
+    Returns:
+        The updated Quote object
+        
+    Raises:
+        ValueError: If quote is not found
+        LLMUncertainError: If confidence is below min_confidence
+        Exception: For any other errors during processing
+    """
+    # Get the quote from database
+    quote = db_session.query(Quote).filter(Quote.id == quote_id).first()
+    if not quote:
+        raise ValueError(f"Quote with ID {quote_id} not found")
+    
+    try:
+        # Extract details using LLM
+        details = extract_quote_details(
+            quote_text=quote.text,
+            commentary=quote.commentary,
+            model=model
+        )
+        
+        # Check confidence level
+        confidence = details.get('confidence', 0)
+        if confidence < min_confidence:
+            raise LLMUncertainError(
+                confidence=confidence,
+                message=f"LLM confidence too low for quote {quote_id}"
+            )
+        
+        # Update quote with extracted details
+        if details.get('original_author'):
+            quote.original_author = details['original_author']
+        if details.get('source'):
+            quote.source = details['source']
+        if details.get('date'):
+            quote.date = details['date']
+        if details.get('quote_type'):
+            quote.quote_type = details['quote_type']
+        
+        # Add confidence to commentary if it doesn't already mention it
+        if 'confidence:' not in (quote.commentary or '').lower():
+            confidence_comment = f"\n\n[Extracted with {confidence:.1%} confidence]"
+            quote.commentary = f"{quote.commentary or ''}{confidence_comment}"
+        
+        db_session.commit()
+        logger.info(f"Successfully enriched quote {quote_id} with LLM data (confidence: {confidence:.1%})")
+        return quote
+        
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Failed to enrich quote {quote_id} with LLM: {str(e)}")
+        if not isinstance(e, (ValueError, LLMUncertainError)):
+            # Log the full error for debugging, but don't expose internal details
+            logger.exception(f"Unexpected error enriching quote {quote_id}")
+            raise Exception(f"Failed to process quote: {str(e)}") from e
+        raise
+
+def extract_quote_details(
+    quote_text: str,
+    commentary: Optional[str] = None,
+    model: str = DEFAULT_MODEL
+) -> Dict[str, Any]:
+    """
+    Extract detailed information about a quote including author, source, and type.
+    
+    Args:
+        quote_text: The text of the quote to analyze
+        commentary: Optional additional context or commentary about the quote
+        model: The model to use for generation
+        
+    Returns:
+        Dictionary containing the extracted quote details
+    """
+    schema = _create_quote_details_schema()
+    
+    prompt = f"""Extract detailed information about this quote:
+    
+Quote: "{quote_text}"""
+    
+    if commentary:
+        prompt += f"\n\nCommentary: {commentary}"
+        
+    prompt += "\n\nProvide the most likely original author, source, date, and quote type."
+    
+    response = generate_chat(
+        prompt=prompt,
+        model=model,
+        json_schema=schema,
+        context="""You are an expert in quotes and their origins. 
+        Extract accurate information about the quote's source and type. 
+        If you're not certain about a field, make an educated guess or leave it empty."""
+    )
+    
+    return response.structured_data
 
 
 def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:
@@ -125,6 +247,16 @@ def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:
     quote_type = quote_data.get('quote_type', 'personal')
     if quote_type not in QUOTE_TYPES:
         return False, f"Invalid quote type: {quote_type}"
+    
+    # Validate date format if present
+    if 'date' in quote_data and quote_data['date']:
+        try:
+            if not isinstance(quote_data['date'], (str, datetime)):
+                return False, "Date must be a string or datetime object"
+            if isinstance(quote_data['date'], str):
+                datetime.strptime(quote_data['date'], '%Y-%m-%d')
+        except ValueError:
+            return False, "Date must be in YYYY-MM-DD format or a datetime object"
         
     return True, None
 
