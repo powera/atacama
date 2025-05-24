@@ -41,8 +41,9 @@ class User(Base):
 
 class MessageType(enum.Enum):
     EMAIL = "email"
-    ARTICLE = "article" 
+    ARTICLE = "article"
     WIDGET = "widget"
+    QUOTE = "quote"
 
 class Message(Base):
     """Base class for all message types."""
@@ -99,23 +100,29 @@ class Message(Base):
     }
 
 
-class Quote(Base):
+class Quote(Message):
     """Stores tracked quotes and their metadata."""
     __tablename__ = 'quotes'
     
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     quote_type: Mapped[str] = mapped_column(String, nullable=False)
-    author: Mapped[Optional[str]] = mapped_column(String)
+    original_author: Mapped[Optional[str]] = mapped_column(String)
     date: Mapped[Optional[str]] = mapped_column(String)  # Flexible format for historical dates
     source: Mapped[Optional[str]] = mapped_column(Text)
     commentary: Mapped[Optional[str]] = mapped_column(Text)  # For snowclone explanations or personal meanings
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
-    # Many-to-many relationship with emails where the quote appears
-    emails: Mapped[List["Email"]] = relationship("Email", secondary='email_quotes', back_populates="quotes")
-    # Many-to-many relationship with articles where the quote appears
-    articles: Mapped[List["Article"]] = relationship("Article", secondary='article_quotes', back_populates="quotes")
+    # Relationship with emails that reference this quote
+    emails: Mapped[List["Email"]] = relationship(
+        "Email", 
+        secondary='email_quotes', 
+        back_populates="quotes",
+        lazy="selectin"
+    )
+    
+    __mapper_args__ = {
+        'polymorphic_identity': MessageType.QUOTE
+    }
 
 
 class Email(Message):
@@ -143,7 +150,12 @@ class Email(Message):
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {type: str, content: str}}
     
     # Quote relationships
-    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='email_quotes', lazy="selectin", back_populates="emails")
+    quotes: Mapped[List["Quote"]] = relationship(
+        "Quote", 
+        secondary='email_quotes', 
+        back_populates="emails",
+        lazy="selectin"
+    )
 
     __mapper_args__ = {
         'polymorphic_identity': MessageType.EMAIL
@@ -176,8 +188,7 @@ class Article(Message):
     # Annotations (Article-specific)
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)
     
-    # Quote relationships (Article-specific)
-    quotes: Mapped[List[Quote]] = relationship(Quote, secondary='article_quotes', lazy="selectin", back_populates="articles")
+    # Quote relationships removed as we're not using article_quotes anymore
     
     @validates('slug')
     def validate_slug(self, key, slug):
@@ -191,12 +202,7 @@ class Article(Message):
     }
 
 
-# Association table for article-quote relationships
-article_quotes = Table('article_quotes', Base.metadata,
-    Column('article_id', Integer, ForeignKey('articles.id')),
-    Column('quote_id', Integer, ForeignKey('quotes.id')),
-    Column('created_at', DateTime, default=datetime.utcnow)
-)
+# Article-quote association table removed as it's no longer used
 
 class ReactWidget(Message):
     """React widget model for storing interactive components."""
