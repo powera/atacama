@@ -20,17 +20,19 @@ sys.path.insert(0, os.path.join(project_root, 'src'))
 
 import constants
 
-# common libraries
-from common.channel_config import get_channel_manager
-from common.database import db
-import common.messages
-import common.models
+# Models and database
+from models import db
+from models.messages import get_message_by_id, get_message_chain, get_filtered_messages
+from models.users import get_or_create_user
+
+# Common libraries
+from common.config.channel_config import get_channel_manager
 import aml_parser
 import web.server  # create_app
 
-# scripts
-import util.db
-import util.export
+# Utils
+from util import db as db_util
+from util import export as export_util
 
 constants.init_production()
 
@@ -47,7 +49,7 @@ def set_user(email, name=None):
 
     with db.session() as db_session:
         db_session.expire_on_commit = False
-        g.user = common.models.get_or_create_user(db_session, user_dict)
+        g.user = get_or_create_user(db_session, user_dict)
 
     print(f"Switched to user: {email}")
 

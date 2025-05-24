@@ -11,7 +11,8 @@ import requests
 
 import constants
 from common.llm.telemetry import LLMUsage
-from common.llm.types import Response
+from common.llm.types import Response, Schema
+from common.llm.lib import schema_from_dict, to_openai_schema
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -128,12 +129,12 @@ class OpenAIClient:
         
         # If JSON schema provided, configure for structured response
         if json_schema:
-            if isinstance(json_schema, clients.lib.Schema):
+            if isinstance(json_schema, Schema):
                 schema_obj = json_schema
             else:
-                schema_obj = clients.lib.schema_from_dict(json_schema)
+                schema_obj = schema_from_dict(json_schema)
             
-            clean_schema = clients.lib.to_openai_schema(schema_obj)
+            clean_schema = to_openai_schema(schema_obj)
             
             kwargs["temperature"] = 0.15  # Lower temperature for structured output
             kwargs["response_format"] = {
