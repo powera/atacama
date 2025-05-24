@@ -210,7 +210,8 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
     def test_templates(self):
         """Test template formatting."""
         cases = [
-            ('{{pgn|rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2}}', 'chess-board'),
+            # Chess formatting using React currently
+            # ('{{pgn|rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2}}', 'chess-board'),
             ('{{isbn|1234567890}}', 'isbn'),
             ('{{wikidata|Q12345}}', 'wikidata')
         ]

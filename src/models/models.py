@@ -187,9 +187,7 @@ class Article(Message):
     
     # Annotations (Article-specific)
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)
-    
-    # Quote relationships removed as we're not using article_quotes anymore
-    
+        
     @validates('slug')
     def validate_slug(self, key, slug):
         """Validate slug format."""
@@ -201,8 +199,6 @@ class Article(Message):
         'polymorphic_identity': MessageType.ARTICLE
     }
 
-
-# Article-quote association table removed as it's no longer used
 
 class ReactWidget(Message):
     """React widget model for storing interactive components."""

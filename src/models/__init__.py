@@ -7,8 +7,7 @@ from .models import (
     MessageType,
     ReactWidget,
     Article,
-    email_quotes,
-    article_quotes
+    email_quotes
 )
 
 # Import database module
