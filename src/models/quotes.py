@@ -147,15 +147,32 @@ def enrich_quote_with_llm(
     
     try:
         # Extract details using LLM
-        details = extract_quote_details(
+        response = extract_quote_details(
             quote_text=quote.text,
             commentary=quote.commentary,
-            model=model
+            model=model,
+            return_full_response=True
         )
+        
+        # Get the structured data from the response
+        details = response.structured_data if hasattr(response, 'structured_data') else response
         
         # Check confidence level
         confidence = details.get('confidence', 0)
         if confidence < min_confidence:
+            # Log the LLM response when confidence is too low
+            logger.warning(
+                f"LLM response for quote {quote_id} had low confidence ({confidence:.1%}): "
+                f"Original author: {details.get('original_author', 'N/A')}, "
+                f"Source: {details.get('source', 'N/A')}, "
+                f"Date: {details.get('date', 'N/A')}, "
+                f"Quote type: {details.get('quote_type', 'N/A')}"
+            )
+            
+            # If there's additional thought from the LLM, log that too
+            if hasattr(response, 'additional_thought') and response.additional_thought:
+                logger.warning(f"LLM additional thought: {response.additional_thought}")
+                
             raise LLMUncertainError(
                 confidence=confidence,
                 message=f"LLM confidence too low for quote {quote_id}"
@@ -192,8 +209,9 @@ def enrich_quote_with_llm(
 def extract_quote_details(
     quote_text: str,
     commentary: Optional[str] = None,
-    model: str = DEFAULT_MODEL
-) -> Dict[str, Any]:
+    model: str = DEFAULT_MODEL,
+    return_full_response: bool = False
+) -> Union[Dict[str, Any], Any]:
     """
     Extract detailed information about a quote including author, source, and type.
     
@@ -201,9 +219,10 @@ def extract_quote_details(
         quote_text: The text of the quote to analyze
         commentary: Optional additional context or commentary about the quote
         model: The model to use for generation
+        return_full_response: If True, returns the full response object instead of just structured data
         
     Returns:
-        Dictionary containing the extracted quote details
+        Dictionary containing the extracted quote details or the full response object
     """
     schema = _create_quote_details_schema()
     
@@ -225,7 +244,7 @@ Quote: "{quote_text}"""
         If you're not certain about a field, make an educated guess or leave it empty."""
     )
     
-    return response.structured_data
+    return response if return_full_response else response.structured_data
 
 
 def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:
