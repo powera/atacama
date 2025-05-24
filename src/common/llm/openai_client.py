@@ -5,13 +5,13 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Any, List
+from typing import Dict, Optional, Any, Tuple
 
 import requests
 
 import constants
 from common.llm.telemetry import LLMUsage
+from common.llm.types import Response
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,12 +23,6 @@ PROD_MODEL = "gpt-4.1-mini-2025-04-14"
 DEFAULT_MODEL = TEST_MODEL
 DEFAULT_TIMEOUT = 50
 API_BASE = "https://api.openai.com/v1"
-
-@dataclass
-class APIResponse:
-    """Container for API response."""
-    response_text: str
-    usage: LLMUsage
 
 def measure_completion(func):
     """Decorator to measure completion API call duration."""
@@ -90,49 +84,14 @@ class OpenAIClient:
             logger.debug("Model warmup not required for OpenAI: %s", model)
         return True
 
-    def generate_text(self, prompt: str, model: str = DEFAULT_MODEL) -> Tuple[str, LLMUsage]:
-        """Generate text completion using OpenAI API."""
-        if self.debug:
-            logger.debug("Generating text with model: %s", model)
-            logger.debug("Prompt: %s", prompt)
-            
-        completion_data, duration_ms = self._create_completion(
-            model=model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                },
-            ],
-            max_tokens=1536,
-            temperature=0.15,
-        )
-        
-        usage = LLMUsage.from_api_response(
-            {
-                "prompt_tokens": completion_data["usage"]["prompt_tokens"],
-                "completion_tokens": completion_data["usage"]["completion_tokens"],
-                "total_duration": duration_ms
-            },
-            model=model
-        )
-        
-        result = completion_data["choices"][0]["message"]["content"]
-        
-        if self.debug:
-            logger.debug("Generated text: %s", result)
-            logger.debug("Usage metrics: %s", usage.to_dict())
-                
-        return result, usage
-
     def generate_chat(
         self,
         prompt: str,
         model: str = DEFAULT_MODEL,
         brief: bool = False,
-        json_schema: Optional[Dict] = None,
+        json_schema: Optional[Any] = None,
         context: Optional[str] = None
-    ) -> Tuple[str, Dict[str, Any], LLMUsage]:
+    ) -> Response:
         """
         Generate chat completion using OpenAI API.
         
@@ -144,7 +103,7 @@ class OpenAIClient:
             context: Optional context to include before the prompt
         
         Returns:
-            Tuple containing (response_text, structured_data, usage_info)
+            Response containing response_text, structured_data, and usage
             For text responses, structured_data will be empty dict
             For JSON responses, response_text will be empty string
         """
@@ -153,7 +112,7 @@ class OpenAIClient:
             logger.debug("Model: %s", model)
             logger.debug("Brief mode: %s", brief)
             logger.debug("Context: %s", context)
-            logger.debug("JSON schema: %s", json.dumps(json_schema, indent=2) if json_schema else None)
+            logger.debug("JSON schema: %s", json_schema)
         
         messages = []
         if context:
@@ -163,21 +122,19 @@ class OpenAIClient:
         kwargs = {
             "model": model,
             "messages": messages,
-            "max_tokens": 256 if brief else 1536,
-            "temperature": 0.45,
+            "max_tokens": 512 if brief else 4096,
+            "temperature": 0.35,
         }
         
         # If JSON schema provided, configure for structured response
         if json_schema:
-            # Remove any minimum/maximum constraints from schema properties
-            clean_schema = json_schema.copy()
-            if "properties" in clean_schema:
-                for prop in clean_schema["properties"].values():
-                    if isinstance(prop, dict):
-                        prop.pop("minimum", None)
-                        prop.pop("maximum", None)
+            if isinstance(json_schema, clients.lib.Schema):
+                schema_obj = json_schema
+            else:
+                schema_obj = clients.lib.schema_from_dict(json_schema)
             
-            clean_schema["additionalProperties"] = False
+            clean_schema = clients.lib.to_openai_schema(schema_obj)
+            
             kwargs["temperature"] = 0.15  # Lower temperature for structured output
             kwargs["response_format"] = {
                 "type": "json_schema",
@@ -192,6 +149,10 @@ class OpenAIClient:
         completion_data, duration_ms = self._create_completion(**kwargs)
         
         response_content = completion_data["choices"][0]["message"]["content"]
+        if self.debug:
+            logger.debug("Response content: %s", response_content)
+
+        # Calculate token usage
         usage = LLMUsage.from_api_response(
             {
                 "prompt_tokens": completion_data["usage"]["prompt_tokens"],
@@ -216,10 +177,19 @@ class OpenAIClient:
             structured_data = {}
         
         if self.debug:
-            logger.debug("Response text: %s", response_text if response_text else "JSON response")
+            if response_text:
+                logger.debug("Response text: %s", response_text)
+            elif structured_data:
+                logger.debug("Structured data: %s", structured_data)
+            else:
+                logger.debug("No response text or structured data")
             logger.debug("Usage metrics: %s", usage.to_dict())
         
-        return response_text, structured_data, usage
+        return Response(
+            response_text=response_text,
+            structured_data=structured_data,
+            usage=usage
+        )
 
 # Create default client instance
 client = OpenAIClient(debug=False)  # Set to True to enable debug logging
@@ -228,21 +198,18 @@ client = OpenAIClient(debug=False)  # Set to True to enable debug logging
 def warm_model(model: str) -> bool:
     return client.warm_model(model)
 
-def generate_text(prompt: str, model: str = DEFAULT_MODEL) -> Tuple[str, LLMUsage]:
-    return client.generate_text(prompt, model)
-
 def generate_chat(
     prompt: str,
     model: str = DEFAULT_MODEL,
     brief: bool = False,
-    json_schema: Optional[Dict] = None,
+    json_schema: Optional[Any] = None,
     context: Optional[str] = None
-) -> Tuple[str, Dict[str, Any], LLMUsage]:
+) -> Response:
     """
-    Generate a chat response, either text or JSON.
+    Generate a chat response using OpenAI API.
     
     Returns:
-        Tuple containing (response_text, structured_data, usage_info)
+        Response containing response_text, structured_data, and usage
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
