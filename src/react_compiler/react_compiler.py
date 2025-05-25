@@ -40,7 +40,7 @@ class WidgetBuilder:
         'd3': 'd3',
         'axios': 'axios',
         'date-fns': 'dateFns',
-        'lucide-react': 'lucideReact'
+        'lucide-react': 'LucideReact'
     }
 
     def __init__(self, build_dir: str = None):
