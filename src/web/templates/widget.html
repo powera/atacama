@@ -153,6 +153,11 @@
 <script>
 // Expose individual icons to match ES6 import syntax
 if (window.LucideReact) {
+    const iconContext = {
+        React: window.React,
+        forwardRef: window.React.forwardRef,
+        createElement: window.React.createElement
+    };
     Object.assign(window, window.LucideReact);
 }
 </script>
