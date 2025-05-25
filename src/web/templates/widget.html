@@ -149,6 +149,14 @@
         {% endif %}
     {% endfor %}
 {% endif %}
+{% if 'lucide-react' in (widget.dependencies or '').split(',') %}
+<script>
+// Expose individual icons to match ES6 import syntax
+if (window.LucideReact) {
+    Object.assign(window, window.LucideReact);
+}
+</script>
+{% endif %}
 
 <script>
     {{ widget.compiled_code | safe }}
