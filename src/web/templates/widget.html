@@ -139,7 +139,7 @@
     'axios': 'https://unpkg.com/axios@1/dist/axios.min.js',
     'date-fns': 'https://unpkg.com/date-fns@3/index.js',
     'react-chartjs-2': 'https://unpkg.com/react-chartjs-2@5/dist/index.min.js',
-    'lucide-react': 'https://unpkg.com/lucide-react/dist/umd/lucide-react.min.js'
+    'lucide-react': '/js/third_party/lucide-react.js'
 } %}
 
 {% if widget.dependencies %}
@@ -149,19 +149,13 @@
         {% endif %}
     {% endfor %}
 {% endif %}
-{% if 'lucide-react' in (widget.dependencies or '').split(',') %}
+
 <script>
-// Expose individual icons to match ES6 import syntax
-if (window.LucideReact) {
-    const iconContext = {
-        React: window.React,
-        forwardRef: window.React.forwardRef,
-        createElement: window.React.createElement
-    };
-    Object.assign(window, window.LucideReact);
+if (typeof window !== 'undefined') {
+    window.React = React;
+    window.react = React;
 }
 </script>
-{% endif %}
 
 <script>
     {{ widget.compiled_code | safe }}
