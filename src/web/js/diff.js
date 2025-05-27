@@ -1,4 +1,3 @@
-
 /**
  * Diff utility for comparing code versions
  * Provides line-by-line diff functionality with LCS-based algorithm
@@ -12,8 +11,13 @@ class DiffUtil {
      * @returns {Array} Array of diff objects
      */
     static generateDiff(originalText, improvedText) {
-        const originalLines = originalText.split('\n');
-        const improvedLines = improvedText.split('\n');
+        // Handle empty inputs
+        if (!originalText && !improvedText) {
+            return [];
+        }
+        
+        const originalLines = (originalText || '').split('\n');
+        const improvedLines = (improvedText || '').split('\n');
         
         // Compute line-by-line diff using improved LCS algorithm
         const diff = this.computeLineDiff(originalLines, improvedLines);
@@ -28,68 +32,62 @@ class DiffUtil {
      * @returns {Array} Diff result
      */
     static computeLineDiff(originalLines, improvedLines) {
-        // Use improved Myers diff algorithm with better LCS computation
-        const lcs = this.computeLCS(originalLines, improvedLines);
         const diff = [];
         
-        let originalIndex = 0;
-        let improvedIndex = 0;
-        let lcsIndex = 0;
+        // Handle empty arrays
+        if (originalLines.length === 0 && improvedLines.length === 0) {
+            return diff;
+        }
         
-        while (originalIndex < originalLines.length || improvedIndex < improvedLines.length) {
-            // Check if we're at an LCS match
-            if (lcsIndex < lcs.length && 
-                originalIndex < originalLines.length && 
-                improvedIndex < improvedLines.length &&
-                originalLines[originalIndex] === lcs[lcsIndex] &&
-                improvedLines[improvedIndex] === lcs[lcsIndex]) {
-                
-                // This line is unchanged
-                diff.push({
+        // Use improved algorithm that processes changes in order
+        const lcsMatrix = this.computeLCSMatrix(originalLines, improvedLines);
+        
+        // Backtrack through the matrix to build the diff
+        let i = originalLines.length;
+        let j = improvedLines.length;
+        const result = [];
+        
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && originalLines[i - 1] === improvedLines[j - 1]) {
+                // Lines match - add to front of result
+                result.unshift({
                     type: 'unchanged',
-                    original: originalLines[originalIndex],
-                    improved: improvedLines[improvedIndex],
-                    originalLineNum: originalIndex + 1,
-                    improvedLineNum: improvedIndex + 1
+                    original: originalLines[i - 1],
+                    improved: improvedLines[j - 1],
+                    originalLineNum: i,
+                    improvedLineNum: j
                 });
-                originalIndex++;
-                improvedIndex++;
-                lcsIndex++;
-            } else {
-                // Handle deletions first
-                while (originalIndex < originalLines.length && 
-                       (lcsIndex >= lcs.length || originalLines[originalIndex] !== lcs[lcsIndex])) {
-                    diff.push({
-                        type: 'removed',
-                        original: originalLines[originalIndex],
-                        originalLineNum: originalIndex + 1
-                    });
-                    originalIndex++;
-                }
-                
-                // Then handle additions
-                while (improvedIndex < improvedLines.length && 
-                       (lcsIndex >= lcs.length || improvedLines[improvedIndex] !== lcs[lcsIndex])) {
-                    diff.push({
-                        type: 'added',
-                        improved: improvedLines[improvedIndex],
-                        improvedLineNum: improvedIndex + 1
-                    });
-                    improvedIndex++;
-                }
+                i--;
+                j--;
+            } else if (j > 0 && (i === 0 || lcsMatrix[i][j - 1] >= lcsMatrix[i - 1][j])) {
+                // Addition
+                result.unshift({
+                    type: 'added',
+                    improved: improvedLines[j - 1],
+                    improvedLineNum: j
+                });
+                j--;
+            } else if (i > 0) {
+                // Deletion
+                result.unshift({
+                    type: 'removed',
+                    original: originalLines[i - 1],
+                    originalLineNum: i
+                });
+                i--;
             }
         }
         
-        return diff;
+        return result;
     }
 
     /**
-     * Improved LCS computation using dynamic programming with proper backtracking
+     * Compute LCS length matrix using dynamic programming
      * @param {Array} a - First array
      * @param {Array} b - Second array
-     * @returns {Array} Longest common subsequence
+     * @returns {Array} LCS length matrix
      */
-    static computeLCS(a, b) {
+    static computeLCSMatrix(a, b) {
         const m = a.length;
         const n = b.length;
         
@@ -106,6 +104,26 @@ class DiffUtil {
                 }
             }
         }
+        
+        return dp;
+    }
+
+    /**
+     * Improved LCS computation using dynamic programming with proper backtracking
+     * @param {Array} a - First array
+     * @param {Array} b - Second array
+     * @returns {Array} Longest common subsequence
+     */
+    static computeLCS(a, b) {
+        const m = a.length;
+        const n = b.length;
+        
+        if (m === 0 || n === 0) {
+            return [];
+        }
+        
+        // Get the LCS matrix
+        const dp = this.computeLCSMatrix(a, b);
         
         // Reconstruct LCS using backtracking
         const lcs = [];
@@ -182,6 +200,12 @@ class DiffUtil {
         const improvedLineNumbers = document.getElementById('improved-line-numbers');
         const improvedCodeContent = document.getElementById('improved-code-content');
         
+        // Check if elements exist
+        if (!originalLineNumbers || !originalCodeContent || !improvedLineNumbers || !improvedCodeContent) {
+            console.error('Required diff view elements not found');
+            return;
+        }
+        
         let originalHTML = '';
         let improvedHTML = '';
         let originalLineNumHTML = '';
@@ -194,7 +218,8 @@ class DiffUtil {
             // Original side
             if (row.original) {
                 const originalClass = row.original.type === 'removed' ? 'line-removed' : '';
-                originalLineNumHTML += `<div class="line-num ${originalClass}">${row.original.lineNum || ''}</div>`;
+                const lineNum = this.escapeHtml(String(row.original.lineNum || ''));
+                originalLineNumHTML += `<div class="line-num ${originalClass}">${lineNum}</div>`;
                 originalHTML += `<div class="code-line ${originalClass}">${this.escapeHtml(row.original.content || '')}</div>`;
             } else {
                 originalLineNumHTML += `<div class="line-num line-empty"></div>`;
@@ -204,7 +229,8 @@ class DiffUtil {
             // Improved side
             if (row.improved) {
                 const improvedClass = row.improved.type === 'added' ? 'line-added' : '';
-                improvedLineNumHTML += `<div class="line-num ${improvedClass}">${row.improved.lineNum || ''}</div>`;
+                const lineNum = this.escapeHtml(String(row.improved.lineNum || ''));
+                improvedLineNumHTML += `<div class="line-num ${improvedClass}">${lineNum}</div>`;
                 improvedHTML += `<div class="code-line ${improvedClass}">${this.escapeHtml(row.improved.content || '')}</div>`;
             } else {
                 improvedLineNumHTML += `<div class="line-num line-empty"></div>`;
@@ -218,10 +244,17 @@ class DiffUtil {
         improvedCodeContent.innerHTML = improvedHTML;
         
         // Update line counts
-        const originalLines = alignedDiff.filter(row => row.original && row.original.content).length;
-        const improvedLines = alignedDiff.filter(row => row.improved && row.improved.content).length;
-        document.getElementById('original-line-count').textContent = `${originalLines} lines`;
-        document.getElementById('improved-line-count').textContent = `${improvedLines} lines`;
+        const originalLines = alignedDiff.filter(row => row.original && row.original.content !== undefined).length;
+        const improvedLines = alignedDiff.filter(row => row.improved && row.improved.content !== undefined).length;
+        
+        const originalLineCount = document.getElementById('original-line-count');
+        const improvedLineCount = document.getElementById('improved-line-count');
+        
+        if (originalLineCount) originalLineCount.textContent = `${originalLines} lines`;
+        if (improvedLineCount) improvedLineCount.textContent = `${improvedLines} lines`;
+        
+        // Setup synchronized scrolling
+        this.setupScrollSync();
     }
 
     /**
@@ -232,13 +265,19 @@ class DiffUtil {
         const unifiedLineNumbers = document.getElementById('unified-line-numbers');
         const unifiedCodeContent = document.getElementById('unified-code-content');
         
+        // Check if elements exist
+        if (!unifiedLineNumbers || !unifiedCodeContent) {
+            console.error('Required unified view elements not found');
+            return;
+        }
+        
         let unifiedHTML = '';
         let lineNumHTML = '';
         let lineNum = 1;
         
         diff.forEach(item => {
             if (item.type === 'unchanged') {
-                lineNumHTML += `<div class="line-num">${lineNum}</div>`;
+                lineNumHTML += `<div class="line-num">${this.escapeHtml(String(lineNum))}</div>`;
                 unifiedHTML += `<div class="code-line">${this.escapeHtml(item.original)}</div>`;
                 lineNum++;
             } else if (item.type === 'removed') {
@@ -247,11 +286,44 @@ class DiffUtil {
             } else if (item.type === 'added') {
                 lineNumHTML += `<div class="line-num line-added">+</div>`;
                 unifiedHTML += `<div class="code-line line-added">+ ${this.escapeHtml(item.improved)}</div>`;
+                lineNum++;
             }
         });
         
         unifiedLineNumbers.innerHTML = lineNumHTML;
         unifiedCodeContent.innerHTML = unifiedHTML;
+    }
+
+    /**
+     * Setup synchronized scrolling between diff panels
+     */
+    static setupScrollSync() {
+        const originalContent = document.getElementById('original-code-content');
+        const improvedContent = document.getElementById('improved-code-content');
+        
+        if (!originalContent || !improvedContent) return;
+        
+        let syncing = false;
+        
+        const syncScroll = (source, target) => {
+            if (syncing) return;
+            syncing = true;
+            
+            const scrollPercentage = source.scrollTop / (source.scrollHeight - source.clientHeight);
+            target.scrollTop = scrollPercentage * (target.scrollHeight - target.clientHeight);
+            
+            setTimeout(() => { syncing = false; }, 50);
+        };
+        
+        // Remove existing listeners to prevent duplicates
+        const newOriginal = originalContent.cloneNode(true);
+        const newImproved = improvedContent.cloneNode(true);
+        originalContent.parentNode.replaceChild(newOriginal, originalContent);
+        improvedContent.parentNode.replaceChild(newImproved, improvedContent);
+        
+        // Add scroll listeners
+        newOriginal.addEventListener('scroll', () => syncScroll(newOriginal, newImproved));
+        newImproved.addEventListener('scroll', () => syncScroll(newImproved, newOriginal));
     }
 
     /**
@@ -263,11 +335,14 @@ class DiffUtil {
         const removed = diff.filter(d => d.type === 'removed').length;
         const unchanged = diff.filter(d => d.type === 'unchanged').length;
         
-        document.getElementById('diff-stats-text').innerHTML = `
-            <span class="stat-added">+${added}</span> 
-            <span class="stat-removed">-${removed}</span> 
-            <span class="stat-unchanged">${unchanged} unchanged</span>
-        `;
+        const statsElement = document.getElementById('diff-stats-text');
+        if (statsElement) {
+            statsElement.innerHTML = `
+                <span class="stat-added">+${added}</span> 
+                <span class="stat-removed">-${removed}</span> 
+                <span class="stat-unchanged">${unchanged} unchanged</span>
+            `;
+        }
     }
 
     /**
@@ -277,7 +352,7 @@ class DiffUtil {
      */
     static escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text || '';
         return div.innerHTML;
     }
 
@@ -288,6 +363,11 @@ class DiffUtil {
         const sideBySide = document.getElementById('side-by-side-view');
         const unified = document.getElementById('unified-view');
         const modeText = document.getElementById('diff-mode-text');
+        
+        if (!sideBySide || !unified || !modeText) {
+            console.error('Required view elements not found');
+            return;
+        }
         
         if (sideBySide.classList.contains('active')) {
             sideBySide.classList.remove('active');
