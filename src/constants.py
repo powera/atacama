@@ -20,6 +20,8 @@ REQUEST_LOG_DIR = os.path.join(LOG_DIR, "requests")
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
+REACT_COMPILER_JS_DIR = os.path.join(SRC_DIR, 'react_compiler', "js")
+
 # Database path - will be updated when testing mode is set
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
 _TEST_DB_PATH: str = "sqlite:///:memory:"

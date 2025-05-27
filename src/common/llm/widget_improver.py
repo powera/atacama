@@ -19,14 +19,12 @@ class WidgetImprover:
     CANNED_PROMPTS = {
         'fullscreen': {
             'name': 'Improve Full-Screen Mode',
-            'prompt': '''Improve this React widget to work better in full-screen mode. Consider:
-- Responsive design that works on all screen sizes
-- Proper use of viewport dimensions
-- Scalable fonts and elements
-- Touch-friendly controls for mobile
-- Efficient use of screen real estate
+            'prompt': '''Improve this React widget to work better in full-screen mode.
 
-Make the component adaptive and ensure it looks great on both desktop and mobile devices.'''
+Use the useFullscreen Hook: To add fullscreen functionality to your widget, import { useFullscreen } from './useFullscreen' and destructure { isFullscreen, toggleFullscreen, containerRef } from the hook.
+Attach containerRef to your main container div, add the CSS class ${isFullscreen ? 'w-fullscreen' : 'w-container'}, and create a button that calls toggleFullscreen() to switch between normal and fullscreen modes.
+Do not implement the useFullscreen hook directly in this code, just use it as described.
+'''
         },
         'global_settings': {
             'name': 'Add Global Settings Support',

@@ -2,6 +2,7 @@
 
 {% block styles %}
 <link rel="stylesheet" href="/css/widget.css">
+<link rel="stylesheet" href="/css/widget_tools.css">
 {% endblock %}
 {% block title %}{{ widget.title }} - Widget{% endblock %}
 
@@ -43,71 +44,6 @@
 
 {% block scripts %}
 
-{% if not widget.compiled_code %}
-<!-- Load non-compiled code path -->
-<script crossorigin src="/js/third_party/react.production.min.js"></script>
-<script crossorigin src="/js/third_party/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Improved Tailwind CSS configuration -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  // Configure Tailwind once for all components
-  tailwind.config = {
-    darkMode: ['class', '[data-theme="dark"]'],
-    theme: {
-      extend: {
-        // You can extend the theme here with custom colors that match your AtacamaViewer themes
-        colors: {
-          primary: 'var(--color-primary)',
-          background: 'var(--color-background)',
-          text: 'var(--color-text)',
-        },
-      }
-    }
-  }
-</script>
-
-<script type="text/babel">
-    // Make React hooks available globally
-    const { useState, useEffect, useRef } = React;
-
-    // Set globals
-    window.React = React;
-    window.useRef = React.useRef;
-    window.useState = React.useState;
-    window.useEffect = React.useEffect;
-    
-    // Widget error handling
-    window.addEventListener('error', function(event) {
-        console.error('Widget error:', event.error);
-        document.getElementById('widget-root').style.display = 'none';
-        document.getElementById('widget-error').style.display = 'block';
-        document.getElementById('error-details').textContent = event.error.toString();
-    });
-    
-    try {
-        // Widget code
-        {{ widget.code | safe }}
-        
-        // Mount the widget
-        const componentName = '{{ widget.title }}'.replace(/\s+/g, '');
-        const Component = window[componentName];
-        
-        if (!Component) {
-            throw new Error(`Component ${componentName} not found. Make sure your component name matches the widget title.`);
-        }
-        
-        const root = ReactDOM.createRoot(document.getElementById('widget-root'));
-        root.render(React.createElement(Component));
-    } catch (error) {
-        console.error('Widget initialization error:', error);
-        document.getElementById('widget-root').style.display = 'none';
-        document.getElementById('widget-error').style.display = 'block';
-        document.getElementById('error-details').textContent = error.toString();
-    }
-</script>
-{% else %}
 <!-- Load compiled code path -->
 <!-- React (always needed) -->
 <script crossorigin src="/js/third_party/react.production.min.js"></script>
@@ -180,5 +116,4 @@ if (typeof window !== 'undefined') {
         console.error('Widget mount error:', error);
     }
 </script>
-{% endif %}
 {% endblock %}
