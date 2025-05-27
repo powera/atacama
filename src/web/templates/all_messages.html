@@ -14,7 +14,7 @@
 .all-messages-container {
     max-width: 95vw;
     margin: 0 auto;
-    padding: var(--spacing-base);
+    padding: var(--spacing-base, 1rem);
 }
 
 .message-type-badge {
@@ -22,36 +22,42 @@
     padding: 0.2em 0.6em;
     font-size: 0.8em;
     font-weight: 500;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius, 8px);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-right: var(--spacing-small);
+    margin-right: var(--spacing-small, 0.5rem);
 }
 
-.message-type-email { background-color: #e3f2fd; color: #1976d2; }
-.message-type-article { background-color: #f3e5f5; color: #7b1fa2; }
-.message-type-widget { background-color: #e8f5e8; color: #388e3c; }
-.message-type-quote { background-color: #fff3e0; color: #f57c00; }
+/* Theme-aware badge colors */
+.message-type-email { 
+    background-color: var(--accent-color, #4a6bfa); 
+    color: var(--title-color, white); 
+    opacity: 0.9;
+}
+.message-type-article { 
+    background-color: var(--link-color, #7b1fa2); 
+    color: var(--title-color, white); 
+    opacity: 0.9;
+}
+.message-type-widget { 
+    background-color: #388e3c; 
+    color: white; 
+}
+.message-type-quote { 
+    background-color: #f57c00; 
+    color: white; 
+}
 
+/* Use stream-message class to match theme */
 .all-message {
-    margin: var(--spacing-large) 0;
-    padding: var(--spacing-base);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    background: var(--color-background);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.all-message:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    /* Inherit from theme's stream-message styling */
 }
 
 .message-meta {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: var(--spacing-small);
+    margin-bottom: var(--spacing-small, 0.5rem);
 }
 
 .message-info {
@@ -59,62 +65,68 @@
 }
 
 .message-title-link {
-    color: var(--color-primary);
+    color: var(--accent-color, var(--link-color, #4a6bfa));
     text-decoration: none;
     font-weight: 600;
     font-size: 1.1em;
+    transition: color 0.3s ease;
 }
 
 .message-title-link:hover {
+    color: var(--link-hover-color, var(--accent-color, #3451c6));
     text-decoration: underline;
 }
 
 .message-author {
-    font-size: var(--font-size-small);
-    color: var(--color-text-secondary);
+    font-size: 0.9em;
+    color: var(--muted-text-color, var(--color-text-secondary, #718096));
     margin-top: 0.2em;
 }
 
 .message-preview {
-    color: var(--color-text);
-    margin-top: var(--spacing-small);
+    color: var(--text-color, var(--color-text, inherit));
+    margin-top: var(--spacing-small, 0.5rem);
     line-height: 1.5;
 }
 
-.message-channel {
-    font-size: var(--font-size-small);
-    color: var(--color-text-secondary);
-    padding: 0.2em 0.5em;
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+.all-message-channel {
+    font-size: 0.8rem;
+    color: var(--active-item-text, white);
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--accent-color, #4a6bfa);
     white-space: nowrap;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .stream-navigation {
     display: flex;
     justify-content: center;
-    margin: var(--spacing-large) 0;
+    margin: var(--spacing-large, 2rem) 0;
 }
 
 .navigation-link {
-    padding: var(--spacing-small) var(--spacing-base);
-    color: var(--color-primary);
+    padding: var(--spacing-small, 0.5rem) var(--spacing-base, 1rem);
+    color: var(--accent-color, var(--color-primary, #4a6bfa));
     text-decoration: none;
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border: 1px solid var(--card-border, var(--color-border, #e2e8f0));
+    border-radius: var(--border-radius, 8px);
+    background-color: var(--card-background, var(--color-background, white));
     transition: background-color 0.2s ease;
 }
 
 .navigation-link:hover {
-    background-color: var(--color-annotation-bg);
+    background-color: var(--card-background, rgba(74, 107, 250, 0.1));
 }
 
 .summary-stats {
     text-align: center;
-    margin-bottom: var(--spacing-large);
-    padding: var(--spacing-base);
-    background-color: var(--color-annotation-bg);
-    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-large, 2rem);
+    padding: var(--spacing-base, 1rem);
+    background-color: var(--card-background, var(--color-annotation-bg, #f8f9fa));
+    border-radius: var(--border-radius, 8px);
+    border: 1px solid var(--card-border, var(--color-border, #e2e8f0));
+    color: var(--text-color, inherit);
 }
 </style>
 {% endblock %}
@@ -126,33 +138,33 @@
     </div>
 
     {% for message in messages %}
-    <article class="all-message">
-        <div class="message-meta">
+    <article class="stream-message all-message">
+        <div class="message-header">
             <div class="message-info">
-                <div>
-                    <span class="message-type-badge message-type-{{ message.type }}">
-                        {{ message.type }}
-                    </span>
-                    <a href="{{ message.url }}" class="message-title-link">
-                        {{ message.title }}
-                    </a>
-                </div>
-                <div class="message-author">
-                    by {{ message.author.name }} • {{ message.created_at_formatted }}
-                </div>
+                <span class="message-type-badge message-type-{{ message.type }}">
+                    {{ message.type }}
+                </span>
+                <a href="{{ message.url }}" class="message-title message-title-link">
+                    {{ message.title }}
+                </a>
             </div>
             <div>
                 {% if message.channel != 'private' %}
-                <span class="message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
+                <span class="all-message-channel">{{ channel_manager.get_display_name(message.channel) }}</span>
                 {% endif %}
             </div>
         </div>
         
-        {% if message.preview %}
-        <div class="message-preview">
-            {{ message.preview | e }}
+        <div class="message-body">
+            <div class="message-author">
+                by {{ message.author.name }} • {{ message.created_at_formatted }}
+            </div>
+            {% if message.preview %}
+            <div class="message-preview">
+                {{ message.preview | e }}
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </article>
     {% endfor %}
 
