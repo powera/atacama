@@ -3,7 +3,7 @@ from sqlalchemy import select
 from typing import Dict, Any
 from common.base.logging_config import get_logger
 
-from web.decorators import require_auth
+from web.decorators import require_auth, optional_auth
 from models.database import db
 from models.models import Quote
 from models.quotes import (
@@ -92,6 +92,7 @@ def delete_quote(quote_id: int):
 
 
 @quotes_bp.route('/quotes/<int:quote_id>')
+@optional_auth
 def view_quote(quote_id: int):
     """View a specific quote."""
     with db.session() as db_session:
