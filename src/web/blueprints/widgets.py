@@ -330,6 +330,41 @@ def save_version(slug):
         })
 
 
+@widgets_bp.route('/widget/<string:slug>/get_version_code', methods=['POST'])
+@require_admin
+def get_version_code(slug):
+    """Get code for a specific version of the widget."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        data = request.get_json()
+        version = data.get('version', 'current')
+        
+        if version == 'current':
+            code = widget.code
+        else:
+            version_obj = session.query(WidgetVersion).filter_by(id=version, widget_id=widget.id).first()
+            if not version_obj:
+                return jsonify({
+                    'success': False,
+                    'error': 'Version not found'
+                }), 404
+            code = version_obj.code
+        
+        return jsonify({
+            'success': True,
+            'code': code
+        })
+
+
 @widgets_bp.route('/widget/<string:slug>/test_version', methods=['POST'])
 @require_admin
 def test_version(slug):
