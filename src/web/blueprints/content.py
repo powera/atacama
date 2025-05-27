@@ -467,8 +467,8 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
                 if email:
                     type_specific_data = email
                     title = email.subject or '(No Subject)'
-                    # Use plain content for preview to avoid HTML tag truncation issues
-                    preview_text = email.content or email.preview_content or ''
+                    # Use plain content for preview to avoid HTML tag truncation issues; "preview_content" is HTML rendered and should not be truncated further.
+                    preview_text = email.content or ''
                     if len(preview_text) > 200:
                         preview = preview_text[:200] + '...'
                     else:
