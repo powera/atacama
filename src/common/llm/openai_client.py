@@ -8,6 +8,7 @@ import time
 from typing import Dict, Optional, Any, Tuple
 
 import requests
+import tiktoken
 
 import constants
 from common.llm.telemetry import LLMUsage
@@ -132,10 +133,28 @@ class OpenAIClient:
             messages.append({"role": "system", "content": context})
         messages.append({"role": "user", "content": prompt})
         
+        # Calculate input tokens using tiktoken
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+            input_tokens = 0
+            for message in messages:
+                input_tokens += len(encoding.encode(message["content"]))
+        except Exception as e:
+            logger.warning(f"Failed to calculate input tokens with tiktoken: {e}")
+            input_tokens = 0
+        
+        # Set max_tokens with proper limits
+        if brief:
+            max_tokens = 1536
+        else:
+            # For widget improvement, use at least 1.5x the input tokens but cap at reasonable limit
+            min_tokens = max(1536, int(input_tokens * 1.5)) if input_tokens > 0 else 8000
+            max_tokens = min(min_tokens, 16000)  # Cap at 16k for safety
+        
         kwargs = {
             "model": model,
             "messages": messages,
-            "max_tokens": 512 if brief else 4096,
+            "max_tokens": max_tokens,
             "temperature": 0.35,
         }
         

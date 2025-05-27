@@ -210,8 +210,12 @@
 
         currentPrompt = prompt;
 
+        // Add processing state to disable interactions
+        document.body.classList.add('processing');
+
         // Show progress
         document.getElementById('improvement-progress').style.display = 'block';
+        document.getElementById('improvement-progress').classList.add('processing');
         document.getElementById('improvement-results').style.display = 'none';
 
         // Update progress text
@@ -260,30 +264,48 @@
                 console.error('Error:', error);
                 alert('Failed to improve widget: ' + error.message);
                 document.getElementById('improvement-progress').style.display = 'none';
+                // Remove processing state on error
+                document.body.classList.remove('processing');
             });
     }
 
     function showResults(data) {
+        // Remove processing state
+        document.body.classList.remove('processing');
+        
         document.getElementById('improvement-progress').style.display = 'none';
         document.getElementById('improvement-results').style.display = 'block';
 
         if (data.success) {
             currentImprovedCode = data.improved_code;
             document.getElementById('improved-code').value = data.improved_code;
+            
+            // Properly escape HTML content
+            const aiModel = escapeHtml(data.ai_model || 'OpenAI');
+            const improvementType = escapeHtml(currentType);
+            const fullResponse = data.full_response ? escapeHtml(data.full_response) : '';
+            
             document.getElementById('ai-response').innerHTML = `
                 <p><strong>Improvement successful!</strong></p>
-                <p>AI used: ${data.ai_model || 'OpenAI'}</p>
-                <p>Type: ${currentType}</p>
-                ${data.full_response ? `<details><summary>Full AI Response</summary><pre>${data.full_response}</pre></details>` : ''}
+                <p>AI used: ${aiModel}</p>
+                <p>Type: ${improvementType}</p>
+                ${fullResponse ? `<details><summary>Full AI Response</summary><pre>${fullResponse}</pre></details>` : ''}
             `;
         } else {
+            const errorMessage = escapeHtml(data.error || 'Unknown error');
             document.getElementById('ai-response').innerHTML = `
-                <p><strong>Error:</strong> ${data.error}</p>
+                <p><strong>Error:</strong> ${errorMessage}</p>
                 <p>The original code has been preserved.</p>
             `;
             currentImprovedCode = originalCode;
             document.getElementById('improved-code').value = originalCode;
         }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     function compareCode() {

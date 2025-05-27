@@ -11,3 +11,5 @@ jieba>=0.42.1
 tomli>=2.2.1
 tomli_w>=1.2.0
 coverage>=7.6.12
+constants
+tiktoken
