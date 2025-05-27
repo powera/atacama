@@ -48,17 +48,28 @@ class OpenAIClient:
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
-        }
+        } if self.api_key else None
 
-    def _load_key(self) -> str:
+    def _load_key(self) -> Optional[str]:
         """Load OpenAI API key from file."""
         key_path = os.path.join(constants.KEY_DIR, "openai.key")
-        with open(key_path) as f:
-            return f.read().strip()
+        try:
+            with open(key_path) as f:
+                return f.read().strip()
+        except (FileNotFoundError, IOError) as e:
+            logger.error("Failed to load OpenAI API key from %s: %s", key_path, str(e))
+            return None
+
+    def _check_api_key(self):
+        """Check if API key is available and raise exception if not."""
+        if not self.api_key:
+            raise Exception("OpenAI API key not available. Please ensure the key file exists at the configured path.")
 
     @measure_completion
     def _create_completion(self, **kwargs) -> Dict:
         """Make direct HTTP request to OpenAI chat completions endpoint."""
+        self._check_api_key()
+        
         url = f"{API_BASE}/chat/completions"
         
         if self.debug:
@@ -81,6 +92,7 @@ class OpenAIClient:
 
     def warm_model(self, model: str) -> bool:
         """Simulate model warmup (not needed for OpenAI but kept for API compatibility)."""
+        self._check_api_key()
         if self.debug:
             logger.debug("Model warmup not required for OpenAI: %s", model)
         return True
