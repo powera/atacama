@@ -1,0 +1,65 @@
+
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Launch Web Server",
+            "type": "shell",
+            "command": "python3",
+            "args": ["launch.py", "--web", "--dev"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "python3",
+            "args": ["run_tests.py", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Tests with Coverage",
+            "type": "shell",
+            "command": "python3",
+            "args": ["run_tests.py", "--coverage", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Launch Spaceship Server",
+            "type": "shell",
+            "command": "python3",
+            "args": ["launch.py", "--spaceship"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

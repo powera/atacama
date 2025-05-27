@@ -51,7 +51,8 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description='Launch Atacama system components.',
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog='launch.py'
     )
     
     # Component selection
@@ -61,59 +62,105 @@ def parse_args():
     parser.add_argument('--spaceship', action='store_true', help='Launch spaceship server')
     
     # Server configuration
-    parser.add_argument('--host', default='0.0.0.0', help='Host for server')
-    parser.add_argument('--port', type=int, help='Port for server')
+    parser.add_argument('--host', default='0.0.0.0', 
+                       help='Host for server (default: 0.0.0.0)')
+    parser.add_argument('--port', type=int, 
+                       help='Port for server (default: 5000 for web, 8998 for spaceship)')
+    
+    # Development options
+    parser.add_argument('--dev', action='store_true', 
+                       help='Enable development mode with auto-reload')
+    parser.add_argument('--debug', action='store_true', 
+                       help='Enable debug mode')
     
     # Logging configuration
     parser.add_argument('--log-level', default='INFO',
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                       help='Set the logging level')
+                       help='Set the logging level (default: INFO)')
     parser.add_argument('--app-log-level', default='DEBUG',
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                       help='Set the application-specific logging level')
+                       help='Set the application-specific logging level (default: DEBUG)')
+    parser.add_argument('--quiet', '-q', action='store_true',
+                       help='Suppress non-essential output')
     
-    # Note about log files
-    parser.epilog = "Note: Log files are created with timestamp and PID in the filename format: atacama_YYYYMMDD_HHMMSS_pidNNNN.log"
+    # Examples and notes
+    parser.epilog = """
+Examples:
+  %(prog)s --web                    # Launch web server on default port 5000
+  %(prog)s --web --port 8080        # Launch web server on port 8080
+  %(prog)s --spaceship             # Launch spaceship server
+  %(prog)s --mode web --dev        # Launch web server in development mode
+
+Note: Log files are created with timestamp and PID in the filename format: 
+      atacama_YYYYMMDD_HHMMSS_pidNNNN.log
+    """ % {'prog': parser.prog}
     
     return parser.parse_args()
 
 def main():
     """Main entry point."""
-    args = parse_args()
-    
-    # Determine which mode to run based on arguments
-    if args.mode:
-        # Legacy mode argument support
-        if args.mode == 'web':
-            args.web = True
-            args.spaceship = False
-        elif args.mode == 'spaceship':
-            args.spaceship = True
-            args.web = False
-    
-    # Initialize system with configured log levels
-    init_system(log_level=args.log_level, app_log_level=args.app_log_level)
-    
-    # Get logger after initialization to ensure it's properly configured
-    logger = get_logger(__name__)
-    logger.info("Atacama system initialized")
-    
-    # Launch requested components
-    if args.web:
-        from web.server import run_server
-        port = args.port or 5000
-        logger.info(f"Starting web server on {args.host}:{port}")
-        run_server(host=args.host, port=port)
-    elif args.spaceship:
-        from spaceship.server import run_server
-        port = args.port or 8998
-        logger.info(f"Starting spaceship server on {args.host}:{port}")
-        run_server(args.host, port)
-    else:
-        print("No component specified to launch. Use --web or --spaceship to start a server.")
+    try:
+        args = parse_args()
+        
+        # Determine which mode to run based on arguments
+        if args.mode:
+            # Legacy mode argument support
+            if args.mode == 'web':
+                args.web = True
+                args.spaceship = False
+            elif args.mode == 'spaceship':
+                args.spaceship = True
+                args.web = False
+        
+        # Validate arguments
+        if not args.web and not args.spaceship:
+            print("Error: No component specified to launch.", file=sys.stderr)
+            print("Use --web or --spaceship to start a server.", file=sys.stderr)
+            print("Run 'python launch.py --help' for more information.", file=sys.stderr)
+            return 1
+        
+        if args.web and args.spaceship:
+            print("Error: Cannot launch both web and spaceship servers simultaneously.", file=sys.stderr)
+            return 1
+        
+        # Initialize system with configured log levels
+        log_level = 'DEBUG' if args.debug else args.log_level
+        if args.quiet:
+            log_level = 'WARNING'
+            
+        init_system(log_level=log_level, app_log_level=args.app_log_level)
+        
+        # Get logger after initialization to ensure it's properly configured
+        logger = get_logger(__name__)
+        logger.info("Atacama system initialized")
+        
+        # Launch requested components
+        if args.web:
+            from web.server import run_server
+            port = args.port or 5000
+            if not args.quiet:
+                print(f"Starting web server on http://{args.host}:{port}")
+            logger.info(f"Starting web server on {args.host}:{port}")
+            run_server(host=args.host, port=port, debug=args.debug or args.dev)
+        elif args.spaceship:
+            from spaceship.server import run_server
+            port = args.port or 8998
+            if not args.quiet:
+                print(f"Starting spaceship server on {args.host}:{port}")
+            logger.info(f"Starting spaceship server on {args.host}:{port}")
+            run_server(args.host, port)
+        
+        return 0
+        
+    except KeyboardInterrupt:
+        print("\nShutdown requested by user", file=sys.stderr)
+        return 130  # Standard exit code for SIGINT
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        if '--debug' in sys.argv or '-v' in sys.argv:
+            import traceback
+            traceback.print_exc()
         return 1
-    
-    return 0
 
 if __name__ == '__main__':
     sys.exit(main())

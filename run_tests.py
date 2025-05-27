@@ -75,7 +75,9 @@ def discover_test_modules() -> dict:
 def run_test_suite(categories: Optional[List[str]] = None,
                    pattern: Optional[str] = None,
                    verbose: bool = False,
-                   with_coverage: bool = False) -> bool:
+                   with_coverage: bool = False,
+                   fail_fast: bool = False,
+                   quiet: bool = False) -> bool:
     """
     Run test suite with optional filtering.
     
@@ -139,8 +141,11 @@ def run_test_suite(categories: Optional[List[str]] = None,
             suite.addTests(loader.loadTestsFromModule(module))
         
         # Run tests
+        verbosity = 0 if quiet else (2 if verbose else 1)
         runner = unittest.TextTestRunner(
-            verbosity=2 if verbose else 1
+            verbosity=verbosity,
+            failfast=fail_fast,
+            buffer=not verbose  # Capture stdout/stderr unless verbose
         )
         result = runner.run(suite)
         
@@ -157,7 +162,9 @@ def run_test_suite(categories: Optional[List[str]] = None,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Run Atacama test suite'
+        description='Run Atacama test suite',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog='run_tests.py'
     )
     
     parser.add_argument(
@@ -169,28 +176,88 @@ if __name__ == '__main__':
     
     parser.add_argument(
         '--pattern',
-        help='Only run tests matching pattern'
+        help='Only run tests matching pattern (e.g., "test_auth*")'
     )
     
     parser.add_argument(
-        '--verbose',
+        '--verbose', '-v',
         action='store_true',
         help='Enable verbose output'
     )
     
     parser.add_argument(
+        '--quiet', '-q',
+        action='store_true',
+        help='Suppress non-essential output'
+    )
+    
+    parser.add_argument(
         '--coverage',
         action='store_true',
-        help='Enable coverage reporting'
+        help='Enable coverage reporting (generates HTML report in coverage_html/)'
     )
+    
+    parser.add_argument(
+        '--fail-fast', '-x',
+        action='store_true',
+        help='Stop on first test failure'
+    )
+    
+    parser.add_argument(
+        '--list-tests',
+        action='store_true',
+        help='List available tests without running them'
+    )
+    
+    # Examples
+    parser.epilog = """
+Examples:
+  %(prog)s                         # Run all tests
+  %(prog)s --category common       # Run only common tests
+  %(prog)s --category web --category parser  # Run web and parser tests
+  %(prog)s --pattern "*auth*"      # Run tests with 'auth' in the name
+  %(prog)s --coverage             # Run tests with coverage reporting
+  %(prog)s --verbose --fail-fast  # Verbose output, stop on first failure
+  %(prog)s --list-tests           # List all available tests
+
+Test categories:
+  common  - Core utilities and configuration tests
+  web     - Web server and API tests
+  parser  - Markup parser tests
+    """ % {'prog': parser.prog}
     
     args = parser.parse_args()
     
-    success = run_test_suite(
-        categories=args.category,
-        pattern=args.pattern,
-        verbose=args.verbose,
-        with_coverage=args.coverage
-    )
-    
-    sys.exit(0 if success else 1)
+    try:
+        if args.list_tests:
+            # List available tests
+            all_tests = discover_test_modules()
+            print("Available test categories and modules:")
+            for category, modules in all_tests.items():
+                if modules:
+                    print(f"\n{category}:")
+                    for module in modules:
+                        module_name = os.path.basename(module).replace('.py', '')
+                        print(f"  {module_name}")
+            sys.exit(0)
+        
+        success = run_test_suite(
+            categories=args.category,
+            pattern=args.pattern,
+            verbose=args.verbose and not args.quiet,
+            with_coverage=args.coverage,
+            fail_fast=args.fail_fast,
+            quiet=args.quiet
+        )
+        
+        sys.exit(0 if success else 1)
+        
+    except KeyboardInterrupt:
+        print("\nTest run interrupted by user", file=sys.stderr)
+        sys.exit(130)
+    except Exception as e:
+        print(f"Error running tests: {e}", file=sys.stderr)
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
