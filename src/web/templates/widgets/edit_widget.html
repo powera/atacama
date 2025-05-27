@@ -50,6 +50,24 @@
         </div>
 
         <div class="form-group">
+            <label for="version-select">Version:</label>
+            <select id="version-select" onchange="switchVersion()">
+                <option value="current" selected>Current Code</option>
+                {% for version in widget.versions %}
+                    <option value="{{ version.id }}" 
+                            data-code="{{ version.code|e }}"
+                            {% if not version.is_working %}data-broken="true"{% endif %}>
+                        Version {{ version.version_number }}
+                        {% if version.improvement_type %}({{ version.improvement_type }}){% endif %}
+                        - {{ version.created_at.strftime('%m/%d %H:%M') }}
+                        {% if not version.is_working %} ⚠️{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+            <small>Select a version to load its code. Warning icons (⚠️) indicate versions that failed to build.</small>
+        </div>
+
+        <div class="form-group">
             <label for="code">React Component Code:</label>
             <textarea id="code" name="code" rows="30">{{ widget.code }}</textarea>
         </div>
@@ -188,6 +206,49 @@
 </style>
 
 <script>
+    // Store the original current code
+    const originalCode = document.getElementById('code').value;
+    
+    function switchVersion() {
+        const versionSelect = document.getElementById('version-select');
+        const selectedOption = versionSelect.options[versionSelect.selectedIndex];
+        const codeTextarea = document.getElementById('code');
+        
+        if (selectedOption.value === 'current') {
+            codeTextarea.value = originalCode;
+        } else {
+            const versionId = selectedOption.value;
+            
+            // Fetch the version code from the server
+            fetch('{{ url_for("widgets.get_version_code", slug=widget.slug) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    version: versionId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    codeTextarea.value = data.code;
+                } else {
+                    alert('Failed to load version: ' + data.error);
+                    // Reset to current
+                    versionSelect.value = 'current';
+                    codeTextarea.value = originalCode;
+                }
+            })
+            .catch(error => {
+                alert('Failed to load version: ' + error.message);
+                // Reset to current
+                versionSelect.value = 'current';
+                codeTextarea.value = originalCode;
+            });
+        }
+    }
+
     function previewWidget() {
         const modal = document.getElementById('preview-modal');
         const root = document.getElementById('preview-root');

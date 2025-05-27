@@ -98,7 +98,8 @@ def edit_widget(slug):
         
         return render_template(
             'widgets/edit_widget.html',
-            widget=widget
+            widget=widget,
+            channel_manager=get_channel_manager()
         )
     
 
