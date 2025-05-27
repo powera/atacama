@@ -374,48 +374,99 @@
     }
 
     function computeLineDiff(originalLines, improvedLines) {
+        // Use Myers diff algorithm (simplified LCS-based approach)
+        const lcs = computeLCS(originalLines, improvedLines);
         const diff = [];
+        
         let originalIndex = 0;
         let improvedIndex = 0;
+        let lcsIndex = 0;
         
         while (originalIndex < originalLines.length || improvedIndex < improvedLines.length) {
-            const originalLine = originalLines[originalIndex];
-            const improvedLine = improvedLines[improvedIndex];
-            
-            if (originalIndex >= originalLines.length) {
-                // Only improved lines left
-                diff.push({ type: 'added', improved: improvedLine, improvedLineNum: improvedIndex + 1 });
-                improvedIndex++;
-            } else if (improvedIndex >= improvedLines.length) {
-                // Only original lines left
-                diff.push({ type: 'removed', original: originalLine, originalLineNum: originalIndex + 1 });
-                originalIndex++;
-            } else if (originalLine === improvedLine) {
-                // Lines are the same
-                diff.push({ 
-                    type: 'unchanged', 
-                    original: originalLine, 
-                    improved: improvedLine,
+            // Check if we're at an LCS match
+            if (lcsIndex < lcs.length && 
+                originalIndex < originalLines.length && 
+                improvedIndex < improvedLines.length &&
+                originalLines[originalIndex] === lcs[lcsIndex] &&
+                improvedLines[improvedIndex] === lcs[lcsIndex]) {
+                
+                // This line is unchanged
+                diff.push({
+                    type: 'unchanged',
+                    original: originalLines[originalIndex],
+                    improved: improvedLines[improvedIndex],
                     originalLineNum: originalIndex + 1,
                     improvedLineNum: improvedIndex + 1
                 });
                 originalIndex++;
                 improvedIndex++;
+                lcsIndex++;
             } else {
-                // Lines are different - simple heuristic: treat as changed
-                diff.push({ 
-                    type: 'changed', 
-                    original: originalLine, 
-                    improved: improvedLine,
-                    originalLineNum: originalIndex + 1,
-                    improvedLineNum: improvedIndex + 1
-                });
-                originalIndex++;
-                improvedIndex++;
+                // Handle deletions and additions
+                let hasDeleted = false;
+                let hasAdded = false;
+                
+                // Process deletions
+                while (originalIndex < originalLines.length && 
+                       (lcsIndex >= lcs.length || originalLines[originalIndex] !== lcs[lcsIndex])) {
+                    diff.push({
+                        type: 'removed',
+                        original: originalLines[originalIndex],
+                        originalLineNum: originalIndex + 1
+                    });
+                    originalIndex++;
+                    hasDeleted = true;
+                }
+                
+                // Process additions
+                while (improvedIndex < improvedLines.length && 
+                       (lcsIndex >= lcs.length || improvedLines[improvedIndex] !== lcs[lcsIndex])) {
+                    diff.push({
+                        type: 'added',
+                        improved: improvedLines[improvedIndex],
+                        improvedLineNum: improvedIndex + 1
+                    });
+                    improvedIndex++;
+                    hasAdded = true;
+                }
             }
         }
         
         return diff;
+    }
+    
+    function computeLCS(a, b) {
+        const m = a.length;
+        const n = b.length;
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        // Build LCS length table
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (a[i - 1] === b[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+        
+        // Reconstruct LCS
+        const lcs = [];
+        let i = m, j = n;
+        while (i > 0 && j > 0) {
+            if (a[i - 1] === b[j - 1]) {
+                lcs.unshift(a[i - 1]);
+                i--;
+                j--;
+            } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                i--;
+            } else {
+                j--;
+            }
+        }
+        
+        return lcs;
     }
 
     function updateSideBySideView(diff) {
@@ -499,13 +550,14 @@
     }
 
     function updateDiffStats(diff) {
-        const added = diff.filter(d => d.type === 'added' || d.type === 'changed').length;
-        const removed = diff.filter(d => d.type === 'removed' || d.type === 'changed').length;
+        const added = diff.filter(d => d.type === 'added').length;
+        const removed = diff.filter(d => d.type === 'removed').length;
+        const unchanged = diff.filter(d => d.type === 'unchanged').length;
         
         document.getElementById('diff-stats-text').innerHTML = `
             <span class="stat-added">+${added}</span> 
             <span class="stat-removed">-${removed}</span> 
-            lines changed
+            <span class="stat-unchanged">${unchanged} unchanged</span>
         `;
     }
 
