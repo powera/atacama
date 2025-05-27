@@ -19,7 +19,7 @@ from flask import (
     url_for
 )
 from sqlalchemy import select, text
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 # Local application imports
 from common.base.logging_config import get_logger
@@ -36,7 +36,8 @@ from models.messages import (
     get_message_chain,
     get_user_allowed_channels
 )
-from models.models import Email
+
+from models.models import Message, Article, ReactWidget, Quote, Email
 from models.users import is_user_admin
 from web.blueprints.errors import handle_error
 from web.decorators import navigable, navigable_per_channel, optional_auth, require_auth
@@ -404,8 +405,6 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
     Display a unified stream of all message types with metadata and links.
     Uses datetime-based pagination like the stream view.
     """
-    from models.models import Message, Article, ReactWidget, Quote
-    from sqlalchemy.orm import selectinload
     
     domain_manager = get_domain_manager()
     current_domain = g.current_domain
@@ -445,7 +444,7 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
             query = query.filter(Message.created_at < older_than_timestamp)
         
         # Get messages ordered by creation date (newest first)
-        limit = 20
+        limit = 10
         messages = query.order_by(Message.created_at.desc()).limit(limit + 1).all()
         
         # Check if there are more messages
