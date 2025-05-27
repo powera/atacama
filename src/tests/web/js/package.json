@@ -1,0 +1,11 @@
+{
+  "name": "atacama-js-tests",
+  "version": "1.0.0",
+  "description": "JavaScript tests for Atacama",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

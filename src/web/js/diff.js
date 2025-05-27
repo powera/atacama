@@ -16,13 +16,27 @@ class DiffUtil {
             return [];
         }
         
-        const originalLines = (originalText || '').split('\n');
-        const improvedLines = (improvedText || '').split('\n');
+        // Normalize line endings to LF before splitting
+        const normalizedOriginal = this.normalizeLineEndings(originalText || '');
+        const normalizedImproved = this.normalizeLineEndings(improvedText || '');
+        
+        const originalLines = normalizedOriginal.split('\n');
+        const improvedLines = normalizedImproved.split('\n');
         
         // Compute line-by-line diff using improved LCS algorithm
         const diff = this.computeLineDiff(originalLines, improvedLines);
         
         return diff;
+    }
+    
+    /**
+     * Normalize line endings to LF
+     * @param {string} text - Text to normalize
+     * @returns {string} Normalized text
+     */
+    static normalizeLineEndings(text) {
+        // Replace all CRLF with LF and then replace any remaining CR with LF
+        return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     }
 
     /**
