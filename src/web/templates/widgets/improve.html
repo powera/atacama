@@ -114,19 +114,57 @@
 
 <!-- Code Comparison Modal -->
 <div id="compare-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <span class="close" onclick="closeCompare()">&times;</span>
-        <h2>Code Comparison</h2>
-        <div class="comparison-view">
-            <div class="code-column">
-                <h3>Original Code</h3>
-                <textarea id="original-code" readonly></textarea>
-            </div>
-            <div class="code-column">
-                <h3>Improved Code</h3>
-                <textarea id="comparison-improved-code" readonly></textarea>
+    <div class="modal-content diff-modal">
+        <div class="modal-header">
+            <h2>Code Comparison</h2>
+            <span class="close" onclick="closeCompare()">&times;</span>
+        </div>
+        <div class="diff-toolbar">
+            <button type="button" class="button secondary" onclick="toggleDiffMode()">
+                <span id="diff-mode-text">Switch to Unified View</span>
+            </button>
+            <div class="diff-stats">
+                <span id="diff-stats-text">Computing changes...</span>
             </div>
         </div>
+        <div class="diff-container">
+            <div id="side-by-side-view" class="diff-view active">
+                <div class="diff-pane">
+                    <div class="diff-header">
+                        <h3>Original Code</h3>
+                        <span class="line-count" id="original-line-count"></span>
+                    </div>
+                    <div class="diff-content">
+                        <div class="line-numbers" id="original-line-numbers"></div>
+                        <pre class="code-content" id="original-code-content"></pre>
+                    </div>
+                </div>
+                <div class="diff-pane">
+                    <div class="diff-header">
+                        <h3>Improved Code</h3>
+                        <span class="line-count" id="improved-line-count"></span>
+                    </div>
+                    <div class="diff-content">
+                        <div class="line-numbers" id="improved-line-numbers"></div>
+                        <pre class="code-content" id="improved-code-content"></pre>
+                    </div>
+                </div>
+            </div>
+            <div id="unified-view" class="diff-view">
+                <div class="diff-pane unified">
+                    <div class="diff-header">
+                        <h3>Unified Diff</h3>
+                    </div>
+                    <div class="diff-content">
+                        <div class="line-numbers" id="unified-line-numbers"></div>
+                        <pre class="code-content" id="unified-code-content"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Fallback textareas for copy functionality -->
+        <textarea id="original-code" style="display: none;" readonly></textarea>
+        <textarea id="comparison-improved-code" style="display: none;" readonly></textarea>
     </div>
 </div>
 
@@ -311,7 +349,180 @@
     function compareCode() {
         document.getElementById('original-code').value = originalCode;
         document.getElementById('comparison-improved-code').value = currentImprovedCode;
+        
+        // Generate and display the diff
+        generateDiff(originalCode, currentImprovedCode);
+        
         document.getElementById('compare-modal').style.display = 'block';
+    }
+
+    function generateDiff(originalText, improvedText) {
+        const originalLines = originalText.split('\n');
+        const improvedLines = improvedText.split('\n');
+        
+        // Simple line-by-line diff implementation
+        const diff = computeLineDiff(originalLines, improvedLines);
+        
+        // Update side-by-side view
+        updateSideBySideView(diff);
+        
+        // Update unified view
+        updateUnifiedView(diff);
+        
+        // Update stats
+        updateDiffStats(diff);
+    }
+
+    function computeLineDiff(originalLines, improvedLines) {
+        const diff = [];
+        let originalIndex = 0;
+        let improvedIndex = 0;
+        
+        while (originalIndex < originalLines.length || improvedIndex < improvedLines.length) {
+            const originalLine = originalLines[originalIndex];
+            const improvedLine = improvedLines[improvedIndex];
+            
+            if (originalIndex >= originalLines.length) {
+                // Only improved lines left
+                diff.push({ type: 'added', improved: improvedLine, improvedLineNum: improvedIndex + 1 });
+                improvedIndex++;
+            } else if (improvedIndex >= improvedLines.length) {
+                // Only original lines left
+                diff.push({ type: 'removed', original: originalLine, originalLineNum: originalIndex + 1 });
+                originalIndex++;
+            } else if (originalLine === improvedLine) {
+                // Lines are the same
+                diff.push({ 
+                    type: 'unchanged', 
+                    original: originalLine, 
+                    improved: improvedLine,
+                    originalLineNum: originalIndex + 1,
+                    improvedLineNum: improvedIndex + 1
+                });
+                originalIndex++;
+                improvedIndex++;
+            } else {
+                // Lines are different - simple heuristic: treat as changed
+                diff.push({ 
+                    type: 'changed', 
+                    original: originalLine, 
+                    improved: improvedLine,
+                    originalLineNum: originalIndex + 1,
+                    improvedLineNum: improvedIndex + 1
+                });
+                originalIndex++;
+                improvedIndex++;
+            }
+        }
+        
+        return diff;
+    }
+
+    function updateSideBySideView(diff) {
+        const originalLineNumbers = document.getElementById('original-line-numbers');
+        const originalCodeContent = document.getElementById('original-code-content');
+        const improvedLineNumbers = document.getElementById('improved-line-numbers');
+        const improvedCodeContent = document.getElementById('improved-code-content');
+        
+        let originalHTML = '';
+        let improvedHTML = '';
+        let originalLineNumHTML = '';
+        let improvedLineNumHTML = '';
+        
+        diff.forEach(item => {
+            if (item.type === 'unchanged' || item.type === 'changed') {
+                // Both sides have content
+                const originalClass = item.type === 'changed' ? 'line-removed' : '';
+                const improvedClass = item.type === 'changed' ? 'line-added' : '';
+                
+                originalLineNumHTML += `<div class="line-num ${originalClass}">${item.originalLineNum || ''}</div>`;
+                originalHTML += `<div class="code-line ${originalClass}">${escapeHtml(item.original || '')}</div>`;
+                
+                improvedLineNumHTML += `<div class="line-num ${improvedClass}">${item.improvedLineNum || ''}</div>`;
+                improvedHTML += `<div class="code-line ${improvedClass}">${escapeHtml(item.improved || '')}</div>`;
+            } else if (item.type === 'removed') {
+                // Only original side has content
+                originalLineNumHTML += `<div class="line-num line-removed">${item.originalLineNum}</div>`;
+                originalHTML += `<div class="code-line line-removed">${escapeHtml(item.original)}</div>`;
+                
+                improvedLineNumHTML += `<div class="line-num line-empty"></div>`;
+                improvedHTML += `<div class="code-line line-empty"></div>`;
+            } else if (item.type === 'added') {
+                // Only improved side has content
+                originalLineNumHTML += `<div class="line-num line-empty"></div>`;
+                originalHTML += `<div class="code-line line-empty"></div>`;
+                
+                improvedLineNumHTML += `<div class="line-num line-added">${item.improvedLineNum}</div>`;
+                improvedHTML += `<div class="code-line line-added">${escapeHtml(item.improved)}</div>`;
+            }
+        });
+        
+        originalLineNumbers.innerHTML = originalLineNumHTML;
+        originalCodeContent.innerHTML = originalHTML;
+        improvedLineNumbers.innerHTML = improvedLineNumHTML;
+        improvedCodeContent.innerHTML = improvedHTML;
+        
+        // Update line counts
+        document.getElementById('original-line-count').textContent = `${diff.filter(d => d.original).length} lines`;
+        document.getElementById('improved-line-count').textContent = `${diff.filter(d => d.improved).length} lines`;
+    }
+
+    function updateUnifiedView(diff) {
+        const unifiedLineNumbers = document.getElementById('unified-line-numbers');
+        const unifiedCodeContent = document.getElementById('unified-code-content');
+        
+        let unifiedHTML = '';
+        let lineNumHTML = '';
+        let lineNum = 1;
+        
+        diff.forEach(item => {
+            if (item.type === 'unchanged') {
+                lineNumHTML += `<div class="line-num">${lineNum}</div>`;
+                unifiedHTML += `<div class="code-line">${escapeHtml(item.original)}</div>`;
+                lineNum++;
+            } else if (item.type === 'removed') {
+                lineNumHTML += `<div class="line-num line-removed">-</div>`;
+                unifiedHTML += `<div class="code-line line-removed">- ${escapeHtml(item.original)}</div>`;
+            } else if (item.type === 'added') {
+                lineNumHTML += `<div class="line-num line-added">+</div>`;
+                unifiedHTML += `<div class="code-line line-added">+ ${escapeHtml(item.improved)}</div>`;
+            } else if (item.type === 'changed') {
+                lineNumHTML += `<div class="line-num line-removed">-</div>`;
+                unifiedHTML += `<div class="code-line line-removed">- ${escapeHtml(item.original)}</div>`;
+                lineNumHTML += `<div class="line-num line-added">+</div>`;
+                unifiedHTML += `<div class="code-line line-added">+ ${escapeHtml(item.improved)}</div>`;
+            }
+        });
+        
+        unifiedLineNumbers.innerHTML = lineNumHTML;
+        unifiedCodeContent.innerHTML = unifiedHTML;
+    }
+
+    function updateDiffStats(diff) {
+        const added = diff.filter(d => d.type === 'added' || d.type === 'changed').length;
+        const removed = diff.filter(d => d.type === 'removed' || d.type === 'changed').length;
+        
+        document.getElementById('diff-stats-text').innerHTML = `
+            <span class="stat-added">+${added}</span> 
+            <span class="stat-removed">-${removed}</span> 
+            lines changed
+        `;
+    }
+
+    function toggleDiffMode() {
+        const sideBySide = document.getElementById('side-by-side-view');
+        const unified = document.getElementById('unified-view');
+        const modeText = document.getElementById('diff-mode-text');
+        
+        if (sideBySide.classList.contains('active')) {
+            sideBySide.classList.remove('active');
+            unified.classList.add('active');
+            modeText.textContent = 'Switch to Side-by-Side';
+        } else {
+            unified.classList.remove('active');
+            sideBySide.classList.add('active');
+            modeText.textContent = 'Switch to Unified View';
+        }
     }
 
     function closeCompare() {
