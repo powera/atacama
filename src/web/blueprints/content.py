@@ -494,7 +494,7 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
                     type_specific_data = quote
                     title = f"{quote.quote_type.title()}: {quote.text[:50]}..." if len(quote.text) > 50 else f"{quote.quote_type.title()}: {quote.text}"
                     preview = f"By {quote.original_author or 'Unknown'}" + (f" - {quote.commentary[:100]}..." if quote.commentary else "")
-                    message_url = url_for('quotes.list_quotes') + f"#{quote.id}"
+                    message_url = url_for('quotes.view_quote', quote_id=quote_id) + f"#{quote.id}"
             
             # Only include if we have the type-specific data and a URL
             if type_specific_data and message_url:
