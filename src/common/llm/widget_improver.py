@@ -85,8 +85,7 @@ Ensure the widget provides an excellent mobile user experience.'''
         """Load common CSS for context."""
         css_files = [
             'src/web/css/common.css',
-            'src/web/css/atacama.css',
-            'src/web/css/widget.css'
+            'src/web/css/widget_tools.css',
         ]
         
         css_content = ""
