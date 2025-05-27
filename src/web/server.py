@@ -183,9 +183,17 @@ def get_app():
         app = create_app()
     return app
 
-def run_server(host: str = '0.0.0.0', port: int = 5000) -> None:
+def run_server(host: str = '0.0.0.0', port: int = 5000, debug: bool = False) -> None:
     """Run the server and start the email fetcher daemon."""
     # Database initialization will happen automatically when needed
     # since system is already initialized by create_app()
     logger.info(f"Starting message processor server on {host}:{port}")
-    serve(get_app(), host=host, port=port)
+    
+    if debug:
+        # Use Flask's built-in development server for debug mode
+        app = get_app()
+        app.config['DEBUG'] = True
+        app.run(host=host, port=port, debug=True)
+    else:
+        # Use Waitress for production
+        serve(get_app(), host=host, port=port)
