@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request, jsonify
 from sqlalchemy import select
 from datetime import datetime
+import hashlib
 from models.database import db
 from models.models import ReactWidget, User, WidgetVersion
 from models.messages import check_channel_access
@@ -74,9 +75,42 @@ def edit_widget(slug):
             return redirect(url_for('widgets.view_widget', slug=slug))
         
         if request.method == 'POST':
+            new_code = request.form.get('code', widget.code)
+            code_hash = hashlib.md5(new_code.encode('utf-8')).hexdigest()
+            
+            # Check if this exact code already exists as a version
+            existing_version = session.query(WidgetVersion).filter_by(
+                widget_id=widget.id,
+                code_hash=code_hash
+            ).first()
+            
+            # Only save a new version if the code is different
+            if not existing_version and new_code != widget.code:
+                # Get the next version number
+                max_version = session.query(WidgetVersion).filter_by(widget_id=widget.id).count()
+                version_number = max_version + 1
+                
+                # Create new version
+                version = WidgetVersion(
+                    widget_id=widget.id,
+                    version_number=version_number,
+                    code=new_code,
+                    code_hash=code_hash,
+                    improvement_type='manual',
+                    dev_comments='Manual edit via form'
+                )
+                
+                session.add(version)
+                session.flush()  # To get the ID
+                
+                # Build the version
+                build_success = version.build()
+                logger.info(f"Created version {version_number} for widget {slug}, build success: {build_success}")
+            
+            # Update widget properties
             widget.title = request.form.get('title', widget.title)
             widget.description = request.form.get('description', widget.description)
-            widget.code = request.form.get('code', widget.code)
+            widget.code = new_code
             widget.last_modified_at = datetime.utcnow()
 
             session.commit()
@@ -154,6 +188,26 @@ def create_widget():
             )
             
             session.add(widget)
+            session.flush()  # To get widget ID
+            
+            # Create initial version if there's code
+            if code.strip():
+                code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
+                initial_version = WidgetVersion(
+                    widget_id=widget.id,
+                    version_number=1,
+                    code=code,
+                    code_hash=code_hash,
+                    improvement_type='manual',
+                    dev_comments='Initial widget creation'
+                )
+                session.add(initial_version)
+                session.flush()
+                
+                # Build the initial version
+                build_success = initial_version.build()
+                logger.info(f"Created initial version for widget {slug}, build success: {build_success}")
+            
             session.commit()
             
             flash("Widget created successfully!", 'success')
@@ -288,10 +342,23 @@ def save_version(slug):
         
         data = request.get_json()
         code = data.get('code', '')
+        code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
         prompt_used = data.get('prompt_used', '')
         improvement_type = data.get('improvement_type', 'custom')
         dev_comments = data.get('dev_comments', '')
         set_active = data.get('set_active', False)
+        
+        # Check for duplicate code
+        existing_version = session.query(WidgetVersion).filter_by(
+            widget_id=widget.id,
+            code_hash=code_hash
+        ).first()
+        
+        if existing_version:
+            return jsonify({
+                'success': False,
+                'error': f'This code already exists as version {existing_version.version_number}'
+            })
         
         # Get the next version number
         max_version = session.query(WidgetVersion).filter_by(widget_id=widget.id).count()
@@ -302,6 +369,7 @@ def save_version(slug):
             widget_id=widget.id,
             version_number=version_number,
             code=code,
+            code_hash=code_hash,
             prompt_used=prompt_used,
             improvement_type=improvement_type,
             dev_comments=dev_comments,

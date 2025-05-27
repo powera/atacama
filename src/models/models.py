@@ -282,6 +282,7 @@ class WidgetVersion(Base):
     
     # Code and compilation
     code: Mapped[str] = mapped_column(Text, nullable=False)
+    code_hash: Mapped[Optional[str]] = mapped_column(String(32))  # MD5 hash for de-duplication
     compiled_code: Mapped[Optional[str]] = mapped_column(Text)
     dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
     
@@ -305,8 +306,14 @@ class WidgetVersion(Base):
     
     def build(self):
         """Build this version of the widget code."""
+        import hashlib
+        
         builder = WidgetBuilder()
         widget_name = self.widget.title.replace(' ', '')
+        
+        # Set code hash if not already set
+        if not self.code_hash:
+            self.code_hash = hashlib.md5(self.code.encode('utf-8')).hexdigest()
         
         # Auto-detect dependencies
         all_deps = builder.check_react_libraries(self.code)
