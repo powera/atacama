@@ -84,8 +84,8 @@ def edit_widget(slug):
                 code_hash=code_hash
             ).first()
             
-            # Only save a new version if the code is different
-            if not existing_version and new_code != widget.code:
+            # Only save a new version if the code is not in the WidgetVersion table
+            if not existing_version:
                 # Get the next version number
                 max_version = session.query(WidgetVersion).filter_by(widget_id=widget.id).count()
                 version_number = max_version + 1

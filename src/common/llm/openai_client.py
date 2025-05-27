@@ -8,7 +8,6 @@ import time
 from typing import Dict, Optional, Any, Tuple
 
 import requests
-import tiktoken
 
 import constants
 from common.llm.telemetry import LLMUsage
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 TEST_MODEL = "gpt-4.1-nano-2025-04-14"
 PROD_MODEL = "gpt-4.1-mini-2025-04-14"
 DEFAULT_MODEL = TEST_MODEL
-DEFAULT_TIMEOUT = 50
+DEFAULT_TIMEOUT = 240
 API_BASE = "https://api.openai.com/v1"
 
 def measure_completion(func):
@@ -104,7 +103,8 @@ class OpenAIClient:
         model: str = DEFAULT_MODEL,
         brief: bool = False,
         json_schema: Optional[Any] = None,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        max_tokens: Optional[int] = None
     ) -> Response:
         """
         Generate chat completion using OpenAI API.
@@ -127,29 +127,22 @@ class OpenAIClient:
             logger.debug("Brief mode: %s", brief)
             logger.debug("Context: %s", context)
             logger.debug("JSON schema: %s", json_schema)
+        else:
+            logger.info("Generating chat response with model: %s", model)
         
         messages = []
         if context:
             messages.append({"role": "system", "content": context})
         messages.append({"role": "user", "content": prompt})
         
-        # Calculate input tokens using tiktoken
-        try:
-            encoding = tiktoken.encoding_for_model(model)
-            input_tokens = 0
-            for message in messages:
-                input_tokens += len(encoding.encode(message["content"]))
-        except Exception as e:
-            logger.warning(f"Failed to calculate input tokens with tiktoken: {e}")
-            input_tokens = 0
-        
         # Set max_tokens with proper limits
-        if brief:
-            max_tokens = 1536
-        else:
-            # For widget improvement, use at least 1.5x the input tokens but cap at reasonable limit
-            min_tokens = max(1536, int(input_tokens * 1.5)) if input_tokens > 0 else 8000
-            max_tokens = min(min_tokens, 16000)  # Cap at 16k for safety
+        if not max_tokens:
+            if brief:
+                max_tokens = 512
+            else:
+                max_tokens = 2048
+
+        logger.info("Using max_tokens: %d", max_tokens)
         
         kwargs = {
             "model": model,
@@ -235,7 +228,8 @@ def generate_chat(
     model: str = DEFAULT_MODEL,
     brief: bool = False,
     json_schema: Optional[Any] = None,
-    context: Optional[str] = None
+    context: Optional[str] = None,
+    max_tokens: Optional[int] = None
 ) -> Response:
     """
     Generate a chat response using OpenAI API.
@@ -245,4 +239,5 @@ def generate_chat(
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
-    return client.generate_chat(prompt, model, brief, json_schema, context)
+    return client.generate_chat(prompt, model, brief, json_schema, context,
+                                max_tokens=max_tokens)

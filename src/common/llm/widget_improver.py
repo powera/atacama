@@ -5,6 +5,8 @@ import os
 from typing import Optional, Dict, Any
 from pathlib import Path
 
+import tiktoken
+
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL
 from common.base.logging_config import get_logger
 
@@ -124,12 +126,25 @@ Ensure the widget provides an excellent mobile user experience.'''
             full_prompt = self._build_improvement_prompt(
                 current_code, prompt, widget_title
             )
+            logger.info(f"Improving widget code for '{widget_title}' with prompt: {full_prompt[:100]}...")  # Log first 100 chars
+
+            # Calculate input tokens using tiktoken
+            try:
+                encoding = tiktoken.get_encoding("cl100k_base")
+                input_tokens = 0
+                input_tokens += len(encoding.encode(full_prompt))
+            except Exception as e:
+                logger.warning(f"Failed to calculate input tokens with tiktoken: {e}")
+                input_tokens = 0
+
+            max_tokens = max(2048, input_tokens * 1.25 + 500)
             
             # Generate improved code
             response = generate_chat(
                 prompt=full_prompt,
                 model=self.model,
-                brief=False
+                brief=False,
+                max_tokens=int(max_tokens),
             )
             
             if not response.response_text:
@@ -143,6 +158,7 @@ Ensure the widget provides an excellent mobile user experience.'''
             # Extract code from response
             improved_code = self._extract_code_from_response(response.response_text)
             
+            logger.info(f"Finished improving widget code for '{widget_title}'.")
             return {
                 'success': True,
                 'improved_code': improved_code,
