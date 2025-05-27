@@ -392,6 +392,138 @@ def landing_page():
         )
     
 
+@content_bp.route('/all')
+@optional_auth
+@navigable(name="All Messages", 
+          description="View all types of messages (emails, articles, widgets, quotes)",
+          category="main")
+def all_messages():
+    """
+    Display a unified stream of all message types with metadata and links.
+    """
+    from models.models import Article, ReactWidget, Quote
+    
+    domain_manager = get_domain_manager()
+    current_domain = g.current_domain
+    
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    with db.session() as db_session:
+        # Get user-allowed channels
+        allowed_channels = get_user_allowed_channels(g.user, ignore_preferences=True)
+        
+        # Filter channels based on domain restrictions
+        if not domain_manager.get_domain_config(current_domain).allows_all_channels:
+            domain_channels = domain_manager.get_allowed_channels(current_domain)
+            allowed_channels = [c for c in allowed_channels if c in domain_channels]
+        
+        # Get all message types
+        emails = db_session.query(Email).filter(
+            Email.channel.in_(allowed_channels)
+        ).all()
+        
+        articles = db_session.query(Article).filter(
+            Article.channel.in_(allowed_channels),
+            Article.published == True
+        ).all()
+        
+        widgets = db_session.query(ReactWidget).filter(
+            ReactWidget.channel.in_(allowed_channels),
+            ReactWidget.published == True
+        ).all()
+        
+        quotes = db_session.query(Quote).filter(
+            Quote.channel.in_(allowed_channels)
+        ).all()
+        
+        # Combine all messages with type information
+        all_messages = []
+        
+        for email in emails:
+            all_messages.append({
+                'type': 'email',
+                'id': email.id,
+                'title': email.subject or '(No Subject)',
+                'created_at': email.created_at,
+                'channel': email.channel,
+                'author': email.author,
+                'preview': email.preview_content[:200] + '...' if email.preview_content and len(email.preview_content) > 200 else email.preview_content,
+                'url': url_for('content.get_message', message_id=email.id),
+                'object': email
+            })
+        
+        for article in articles:
+            all_messages.append({
+                'type': 'article',
+                'id': article.id,
+                'title': article.title,
+                'created_at': article.published_at or article.created_at,
+                'channel': article.channel,
+                'author': article.author,
+                'preview': article.processed_content[:200] + '...' if article.processed_content and len(article.processed_content) > 200 else article.processed_content,
+                'url': url_for('articles.view_article', slug=article.slug),
+                'object': article
+            })
+        
+        for widget in widgets:
+            all_messages.append({
+                'type': 'widget',
+                'id': widget.id,
+                'title': widget.title,
+                'created_at': widget.published_at or widget.created_at,
+                'channel': widget.channel,
+                'author': widget.author,
+                'preview': widget.description or 'Interactive React widget',
+                'url': url_for('widgets.view_widget', slug=widget.slug),
+                'object': widget
+            })
+        
+        for quote in quotes:
+            all_messages.append({
+                'type': 'quote',
+                'id': quote.id,
+                'title': f"{quote.quote_type.title()}: {quote.text[:50]}..." if len(quote.text) > 50 else f"{quote.quote_type.title()}: {quote.text}",
+                'created_at': quote.created_at,
+                'channel': quote.channel,
+                'author': quote.author,
+                'preview': f"By {quote.original_author or 'Unknown'}" + (f" - {quote.commentary[:100]}..." if quote.commentary else ""),
+                'url': url_for('quotes.list_quotes') + f"#{quote.id}",
+                'object': quote
+            })
+        
+        # Sort by creation date (newest first)
+        all_messages.sort(key=lambda x: x['created_at'], reverse=True)
+        
+        # Paginate
+        total_count = len(all_messages)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_messages = all_messages[start_idx:end_idx]
+        
+        # Format timestamps
+        for message in paginated_messages:
+            message['created_at_formatted'] = message['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Calculate pagination info
+        total_pages = (total_count + per_page - 1) // per_page
+        has_prev = page > 1
+        has_next = page < total_pages
+        
+        return render_template(
+            'all_messages.html',
+            messages=paginated_messages,
+            total_count=total_count,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+            has_prev=has_prev,
+            has_next=has_next,
+            available_channels=allowed_channels
+        )
+
+
 @content_bp.route('/channel/<string:channel>/message_list')
 @optional_auth
 @navigable_per_channel(name="Message List",
