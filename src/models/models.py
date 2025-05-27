@@ -222,6 +222,13 @@ class ReactWidget(Message):
     dependencies: Mapped[Optional[Dict]] = mapped_column(Text)  # External dependencies needed
     config: Mapped[Optional[Dict]] = mapped_column(Text)  # Widget configuration
     
+    # Current active version
+    active_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('widget_versions.id'))
+    
+    # Relationship to versions
+    versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", cascade="all, delete-orphan")
+    active_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", foreign_keys=[active_version_id], post_update=True)
+    
     def build(self):
         """Build the widget code into a browser-ready bundle."""
         builder = WidgetBuilder()
@@ -260,4 +267,68 @@ class ReactWidget(Message):
         if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', slug.lower()):
             raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
         return slug.lower()
+
+
+class WidgetVersion(Base):
+    """Stores different versions of widget code, including AI-improved iterations."""
+    __tablename__ = 'widget_versions'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    widget_id: Mapped[int] = mapped_column(Integer, ForeignKey('react_widgets.id'), nullable=False)
+    
+    # Version metadata
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)  # Auto-incrementing per widget
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # Code and compilation
+    code: Mapped[str] = mapped_column(Text, nullable=False)
+    compiled_code: Mapped[Optional[str]] = mapped_column(Text)
+    dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
+    
+    # AI improvement tracking
+    prompt_used: Mapped[Optional[str]] = mapped_column(Text)  # The prompt that generated this version
+    previous_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('widget_versions.id'))
+    improvement_type: Mapped[Optional[str]] = mapped_column(String)  # 'canned', 'custom', 'manual'
+    dev_comments: Mapped[Optional[str]] = mapped_column(Text)  # Developer notes about this version
+    
+    # AI generation metadata
+    ai_model_used: Mapped[Optional[str]] = mapped_column(String)  # Which AI model was used
+    ai_usage_stats: Mapped[Optional[Dict]] = mapped_column(Text)  # Token usage, cost, etc.
+    
+    # Status
+    is_working: Mapped[Optional[bool]] = mapped_column(Boolean, default=None)  # Whether this version compiles/works
+    build_error: Mapped[Optional[str]] = mapped_column(Text)  # Build error if any
+    
+    # Relationships
+    widget: Mapped["ReactWidget"] = relationship("ReactWidget", back_populates="versions", foreign_keys=[widget_id])
+    previous_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", remote_side=[id])
+    
+    def build(self):
+        """Build this version of the widget code."""
+        builder = WidgetBuilder()
+        widget_name = self.widget.title.replace(' ', '')
+        
+        # Auto-detect dependencies
+        all_deps = builder.check_react_libraries(self.code)
+        deps = all_deps["target_libraries"]
+        self.dependencies = ",".join(deps)
+
+        success, built_code, error = builder.build_widget(
+            self.code, 
+            widget_name,
+            external_dependencies=deps
+        )
+        
+        if success:
+            logger.info(f"Widget version {self.id} built successfully.")
+            self.compiled_code = built_code
+            self.is_working = True
+            self.build_error = None
+        else:
+            logger.warning(f"Widget version build failed: {error}")
+            self.compiled_code = None
+            self.is_working = False
+            self.build_error = error
+            
+        return success
 
