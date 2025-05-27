@@ -226,7 +226,7 @@ class ReactWidget(Message):
     active_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('widget_versions.id'))
     
     # Relationship to versions
-    versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", cascade="all, delete-orphan")
+    versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", foreign_keys="[WidgetVersion.widget_id]", cascade="all, delete-orphan")
     active_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", foreign_keys=[active_version_id], post_update=True)
     
     def build(self):

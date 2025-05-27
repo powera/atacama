@@ -2,12 +2,13 @@ from flask import Blueprint, render_template, abort, flash, redirect, url_for, g
 from sqlalchemy import select
 from datetime import datetime
 from models.database import db
-from models.models import ReactWidget, User
+from models.models import ReactWidget, User, WidgetVersion
 from models.messages import check_channel_access
 from web.decorators import navigable, optional_auth, require_auth, require_admin
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
+from common.llm.widget_improver import widget_improver
 
 from models.messages import get_user_allowed_channels
 
@@ -216,3 +217,152 @@ def publish_widget(slug):
             'status': 'success',
             'message': 'Widget published!'
         }), 200
+
+
+@widgets_bp.route('/widget/<string:slug>/improve', methods=['GET', 'POST'])
+@require_admin
+def improve_widget(slug):
+    """Improve a React widget using AI."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        if request.method == 'GET':
+            # Show the improvement interface
+            return render_template(
+                'widgets/improve.html',
+                widget=widget
+            )
+        
+        # Handle POST request for AI improvement
+        data = request.get_json()
+        base_version = data.get('base_version', 'current')
+        prompt = data.get('prompt', '')
+        improvement_type = data.get('improvement_type', 'custom')
+        
+        # Get the base code
+        if base_version == 'current':
+            base_code = widget.code
+        else:
+            version = session.query(WidgetVersion).filter_by(id=base_version).first()
+            if not version or version.widget_id != widget.id:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid version selected'
+                }), 400
+            base_code = version.code
+        
+        # Use AI to improve the widget
+        result = widget_improver.improve_widget(
+            current_code=base_code,
+            prompt=prompt,
+            improvement_type=improvement_type,
+            widget_title=widget.title
+        )
+        
+        return jsonify(result)
+
+
+@widgets_bp.route('/widget/<string:slug>/save_version', methods=['POST'])
+@require_admin
+def save_version(slug):
+    """Save a new version of the widget."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        data = request.get_json()
+        code = data.get('code', '')
+        prompt_used = data.get('prompt_used', '')
+        improvement_type = data.get('improvement_type', 'custom')
+        dev_comments = data.get('dev_comments', '')
+        set_active = data.get('set_active', False)
+        
+        # Get the next version number
+        max_version = session.query(WidgetVersion).filter_by(widget_id=widget.id).count()
+        version_number = max_version + 1
+        
+        # Create new version
+        version = WidgetVersion(
+            widget_id=widget.id,
+            version_number=version_number,
+            code=code,
+            prompt_used=prompt_used,
+            improvement_type=improvement_type,
+            dev_comments=dev_comments,
+            ai_model_used='openai'  # Could be made configurable
+        )
+        
+        session.add(version)
+        session.flush()  # To get the ID
+        
+        # Build the version
+        build_success = version.build()
+        
+        if set_active and build_success:
+            widget.active_version_id = version.id
+            widget.code = code
+            widget.compiled_code = version.compiled_code
+            widget.dependencies = version.dependencies
+            widget.last_modified_at = datetime.utcnow()
+        
+        session.commit()
+        
+        return jsonify({
+            'success': True,
+            'version_id': version.id,
+            'version_number': version_number,
+            'build_success': build_success
+        })
+
+
+@widgets_bp.route('/widget/<string:slug>/test_version', methods=['POST'])
+@require_admin
+def test_version(slug):
+    """Test a version of widget code without saving."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        test_code = request.form.get('code', widget.code)
+        
+        # Create a temporary widget object for testing
+        test_widget = type('TestWidget', (), {
+            'title': widget.title + ' (Test)',
+            'slug': widget.slug + '-test',
+            'code': test_code,
+            'compiled_code': None,
+            'channel': widget.channel,
+            'description': 'Test version of ' + widget.title,
+            'published': False,
+            'requires_auth': widget.requires_auth,
+            'is_public': widget.is_public
+        })()
+        
+        return render_template(
+            'widget.html',
+            widget=test_widget,
+            channel_config=get_channel_manager().get_channel_config(widget.channel),
+            test_mode=True
+        )
