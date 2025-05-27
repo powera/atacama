@@ -55,7 +55,7 @@
         </div>
         
         <div class="form-actions">
-            <button type="submit" class="button primary">Save Changes</button>
+            <button type="submit" class="button primary">Save & Build Widget</button>
             <button type="button" class="button secondary" onclick="previewWidget()">Preview</button>
             <a href="{{ url_for('widgets.list_widgets') }}" class="button">Back to List</a>
         </div>
@@ -181,18 +181,34 @@
 
     function buildWidget() {
         if (confirm('Build this widget? This will compile the React code for production use.')) {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Building...';
+            button.disabled = true;
+            
             fetch('{{ url_for("widgets.build_widget", slug=widget.slug) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: '{}'
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
+            }).then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        location.reload();
+                    }
                 } else {
-                    alert('Failed to build widget');
+                    alert('Failed to build widget: ' + (data.message || 'Unknown error'));
+                    button.textContent = originalText;
+                    button.disabled = false;
                 }
+            }).catch(error => {
+                alert('Failed to build widget: ' + error.message);
+                button.textContent = originalText;
+                button.disabled = false;
             });
         }
     }

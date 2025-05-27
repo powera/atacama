@@ -79,7 +79,20 @@ def edit_widget(slug):
             widget.last_modified_at = datetime.utcnow()
 
             session.commit()
-            flash("Widget updated successfully!", 'success')
+            
+            # Auto-build the widget after saving
+            try:
+                build_success = widget.build()
+                session.commit()
+                
+                if build_success:
+                    flash("Widget updated and built successfully!", 'success')
+                else:
+                    flash("Widget updated, but build failed. Check server logs.", 'warning')
+            except Exception as e:
+                logger.error(f"Widget build error during save: {str(e)}")
+                flash("Widget updated, but build encountered an error.", 'warning')
+            
             return redirect(url_for('widgets.view_widget', slug=slug))
         
         return render_template(
@@ -170,7 +183,8 @@ def build_widget(slug):
     if success:
         return jsonify({
             'status': 'success',
-            'message': 'Widget built successfully!'
+            'message': 'Widget built successfully!',
+            'redirect': url_for('widgets.view_widget', slug=slug)
         }), 200
     else:
         return jsonify({
