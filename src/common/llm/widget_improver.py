@@ -202,32 +202,45 @@ Please provide the improved React component code:"""
         code_block_pattern = r'```(?:javascript|jsx|react|js)?\n(.*?)\n```'
         matches = re.findall(code_block_pattern, response, re.DOTALL)
         
+        extracted_code = ""
         if matches:
             # Return the first code block found
-            return matches[0].strip()
+            extracted_code = matches[0].strip()
+        else:
+            # If no code blocks found, look for code that starts with typical React patterns
+            lines = response.split('\n')
+            code_lines = []
+            in_code = False
+            
+            for line in lines:
+                # Start collecting when we see React-like code
+                if not in_code and ('import React' in line or 'const ' in line or 'function ' in line):
+                    in_code = True
+                
+                if in_code:
+                    code_lines.append(line)
+                    
+                # Stop when we hit explanation text after code
+                if in_code and line.strip() and not line.startswith('//') and ('This ' in line or 'The ' in line):
+                    break
+            
+            if code_lines:
+                extracted_code = '\n'.join(code_lines).strip()
+            else:
+                # Fallback: return the response as-is
+                extracted_code = response.strip()
         
-        # If no code blocks found, look for code that starts with typical React patterns
-        lines = response.split('\n')
-        code_lines = []
-        in_code = False
+        # Remove export default statements from the extracted code
+        lines = extracted_code.split('\n')
+        filtered_lines = []
         
         for line in lines:
-            # Start collecting when we see React-like code
-            if not in_code and ('import React' in line or 'const ' in line or 'function ' in line):
-                in_code = True
-            
-            if in_code:
-                code_lines.append(line)
-                
-            # Stop when we hit explanation text after code
-            if in_code and line.strip() and not line.startswith('//') and ('This ' in line or 'The ' in line):
-                break
+            stripped_line = line.strip()
+            # Skip export default lines
+            if not (stripped_line.startswith('export default') and ';' in stripped_line):
+                filtered_lines.append(line)
         
-        if code_lines:
-            return '\n'.join(code_lines).strip()
-        
-        # Fallback: return the response as-is
-        return response.strip()
+        return '\n'.join(filtered_lines).strip()
     
     def get_canned_prompts(self) -> Dict[str, Dict[str, str]]:
         """Get available canned improvement prompts."""
