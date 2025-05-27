@@ -154,9 +154,12 @@ module.exports = {{
             src_dir = os.path.join(temp_dir, 'src')
             os.makedirs(src_dir)
             
+            # Clean the widget code by removing any existing export default statements
+            cleaned_code = self._remove_export_default(widget_code)
+            
             # Wrap the widget code to export it properly
             wrapped_code = f"""
-{widget_code}
+{cleaned_code}
 
 // Export the component
 export default {widget_name};
@@ -219,6 +222,27 @@ export default {widget_name};
             return False, "", str(e)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def _remove_export_default(self, code: str) -> str:
+        """
+        Remove export default statements from widget code.
+        
+        Args:
+            code: The widget source code
+            
+        Returns:
+            Code with export default statements removed
+        """
+        lines = code.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            stripped_line = line.strip()
+            # Skip export default lines
+            if not (stripped_line.startswith('export default') and ';' in stripped_line):
+                filtered_lines.append(line)
+        
+        return '\n'.join(filtered_lines)
 
     def check_react_libraries(self, code):
         """
