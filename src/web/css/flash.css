@@ -1,0 +1,128 @@
+/* Flash message styles */
+.flash-messages {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    max-width: 600px;
+    width: 90%;
+}
+
+.flash-message {
+    padding: var(--spacing-base) var(--spacing-large);
+    margin-bottom: var(--spacing-base);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: flashSlideIn 0.3s ease-out;
+}
+
+.flash-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    margin-left: var(--spacing-base);
+    padding: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flash-close:hover {
+    opacity: 1;
+}
+
+/* Flash message types */
+.flash-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.flash-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.flash-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Default flash style (when no category is specified) */
+.flash-message:not([class*="flash-"]) {
+    background-color: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* Animation */
+@keyframes flashSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .flash-success {
+    background-color: #1e3a1e;
+    color: #a3d9a5;
+    border-color: #2d5a2f;
+}
+
+[data-theme="dark"] .flash-error {
+    background-color: #3a1e1e;
+    color: #d9a3a3;
+    border-color: #5a2d2d;
+}
+
+[data-theme="dark"] .flash-warning {
+    background-color: #3a3a1e;
+    color: #d9d9a3;
+    border-color: #5a5a2d;
+}
+
+[data-theme="dark"] .flash-info {
+    background-color: #1e2a3a;
+    color: #a3c1d9;
+    border-color: #2d425a;
+}
+
+/* High contrast theme adjustments */
+[data-theme="high-contrast"] .flash-message {
+    border-width: 2px;
+}
+
+/* Mobile responsive */
+@media screen and (max-width: 768px) {
+    .flash-messages {
+        width: 95%;
+        top: 0.5rem;
+    }
+    
+    .flash-message {
+        padding: var(--spacing-small) var(--spacing-base);
+    }
+}
