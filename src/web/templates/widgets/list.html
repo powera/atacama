@@ -13,9 +13,12 @@
     
     {% if not widgets %}
         <div class="empty-state">
-            <p>No widgets available yet.</p>
+            <h2>No Widgets Found</h2>
+            <p>There are no widgets available yet.</p>
             {% if g.user %}
                 <p><a href="{{ url_for('widgets.create_widget') }}">Create the first widget!</a></p>
+            {% else %}
+                <p>Check back later or <a href="{{ url_for('auth.login') }}">log in</a> to create widgets.</p>
             {% endif %}
         </div>
     {% else %}
@@ -34,14 +37,19 @@
                     
                     <div class="widget-meta">
                         <span class="widget-channel">
-                            {{ channel_manager.get_display_name(widget.channel) }}
+                            📦 {{ channel_manager.get_display_name(widget.channel) }}
                         </span>
                         {% if widget.author %}
-                            <span class="widget-author">by {{ widget.author.name }}</span>
+                            <span class="widget-author">👤 {{ widget.author.name }}</span>
                         {% endif %}
                         <time class="widget-date">
-                            {{ widget.created_at.strftime('%Y-%m-%d') }}
+                            📅 {{ widget.created_at.strftime('%b %d, %Y') }}
                         </time>
+                        {% if widget.published %}
+                            <span class="widget-status">✅ Published</span>
+                        {% else %}
+                            <span class="widget-status">📝 Draft</span>
+                        {% endif %}
                     </div>
                     
                     {% if g.user and (g.user.id == widget.author_id or 
@@ -57,79 +65,5 @@
     {% endif %}
 </div>
 
-<style>
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    
-    .widgets-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 2rem;
-    }
-    
-    .widget-card {
-        background: var(--color-card-bg);
-        padding: 1.5rem;
-        border: 1px solid var(--color-border);
-        border-radius: var(--border-radius);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .widget-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--box-shadow);
-    }
-    
-    .widget-card h2 {
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-    }
-    
-    .widget-card h2 a {
-        color: var(--color-text);
-        text-decoration: none;
-    }
-    
-    .widget-card h2 a:hover {
-        color: var(--color-primary);
-    }
-    
-    .widget-description {
-        color: var(--color-text-secondary);
-        margin: 0.5rem 0;
-    }
-    
-    .widget-meta {
-        display: flex;
-        gap: 1rem;
-        font-size: 0.85rem;
-        color: var(--color-text-secondary);
-        margin-top: 1rem;
-    }
-    
-    .widget-channel {
-        padding: 0.2rem 0.5rem;
-        background: var(--color-background);
-        border-radius: var(--border-radius);
-    }
-    
-    .widget-actions {
-        margin-top: 1rem;
-    }
-    
-    .button.small {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.9rem;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: var(--color-text-secondary);
-    }
-</style>
+
 {% endblock %}

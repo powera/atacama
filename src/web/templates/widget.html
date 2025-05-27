@@ -10,23 +10,20 @@
     
     <div id="widget-root" class="widget-mount-point"></div>
     
-    <div id="widget-error" class="widget-error" style="display: none;">
-        <h2>Widget Error</h2>
-        <p>There was an error loading this widget.</p>
-        <pre id="error-details"></pre>
-    </div>
-
-    <footer class="widget-header">
+    <header class="widget-header">
         <h1>{{ widget.title }}</h1>
         {% if widget.description %}
             <p class="widget-description">{{ widget.description }}</p>
         {% endif %}
         <div class="widget-metadata">
             {% if widget.author %}
-                <span>Created by {{ widget.author.name }}</span>
+                <span>👤 {{ widget.author.name }}</span>
             {% endif %}
             {% if widget.published_at %}
-                <span>Published {{ widget.published_at.strftime('%Y-%m-%d') }}</span>
+                <span>📅 {{ widget.published_at.strftime('%b %d, %Y') }}</span>
+            {% endif %}
+            {% if widget.channel %}
+                <span>📦 {{ channel_manager.get_display_name(widget.channel) }}</span>
             {% endif %}
             {% if g.user and (g.user.id == widget.author_id or 
                              (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)) %}
@@ -34,7 +31,13 @@
                    class="button small">Edit Widget</a>
             {% endif %}
         </div>
-    </footer>
+    </header>
+    
+    <div id="widget-error" class="widget-error" style="display: none;">
+        <h2>Widget Error</h2>
+        <p>There was an error loading this widget.</p>
+        <pre id="error-details"></pre>
+    </div>
 </div>
 {% endblock %}
 
