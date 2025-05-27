@@ -467,7 +467,12 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
                 if email:
                     type_specific_data = email
                     title = email.subject or '(No Subject)'
-                    preview = email.preview_content[:200] + '...' if email.preview_content and len(email.preview_content) > 200 else email.preview_content
+                    # Use plain content for preview to avoid HTML tag truncation issues
+                    preview_text = email.content or email.preview_content or ''
+                    if len(preview_text) > 200:
+                        preview = preview_text[:200] + '...'
+                    else:
+                        preview = preview_text
                     message_url = url_for('content.get_message', message_id=email.id)
             
             elif message.message_type.value == 'article':
