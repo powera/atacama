@@ -393,22 +393,36 @@ def landing_page():
     
 
 @content_bp.route('/all')
+@content_bp.route('/all/before/<string:tsdate>/')
+@content_bp.route('/all/before/<string:tsdate>/<string:tstime>/')
 @optional_auth
 @navigable(name="All Messages", 
           description="View all types of messages (emails, articles, widgets, quotes)",
           category="main")
-def all_messages():
+def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
     """
     Display a unified stream of all message types with metadata and links.
+    Uses datetime-based pagination like the stream view.
     """
-    from models.models import Article, ReactWidget, Quote
+    from models.models import Message, Article, ReactWidget, Quote
+    from sqlalchemy.orm import selectinload
     
     domain_manager = get_domain_manager()
     current_domain = g.current_domain
     
-    # Get pagination parameters
-    page = request.args.get('page', 1, type=int)
-    per_page = 20
+    # Handle timestamp-based filtering
+    older_than_timestamp = None
+    if tsdate:
+        if not tstime:
+            # If time is not provided, default to end of day
+            tstime = '235959'
+        try:
+            # Parse timestamp from URL format YYYY-MM-DD and HHMMSS
+            timestamp_str = f"{tsdate} {tstime[:2]}:{tstime[2:4]}:{tstime[4:6]}"
+            older_than_timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        except (ValueError, TypeError, IndexError):
+            # If timestamp is invalid, ignore it
+            pass
     
     with db.session() as db_session:
         # Get user-allowed channels
@@ -419,107 +433,101 @@ def all_messages():
             domain_channels = domain_manager.get_allowed_channels(current_domain)
             allowed_channels = [c for c in allowed_channels if c in domain_channels]
         
-        # Get all message types
-        emails = db_session.query(Email).filter(
-            Email.channel.in_(allowed_channels)
-        ).all()
+        # Query Messages table with proper filtering
+        query = db_session.query(Message).options(
+            selectinload(Message.author)
+        ).filter(
+            Message.channel.in_(allowed_channels)
+        )
         
-        articles = db_session.query(Article).filter(
-            Article.channel.in_(allowed_channels),
-            Article.published == True
-        ).all()
+        # Apply timestamp filter if provided
+        if older_than_timestamp:
+            query = query.filter(Message.created_at < older_than_timestamp)
         
-        widgets = db_session.query(ReactWidget).filter(
-            ReactWidget.channel.in_(allowed_channels),
-            ReactWidget.published == True
-        ).all()
+        # Get messages ordered by creation date (newest first)
+        limit = 20
+        messages = query.order_by(Message.created_at.desc()).limit(limit + 1).all()
         
-        quotes = db_session.query(Quote).filter(
-            Quote.channel.in_(allowed_channels)
-        ).all()
+        # Check if there are more messages
+        has_more = len(messages) > limit
+        messages = messages[:limit]
         
-        # Combine all messages with type information
-        all_messages = []
+        # Transform messages into display format
+        display_messages = []
         
-        for email in emails:
-            all_messages.append({
-                'type': 'email',
-                'id': email.id,
-                'title': email.subject or '(No Subject)',
-                'created_at': email.created_at,
-                'channel': email.channel,
-                'author': email.author,
-                'preview': email.preview_content[:200] + '...' if email.preview_content and len(email.preview_content) > 200 else email.preview_content,
-                'url': url_for('content.get_message', message_id=email.id),
-                'object': email
-            })
+        for message in messages:
+            # Get type-specific data by querying the specific table
+            type_specific_data = None
+            message_url = None
+            preview = None
+            title = None
+            display_date = message.created_at
+            
+            if message.message_type.value == 'email':
+                email = db_session.query(Email).get(message.id)
+                if email:
+                    type_specific_data = email
+                    title = email.subject or '(No Subject)'
+                    preview = email.preview_content[:200] + '...' if email.preview_content and len(email.preview_content) > 200 else email.preview_content
+                    message_url = url_for('content.get_message', message_id=email.id)
+            
+            elif message.message_type.value == 'article':
+                article = db_session.query(Article).get(message.id)
+                if article and article.published:
+                    type_specific_data = article
+                    title = article.title
+                    preview = article.processed_content[:200] + '...' if article.processed_content and len(article.processed_content) > 200 else article.processed_content
+                    message_url = url_for('articles.view_article', slug=article.slug)
+                    display_date = article.published_at or article.created_at
+            
+            elif message.message_type.value == 'widget':
+                widget = db_session.query(ReactWidget).get(message.id)
+                if widget and widget.published:
+                    type_specific_data = widget
+                    title = widget.title
+                    preview = widget.description or 'Interactive React widget'
+                    message_url = url_for('widgets.view_widget', slug=widget.slug)
+                    display_date = widget.published_at or widget.created_at
+            
+            elif message.message_type.value == 'quote':
+                quote = db_session.query(Quote).get(message.id)
+                if quote:
+                    type_specific_data = quote
+                    title = f"{quote.quote_type.title()}: {quote.text[:50]}..." if len(quote.text) > 50 else f"{quote.quote_type.title()}: {quote.text}"
+                    preview = f"By {quote.original_author or 'Unknown'}" + (f" - {quote.commentary[:100]}..." if quote.commentary else "")
+                    message_url = url_for('quotes.list_quotes') + f"#{quote.id}"
+            
+            # Only include if we have the type-specific data and a URL
+            if type_specific_data and message_url:
+                display_messages.append({
+                    'type': message.message_type.value,
+                    'id': message.id,
+                    'title': title,
+                    'created_at': display_date,
+                    'created_at_formatted': display_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    'channel': message.channel,
+                    'author': message.author,
+                    'preview': preview,
+                    'url': message_url,
+                    'object': type_specific_data
+                })
         
-        for article in articles:
-            all_messages.append({
-                'type': 'article',
-                'id': article.id,
-                'title': article.title,
-                'created_at': article.published_at or article.created_at,
-                'channel': article.channel,
-                'author': article.author,
-                'preview': article.processed_content[:200] + '...' if article.processed_content and len(article.processed_content) > 200 else article.processed_content,
-                'url': url_for('articles.view_article', slug=article.slug),
-                'object': article
-            })
+        # Calculate next page timestamp if there are more messages
+        older_than_next_tsdate = None
+        older_than_next_tstime = None
         
-        for widget in widgets:
-            all_messages.append({
-                'type': 'widget',
-                'id': widget.id,
-                'title': widget.title,
-                'created_at': widget.published_at or widget.created_at,
-                'channel': widget.channel,
-                'author': widget.author,
-                'preview': widget.description or 'Interactive React widget',
-                'url': url_for('widgets.view_widget', slug=widget.slug),
-                'object': widget
-            })
-        
-        for quote in quotes:
-            all_messages.append({
-                'type': 'quote',
-                'id': quote.id,
-                'title': f"{quote.quote_type.title()}: {quote.text[:50]}..." if len(quote.text) > 50 else f"{quote.quote_type.title()}: {quote.text}",
-                'created_at': quote.created_at,
-                'channel': quote.channel,
-                'author': quote.author,
-                'preview': f"By {quote.original_author or 'Unknown'}" + (f" - {quote.commentary[:100]}..." if quote.commentary else ""),
-                'url': url_for('quotes.list_quotes') + f"#{quote.id}",
-                'object': quote
-            })
-        
-        # Sort by creation date (newest first)
-        all_messages.sort(key=lambda x: x['created_at'], reverse=True)
-        
-        # Paginate
-        total_count = len(all_messages)
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        paginated_messages = all_messages[start_idx:end_idx]
-        
-        # Format timestamps
-        for message in paginated_messages:
-            message['created_at_formatted'] = message['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Calculate pagination info
-        total_pages = (total_count + per_page - 1) // per_page
-        has_prev = page > 1
-        has_next = page < total_pages
+        if display_messages and has_more:
+            # Format timestamp as YYYY-MM-DD and HHMMSS for URL
+            dt = display_messages[-1]['created_at']
+            older_than_next_tsdate = f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
+            older_than_next_tstime = f"{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
         
         return render_template(
             'all_messages.html',
-            messages=paginated_messages,
-            total_count=total_count,
-            page=page,
-            per_page=per_page,
-            total_pages=total_pages,
-            has_prev=has_prev,
-            has_next=has_next,
+            messages=display_messages,
+            has_more=has_more,
+            older_than_tsdate=older_than_next_tsdate,
+            older_than_tstime=older_than_next_tstime,
             available_channels=allowed_channels
         )
 

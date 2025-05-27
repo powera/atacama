@@ -90,15 +90,13 @@
     white-space: nowrap;
 }
 
-.pagination {
+.stream-navigation {
     display: flex;
     justify-content: center;
-    align-items: center;
-    gap: var(--spacing-base);
     margin: var(--spacing-large) 0;
 }
 
-.pagination-link {
+.navigation-link {
     padding: var(--spacing-small) var(--spacing-base);
     color: var(--color-primary);
     text-decoration: none;
@@ -107,18 +105,8 @@
     transition: background-color 0.2s ease;
 }
 
-.pagination-link:hover {
+.navigation-link:hover {
     background-color: var(--color-annotation-bg);
-}
-
-.pagination-link.disabled {
-    color: var(--color-text-secondary);
-    pointer-events: none;
-}
-
-.pagination-info {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-small);
 }
 
 .summary-stats {
@@ -134,10 +122,7 @@
 {% block content %}
 <div class="all-messages-container">
     <div class="summary-stats">
-        <strong>{{ total_count }}</strong> total messages across all types
-        {% if total_pages > 1 %}
-        (Page {{ page }} of {{ total_pages }})
-        {% endif %}
+        All messages across all types (emails, articles, widgets, quotes)
     </div>
 
     {% for message in messages %}
@@ -171,21 +156,9 @@
     </article>
     {% endfor %}
 
-    {% if total_pages > 1 %}
-    <div class="pagination">
-        {% if has_prev %}
-        <a href="{{ url_for('content.all_messages', page=page-1) }}" class="pagination-link">← Previous</a>
-        {% else %}
-        <span class="pagination-link disabled">← Previous</span>
-        {% endif %}
-        
-        <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
-        
-        {% if has_next %}
-        <a href="{{ url_for('content.all_messages', page=page+1) }}" class="pagination-link">Next →</a>
-        {% else %}
-        <span class="pagination-link disabled">Next →</span>
-        {% endif %}
+    {% if has_more %}
+    <div class="stream-navigation">
+        <a href="{{ url_for('content.all_messages', tsdate=older_than_tsdate, tstime=older_than_tstime) }}" class="navigation-link">Show Older Messages</a>
     </div>
     {% endif %}
 </div>
