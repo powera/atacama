@@ -23,3 +23,6 @@ src/web/react/node_modules
 src/web/static/js/react
 .env
 *.local.js
+
+# Development DB
+emails.db

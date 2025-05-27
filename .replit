@@ -51,3 +51,7 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 launch.py --spaceship"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
