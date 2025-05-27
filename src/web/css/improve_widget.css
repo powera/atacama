@@ -410,43 +410,60 @@
 .diff-content {
     flex: 1;
     display: flex;
-    overflow: auto;
+    overflow: hidden;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 13px;
     line-height: 1.4;
     height: 100%;
+    position: relative;
 }
 
 .line-numbers {
     background: var(--color-background-secondary);
     border-right: 1px solid var(--color-border);
-    padding: 0.5rem 0;
-    min-width: 50px;
+    min-width: 60px;
     text-align: right;
     user-select: none;
     flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .line-num {
-    padding: 0 0.5rem;
+    padding: 0 8px;
     color: var(--color-text-secondary);
     font-size: 12px;
+    height: 1.4em;
+    line-height: 1.4em;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
 }
 
 .code-content {
     flex: 1;
-    padding: 0.5rem;
+    padding: 0;
     margin: 0;
     white-space: pre;
-    overflow-x: auto;
+    overflow: auto;
     background: var(--color-background);
+    display: flex;
+    flex-direction: column;
 }
 
 .code-line {
-    min-height: 1.4em;
-    padding: 0 0.5rem;
+    height: 1.4em;
+    line-height: 1.4em;
+    padding: 0 8px;
     margin: 0;
     white-space: pre;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Diff highlighting */
@@ -461,8 +478,8 @@
 }
 
 .line-empty {
-    background-color: rgba(0, 0, 0, 0.05);
-    opacity: 0.3;
+    background-color: rgba(128, 128, 128, 0.05);
+    opacity: 0.4;
 }
 
 .line-num.line-added {
@@ -478,7 +495,8 @@
 }
 
 .line-num.line-empty {
-    background-color: transparent;
+    background-color: rgba(128, 128, 128, 0.05);
+    opacity: 0.4;
 }
 
 /* Legacy comparison view for backwards compatibility */
