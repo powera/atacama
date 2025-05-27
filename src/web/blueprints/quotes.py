@@ -91,6 +91,20 @@ def delete_quote(quote_id: int):
         return "Quote not found", 404
 
 
+@quotes_bp.route('/quotes/<int:quote_id>')
+def view_quote(quote_id: int):
+    """View a specific quote."""
+    with db.session() as db_session:
+        quote = db_session.get(Quote, quote_id)
+        if not quote:
+            return "Quote not found", 404
+            
+        return render_template(
+            'quotes/view_quote.html',
+            quote=quote
+        )
+
+
 @quotes_bp.route('/quotes/search')
 @require_auth
 def search():

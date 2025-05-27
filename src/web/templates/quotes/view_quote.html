@@ -1,0 +1,65 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quote - Atacama</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/atacama.css">
+    <link rel="stylesheet" href="/css/quotes.css">
+</head>
+<body>
+    <div class="container">
+        <div class="quote-detail">
+            <div class="quote-text">"{{ quote.text }}"</div>
+            
+            <div class="quote-metadata">
+                {% if quote.quote_type %}
+                <div class="metadata-item">
+                    <span class="label">Type:</span>
+                    <span class="quote-type type-{{ quote.quote_type }}">{{ quote.quote_type }}</span>
+                </div>
+                {% endif %}
+                
+                {% if quote.original_author %}
+                <div class="metadata-item">
+                    <span class="label">Author:</span>
+                    <span class="value">{{ quote.original_author }}</span>
+                </div>
+                {% endif %}
+                
+                {% if quote.source %}
+                <div class="metadata-item">
+                    <span class="label">Source:</span>
+                    <span class="value">{{ quote.source }}</span>
+                </div>
+                {% endif %}
+                
+                {% if quote.date %}
+                <div class="metadata-item">
+                    <span class="label">Date:</span>
+                    <span class="value">{{ quote.date }}</span>
+                </div>
+                {% endif %}
+                
+                {% if quote.created_at %}
+                <div class="metadata-item">
+                    <span class="label">Added:</span>
+                    <span class="value">{{ quote.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if quote.commentary %}
+            <div class="quote-commentary">
+                <h3>Commentary</h3>
+                <div class="commentary-text">{{ quote.commentary }}</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="navigation-actions">
+            <a href="{{ url_for('quotes.list_quotes') }}" class="button secondary">← Back to Quotes</a>
+        </div>
+    </div>
+</body>
+</html>

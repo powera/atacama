@@ -34,3 +34,61 @@
     border-radius: 3px;
     margin-right: 10px;
 }
+
+/* Quote detail view styles */
+.quote-detail {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid var(--color-text-muted);
+    border-radius: 8px;
+    background-color: var(--color-bg-secondary, #f9f9f9);
+}
+
+.quote-detail .quote-text {
+    font-size: 1.3em;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    font-style: italic;
+}
+
+.quote-detail .quote-metadata {
+    margin-bottom: 20px;
+}
+
+.metadata-item {
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+}
+
+.metadata-item .label {
+    font-weight: bold;
+    min-width: 80px;
+    margin-right: 10px;
+}
+
+.metadata-item .value {
+    color: var(--color-text-secondary, #666);
+}
+
+.quote-commentary {
+    border-top: 1px solid var(--color-text-muted);
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.quote-commentary h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.1em;
+}
+
+.commentary-text {
+    line-height: 1.5;
+    color: var(--color-text-secondary, #666);
+}
+
+.navigation-actions {
+    margin-top: 20px;
+    text-align: center;
+}
