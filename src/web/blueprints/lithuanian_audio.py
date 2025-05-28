@@ -29,7 +29,7 @@ def get_available_voices() -> List[str]:
         voices = [d for d in os.listdir(constants.LITHUANIAN_AUDIO_DIR) 
                  if os.path.isdir(os.path.join(constants.LITHUANIAN_AUDIO_DIR, d))]
         
-        logger.info(f"Found {len(voices)} Lithuanian voice directories: {', '.join(voices)}")
+        logger.debug(f"Found {len(voices)} Lithuanian voice directories: {', '.join(voices)}")
         return voices
     except Exception as e:
         logger.error(f"Error getting Lithuanian voice directories: {str(e)}")
