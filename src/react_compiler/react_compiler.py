@@ -151,30 +151,32 @@ class WidgetBuilder:
         # Patterns to detect existing exports
         export_patterns = [
             # export default ComponentName;
-            r'export\s+default\s+(\w+)\s*;?\s*$',
+            (r'export\s+default\s+(\w+)\s*;?\s*$', 'simple'),
             # export default function ComponentName() {...}
-            r'export\s+default\s+function\s+(\w+)\s*\([^)]*\)\s*{',
+            (r'export\s+default\s+function\s+(\w+)\s*\([^)]*\)\s*\{', 'function'),
             # export default () => {...}
-            r'export\s+default\s+\([^)]*\)\s*=>\s*{',
+            (r'export\s+default\s+\([^)]*\)\s*=>\s*\{', 'arrow'),
             # export default class ComponentName {...}
-            r'export\s+default\s+class\s+(\w+)\s*{',
+            (r'export\s+default\s+class\s+(\w+)\s*\{', 'class'),
             # export { ComponentName as default };
-            r'export\s+{\s*(\w+)\s+as\s+default\s*}\s*;?\s*$',
+            (r'export\s+\{\s*(\w+)\s+as\s+default\s*\}\s*;?\s*$', 'named'),
             # module.exports = ComponentName;
-            r'module\.exports\s*=\s*(\w+)\s*;?\s*$'
+            (r'module\.exports\s*=\s*(\w+)\s*;?\s*$', 'commonjs')
         ]
         
         has_export = False
         exported_name = None
+        export_type = None
         
         # Check if there's already an export
-        for pattern in export_patterns:
+        for pattern, pattern_type in export_patterns:
             match = re.search(pattern, code, re.MULTILINE | re.DOTALL)
             if match:
                 has_export = True
-                if match.groups():
+                export_type = pattern_type
+                if match.groups() and pattern_type != 'arrow':
                     exported_name = match.group(1)
-                logger.info(f"Found existing export: {exported_name or 'anonymous'}")
+                logger.info(f"Found existing export: {exported_name or 'anonymous'} (type: {export_type})")
                 break
         
         if has_export:
@@ -182,21 +184,30 @@ class WidgetBuilder:
                 # Replace the exported component name with the expected widget name
                 logger.info(f"Replacing exported component name '{exported_name}' with '{widget_name}'")
                 
-                # Replace the component definition name
-                component_def_patterns = [
-                    (rf'function\s+{re.escape(exported_name)}\s*\(', f'function {widget_name}('),
-                    (rf'const\s+{re.escape(exported_name)}\s*=', f'const {widget_name} ='),
-                    (rf'let\s+{re.escape(exported_name)}\s*=', f'let {widget_name} ='),
-                    (rf'var\s+{re.escape(exported_name)}\s*=', f'var {widget_name} ='),
-                    (rf'class\s+{re.escape(exported_name)}\s*{{', f'class {widget_name} {{'),
-                ]
-                
-                for old_pattern, new_replacement in component_def_patterns:
-                    code = re.sub(old_pattern, new_replacement, code)
-                
-                # Replace the export statement
-                for pattern in export_patterns:
-                    code = re.sub(pattern, f'export default {widget_name};', code)
+                # First, replace the component definition name
+                if export_type == 'function':
+                    # Handle export default function ComponentName() pattern
+                    code = re.sub(rf'export\s+default\s+function\s+{re.escape(exported_name)}\s*\(',
+                                f'export default function {widget_name}(', code)
+                else:
+                    # Handle other component definition patterns
+                    component_def_patterns = [
+                        (rf'function\s+{re.escape(exported_name)}\s*\(', f'function {widget_name}('),
+                        (rf'const\s+{re.escape(exported_name)}\s*=', f'const {widget_name} ='),
+                        (rf'let\s+{re.escape(exported_name)}\s*=', f'let {widget_name} ='),
+                        (rf'var\s+{re.escape(exported_name)}\s*=', f'var {widget_name} ='),
+                        (rf'class\s+{re.escape(exported_name)}\s*\{{', f'class {widget_name} {{'),
+                    ]
+                    
+                    for old_pattern, new_replacement in component_def_patterns:
+                        code = re.sub(old_pattern, new_replacement, code)
+                    
+                    # Replace the export statement (except for function exports which were already handled)
+                    if export_type != 'function':
+                        for pattern, _ in export_patterns:
+                            if re.search(pattern, code, re.MULTILINE | re.DOTALL):
+                                code = re.sub(pattern, f'export default {widget_name};', code)
+                                break
             
             # If the export is already correct, just return the code as-is
             return code
