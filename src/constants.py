@@ -22,6 +22,8 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 REACT_COMPILER_JS_DIR = os.path.join(SRC_DIR, 'react_compiler', "js")
 
+LITHUANIAN_AUDIO_DIR = '/home/atacama/trakaido/'
+
 # Database path - will be updated when testing mode is set
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
 _TEST_DB_PATH: str = "sqlite:///:memory:"

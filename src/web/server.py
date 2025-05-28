@@ -171,6 +171,9 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.errors import errors_bp
     app.register_blueprint(errors_bp)
 
+    from web.blueprints.lithuanian_audio import lithuanian_audio_bp
+    app.register_blueprint(lithuanian_audio_bp)
+
     return app
 
 # The app instance will be created when needed
