@@ -290,7 +290,8 @@
     height: 600px;
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
-    overflow: hidden;
+    overflow: auto;
+    position: relative;
 }
 
 .diff-view {
@@ -299,26 +300,18 @@
 }
 
 .diff-view.active {
-    display: flex;
+    display: block;
 }
 
-.diff-view.unified {
-    flex-direction: column;
+/* Make the diff view scrollable */
+#side-by-side-view, #unified-view {
+    overflow: auto;
+    max-height: calc(100% - 40px); /* Account for header */
 }
 
-.diff-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--color-border);
-}
-
-.diff-pane:last-child {
-    border-right: none;
-}
-
-.diff-pane.unified {
-    border-right: none;
+/* Ensure horizontal scrolling works properly */
+.diff-table {
+    min-width: 100%;
 }
 
 .diff-header {
@@ -336,82 +329,94 @@
     font-weight: 600;
 }
 
+.diff-header-left, .diff-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .line-count {
     font-size: 0.8rem;
     color: var(--color-text-secondary);
 }
 
-.diff-content {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
+/* Table-based diff styling */
+.diff-table {
+    width: 100%;
+    border-collapse: collapse;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 13px;
     line-height: 1.4;
-    height: 100%;
-    position: relative;
+    table-layout: fixed;
 }
 
-.line-numbers {
+.side-by-side-table th:nth-child(1),
+.side-by-side-table th:nth-child(3),
+.unified-table th:nth-child(1) {
+    width: 60px;
+}
+
+.side-by-side-table th:nth-child(2),
+.side-by-side-table th:nth-child(4),
+.unified-table th:nth-child(2) {
+    width: auto;
+}
+
+.diff-table th {
+    position: sticky;
+    top: 0;
     background: var(--color-background-secondary);
-    border-right: 1px solid var(--color-border);
-    min-width: 60px;
+    z-index: 10;
+    padding: 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.line-num-header {
     text-align: right;
-    user-select: none;
-    flex-shrink: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+}
+
+.diff-table td {
+    padding: 0;
+    vertical-align: top;
+    white-space: nowrap;
 }
 
 .line-num {
     padding: 0 8px;
     color: var(--color-text-secondary);
     font-size: 12px;
-    height: 1.4em;
-    line-height: 1.4em;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-shrink: 0;
+    text-align: right;
+    user-select: none;
+    background: var(--color-background-secondary);
+    border-right: 1px solid var(--color-border);
 }
 
-.code-content {
-    flex: 1;
-    padding: 0;
-    margin: 0;
-    white-space: pre;
-    overflow: auto;
-    background: var(--color-background);
-    display: flex;
-    flex-direction: column;
-}
-
-.code-line {
-    height: 1.4em;
-    line-height: 1.4em;
+.code-cell {
     padding: 0 8px;
+    background: var(--color-background);
+}
+
+.code-cell pre {
     margin: 0;
+    padding: 0;
     white-space: pre;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
 }
 
 /* Diff highlighting */
-.line-added, .code-line.line-added {
+.code-cell.line-added {
     background-color: rgba(40, 167, 69, 0.15);
     border-left: 3px solid #28a745;
 }
 
-.line-removed, .code-line.line-removed {
+.code-cell.line-removed {
     background-color: rgba(220, 53, 69, 0.15);
     border-left: 3px solid #dc3545;
 }
 
-.line-empty {
+.code-cell.line-empty {
     background-color: rgba(128, 128, 128, 0.05);
     opacity: 0.4;
 }
@@ -486,19 +491,6 @@
         margin: 1% auto;
     }
 
-    .diff-view.active {
-        flex-direction: column;
-    }
-
-    .diff-pane {
-        border-right: none;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .diff-pane:last-child {
-        border-bottom: none;
-    }
-
     .diff-toolbar {
         flex-direction: column;
         gap: 0.5rem;
@@ -520,6 +512,22 @@
 
     .form-actions {
         flex-direction: column;
+    }
+    
+    /* Table-based diff view responsive adjustments */
+    .diff-table {
+        table-layout: auto;
+    }
+    
+    .diff-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .diff-header-left, .diff-header-right {
+        width: 100%;
+        justify-content: space-between;
     }
 }
 

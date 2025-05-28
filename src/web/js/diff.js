@@ -209,53 +209,65 @@ class DiffUtil {
      * @param {Array} diff - Diff array
      */
     static updateSideBySideView(diff) {
-        const originalLineNumbers = document.getElementById('original-line-numbers');
-        const originalCodeContent = document.getElementById('original-code-content');
-        const improvedLineNumbers = document.getElementById('improved-line-numbers');
-        const improvedCodeContent = document.getElementById('improved-code-content');
+        const sideBySideView = document.getElementById('side-by-side-view');
         
-        // Check if elements exist
-        if (!originalLineNumbers || !originalCodeContent || !improvedLineNumbers || !improvedCodeContent) {
-            console.error('Required diff view elements not found');
+        // Check if element exists
+        if (!sideBySideView) {
+            console.error('Required diff view element not found');
             return;
         }
-        
-        let originalHTML = '';
-        let improvedHTML = '';
-        let originalLineNumHTML = '';
-        let improvedLineNumHTML = '';
         
         // Process diff to create aligned rows
         const alignedDiff = this.createAlignedDiff(diff);
         
+        // Create table structure for side-by-side view
+        let tableHTML = `
+            <table class="diff-table side-by-side-table">
+                <thead>
+                    <tr>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Original Code</th>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Improved Code</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
         alignedDiff.forEach(row => {
+            tableHTML += '<tr>';
+            
             // Original side
             if (row.original) {
                 const originalClass = row.original.type === 'removed' ? 'line-removed' : '';
                 const lineNum = this.escapeHtml(String(row.original.lineNum || ''));
-                originalLineNumHTML += `<div class="line-num ${originalClass}">${lineNum}</div>`;
-                originalHTML += `<div class="code-line ${originalClass}">${this.escapeHtml(row.original.content || '')}</div>`;
+                tableHTML += `<td class="line-num ${originalClass}">${lineNum}</td>`;
+                tableHTML += `<td class="code-cell ${originalClass}"><pre>${this.escapeHtml(row.original.content || '')}</pre></td>`;
             } else {
-                originalLineNumHTML += `<div class="line-num line-empty"></div>`;
-                originalHTML += `<div class="code-line line-empty"></div>`;
+                tableHTML += `<td class="line-num line-empty"></td>`;
+                tableHTML += `<td class="code-cell line-empty"></td>`;
             }
             
             // Improved side
             if (row.improved) {
                 const improvedClass = row.improved.type === 'added' ? 'line-added' : '';
                 const lineNum = this.escapeHtml(String(row.improved.lineNum || ''));
-                improvedLineNumHTML += `<div class="line-num ${improvedClass}">${lineNum}</div>`;
-                improvedHTML += `<div class="code-line ${improvedClass}">${this.escapeHtml(row.improved.content || '')}</div>`;
+                tableHTML += `<td class="line-num ${improvedClass}">${lineNum}</td>`;
+                tableHTML += `<td class="code-cell ${improvedClass}"><pre>${this.escapeHtml(row.improved.content || '')}</pre></td>`;
             } else {
-                improvedLineNumHTML += `<div class="line-num line-empty"></div>`;
-                improvedHTML += `<div class="code-line line-empty"></div>`;
+                tableHTML += `<td class="line-num line-empty"></td>`;
+                tableHTML += `<td class="code-cell line-empty"></td>`;
             }
+            
+            tableHTML += '</tr>';
         });
         
-        originalLineNumbers.innerHTML = originalLineNumHTML;
-        originalCodeContent.innerHTML = originalHTML;
-        improvedLineNumbers.innerHTML = improvedLineNumHTML;
-        improvedCodeContent.innerHTML = improvedHTML;
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        sideBySideView.innerHTML = tableHTML;
         
         // Update line counts
         const originalLines = alignedDiff.filter(row => row.original && row.original.content !== undefined).length;
@@ -266,9 +278,6 @@ class DiffUtil {
         
         if (originalLineCount) originalLineCount.textContent = `${originalLines} lines`;
         if (improvedLineCount) improvedLineCount.textContent = `${improvedLines} lines`;
-        
-        // Setup synchronized scrolling
-        this.setupScrollSync();
     }
 
     /**
@@ -276,68 +285,55 @@ class DiffUtil {
      * @param {Array} diff - Diff array
      */
     static updateUnifiedView(diff) {
-        const unifiedLineNumbers = document.getElementById('unified-line-numbers');
-        const unifiedCodeContent = document.getElementById('unified-code-content');
+        const unifiedView = document.getElementById('unified-view');
         
-        // Check if elements exist
-        if (!unifiedLineNumbers || !unifiedCodeContent) {
-            console.error('Required unified view elements not found');
+        // Check if element exists
+        if (!unifiedView) {
+            console.error('Required unified view element not found');
             return;
         }
         
-        let unifiedHTML = '';
-        let lineNumHTML = '';
+        // Create table structure for unified view
+        let tableHTML = `
+            <table class="diff-table unified-table">
+                <thead>
+                    <tr>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Unified Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
         let lineNum = 1;
         
         diff.forEach(item => {
             if (item.type === 'unchanged') {
-                lineNumHTML += `<div class="line-num">${this.escapeHtml(String(lineNum))}</div>`;
-                unifiedHTML += `<div class="code-line">${this.escapeHtml(item.original)}</div>`;
+                tableHTML += `<tr>
+                    <td class="line-num">${this.escapeHtml(String(lineNum))}</td>
+                    <td class="code-cell"><pre>${this.escapeHtml(item.original)}</pre></td>
+                </tr>`;
                 lineNum++;
             } else if (item.type === 'removed') {
-                lineNumHTML += `<div class="line-num line-removed">-</div>`;
-                unifiedHTML += `<div class="code-line line-removed">- ${this.escapeHtml(item.original)}</div>`;
+                tableHTML += `<tr>
+                    <td class="line-num line-removed">-</td>
+                    <td class="code-cell line-removed"><pre>- ${this.escapeHtml(item.original)}</pre></td>
+                </tr>`;
             } else if (item.type === 'added') {
-                lineNumHTML += `<div class="line-num line-added">+</div>`;
-                unifiedHTML += `<div class="code-line line-added">+ ${this.escapeHtml(item.improved)}</div>`;
+                tableHTML += `<tr>
+                    <td class="line-num line-added">+</td>
+                    <td class="code-cell line-added"><pre>+ ${this.escapeHtml(item.improved)}</pre></td>
+                </tr>`;
                 lineNum++;
             }
         });
         
-        unifiedLineNumbers.innerHTML = lineNumHTML;
-        unifiedCodeContent.innerHTML = unifiedHTML;
-    }
-
-    /**
-     * Setup synchronized scrolling between diff panels
-     */
-    static setupScrollSync() {
-        const originalContent = document.getElementById('original-code-content');
-        const improvedContent = document.getElementById('improved-code-content');
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
         
-        if (!originalContent || !improvedContent) return;
-        
-        let syncing = false;
-        
-        const syncScroll = (source, target) => {
-            if (syncing) return;
-            syncing = true;
-            
-            const scrollPercentage = source.scrollTop / (source.scrollHeight - source.clientHeight);
-            target.scrollTop = scrollPercentage * (target.scrollHeight - target.clientHeight);
-            
-            setTimeout(() => { syncing = false; }, 50);
-        };
-        
-        // Remove existing listeners to prevent duplicates
-        const newOriginal = originalContent.cloneNode(true);
-        const newImproved = improvedContent.cloneNode(true);
-        originalContent.parentNode.replaceChild(newOriginal, originalContent);
-        improvedContent.parentNode.replaceChild(newImproved, improvedContent);
-        
-        // Add scroll listeners
-        newOriginal.addEventListener('scroll', () => syncScroll(newOriginal, newImproved));
-        newImproved.addEventListener('scroll', () => syncScroll(newImproved, newOriginal));
+        unifiedView.innerHTML = tableHTML;
     }
 
     /**
