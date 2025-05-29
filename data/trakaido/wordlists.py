@@ -121,7 +121,7 @@ verbs_one = {
   "Basic Daily Verbs": [
     # valgyti (to eat)
     { "english": "I eat", "lithuanian": "aš valgau" },
-    { "english": "you eat", "lithuanian": "tu valgai" },
+    { "english": "you(s.) eat", "lithuanian": "tu valgai" },
     { "english": "he eats", "lithuanian": "jis valgo" },
     { "english": "she eats", "lithuanian": "ji valgo" },
     { "english": "it eats", "lithuanian": "tai valgo" },
@@ -132,7 +132,7 @@ verbs_one = {
     
     # gerti (to drink)
     { "english": "I drink", "lithuanian": "aš geriu" },
-    { "english": "you drink", "lithuanian": "tu geri" },
+    { "english": "you(s.) drink", "lithuanian": "tu geri" },
     { "english": "he drinks", "lithuanian": "jis geria" },
     { "english": "she drinks", "lithuanian": "ji geria" },
     { "english": "it drinks", "lithuanian": "tai geria" },
@@ -143,7 +143,7 @@ verbs_one = {
     
     # miegoti (to sleep)
     { "english": "I sleep", "lithuanian": "aš miegu" },
-    { "english": "you sleep", "lithuanian": "tu miegi" },
+    { "english": "you(s.) sleep", "lithuanian": "tu miegi" },
     { "english": "he sleeps", "lithuanian": "jis miega" },
     { "english": "she sleeps", "lithuanian": "ji miega" },
     { "english": "it sleeps", "lithuanian": "tai miega" },
@@ -154,7 +154,7 @@ verbs_one = {
     
     # būti (to be)
     { "english": "I am", "lithuanian": "aš esu" },
-    { "english": "you are", "lithuanian": "tu esi" },
+    { "english": "you(s.) are", "lithuanian": "tu esi" },
     { "english": "he is", "lithuanian": "jis yra" },
     { "english": "she is", "lithuanian": "ji yra" },
     { "english": "it is", "lithuanian": "tai yra" },
@@ -165,7 +165,7 @@ verbs_one = {
     
     # turėti (to have)
     { "english": "I have", "lithuanian": "aš turiu" },
-    { "english": "you have", "lithuanian": "tu turi" },
+    { "english": "you(s.) have", "lithuanian": "tu turi" },
     { "english": "he has", "lithuanian": "jis turi" },
     { "english": "she has", "lithuanian": "ji turi" },
     { "english": "it has", "lithuanian": "tai turi" },
@@ -178,7 +178,7 @@ verbs_one = {
   "Action Verbs": [
     # mėgti (to like)
     { "english": "I like", "lithuanian": "aš mėgstu" },
-    { "english": "you like", "lithuanian": "tu mėgsti" },
+    { "english": "you(s.) like", "lithuanian": "tu mėgsti" },
     { "english": "he likes", "lithuanian": "jis mėgsta" },
     { "english": "she likes", "lithuanian": "ji mėgsta" },
     { "english": "it likes", "lithuanian": "tai mėgsta" },
@@ -189,7 +189,7 @@ verbs_one = {
     
     # gaminti (to make/produce)
     { "english": "I make", "lithuanian": "aš gaminu" },
-    { "english": "you make", "lithuanian": "tu gamini" },
+    { "english": "you(s.) make", "lithuanian": "tu gamini" },
     { "english": "he makes", "lithuanian": "jis gamina" },
     { "english": "she makes", "lithuanian": "ji gamina" },
     { "english": "it makes", "lithuanian": "tai gamina" },
@@ -200,7 +200,7 @@ verbs_one = {
     
     # pirkti (to buy)
     { "english": "I buy", "lithuanian": "aš perku" },
-    { "english": "you buy", "lithuanian": "tu perki" },
+    { "english": "you(s.) buy", "lithuanian": "tu perki" },
     { "english": "he buys", "lithuanian": "jis perka" },
     { "english": "she buys", "lithuanian": "ji perka" },
     { "english": "it buys", "lithuanian": "tai perka" },
@@ -211,7 +211,7 @@ verbs_one = {
     
     # duoti (to give)
     { "english": "I give", "lithuanian": "aš duodu" },
-    { "english": "you give", "lithuanian": "tu duodi" },
+    { "english": "you(s.) give", "lithuanian": "tu duodi" },
     { "english": "he gives", "lithuanian": "jis duoda" },
     { "english": "she gives", "lithuanian": "ji duoda" },
     { "english": "it gives", "lithuanian": "tai duoda" },
@@ -222,7 +222,7 @@ verbs_one = {
     
     # imti (to take)
     { "english": "I take", "lithuanian": "aš imu" },
-    { "english": "you take", "lithuanian": "tu imi" },
+    { "english": "you(s.) take", "lithuanian": "tu imi" },
     { "english": "he takes", "lithuanian": "jis ima" },
     { "english": "she takes", "lithuanian": "ji ima" },
     { "english": "it takes", "lithuanian": "tai ima" },
@@ -235,7 +235,7 @@ verbs_one = {
   "Movement Verbs": [
     # eiti (to walk)
     { "english": "I walk", "lithuanian": "aš einu" },
-    { "english": "you walk", "lithuanian": "tu eini" },
+    { "english": "you(s.) walk", "lithuanian": "tu eini" },
     { "english": "he walks", "lithuanian": "jis eina" },
     { "english": "she walks", "lithuanian": "ji eina" },
     { "english": "it walks", "lithuanian": "tai eina" },
@@ -246,7 +246,7 @@ verbs_one = {
     
     # važiuoti (to drive/travel)
     { "english": "I drive", "lithuanian": "aš važiuoju" },
-    { "english": "you drive", "lithuanian": "tu važiuoji" },
+    { "english": "you(s.) drive", "lithuanian": "tu važiuoji" },
     { "english": "he drives", "lithuanian": "jis važiuoja" },
     { "english": "she drives", "lithuanian": "ji važiuoja" },
     { "english": "it drives", "lithuanian": "tai važiuoja" },
@@ -257,7 +257,7 @@ verbs_one = {
     
     # bėgti (to run)
     { "english": "I run", "lithuanian": "aš bėgu" },
-    { "english": "you run", "lithuanian": "tu bėgi" },
+    { "english": "you(s.) run", "lithuanian": "tu bėgi" },
     { "english": "he runs", "lithuanian": "jis bėga" },
     { "english": "she runs", "lithuanian": "ji bėga" },
     { "english": "it runs", "lithuanian": "tai bėga" },
@@ -268,7 +268,7 @@ verbs_one = {
     
     # vykti (to go/proceed)
     { "english": "I go", "lithuanian": "aš vykstu" },
-    { "english": "you go", "lithuanian": "tu vyksti" },
+    { "english": "you(s.) go", "lithuanian": "tu vyksti" },
     { "english": "he goes", "lithuanian": "jis vyksta" },
     { "english": "she goes", "lithuanian": "ji vyksta" },
     { "english": "it goes", "lithuanian": "tai vyksta" },
@@ -279,7 +279,7 @@ verbs_one = {
     
     # ateiti (to come)
     { "english": "I come", "lithuanian": "aš ateinu" },
-    { "english": "you come", "lithuanian": "tu ateini" },
+    { "english": "you(s.) come", "lithuanian": "tu ateini" },
     { "english": "he comes", "lithuanian": "jis ateina" },
     { "english": "she comes", "lithuanian": "ji ateina" },
     { "english": "it comes", "lithuanian": "tai ateina" },
@@ -290,7 +290,7 @@ verbs_one = {
     
     # grįžti (to return)
     { "english": "I return", "lithuanian": "aš grįžtu" },
-    { "english": "you return", "lithuanian": "tu grįžti" },
+    { "english": "you(s.) return", "lithuanian": "tu grįžti" },
     { "english": "he returns", "lithuanian": "jis grįžta" },
     { "english": "she returns", "lithuanian": "ji grįžta" },
     { "english": "it returns", "lithuanian": "tai grįžta" },
@@ -303,7 +303,7 @@ verbs_one = {
   "Communication & Mental Verbs": [
     # kalbėti (to speak)
     { "english": "I speak", "lithuanian": "aš kalbu" },
-    { "english": "you speak", "lithuanian": "tu kalbi" },
+    { "english": "you(s.) speak", "lithuanian": "tu kalbi" },
     { "english": "he speaks", "lithuanian": "jis kalba" },
     { "english": "she speaks", "lithuanian": "ji kalba" },
     { "english": "it speaks", "lithuanian": "tai kalba" },
@@ -314,7 +314,7 @@ verbs_one = {
     
     # žinoti (to know)
     { "english": "I know", "lithuanian": "aš žinau" },
-    { "english": "you know", "lithuanian": "tu žinai" },
+    { "english": "you(s.) know", "lithuanian": "tu žinai" },
     { "english": "he knows", "lithuanian": "jis žino" },
     { "english": "she knows", "lithuanian": "ji žino" },
     { "english": "it knows", "lithuanian": "tai žino" },
@@ -325,7 +325,7 @@ verbs_one = {
     
     # galėti (to be able/can)
     { "english": "I can", "lithuanian": "aš galiu" },
-    { "english": "you can", "lithuanian": "tu gali" },
+    { "english": "you(s.) can", "lithuanian": "tu gali" },
     { "english": "he can", "lithuanian": "jis gali" },
     { "english": "she can", "lithuanian": "ji gali" },
     { "english": "it can", "lithuanian": "tai gali" },
@@ -336,7 +336,7 @@ verbs_one = {
     
     # norėti (to want)
     { "english": "I want", "lithuanian": "aš noriu" },
-    { "english": "you want", "lithuanian": "tu nori" },
+    { "english": "you(s.) want", "lithuanian": "tu nori" },
     { "english": "he wants", "lithuanian": "jis nori" },
     { "english": "she wants", "lithuanian": "ji nori" },
     { "english": "it wants", "lithuanian": "tai nori" },
@@ -347,7 +347,7 @@ verbs_one = {
     
     # matyti (to see)
     { "english": "I see", "lithuanian": "aš matau" },
-    { "english": "you see", "lithuanian": "tu matai" },
+    { "english": "you(s.) see", "lithuanian": "tu matai" },
     { "english": "he sees", "lithuanian": "jis mato" },
     { "english": "she sees", "lithuanian": "ji mato" },
     { "english": "it sees", "lithuanian": "tai mato" },
@@ -360,7 +360,7 @@ verbs_one = {
   "Work & Life Verbs": [
     # dirbti (to work)
     { "english": "I work", "lithuanian": "aš dirbu" },
-    { "english": "you work", "lithuanian": "tu dirbi" },
+    { "english": "you(s.) work", "lithuanian": "tu dirbi" },
     { "english": "he works", "lithuanian": "jis dirba" },
     { "english": "she works", "lithuanian": "ji dirba" },
     { "english": "it works", "lithuanian": "tai dirba" },
@@ -371,7 +371,7 @@ verbs_one = {
     
     # gyventi (to live)
     { "english": "I live", "lithuanian": "aš gyvenu" },
-    { "english": "you live", "lithuanian": "tu gyveni" },
+    { "english": "you(s.) live", "lithuanian": "tu gyveni" },
     { "english": "he lives", "lithuanian": "jis gyvena" },
     { "english": "she lives", "lithuanian": "ji gyvena" },
     { "english": "it lives", "lithuanian": "tai gyvena" },
@@ -382,7 +382,7 @@ verbs_one = {
     
     # mokytis (to learn)
     { "english": "I learn", "lithuanian": "aš mokausi" },
-    { "english": "you learn", "lithuanian": "tu mokais" },
+    { "english": "you(s.) learn", "lithuanian": "tu mokais" },
     { "english": "he learns", "lithuanian": "jis mokosi" },
     { "english": "she learns", "lithuanian": "ji mokosi" },
     { "english": "it learns", "lithuanian": "tai mokosi" },
@@ -393,7 +393,7 @@ verbs_one = {
     
     # mokyti (to teach)
     { "english": "I teach", "lithuanian": "aš mokau" },
-    { "english": "you teach", "lithuanian": "tu mokai" },
+    { "english": "you(s.) teach", "lithuanian": "tu mokai" },
     { "english": "he teaches", "lithuanian": "jis moko" },
     { "english": "she teaches", "lithuanian": "ji moko" },
     { "english": "it teaches", "lithuanian": "tai moko" },
@@ -404,7 +404,7 @@ verbs_one = {
     
     # žaisti (to play)
     { "english": "I play", "lithuanian": "aš žaidžiu" },
-    { "english": "you play", "lithuanian": "tu žaidi" },
+    { "english": "you(s.) play", "lithuanian": "tu žaidi" },
     { "english": "he plays", "lithuanian": "jis žaidžia" },
     { "english": "she plays", "lithuanian": "ji žaidžia" },
     { "english": "it plays", "lithuanian": "tai žaidžia" },
@@ -537,7 +537,6 @@ nouns_two = {
     { "english": "cheerful", "lithuanian": "linksmas" },
     { "english": "peaceful", "lithuanian": "taikingmas" },
     { "english": "anxious", "lithuanian": "neramus" },
-    { "english": "content", "lithuanian": "patenkintas" }
   ]
 }
 
@@ -552,7 +551,7 @@ nouns_three = {
     { "english": "mile", "lithuanian": "mylia" },
     { "english": "gram", "lithuanian": "gramas" },
     { "english": "kilogram", "lithuanian": "kilogramas" },
-    { "english": "pound", "lithuanian": "svaras" },
+    { "english": "pound (weight)", "lithuanian": "svaras" },
     { "english": "ounce", "lithuanian": "uncija" },
     { "english": "liter", "lithuanian": "litras" },
     { "english": "milliliter", "lithuanian": "mililitras" },
@@ -560,7 +559,7 @@ nouns_three = {
     { "english": "cup (unit)", "lithuanian": "stiklinė" },
     { "english": "tablespoon", "lithuanian": "valgomasis šaukštas" },
     { "english": "teaspoon", "lithuanian": "arbatinis šaukštelis" },
-    { "english": "degree", "lithuanian": "laipsnis" },
+    { "english": "degree (temp.)", "lithuanian": "laipsnis" },
     { "english": "celsius", "lithuanian": "celsijaus" },
     { "english": "fahrenheit", "lithuanian": "farenheitas" }
   ],
@@ -587,7 +586,7 @@ nouns_three = {
     { "english": "volcano", "lithuanian": "ugnikalnis" }
   ],
   "Body Parts": [
-    { "english": "head", "lithuanian": "galva" },
+    { "english": "head (body)", "lithuanian": "galva" },
     { "english": "face", "lithuanian": "veidas" },
     { "english": "eye", "lithuanian": "akis" },
     { "english": "nose", "lithuanian": "nosis" },
@@ -658,9 +657,9 @@ nouns_three = {
     { "english": "ketchup", "lithuanian": "kečupas" },
     { "english": "mayonnaise", "lithuanian": "majonezas" },
     { "english": "vinegar", "lithuanian": "actas" },
-    { "english": "oil", "lithuanian": "aliejus" },
+    { "english": "cooking oil", "lithuanian": "aliejus" },
     { "english": "flour", "lithuanian": "miltai" },
-    { "english": "corn", "lithuanian": "kukurūzai" },
+    { "english": "corn (maize)", "lithuanian": "kukurūzai" },
     { "english": "beans", "lithuanian": "pupelės" },
     { "english": "peas", "lithuanian": "žirniai" },
     { "english": "lemon", "lithuanian": "citrina" },
@@ -703,8 +702,8 @@ nouns_three = {
     { "english": "salmon", "lithuanian": "lašiša" },
     { "english": "tuna", "lithuanian": "tunas" },
     { "english": "shrimp", "lithuanian": "krevetės" },
-    { "english": "crab", "lithuanian": "krabo mėsa" },
-    { "english": "lobster", "lithuanian": "omaro mėsa" }
+    { "english": "crab", "lithuanian": "krabo" },
+    { "english": "lobster", "lithuanian": "omaro" }
   ]
 }
 
@@ -856,23 +855,23 @@ all_words = {
 
 def get_all_word_pairs_flat():
     """
-    Creates a flat list of all word pairs from all categories.
+    Creates a flat list of all word pairs from all corpora.
     
     Returns:
         list: A list of dictionaries, each containing 'english', 'lithuanian', 
-              'category', and 'subcategory' keys.
+              'corpus', and 'group' keys.
     """
     flat_words = []
     
-    # Iterate through all word categories
-    for category_name, category_data in all_words.items():
-        # Iterate through all subcategories
-        for subcategory_name, word_pairs in category_data.items():
-            # Add each word pair to the flat list with category information
+    # Iterate through all corpora
+    for corpus_name, corpus_data in all_words.items():
+        # Iterate through all groups
+        for group_name, word_pairs in corpus_data.items():
+            # Add each word pair to the flat list with corpus information
             for word_pair in word_pairs:
                 flat_word = word_pair.copy()  # Create a copy to avoid modifying the original
-                flat_word['category'] = category_name
-                flat_word['subcategory'] = subcategory_name
+                flat_word['corpus'] = corpus_name
+                flat_word['group'] = group_name
                 flat_words.append(flat_word)
     
     return flat_words

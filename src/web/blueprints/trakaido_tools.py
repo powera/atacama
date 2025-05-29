@@ -26,11 +26,11 @@ def lithuanian_api_index() -> Response:
         "version": "1.0.0",
         "endpoints": {
             "wordlists": {
-                "GET /api/lithuanian/wordlists": "List all wordlist categories",
-                "GET /api/lithuanian/wordlists/_all": "Get all words from all categories",
-                "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, category, subcategory)",
-                "GET /api/lithuanian/wordlists/{category}": "List subcategories or all words in a category (param: words=true)",
-                "GET /api/lithuanian/wordlists/{category}/{subcategory}": "Get words for a specific subcategory"
+                "GET /api/lithuanian/wordlists": "List all wordlist corpora",
+                "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora",
+                "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, corpus, group)",
+                "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
+                "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
             },
             "audio": {
                 "GET /api/lithuanian/audio/voices": "List all available voices",
@@ -93,80 +93,80 @@ def get_audio_file_path(word: str, voice: Optional[str] = None) -> Optional[str]
         return None
 
 # Wordlist related functions
-def get_wordlist_categories() -> List[str]:
+def get_wordlist_corpora() -> List[str]:
     """
-    Get a list of all wordlist categories.
+    Get a list of all wordlist corpora.
     
-    :return: List of category names
+    :return: List of corpus names
     """
     try:
-        categories = list(all_words.keys())
-        logger.debug(f"Found {len(categories)} wordlist categories: {', '.join(categories)}")
-        return categories
+        corpora = list(all_words.keys())
+        logger.debug(f"Found {len(corpora)} wordlist corpora: {', '.join(corpora)}")
+        return corpora
     except Exception as e:
-        logger.error(f"Error getting wordlist categories: {str(e)}")
+        logger.error(f"Error getting wordlist corpora: {str(e)}")
         return []
 
-def get_subcategories(category: str) -> List[str]:
+def get_groups(corpus: str) -> List[str]:
     """
-    Get a list of subcategories for a given category.
+    Get a list of groups for a given corpus.
     
-    :param category: The category name
-    :return: List of subcategory names
+    :param corpus: The corpus name
+    :return: List of group names
     """
     try:
-        if category not in all_words:
-            logger.error(f"Category not found: {category}")
+        if corpus not in all_words:
+            logger.error(f"Corpus not found: {corpus}")
             return []
         
-        subcategories = list(all_words[category].keys())
-        logger.debug(f"Found {len(subcategories)} subcategories for {category}: {', '.join(subcategories)}")
-        return subcategories
+        groups = list(all_words[corpus].keys())
+        logger.debug(f"Found {len(groups)} groups for {corpus}: {', '.join(groups)}")
+        return groups
     except Exception as e:
-        logger.error(f"Error getting subcategories for {category}: {str(e)}")
+        logger.error(f"Error getting groups for {corpus}: {str(e)}")
         return []
 
-def get_words_by_category(category: str, subcategory: Optional[str] = None) -> List[Dict[str, str]]:
+def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[str, str]]:
     """
-    Get words for a specific category and optional subcategory.
+    Get words for a specific corpus and optional group.
     
-    :param category: The category name
-    :param subcategory: Optional subcategory name
+    :param corpus: The corpus name
+    :param group: Optional group name
     :return: List of word pairs
     """
     try:
-        if category not in all_words:
-            logger.error(f"Category not found: {category}")
+        if corpus not in all_words:
+            logger.error(f"Corpus not found: {corpus}")
             return []
         
-        if subcategory:
-            if subcategory not in all_words[category]:
-                logger.error(f"Subcategory {subcategory} not found in category {category}")
+        if group:
+            if group not in all_words[corpus]:
+                logger.error(f"Group {group} not found in corpus {corpus}")
                 return []
-            return all_words[category][subcategory]
+            return all_words[corpus][group]
         
-        # If no subcategory specified, return all words from all subcategories in this category
+        # If no group specified, return all words from all groups in this corpus
         result = []
-        for sub, words in all_words[category].items():
+        for grp, words in all_words[corpus].items():
             result.extend(words)
         return result
     except Exception as e:
-        logger.error(f"Error getting words for category {category}, subcategory {subcategory}: {str(e)}")
+        logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
         return []
 
 # API Routes for wordlists
 @trakaido_bp.route('/api/lithuanian/wordlists')
-def list_wordlist_categories() -> Union[Response, tuple]:
+def list_wordlist_corpora() -> Union[Response, tuple]:
     """
-    List all available wordlist categories.
+    List all available wordlist corpora.
     
-    :return: JSON response with list of categories
+    :return: JSON response with list of corpora
     """
     try:
-        categories = get_wordlist_categories()
-        return jsonify({"categories": categories})
+        corpora = get_wordlist_corpora()
+        return jsonify({"corpora": corpora})
     except Exception as e:
-        logger.error(f"Error listing wordlist categories: {str(e)}")
+        logger.error(f"Error listing wordlist corpora: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @trakaido_bp.route('/api/lithuanian/wordlists/search')
@@ -177,23 +177,23 @@ def search_words() -> Union[Response, tuple]:
     Query parameters:
     - english: Search term for English words
     - lithuanian: Search term for Lithuanian words
-    - category: Filter by category
-    - subcategory: Filter by subcategory (requires category)
+    - corpus: Filter by corpus
+    - group: Filter by group (requires corpus)
     
     :return: JSON response with matching words
     """
     try:
         english_term = request.args.get('english', '').lower()
         lithuanian_term = request.args.get('lithuanian', '').lower()
-        category = request.args.get('category')
-        subcategory = request.args.get('subcategory')
+        corpus = request.args.get('corpus')
+        group = request.args.get('group')
         
         if not english_term and not lithuanian_term:
             return jsonify({"error": "At least one search term (english or lithuanian) is required"}), 400
         
-        # Get all words or filtered by category/subcategory
-        if category:
-            words = get_words_by_category(category, subcategory)
+        # Get all words or filtered by corpus/group
+        if corpus:
+            words = get_words_by_corpus(corpus, group)
         else:
             words = get_all_word_pairs_flat()
         
@@ -210,8 +210,8 @@ def search_words() -> Union[Response, tuple]:
             "query": {
                 "english": english_term,
                 "lithuanian": lithuanian_term,
-                "category": category,
-                "subcategory": subcategory
+                "corpus": corpus,
+                "group": group
             },
             "results": results,
             "count": len(results)
@@ -220,58 +220,53 @@ def search_words() -> Union[Response, tuple]:
         logger.error(f"Error searching words: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@trakaido_bp.route('/api/lithuanian/wordlists/<category>')
-def list_subcategories_or_words(category: str) -> Union[Response, tuple]:
+@trakaido_bp.route('/api/lithuanian/wordlists/<corpus>')
+def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
     """
-    List subcategories for a category or all words if no subcategories exist.
+    List all groups in a corpus in a nested structure, or return words for a specific group.
     
-    :param category: The category name
-    :return: JSON response with subcategories or words
+    :param corpus: The corpus name
+    :return: JSON response with groups in a nested structure or words for a specific group
     """
     try:
-        subcategories = get_subcategories(category)
-        if not subcategories:
-            return jsonify({"error": f"Category '{category}' not found"}), 404
+        groups = get_groups(corpus)
+        if not groups:
+            return jsonify({"error": f"Corpus '{corpus}' not found"}), 404
         
-        # Check if we should return words instead of subcategories
-        all_words_param = request.args.get('words', 'false').lower() == 'true'
+        # Check if a specific group is requested via query parameter
+        requested_group = request.args.get('group')
         
-        if all_words_param:
-            words = get_words_by_category(category)
-            return jsonify({"category": category, "words": words})
+        if requested_group:
+            # Return words for the specific group
+            words = get_words_by_corpus(corpus, requested_group)
+            if not words:
+                return jsonify({"error": f"Group '{requested_group}' not found in corpus '{corpus}'"}), 404
+            
+            return jsonify({
+                "corpus": corpus,
+                "group": requested_group,
+                "words": words
+            })
         
-        return jsonify({"category": category, "subcategories": subcategories})
+        # Return all groups in a nested structure
+        result = {
+            "corpus": corpus,
+            "groups": {}
+        }
+        
+        # Create a nested structure with group names and their words
+        for group_name in groups:
+            result["groups"][group_name] = all_words[corpus][group_name]
+        
+        return jsonify(result)
     except Exception as e:
-        logger.error(f"Error listing subcategories for {category}: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@trakaido_bp.route('/api/lithuanian/wordlists/<category>/<subcategory>')
-def get_words_for_subcategory(category: str, subcategory: str) -> Union[Response, tuple]:
-    """
-    Get words for a specific category and subcategory.
-    
-    :param category: The category name
-    :param subcategory: The subcategory name
-    :return: JSON response with words
-    """
-    try:
-        words = get_words_by_category(category, subcategory)
-        if not words:
-            return jsonify({"error": f"Subcategory '{subcategory}' not found in category '{category}'"}), 404
-        
-        return jsonify({
-            "category": category,
-            "subcategory": subcategory,
-            "words": words
-        })
-    except Exception as e:
-        logger.error(f"Error getting words for {category}/{subcategory}: {str(e)}")
+        logger.error(f"Error listing groups for {corpus}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @trakaido_bp.route('/api/lithuanian/wordlists/_all')
 def get_all_words() -> Union[Response, tuple]:
     """
-    Get all words from all categories and subcategories.
+    Get all words from all corpora and groups.
     
     :return: JSON response with all words
     """
