@@ -278,11 +278,19 @@
             })
             .then(response => response.json())
             .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to start improvement');
+                }
+                
+                // Start polling for job status
+                return pollJobStatus(data.job_id);
+            })
+            .then(data => {
                 progressText.textContent = 'Processing results...';
                 progressFill.style.width = '100%';
 
                 setTimeout(() => {
-                    showResults(data);
+                    showResults(data.result);
                 }, 500);
             })
             .catch(error => {
@@ -292,6 +300,43 @@
                 // Remove processing state on error
                 document.body.classList.remove('processing');
             });
+    }
+
+    function pollJobStatus(jobId) {
+        return new Promise((resolve, reject) => {
+            const progressText = document.getElementById('progress-text');
+            const progressFill = document.querySelector('.progress-fill');
+            
+            function checkStatus() {
+                fetch(`{{ url_for("widgets.improve_status", slug=widget.slug, job_id="PLACEHOLDER") }}`.replace('PLACEHOLDER', jobId))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            reject(new Error(data.error || 'Failed to get job status'));
+                            return;
+                        }
+                        
+                        // Update progress display
+                        progressText.textContent = data.progress;
+                        
+                        if (data.status === 'completed') {
+                            progressFill.style.width = '100%';
+                            resolve(data);
+                        } else if (data.status === 'error') {
+                            reject(new Error(data.error || 'Improvement failed'));
+                        } else {
+                            // Still processing, poll again in 2 seconds
+                            setTimeout(checkStatus, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        reject(error);
+                    });
+            }
+            
+            // Start polling
+            checkStatus();
+        });
     }
 
     function showResults(data) {

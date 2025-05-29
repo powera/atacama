@@ -2,6 +2,9 @@ from flask import Blueprint, render_template, abort, flash, redirect, url_for, g
 from sqlalchemy import select
 from datetime import datetime
 import hashlib
+import threading
+import time
+import uuid
 from models.database import db
 from models.models import ReactWidget, User, WidgetVersion
 from models.messages import check_channel_access
@@ -16,6 +19,9 @@ from models.messages import get_user_allowed_channels
 logger = get_logger(__name__)
 
 widgets_bp = Blueprint('widgets', __name__)
+
+# Global storage for improvement jobs
+improvement_jobs = {}
 
 @widgets_bp.route('/widget/<string:slug>')
 @optional_auth
@@ -314,15 +320,97 @@ def improve_widget(slug):
                 }), 400
             base_code = version.code
         
-        # Use AI to improve the widget
-        result = widget_improver.improve_widget(
-            current_code=base_code,
-            prompt=prompt,
-            improvement_type=improvement_type,
-            widget_title=widget.title
-        )
+        # Generate unique job ID
+        job_id = str(uuid.uuid4())
         
-        return jsonify(result)
+        # Initialize job status
+        improvement_jobs[job_id] = {
+            'status': 'processing',
+            'progress': 'Starting AI improvement...',
+            'result': None,
+            'error': None,
+            'started_at': time.time()
+        }
+        
+        # Start background thread for AI improvement
+        def improve_in_background():
+            try:
+                logger.info(f"Starting background improvement for widget {slug}, job {job_id}")
+                improvement_jobs[job_id]['progress'] = 'AI is analyzing and improving code...'
+                
+                result = widget_improver.improve_widget(
+                    current_code=base_code,
+                    prompt=prompt,
+                    improvement_type=improvement_type,
+                    widget_title=widget.title
+                )
+                
+                improvement_jobs[job_id]['status'] = 'completed'
+                improvement_jobs[job_id]['result'] = result
+                improvement_jobs[job_id]['progress'] = 'Improvement completed'
+                logger.info(f"Completed background improvement for widget {slug}, job {job_id}")
+                
+            except Exception as e:
+                logger.error(f"Error in background improvement for widget {slug}, job {job_id}: {str(e)}")
+                improvement_jobs[job_id]['status'] = 'error'
+                improvement_jobs[job_id]['error'] = str(e)
+                improvement_jobs[job_id]['progress'] = 'Error occurred during improvement'
+        
+        thread = threading.Thread(target=improve_in_background)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Improvement started in background'
+        })
+
+
+@widgets_bp.route('/widget/<string:slug>/improve_status/<string:job_id>', methods=['GET'])
+@require_admin
+def improve_status(slug, job_id):
+    """Check the status of an improvement job."""
+    with db.session() as session:
+        widget = session.query(ReactWidget).filter_by(slug=slug).first()
+        
+        if not widget:
+            abort(404)
+        
+        # Check permissions
+        if not (g.user.id == widget.author_id or 
+                (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)):
+            abort(403)
+        
+        if job_id not in improvement_jobs:
+            return jsonify({
+                'success': False,
+                'error': 'Job not found'
+            }), 404
+        
+        job = improvement_jobs[job_id]
+        
+        # Clean up old completed/errored jobs (older than 1 hour)
+        current_time = time.time()
+        if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 3600:
+            del improvement_jobs[job_id]
+        
+        response = {
+            'success': True,
+            'status': job['status'],
+            'progress': job['progress']
+        }
+        
+        if job['status'] == 'completed' and job['result']:
+            response['result'] = job['result']
+            # Clean up completed job
+            del improvement_jobs[job_id]
+        elif job['status'] == 'error':
+            response['error'] = job['error']
+            # Clean up errored job
+            del improvement_jobs[job_id]
+        
+        return jsonify(response)
 
 
 @widgets_bp.route('/widget/<string:slug>/save_version', methods=['POST'])
