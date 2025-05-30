@@ -1,5 +1,5 @@
 // Access React hooks from the global React object
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 
 /**
  * Default settings configuration
@@ -84,30 +84,68 @@ export const useGlobalSettings = () => {
   const [settings, setSettings] = useState(loadSettings);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const modalRef = useRef(null);
+  const scrollPositionRef = useRef(0);
 
-  // Save settings whenever they change
+  // Save settings whenever they change, but debounce to avoid excessive saves
+  const debouncedSaveSettings = useCallback(
+    (() => {
+      let timeoutId = null;
+      return (newSettings) => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          saveSettings(newSettings);
+        }, 100);
+      };
+    })(),
+    []
+  );
+
   useEffect(() => {
-    saveSettings(settings);
-  }, [settings]);
+    debouncedSaveSettings(settings);
+  }, [settings, debouncedSaveSettings]);
 
-  const updateSetting = (key, value) => {
+  // Memoized update function to prevent unnecessary re-renders
+  const updateSetting = useCallback((key, value) => {
+    // Store current scroll position of the modal if it exists
+    if (modalRef.current) {
+      scrollPositionRef.current = modalRef.current.scrollTop;
+    }
+    
     setSettings(prev => ({
       ...prev,
       [key]: value
     }));
-  };
+  }, []);
 
-  const resetSettings = () => {
+  // Restore scroll position after settings update
+  useEffect(() => {
+    if (scrollPositionRef.current > 0 && modalRef.current) {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        modalRef.current.scrollTop = scrollPositionRef.current;
+      });
+    }
+  }, [settings]);
+
+  const resetSettings = useCallback(() => {
+    // Store current scroll position of the modal if it exists
+    if (modalRef.current) {
+      scrollPositionRef.current = modalRef.current.scrollTop;
+    }
     setSettings({ ...DEFAULT_SETTINGS });
-  };
+  }, []);
 
-  const toggleGlobalSettings = () => {
-    setShowGlobalSettings(prev => !prev);
-  };
+  const toggleGlobalSettings = useCallback(() => {
+    setShowGlobalSettings(prev => {
+      // Reset scroll position reference when opening or closing
+      scrollPositionRef.current = 0;
+      return !prev;
+    });
+  }, []);
 
-  const readGlobalSettings = () => {
+  const readGlobalSettings = useCallback(() => {
     return { ...settings };
-  };
+  }, [settings]);
 
   // Handle escape key and outside clicks
   useEffect(() => {
@@ -138,7 +176,7 @@ export const useGlobalSettings = () => {
   /**
    * Settings Toggle Button Component
    */
-  const SettingsToggle = ({ children, ...props }) => {
+  const SettingsToggle = useCallback(({ children, ...props }) => {
     return (
       <button
         onClick={toggleGlobalSettings}
@@ -150,7 +188,7 @@ export const useGlobalSettings = () => {
         {children || 'Settings'}
       </button>
     );
-  };
+  }, [toggleGlobalSettings]);
 
   /**
    * Settings Modal Component
@@ -223,34 +261,34 @@ export const useGlobalSettings = () => {
             {/* Default Delay Setting */}
             <div className="w-setting-group">
               <label className="w-setting-label">Default Delay</label>
-              <input
-                type="range"
-                min="0.3"
-                max="5.0"
-                step="0.1"
-                value={settings.defaultDelay}
-                onChange={(e) => updateSetting('defaultDelay', parseFloat(e.target.value))}
-                className="w-setting-input"
-              />
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginTop: '0.5rem'
-              }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary, #666)' }}>
-                  0.3s
-                </span>
-                <span style={{ 
-                  fontSize: '1rem', 
-                  fontWeight: '500',
-                  color: 'var(--color-primary, #0074D9)'
-                }}>
-                  {settings.defaultDelay}s
-                </span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary, #666)' }}>
-                  5.0s
-                </span>
+              <div 
+                className="w-range-input-wrapper" 
+                style={{ 
+                  '--range-progress': `${((settings.defaultDelay - 0.3) / (5.0 - 0.3)) * 100}%` 
+                }}
+              >
+                <input
+                  type="range"
+                  min="0.3"
+                  max="5.0"
+                  step="0.1"
+                  value={settings.defaultDelay}
+                  onChange={(e) => {
+                    const newValue = parseFloat(e.target.value);
+                    updateSetting('defaultDelay', newValue);
+                    // Update the progress variable directly for immediate visual feedback
+                    e.target.parentNode.style.setProperty(
+                      '--range-progress', 
+                      `${((newValue - 0.3) / (5.0 - 0.3)) * 100}%`
+                    );
+                  }}
+                  className="w-setting-input"
+                />
+              </div>
+              <div className="w-range-value-display">
+                <span className="w-range-value-min">0.3s</span>
+                <span className="w-range-value-current">{settings.defaultDelay}s</span>
+                <span className="w-range-value-max">5.0s</span>
               </div>
               <p className="w-setting-description">
                 Default timing for transitions and auto-advance delays
