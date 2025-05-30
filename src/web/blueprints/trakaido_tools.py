@@ -2,6 +2,7 @@
 
 import os
 import random
+import re
 from typing import Dict, List, Optional, Union, Any
 
 from flask import Blueprint, send_file, request, abort, Response, jsonify
@@ -13,6 +14,9 @@ from data.trakaido.wordlists import get_all_word_pairs_flat, all_words
 logger = get_logger(__name__)
 
 trakaido_bp = Blueprint('trakaido', __name__)
+
+LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
+
 
 @trakaido_bp.route('/api/lithuanian')
 def lithuanian_api_index() -> Response:
@@ -62,6 +66,29 @@ def get_available_voices() -> List[str]:
         logger.error(f"Error getting Lithuanian voice directories: {str(e)}")
         return []
 
+def sanitize_lithuanian_word(word: str) -> str:
+    """
+    Sanitize a Lithuanian word or phrase for use as a filename.
+    
+    Args:
+        word: The Lithuanian word or phrase to sanitize
+    
+    Returns:
+        Sanitized filename-safe version or empty string if invalid
+    """
+    word = word.strip().lower()
+    
+    # Replace spaces with underscores for multi-word phrases
+    word_with_underscores = word.replace(' ', '_')
+    
+    # Allow all Lithuanian letters, basic Latin letters, and safe characters
+    sanitized = re.sub(r'[^a-z' + LITHUANIAN_CHARS + r'\-_]', '', word_with_underscores)
+    
+    if not sanitized or len(sanitized) > 100:
+        return ""
+        
+    return sanitized
+
 def get_audio_file_path(word: str, voice: Optional[str] = None) -> Optional[str]:
     """
     Get the path to an audio file for the given word and voice.
@@ -79,8 +106,10 @@ def get_audio_file_path(word: str, voice: Optional[str] = None) -> Optional[str]
         # If no voice specified, choose a random one
         selected_voice = voice if voice in voices else random.choice(voices)
         
+        word_filename = sanitize_lithuanian_word(word)
+
         # Construct the file path
-        file_path = os.path.join(constants.LITHUANIAN_AUDIO_DIR, selected_voice, f"{word}.mp3")
+        file_path = os.path.join(constants.LITHUANIAN_AUDIO_DIR, selected_voice, f"{word_filename}.mp3")
         
         # Check if the file exists
         if not os.path.exists(file_path):
