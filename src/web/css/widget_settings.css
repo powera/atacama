@@ -1,0 +1,447 @@
+/* Widget Settings CSS - Global settings modal and components */
+
+/* === SETTINGS MODAL OVERLAY === */
+
+.w-settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* === SETTINGS MODAL CONTAINER === */
+
+.w-settings-modal {
+    background-color: var(--color-background, white);
+    color: var(--color-text, black);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--color-border, #ddd);
+    position: relative;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .w-settings-modal {
+    background-color: var(--color-card-bg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* High contrast theme adjustments */
+[data-theme="high-contrast"] .w-settings-modal {
+    border: 3px solid var(--color-text);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* === SETTINGS MODAL HEADER === */
+
+.w-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+.w-settings-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--color-text, black);
+}
+
+.w-settings-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--color-text-secondary, #666);
+    padding: 0.25rem;
+    border-radius: var(--border-radius, 4px);
+    transition: all 0.2s ease;
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.w-settings-close:hover {
+    background: var(--color-annotation-bg, rgba(0, 0, 0, 0.05));
+    color: var(--color-text, black);
+    transform: scale(1.1);
+}
+
+/* === SETTINGS FORM LAYOUT === */
+
+.w-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.w-setting-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* === SETTING INPUT COMPONENTS === */
+
+/* Checkbox settings */
+.w-setting-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.w-setting-checkbox input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    accent-color: var(--color-primary, #0074D9);
+}
+
+.w-setting-checkbox:hover {
+    color: var(--color-primary, #0074D9);
+}
+
+/* Text input settings */
+.w-setting-label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: var(--color-text, black);
+}
+
+.w-setting-input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #ddd);
+    background-color: var(--color-background, white);
+    color: var(--color-text, black);
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.w-setting-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #0074D9);
+    box-shadow: 0 0 0 3px rgba(0, 116, 217, 0.1);
+}
+
+/* Range slider specific styling */
+.w-setting-input[type="range"] {
+    padding: 0;
+    height: 2rem;
+    background: transparent;
+    border: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.w-setting-input[type="range"]:focus {
+    box-shadow: none;
+}
+
+.w-setting-input[type="range"]::-webkit-slider-track {
+    width: 100%;
+    height: 8px;
+    background: var(--color-border, #ddd);
+    border-radius: 4px;
+}
+
+.w-setting-input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--color-primary, #0074D9);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    margin-top: -6px;
+}
+
+.w-setting-input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: var(--color-border, #ddd);
+    border-radius: 4px;
+    border: none;
+}
+
+.w-setting-input[type="range"]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--color-primary, #0074D9);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: none;
+}
+
+.w-setting-input[type="range"]::-ms-track {
+    width: 100%;
+    height: 8px;
+    background: transparent;
+    border-color: transparent;
+    color: transparent;
+}
+
+.w-setting-input[type="range"]::-ms-fill-lower {
+    background: var(--color-border, #ddd);
+    border-radius: 4px;
+}
+
+.w-setting-input[type="range"]::-ms-fill-upper {
+    background: var(--color-border, #ddd);
+    border-radius: 4px;
+}
+
+.w-setting-input[type="range"]::-ms-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--color-primary, #0074D9);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: none;
+}
+
+/* Select dropdown settings */
+.w-setting-select {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #ddd);
+    background-color: var(--color-background, white);
+    color: var(--color-text, black);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.w-setting-select:focus {
+    outline: none;
+    border-color: var(--color-primary, #0074D9);
+    box-shadow: 0 0 0 3px rgba(0, 116, 217, 0.1);
+}
+
+/* Setting description text */
+.w-setting-description {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary, #666);
+    line-height: 1.4;
+}
+
+.w-setting-checkbox + .w-setting-description {
+    margin-left: 2rem;
+}
+
+/* === SETTINGS ACTIONS FOOTER === */
+
+.w-settings-actions {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border, #ddd);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.w-settings-button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.w-settings-button-secondary {
+    border: 1px solid var(--color-border, #ddd);
+    background-color: var(--color-background, white);
+    color: var(--color-text, black);
+}
+
+.w-settings-button-secondary:hover {
+    background-color: var(--color-annotation-bg, rgba(0, 0, 0, 0.05));
+    border-color: var(--color-primary, #0074D9);
+}
+
+.w-settings-button-primary {
+    border: none;
+    background-color: var(--color-primary, #0074D9);
+    color: white;
+}
+
+.w-settings-button-primary:hover {
+    background-color: var(--color-primary-dark, #0056b3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* === SETTINGS TOGGLE BUTTON === */
+
+.w-settings-toggle {
+    background: var(--color-background, white);
+    color: var(--color-text, black);
+    border: 1px solid var(--color-border, #ddd);
+    padding: var(--spacing-small, 0.5rem) var(--spacing-base, 1rem);
+    font-size: 0.9rem;
+    border-radius: var(--border-radius, 4px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.w-settings-toggle:hover {
+    background: var(--color-annotation-bg, rgba(0, 0, 0, 0.05));
+    border-color: var(--color-primary, #0074D9);
+}
+
+.w-settings-toggle:focus {
+    outline: 2px solid var(--color-primary, #0074D9);
+    outline-offset: 2px;
+}
+
+/* Settings icon in toggle button */
+.w-settings-icon {
+    font-size: 1.1rem;
+}
+
+/* === RESPONSIVE DESIGN === */
+
+@media screen and (max-width: 768px) {
+    .w-settings-modal {
+        padding: 1.5rem;
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .w-settings-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .w-settings-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .w-settings-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .w-settings-button {
+        width: 100%;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .w-settings-modal {
+        padding: 1rem;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .w-settings-overlay {
+        padding: 0;
+    }
+}
+
+/* === THEME-SPECIFIC ADJUSTMENTS === */
+
+/* High contrast mode */
+[data-theme="high-contrast"] .w-settings-close:hover {
+    background: var(--color-text);
+    color: var(--color-background);
+}
+
+[data-theme="high-contrast"] .w-setting-input:focus,
+[data-theme="high-contrast"] .w-setting-select:focus {
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="high-contrast"] .w-settings-button-secondary {
+    border: 2px solid var(--color-text);
+}
+
+[data-theme="high-contrast"] .w-settings-button-secondary:hover {
+    background: var(--color-text);
+    color: var(--color-background);
+}
+
+/* Dark mode input styling */
+[data-theme="dark"] .w-setting-input,
+[data-theme="dark"] .w-setting-select {
+    background-color: var(--color-input-bg, #333);
+    border-color: var(--color-input-border, #555);
+}
+
+[data-theme="dark"] .w-setting-input:focus,
+[data-theme="dark"] .w-setting-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+}
+
+/* === ACCESSIBILITY === */
+
+/* Focus visible for keyboard navigation */
+.w-settings-close:focus-visible,
+.w-settings-button:focus-visible,
+.w-settings-toggle:focus-visible {
+    outline: 2px solid var(--color-primary, #0074D9);
+    outline-offset: 2px;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .w-settings-modal,
+    .w-settings-close,
+    .w-settings-button,
+    .w-settings-toggle,
+    .w-setting-input,
+    .w-setting-select {
+        transition: none;
+    }
+    
+    .w-settings-close:hover,
+    .w-settings-button-primary:hover {
+        transform: none;
+    }
+}
