@@ -31,6 +31,18 @@ const fetchAvailableVoices = async () => {
   }
 };
 
+const fetchConjugations = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/conjugations`);
+    if (!response.ok) throw new Error('Failed to fetch conjugations');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Failed to fetch conjugations:', error);
+    return { conjugations: {}, verbs: [] };
+  }
+};
+
 const FlashCardApp = () => {
   // Global settings integration
   const { 
@@ -60,6 +72,11 @@ const FlashCardApp = () => {
   const [error, setError] = useState(null);
   const [loadingWords, setLoadingWords] = useState(false);
   const [allWords, setAllWords] = useState([]);
+  const [conjugations, setConjugations] = useState({});
+  const [availableVerbs, setAvailableVerbs] = useState([]);
+  const [selectedVerb, setSelectedVerb] = useState(null);
+  const [showConjugations, setShowConjugations] = useState(false);
+  const [loadingConjugations, setLoadingConjugations] = useState(false);
   
   // Use global settings for audio and auto-advance
   const audioEnabled = settings.audioEnabled;
@@ -72,12 +89,15 @@ const FlashCardApp = () => {
       setLoading(true);
       setError(null);
       try {
-        const [corpora, voices] = await Promise.all([
+        const [corpora, voices, conjugationData] = await Promise.all([
           fetchCorpora(),
-          fetchAvailableVoices()
+          fetchAvailableVoices(),
+          fetchConjugations()
         ]);
         setAvailableCorpora(corpora);
         setAvailableVoices(voices);
+        setConjugations(conjugationData.conjugations);
+        setAvailableVerbs(conjugationData.verbs);
         if (voices.length > 0) {
           setSelectedVoice(voices[0]);
         }
@@ -352,6 +372,82 @@ const FlashCardApp = () => {
   // Count total selected words
   const totalSelectedWords = allWords.length;
 
+  // Render conjugation table
+  const renderConjugationTable = (verb) => {
+    const conjugationList = conjugations[verb];
+    if (!conjugationList) return null;
+
+    // Create a 3x3 grid for conjugations
+    const conjugationGrid = {
+      'I': null, 'you(s.)': null, 'he': null,
+      'she': null, 'it': null, 'we': null,
+      'you(pl.)': null, 'they(m.)': null, 'they(f.)': null
+    };
+
+    conjugationList.forEach(conj => {
+      const pronoun = conj.english.split(' ')[0];
+      conjugationGrid[pronoun] = conj;
+    });
+
+    return (
+      <div style={{ marginTop: 'var(--spacing-base)' }}>
+        <h4>Conjugation Table for "{verb}"</h4>
+        <table style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          border: '1px solid var(--color-border)',
+          marginTop: 'var(--spacing-small)'
+        }}>
+          <thead>
+            <tr style={{ background: 'var(--color-annotation-bg)' }}>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Person</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>English</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Lithuanian</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Audio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(conjugationGrid).map(([pronoun, conj]) => {
+              if (!conj) return null;
+              return (
+                <tr key={pronoun}>
+                  <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)', fontWeight: 'bold' }}>
+                    {pronoun}
+                  </td>
+                  <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>
+                    {conj.english}
+                  </td>
+                  <td style={{ 
+                    padding: 'var(--spacing-small)', 
+                    border: '1px solid var(--color-border)',
+                    cursor: audioEnabled ? 'pointer' : 'default'
+                  }}
+                  onMouseEnter={() => audioEnabled && handleHoverStart(conj.lithuanian)}
+                  onMouseLeave={handleHoverEnd}
+                  >
+                    {conj.lithuanian}
+                  </td>
+                  <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
+                    {audioEnabled && (
+                      <button 
+                        className="w-audio-button"
+                        onClick={() => playAudio(conj.lithuanian)}
+                        title="Play pronunciation"
+                        style={{ fontSize: '0.9rem' }}
+                      >
+                        🔊
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -570,6 +666,12 @@ const FlashCardApp = () => {
           <SettingsToggle className="w-mode-option">
             ⚙️ Settings
           </SettingsToggle>
+          <button
+            className={`w-mode-option ${showConjugations ? 'w-active' : ''}`}
+            onClick={() => setShowConjugations(!showConjugations)}
+          >
+            📖 Conjugations
+          </button>
           {audioEnabled && availableVoices.length > 0 && (
             <select 
               value={selectedVoice || ''} 
@@ -597,6 +699,40 @@ const FlashCardApp = () => {
         <div className="w-progress">
           Card {currentCard + 1} of {allWords.length}
           {shuffled && " (shuffled)"}
+        </div>
+      )}
+
+      {/* Conjugation Panel */}
+      {showConjugations && (
+        <div className="w-card">
+          <h3>Lithuanian Verb Conjugations</h3>
+          <div style={{ marginBottom: 'var(--spacing-base)' }}>
+            <label htmlFor="verb-select" style={{ marginRight: 'var(--spacing-small)' }}>
+              Select a verb:
+            </label>
+            <select 
+              id="verb-select"
+              value={selectedVerb || ''} 
+              onChange={(e) => setSelectedVerb(e.target.value)}
+              style={{
+                padding: 'var(--spacing-small) var(--spacing-base)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--border-radius)',
+                background: 'var(--color-background)',
+                color: 'var(--color-text)',
+                fontSize: '0.9rem',
+                minWidth: '150px'
+              }}
+            >
+              <option value="">Choose a verb...</option>
+              {availableVerbs.map(verb => (
+                <option key={verb} value={verb}>
+                  {verb}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedVerb && renderConjugationTable(selectedVerb)}
         </div>
       )}
 

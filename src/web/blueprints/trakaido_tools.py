@@ -36,6 +36,10 @@ def lithuanian_api_index() -> Response:
                 "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
                 "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
             },
+            "conjugations": {
+                "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb",
+                "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb"
+            },
             "audio": {
                 "GET /api/lithuanian/audio/voices": "List all available voices",
                 "GET /api/lithuanian/audio/{word}": "Get audio for a Lithuanian word (param: voice)"
@@ -183,6 +187,64 @@ def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[s
         logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
         return []
 
+def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
+    """
+    Extract verb conjugations from the wordlists and group them by base verb.
+    
+    :return: Dictionary mapping base verbs to their conjugation lists
+    """
+    try:
+        conjugations = {}
+        
+        # Get all verb words from verbs corpus
+        verbs_corpus = all_words.get("verbs", {})
+        
+        for group_name, words in verbs_corpus.items():
+            for word_pair in words:
+                english = word_pair["english"]
+                lithuanian = word_pair["lithuanian"]
+                
+                # Extract base verb from English (e.g., "I walk" -> "walk")
+                # Pattern: "pronoun verb" or "pronoun(modifier) verb"
+                import re
+                match = re.search(r'\b(?:I|you(?:\(s\.\)|\(pl\.\))?|he|she|it|we|they(?:\(m\.\)|\(f\.\))?) (.+)', english)
+                
+                if match:
+                    base_verb = match.group(1)
+                    
+                    # Create conjugation entry
+                    conjugation_entry = {
+                        "english": english,
+                        "lithuanian": lithuanian,
+                        "corpus": "verbs",
+                        "group": group_name
+                    }
+                    
+                    if base_verb not in conjugations:
+                        conjugations[base_verb] = []
+                    
+                    conjugations[base_verb].append(conjugation_entry)
+        
+        # Sort conjugations by a standard order
+        pronoun_order = [
+            "I", "you(s.)", "he", "she", "it", 
+            "we", "you(pl.)", "they(m.)", "they(f.)"
+        ]
+        
+        for verb, verb_conjugations in conjugations.items():
+            verb_conjugations.sort(key=lambda x: next(
+                (i for i, pronoun in enumerate(pronoun_order) 
+                 if x["english"].startswith(pronoun + " ")), 
+                999
+            ))
+        
+        logger.debug(f"Extracted {len(conjugations)} verb conjugation sets")
+        return conjugations
+    
+    except Exception as e:
+        logger.error(f"Error extracting verb conjugations: {str(e)}")
+        return {}
+
 # API Routes for wordlists
 @trakaido_bp.route('/api/lithuanian/wordlists')
 def list_wordlist_corpora() -> Union[Response, tuple]:
@@ -304,6 +366,46 @@ def get_all_words() -> Union[Response, tuple]:
         return jsonify({"words": words})
     except Exception as e:
         logger.error(f"Error getting all words: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@trakaido_bp.route('/api/lithuanian/conjugations')
+def get_verb_conjugations() -> Union[Response, tuple]:
+    """
+    Get all verb conjugations grouped by base verb.
+    
+    :return: JSON response with verb conjugations
+    """
+    try:
+        conjugations = extract_verb_conjugations()
+        return jsonify({
+            "conjugations": conjugations,
+            "verbs": list(conjugations.keys()),
+            "count": len(conjugations)
+        })
+    except Exception as e:
+        logger.error(f"Error getting verb conjugations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@trakaido_bp.route('/api/lithuanian/conjugations/<verb>')
+def get_specific_verb_conjugation(verb: str) -> Union[Response, tuple]:
+    """
+    Get conjugation for a specific verb.
+    
+    :param verb: The base verb (e.g., "walk", "eat")
+    :return: JSON response with conjugation table
+    """
+    try:
+        conjugations = extract_verb_conjugations()
+        
+        if verb not in conjugations:
+            return jsonify({"error": f"Verb '{verb}' not found"}), 404
+        
+        return jsonify({
+            "verb": verb,
+            "conjugations": conjugations[verb]
+        })
+    except Exception as e:
+        logger.error(f"Error getting conjugation for verb '{verb}': {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 # API Routes for audio
