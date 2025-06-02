@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useGlobalSettings } from '../js/globalSettings.js';
+import { useGlobalSettings } from './useGlobalSettings';  # This is the correct syntax for now; it is awkward and possibly should be updated.
 
 // API configuration
 const API_BASE = '/api/lithuanian';
