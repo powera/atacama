@@ -174,8 +174,8 @@ const FlashCardApp = () => {
   }, [audioEnabled, quizMode, studyMode, multipleChoiceOptions, selectedVoice]);
 
   const generateMultipleChoiceOptions = () => {
-    if (!allWords[currentCard]) return;
     const currentWord = allWords[currentCard];
+    if (!currentWord) return;
     const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
     
     // Determine number of options based on difficulty
@@ -772,7 +772,7 @@ const FlashCardApp = () => {
             </div>
           )}
         </div>
-      ) : (
+      ) : currentWord ? (
         <div>
           <div className="w-card">
             <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
@@ -861,6 +861,12 @@ const FlashCardApp = () => {
                 </button>
               );
             })}
+          </div>
+        </div>
+      ) : (
+        <div className="w-card">
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
+            <div>Loading word...</div>
           </div>
         </div>
       )}
