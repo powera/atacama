@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useGlobalSettings } from '../js/globalSettings.js';
 
 // API configuration
 const API_BASE = '/api/lithuanian';
@@ -31,6 +32,13 @@ const fetchAvailableVoices = async () => {
 };
 
 const FlashCardApp = () => {
+  // Global settings integration
+  const { 
+    settings, 
+    SettingsModal, 
+    SettingsToggle 
+  } = useGlobalSettings();
+  
   const [corporaData, setCorporaData] = useState({}); // Cache for corpus structures
   const [currentCard, setCurrentCard] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -46,13 +54,17 @@ const FlashCardApp = () => {
   const [fullScreen, setFullScreen] = useState(false);
   const [audioCache, setAudioCache] = useState({});
   const [hoverTimeout, setHoverTimeout] = useState(null);
-  const [audioEnabled, setAudioEnabled] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadingWords, setLoadingWords] = useState(false);
   const [allWords, setAllWords] = useState([]);
+  
+  // Use global settings for audio and auto-advance
+  const audioEnabled = settings.audioEnabled;
+  const autoAdvance = settings.autoAdvance;
+  const defaultDelay = settings.defaultDelay;
 
   // Load initial data
   useEffect(() => {
@@ -223,12 +235,24 @@ const FlashCardApp = () => {
 
   const markCorrect = () => {
     setStats(prev => ({ ...prev, correct: prev.correct + 1, total: prev.total + 1 }));
-    nextCard();
+    if (autoAdvance) {
+      setTimeout(() => {
+        nextCard();
+      }, defaultDelay * 1000);
+    } else {
+      nextCard();
+    }
   };
 
   const markIncorrect = () => {
     setStats(prev => ({ ...prev, incorrect: prev.incorrect + 1, total: prev.total + 1 }));
-    nextCard();
+    if (autoAdvance) {
+      setTimeout(() => {
+        nextCard();
+      }, defaultDelay * 1000);
+    } else {
+      nextCard();
+    }
   };
 
   const handleMultipleChoiceAnswer = (selectedOption) => {
@@ -236,10 +260,18 @@ const FlashCardApp = () => {
     const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
     setSelectedAnswer(selectedOption);
     setShowAnswer(true);
-    if (selectedOption === correctAnswer) {
+    const isCorrect = selectedOption === correctAnswer;
+    
+    if (isCorrect) {
       setStats(prev => ({ ...prev, correct: prev.correct + 1, total: prev.total + 1 }));
     } else {
       setStats(prev => ({ ...prev, incorrect: prev.incorrect + 1, total: prev.total + 1 }));
+    }
+    
+    if (autoAdvance) {
+      setTimeout(() => {
+        nextCard();
+      }, defaultDelay * 1000);
     }
   };
 
@@ -531,12 +563,9 @@ const FlashCardApp = () => {
         >
           🔀 {shuffled ? 'Shuffled' : 'Ordered'}
         </button>
-        <button
-          className={`w-mode-option ${audioEnabled ? 'w-active' : ''}`}
-          onClick={() => setAudioEnabled(!audioEnabled)}
-        >
-          🔊 {audioEnabled ? 'Audio On' : 'Audio Off'}
-        </button>
+        <SettingsToggle className="w-mode-option">
+          ⚙️ Settings
+        </SettingsToggle>
         {audioEnabled && availableVoices.length > 0 && (
           <select 
             value={selectedVoice || ''} 
@@ -722,6 +751,8 @@ const FlashCardApp = () => {
           🔄 Reset
         </button>
       </div>
+      
+      <SettingsModal />
     </div>
   );
 };
