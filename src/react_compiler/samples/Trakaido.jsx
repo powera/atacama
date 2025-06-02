@@ -583,8 +583,7 @@ const FlashCardApp = () => {
                   className="w-audio-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    const audioWord = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
-                    playAudio(audioWord);
+                    playAudio(currentWord.lithuanian);
                   }}
                   title="Play pronunciation"
                 >
@@ -643,11 +642,8 @@ const FlashCardApp = () => {
                   className += ' w-unselected';
                 }
               }
-              const shouldShowAudioOnHover = audioEnabled && (
-                (studyMode === 'lithuanian-to-english') || 
-                (studyMode === 'english-to-lithuanian')
-              );
-              const audioWord = studyMode === 'english-to-lithuanian' ? option : option;
+              const shouldShowAudioOnHover = audioEnabled && studyMode === 'english-to-lithuanian';
+              const audioWord = option; // In EN->LT mode, options are Lithuanian words
               
               return (
                 <button
@@ -665,7 +661,8 @@ const FlashCardApp = () => {
                         className="w-audio-button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          playAudio(audioWord);
+                          const correctLithuanianWord = studyMode === 'english-to-lithuanian' ? option : currentWord.lithuanian;
+                          playAudio(correctLithuanianWord);
                         }}
                         title="Play pronunciation"
                         style={{ fontSize: '1rem' }}
