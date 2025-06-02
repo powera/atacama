@@ -50,7 +50,7 @@ const FlashCardApp = () => {
     SettingsModal, 
     SettingsToggle 
   } = useGlobalSettings();
-  
+
   const [corporaData, setCorporaData] = useState({}); // Cache for corpus structures
   const [currentCard, setCurrentCard] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -76,7 +76,8 @@ const FlashCardApp = () => {
   const [availableVerbs, setAvailableVerbs] = useState([]);
   const [selectedVerb, setSelectedVerb] = useState(null);
   const [loadingConjugations, setLoadingConjugations] = useState(false);
-  
+  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState(null);
+
   // Use global settings for audio and auto-advance
   const audioEnabled = settings.audioEnabled;
   const autoAdvance = settings.autoAdvance;
@@ -177,11 +178,11 @@ const FlashCardApp = () => {
     const currentWord = allWords[currentCard];
     if (!currentWord) return;
     const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
-    
+
     // Determine number of options based on difficulty
     const numOptions = settings.difficulty === 'easy' ? 4 : settings.difficulty === 'medium' ? 6 : 8;
     const numWrongAnswers = numOptions - 1;
-    
+
     const sameCorpusWords = allWords.filter(word => 
       word.corpus === currentWord.corpus && 
       (studyMode === 'english-to-lithuanian' ? word.lithuanian : word.english) !== correctAnswer
@@ -210,9 +211,9 @@ const FlashCardApp = () => {
         wrongAnswers.push(fallback);
       }
     }
-    
+
     let options = [correctAnswer, ...wrongAnswers];
-    
+
     // Sort alphabetically for medium and hard difficulty, otherwise shuffle
     if (settings.difficulty === 'medium' || settings.difficulty === 'hard') {
       options = options.sort();
@@ -229,7 +230,7 @@ const FlashCardApp = () => {
     } else {
       options = options.sort(() => Math.random() - 0.5);
     }
-    
+
     setMultipleChoiceOptions(options);
   };
 
@@ -267,12 +268,22 @@ const FlashCardApp = () => {
   };
 
   const nextCard = () => {
+    // Cancel any existing auto-advance timer
+    if (autoAdvanceTimer) {
+      clearTimeout(autoAdvanceTimer);
+      setAutoAdvanceTimer(null);
+    }
     setCurrentCard(prev => (prev + 1) % allWords.length);
     setShowAnswer(false);
     setSelectedAnswer(null);
   };
 
   const prevCard = () => {
+    // Cancel any existing auto-advance timer
+    if (autoAdvanceTimer) {
+      clearTimeout(autoAdvanceTimer);
+      setAutoAdvanceTimer(null);
+    }
     setCurrentCard(prev => (prev - 1 + allWords.length) % allWords.length);
     setShowAnswer(false);
     setSelectedAnswer(null);
@@ -281,22 +292,34 @@ const FlashCardApp = () => {
   const markCorrect = () => {
     setStats(prev => ({ ...prev, correct: prev.correct + 1, total: prev.total + 1 }));
     if (autoAdvance) {
-      setTimeout(() => {
-        nextCard();
+      const timerId = setTimeout(() => {
+        setCurrentCard(prev => (prev + 1) % allWords.length);
+        setShowAnswer(false);
+        setSelectedAnswer(null);
+        setAutoAdvanceTimer(null);
       }, defaultDelay * 1000);
+      setAutoAdvanceTimer(timerId);
     } else {
-      nextCard();
+      setCurrentCard(prev => (prev + 1) % allWords.length);
+      setShowAnswer(false);
+      setSelectedAnswer(null);
     }
   };
 
   const markIncorrect = () => {
     setStats(prev => ({ ...prev, incorrect: prev.incorrect + 1, total: prev.total + 1 }));
     if (autoAdvance) {
-      setTimeout(() => {
-        nextCard();
+      const timerId = setTimeout(() => {
+        setCurrentCard(prev => (prev + 1) % allWords.length);
+        setShowAnswer(false);
+        setSelectedAnswer(null);
+        setAutoAdvanceTimer(null);
       }, defaultDelay * 1000);
+      setAutoAdvanceTimer(timerId);
     } else {
-      nextCard();
+      setCurrentCard(prev => (prev + 1) % allWords.length);
+      setShowAnswer(false);
+      setSelectedAnswer(null);
     }
   };
 
@@ -306,17 +329,21 @@ const FlashCardApp = () => {
     setSelectedAnswer(selectedOption);
     setShowAnswer(true);
     const isCorrect = selectedOption === correctAnswer;
-    
+
     if (isCorrect) {
       setStats(prev => ({ ...prev, correct: prev.correct + 1, total: prev.total + 1 }));
     } else {
       setStats(prev => ({ ...prev, incorrect: prev.incorrect + 1, total: prev.total + 1 }));
     }
-    
+
     if (autoAdvance) {
-      setTimeout(() => {
-        nextCard();
+      const timerId = setTimeout(() => {
+        setCurrentCard(prev => (prev + 1) % allWords.length);
+        setShowAnswer(false);
+        setSelectedAnswer(null);
+        setAutoAdvanceTimer(null);
       }, defaultDelay * 1000);
+      setAutoAdvanceTimer(timerId);
     }
   };
 
@@ -812,12 +839,13 @@ const FlashCardApp = () => {
                 } else if (isSelected && !isCorrect) {
                   className += ' w-incorrect';
                 } else if (!isSelected) {
-                  className += ' w-unselected';
+                  ```text
+className += ' w-unselected';
                 }
               }
               const shouldShowAudioOnHover = audioEnabled && studyMode === 'english-to-lithuanian';
               const audioWord = option; // In EN->LT mode, options are Lithuanian words
-              
+
               // Find the translation for incorrect selected answer
               let incorrectTranslation = null;
               if (showAnswer && isSelected && !isCorrect) {
@@ -828,7 +856,7 @@ const FlashCardApp = () => {
                   incorrectTranslation = studyMode === 'english-to-lithuanian' ? wrongWord.english : wrongWord.lithuanian;
                 }
               }
-              
+
               return (
                 <button
                   key={index}
@@ -923,7 +951,7 @@ const FlashCardApp = () => {
           </button>
         </div>
       )}
-      
+
       <SettingsModal />
     </div>
   );
