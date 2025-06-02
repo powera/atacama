@@ -75,7 +75,6 @@ const FlashCardApp = () => {
   const [conjugations, setConjugations] = useState({});
   const [availableVerbs, setAvailableVerbs] = useState([]);
   const [selectedVerb, setSelectedVerb] = useState(null);
-  const [showConjugations, setShowConjugations] = useState(false);
   const [loadingConjugations, setLoadingConjugations] = useState(false);
   
   // Use global settings for audio and auto-advance
@@ -658,6 +657,12 @@ const FlashCardApp = () => {
             Multiple Choice
           </button>
           <button
+            className={`w-mode-option ${quizMode === 'conjugations' ? 'w-active' : ''}`}
+            onClick={() => setQuizMode('conjugations')}
+          >
+            📖 Conjugations
+          </button>
+          <button
             className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
             onClick={shuffleCards}
           >
@@ -666,12 +671,6 @@ const FlashCardApp = () => {
           <SettingsToggle className="w-mode-option">
             ⚙️ Settings
           </SettingsToggle>
-          <button
-            className={`w-mode-option ${showConjugations ? 'w-active' : ''}`}
-            onClick={() => setShowConjugations(!showConjugations)}
-          >
-            📖 Conjugations
-          </button>
           {audioEnabled && availableVoices.length > 0 && (
             <select 
               value={selectedVoice || ''} 
@@ -702,8 +701,14 @@ const FlashCardApp = () => {
         </div>
       )}
 
-      {/* Conjugation Panel */}
-      {showConjugations && (
+      {showNoGroupsMessage ? (
+        <div className="w-card">
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📚 No Groups Selected</div>
+            <div>Please select at least one group to study from the options above.</div>
+          </div>
+        </div>
+      ) : quizMode === 'conjugations' ? (
         <div className="w-card">
           <h3>Lithuanian Verb Conjugations</h3>
           <div style={{ marginBottom: 'var(--spacing-base)' }}>
@@ -733,15 +738,6 @@ const FlashCardApp = () => {
             </select>
           </div>
           {selectedVerb && renderConjugationTable(selectedVerb)}
-        </div>
-      )}
-
-      {showNoGroupsMessage ? (
-        <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📚 No Groups Selected</div>
-            <div>Please select at least one group to study from the options above.</div>
-          </div>
         </div>
       ) : quizMode === 'flashcard' ? (
         <div className="w-card w-card-interactive" onClick={() => setShowAnswer(!showAnswer)}>
@@ -858,7 +854,7 @@ const FlashCardApp = () => {
       )}
 
       {/* Navigation controls */}
-      {!showNoGroupsMessage && (
+      {!showNoGroupsMessage && quizMode !== 'conjugations' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
             <button className="w-button" onClick={prevCard}>← Previous</button>
@@ -870,7 +866,7 @@ const FlashCardApp = () => {
       )}
 
       {/* Stats with Reset button */}
-      {!showNoGroupsMessage && (
+      {!showNoGroupsMessage && quizMode !== 'conjugations' && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div className="w-stat-item" style={{ margin: 0 }}>
