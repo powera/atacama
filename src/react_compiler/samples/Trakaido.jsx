@@ -382,19 +382,8 @@ const FlashCardApp = () => {
     );
   }
 
-  if (!currentWord && totalSelectedWords === 0) {
-    return (
-      <div className="w-container">
-        <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>
-        <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📚 No Groups Selected</div>
-            <div>Please select at least one group to study from the options below.</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show "no groups selected" message but keep the Study Materials section visible
+  const showNoGroupsMessage = !currentWord && totalSelectedWords === 0;
 
   if (!currentWord) {
     return (
@@ -545,69 +534,80 @@ const FlashCardApp = () => {
         </div>
       )}
 
-      <div className="w-mode-selector">
-        {!fullScreen && <h3>Study Options:</h3>}
-        <button
-          className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
-          onClick={() => setStudyMode('english-to-lithuanian')}
-        >
-          English → Lithuanian
-        </button>
-        <button
-          className={`w-mode-option ${studyMode === 'lithuanian-to-english' ? 'w-active' : ''}`}
-          onClick={() => setStudyMode('lithuanian-to-english')}
-        >
-          Lithuanian → English
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'flashcard' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('flashcard')}
-        >
-          Flash Cards
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'multiple-choice' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('multiple-choice')}
-        >
-          Multiple Choice
-        </button>
-        <button
-          className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
-          onClick={shuffleCards}
-        >
-          🔀 {shuffled ? 'Shuffled' : 'Ordered'}
-        </button>
-        <SettingsToggle className="w-mode-option">
-          ⚙️ Settings
-        </SettingsToggle>
-        {audioEnabled && availableVoices.length > 0 && (
-          <select 
-            value={selectedVoice || ''} 
-            onChange={(e) => setSelectedVoice(e.target.value)}
-            style={{
-              padding: 'var(--spacing-small) var(--spacing-base)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--border-radius)',
-              background: 'var(--color-background)',
-              color: 'var(--color-text)',
-              fontSize: '0.9rem'
-            }}
+      {!showNoGroupsMessage && (
+        <div className="w-mode-selector">
+          {!fullScreen && <h3>Study Options:</h3>}
+          <button
+            className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
+            onClick={() => setStudyMode('english-to-lithuanian')}
           >
-            {availableVoices.map(voice => (
-              <option key={voice} value={voice}>
-                🎤 {voice}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+            English → Lithuanian
+          </button>
+          <button
+            className={`w-mode-option ${studyMode === 'lithuanian-to-english' ? 'w-active' : ''}`}
+            onClick={() => setStudyMode('lithuanian-to-english')}
+          >
+            Lithuanian → English
+          </button>
+          <button
+            className={`w-mode-option ${quizMode === 'flashcard' ? 'w-active' : ''}`}
+            onClick={() => setQuizMode('flashcard')}
+          >
+            Flash Cards
+          </button>
+          <button
+            className={`w-mode-option ${quizMode === 'multiple-choice' ? 'w-active' : ''}`}
+            onClick={() => setQuizMode('multiple-choice')}
+          >
+            Multiple Choice
+          </button>
+          <button
+            className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
+            onClick={shuffleCards}
+          >
+            🔀 {shuffled ? 'Shuffled' : 'Ordered'}
+          </button>
+          <SettingsToggle className="w-mode-option">
+            ⚙️ Settings
+          </SettingsToggle>
+          {audioEnabled && availableVoices.length > 0 && (
+            <select 
+              value={selectedVoice || ''} 
+              onChange={(e) => setSelectedVoice(e.target.value)}
+              style={{
+                padding: 'var(--spacing-small) var(--spacing-base)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--border-radius)',
+                background: 'var(--color-background)',
+                color: 'var(--color-text)',
+                fontSize: '0.9rem'
+              }}
+            >
+              {availableVoices.map(voice => (
+                <option key={voice} value={voice}>
+                  🎤 {voice}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
-      <div className="w-progress">
-        Card {currentCard + 1} of {allWords.length}
-        {shuffled && " (shuffled)"}
-      </div>
+      {!showNoGroupsMessage && (
+        <div className="w-progress">
+          Card {currentCard + 1} of {allWords.length}
+          {shuffled && " (shuffled)"}
+        </div>
+      )}
 
-      {quizMode === 'flashcard' ? (
+      {showNoGroupsMessage ? (
+        <div className="w-card">
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📚 No Groups Selected</div>
+            <div>Please select at least one group to study from the options above.</div>
+          </div>
+        </div>
+      ) : quizMode === 'flashcard' ? (
         <div className="w-card w-card-interactive" onClick={() => setShowAnswer(!showAnswer)}>
           <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
           <div 
@@ -722,49 +722,53 @@ const FlashCardApp = () => {
       )}
 
       {/* Navigation controls */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
-          <button className="w-button" onClick={prevCard}>← Previous</button>
+      {!showNoGroupsMessage && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+            <button className="w-button" onClick={prevCard}>← Previous</button>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+            <button className="w-button" onClick={nextCard}>Next →</button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
-          <button className="w-button" onClick={nextCard}>Next →</button>
-        </div>
-      </div>
+      )}
 
       {/* Stats with Reset button */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div className="w-stat-item" style={{ margin: 0 }}>
-            <div className="w-stat-value" style={{ color: 'var(--color-success)' }}>
-              {stats.correct}
+      {!showNoGroupsMessage && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="w-stat-item" style={{ margin: 0 }}>
+              <div className="w-stat-value" style={{ color: 'var(--color-success)' }}>
+                {stats.correct}
+              </div>
+              <div className="w-stat-label">Correct</div>
             </div>
-            <div className="w-stat-label">Correct</div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div className="w-stat-item" style={{ margin: 0 }}>
-            <div className="w-stat-value" style={{ color: 'var(--color-error)' }}>
-              {stats.incorrect}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="w-stat-item" style={{ margin: 0 }}>
+              <div className="w-stat-value" style={{ color: 'var(--color-error)' }}>
+                {stats.incorrect}
+              </div>
+              <div className="w-stat-label">Incorrect</div>
             </div>
-            <div className="w-stat-label">Incorrect</div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <div className="w-stat-item" style={{ margin: 0 }}>
-            <div className="w-stat-value" style={{ color: 'var(--color-primary)' }}>
-              {stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0}%
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="w-stat-item" style={{ margin: 0 }}>
+              <div className="w-stat-value" style={{ color: 'var(--color-primary)' }}>
+                {stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0}%
+              </div>
+              <div className="w-stat-label">Accuracy</div>
             </div>
-            <div className="w-stat-label">Accuracy</div>
           </div>
+          <button 
+            className="w-button-secondary" 
+            onClick={resetCards}
+            style={{ fontSize: '0.8rem', padding: 'var(--spacing-small) var(--spacing-base)' }}
+          >
+            🔄 Reset
+          </button>
         </div>
-        <button 
-          className="w-button-secondary" 
-          onClick={resetCards}
-          style={{ fontSize: '0.8rem', padding: 'var(--spacing-small) var(--spacing-base)' }}
-        >
-          🔄 Reset
-        </button>
-      </div>
+      )}
       
       <SettingsModal />
     </div>
