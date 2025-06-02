@@ -137,7 +137,7 @@ const FlashCardApp = () => {
 
   // Pre-load audio for multiple choice options when audio is enabled
   useEffect(() => {
-    if (audioEnabled && quizMode === 'multiple-choice' && studyMode === 'english-to-lithuanian' && multipleChoiceOptions.length > 0) {
+    if (audioEnabled && quizMode === 'multiple-choice' && studyMode === 'lithuanian-to-english' && multipleChoiceOptions.length > 0) {
       preloadMultipleChoiceAudio();
     }
   }, [audioEnabled, quizMode, studyMode, multipleChoiceOptions, selectedVoice]);
@@ -177,7 +177,7 @@ const FlashCardApp = () => {
   };
 
   const preloadMultipleChoiceAudio = async () => {
-    if (studyMode !== 'english-to-lithuanian' || !selectedVoice) return;
+    if (studyMode !== 'lithuanian-to-english' || !selectedVoice) return;
     const promises = multipleChoiceOptions.map(async (option) => {
       try {
         const cacheKey = `${option}-${selectedVoice}`;
@@ -262,7 +262,7 @@ const FlashCardApp = () => {
   };
 
   const handleHoverStart = (word) => {
-    if (studyMode !== 'english-to-lithuanian' || !audioEnabled || !selectedVoice) return;
+    if (studyMode !== 'lithuanian-to-english' || !audioEnabled || !selectedVoice) return;
     const timeout = setTimeout(() => {
       const cacheKey = `${word}-${selectedVoice}`;
       if (audioCache[cacheKey]) {
@@ -571,7 +571,7 @@ const FlashCardApp = () => {
           {showAnswer && (
             <div className="answer-text">
               <span>{answer}</span>
-              {audioEnabled && (studyMode === 'english-to-lithuanian' || studyMode === 'lithuanian-to-english') && (
+              {audioEnabled && (
                 <button 
                   className="w-audio-button"
                   onClick={(e) => {
@@ -598,7 +598,7 @@ const FlashCardApp = () => {
             <div className="w-question">{question}</div>
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginTop: 'var(--spacing-base)' }}>
               Choose the correct answer:
-              {audioEnabled && studyMode === 'english-to-lithuanian' && (
+              {audioEnabled && studyMode === 'lithuanian-to-english' && (
                 <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
                   (Hover over Lithuanian words for 0.9 seconds to hear pronunciation)
                 </div>
@@ -621,7 +621,7 @@ const FlashCardApp = () => {
                   className += ' w-unselected';
                 }
               }
-              const isLithuanianOption = studyMode === 'english-to-lithuanian';
+              const isLithuanianOption = studyMode === 'lithuanian-to-english';
               return (
                 <button
                   key={index}
@@ -654,25 +654,17 @@ const FlashCardApp = () => {
         </div>
       )}
 
-      {/* Navigation controls with "Reset Stats" aligned with correct/incorrect counts */}
+      {/* Navigation controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
           <button className="w-button" onClick={prevCard}>← Previous</button>
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--spacing-large)', alignItems: 'center' }}>
-          {quizMode === 'flashcard' && (
-            <button className="w-button-secondary" onClick={() => setShowAnswer(!showAnswer)}>
-              {showAnswer ? 'Hide Answer' : 'Show Answer'}
-            </button>
-          )}
-          <button className="w-button-secondary" onClick={resetCards}>🔄 Reset Stats</button>
         </div>
         <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
           <button className="w-button" onClick={nextCard}>Next →</button>
         </div>
       </div>
 
-      {/* Correct/Incorrect stats aligned with Reset button */}
+      {/* Stats with Reset button */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div className="w-stat-item" style={{ margin: 0 }}>
@@ -698,6 +690,13 @@ const FlashCardApp = () => {
             <div className="w-stat-label">Accuracy</div>
           </div>
         </div>
+        <button 
+          className="w-button-secondary" 
+          onClick={resetCards}
+          style={{ fontSize: '0.8rem', padding: 'var(--spacing-small) var(--spacing-base)' }}
+        >
+          🔄 Reset
+        </button>
       </div>
     </div>
   );
