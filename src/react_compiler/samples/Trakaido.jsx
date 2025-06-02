@@ -137,7 +137,7 @@ const FlashCardApp = () => {
 
   // Pre-load audio for multiple choice options when audio is enabled
   useEffect(() => {
-    if (audioEnabled && quizMode === 'multiple-choice' && studyMode === 'lithuanian-to-english' && multipleChoiceOptions.length > 0) {
+    if (audioEnabled && quizMode === 'multiple-choice' && multipleChoiceOptions.length > 0) {
       preloadMultipleChoiceAudio();
     }
   }, [audioEnabled, quizMode, studyMode, multipleChoiceOptions, selectedVoice]);
@@ -177,7 +177,7 @@ const FlashCardApp = () => {
   };
 
   const preloadMultipleChoiceAudio = async () => {
-    if (studyMode !== 'lithuanian-to-english' || !selectedVoice) return;
+    if (!selectedVoice) return;
     const promises = multipleChoiceOptions.map(async (option) => {
       try {
         const cacheKey = `${option}-${selectedVoice}`;
@@ -262,7 +262,7 @@ const FlashCardApp = () => {
   };
 
   const handleHoverStart = (word) => {
-    if (studyMode !== 'lithuanian-to-english' || !audioEnabled || !selectedVoice) return;
+    if (!audioEnabled || !selectedVoice) return;
     const timeout = setTimeout(() => {
       const cacheKey = `${word}-${selectedVoice}`;
       if (audioCache[cacheKey]) {
@@ -567,7 +567,14 @@ const FlashCardApp = () => {
       {quizMode === 'flashcard' ? (
         <div className="w-card w-card-interactive" onClick={() => setShowAnswer(!showAnswer)}>
           <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
-          <div className="w-question">{question}</div>
+          <div 
+            className="w-question"
+            onMouseEnter={() => audioEnabled && studyMode === 'lithuanian-to-english' && handleHoverStart(question)}
+            onMouseLeave={handleHoverEnd}
+            style={{ cursor: audioEnabled && studyMode === 'lithuanian-to-english' ? 'pointer' : 'default' }}
+          >
+            {question}
+          </div>
           {showAnswer && (
             <div className="answer-text">
               <span>{answer}</span>
@@ -576,7 +583,8 @@ const FlashCardApp = () => {
                   className="w-audio-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    playAudio(currentWord.lithuanian);
+                    const audioWord = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+                    playAudio(audioWord);
                   }}
                   title="Play pronunciation"
                 >
@@ -588,6 +596,11 @@ const FlashCardApp = () => {
           {!showAnswer && (
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginTop: 'var(--spacing-base)' }}>
               Click to reveal answer
+              {audioEnabled && studyMode === 'lithuanian-to-english' && (
+                <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                  (Hover over Lithuanian word to hear pronunciation)
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -595,12 +608,21 @@ const FlashCardApp = () => {
         <div>
           <div className="w-card">
             <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
-            <div className="w-question">{question}</div>
+            <div 
+              className="w-question"
+              onMouseEnter={() => audioEnabled && studyMode === 'lithuanian-to-english' && handleHoverStart(question)}
+              onMouseLeave={handleHoverEnd}
+              style={{ cursor: audioEnabled && studyMode === 'lithuanian-to-english' ? 'pointer' : 'default' }}
+            >
+              {question}
+            </div>
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginTop: 'var(--spacing-base)' }}>
               Choose the correct answer:
-              {audioEnabled && studyMode === 'lithuanian-to-english' && (
+              {audioEnabled && (
                 <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                  (Hover over Lithuanian words for 0.9 seconds to hear pronunciation)
+                  {studyMode === 'lithuanian-to-english' 
+                    ? '(Hover over Lithuanian words for 0.9 seconds to hear pronunciation)'
+                    : '(Hover over answer choices for 0.9 seconds to hear pronunciation)'}
                 </div>
               )}
             </div>
@@ -621,24 +643,29 @@ const FlashCardApp = () => {
                   className += ' w-unselected';
                 }
               }
-              const isLithuanianOption = studyMode === 'lithuanian-to-english';
+              const shouldShowAudioOnHover = audioEnabled && (
+                (studyMode === 'lithuanian-to-english') || 
+                (studyMode === 'english-to-lithuanian')
+              );
+              const audioWord = studyMode === 'english-to-lithuanian' ? option : option;
+              
               return (
                 <button
                   key={index}
                   className={className}
                   onClick={() => !showAnswer && handleMultipleChoiceAnswer(option)}
-                  onMouseEnter={() => audioEnabled && isLithuanianOption && handleHoverStart(option)}
+                  onMouseEnter={() => shouldShowAudioOnHover && handleHoverStart(audioWord)}
                   onMouseLeave={handleHoverEnd}
                   disabled={showAnswer}
                 >
                   <div className="choice-content">
                     <span>{option}</span>
-                    {audioEnabled && showAnswer && isCorrect && isLithuanianOption && (
+                    {audioEnabled && showAnswer && isCorrect && (
                       <button 
                         className="w-audio-button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          playAudio(option);
+                          playAudio(audioWord);
                         }}
                         title="Play pronunciation"
                         style={{ fontSize: '1rem' }}
