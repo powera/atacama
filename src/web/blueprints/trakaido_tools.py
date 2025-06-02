@@ -199,31 +199,42 @@ def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
         # Get all verb words from verbs corpus
         verbs_corpus = all_words.get("verbs", {})
         
+        # First, collect all conjugations by group (since each group contains one verb's conjugations)
         for group_name, words in verbs_corpus.items():
+            # Extract base verb from the first person singular form in this group
+            base_verb = None
+            group_conjugations = []
+            
             for word_pair in words:
                 english = word_pair["english"]
                 lithuanian = word_pair["lithuanian"]
                 
-                # Extract base verb from English (e.g., "I walk" -> "walk")
-                # Pattern: "pronoun verb" or "pronoun(modifier) verb"
-                import re
-                match = re.search(r'\b(?:I|you(?:\(s\.\)|\(pl\.\))?|he|she|it|we|they(?:\(m\.\)|\(f\.\))?) (.+)', english)
+                # Create conjugation entry
+                conjugation_entry = {
+                    "english": english,
+                    "lithuanian": lithuanian,
+                    "corpus": "verbs",
+                    "group": group_name
+                }
+                group_conjugations.append(conjugation_entry)
                 
-                if match:
-                    base_verb = match.group(1)
-                    
-                    # Create conjugation entry
-                    conjugation_entry = {
-                        "english": english,
-                        "lithuanian": lithuanian,
-                        "corpus": "verbs",
-                        "group": group_name
-                    }
-                    
-                    if base_verb not in conjugations:
-                        conjugations[base_verb] = []
-                    
-                    conjugations[base_verb].append(conjugation_entry)
+                # Extract base verb from "I verb" pattern (first person singular)
+                if english.startswith("I "):
+                    import re
+                    match = re.search(r'^I (.+)$', english)
+                    if match:
+                        verb_part = match.group(1)
+                        # Handle irregular verbs like "I am" -> "be"
+                        if verb_part == "am":
+                            base_verb = "be"
+                        else:
+                            base_verb = verb_part
+            
+            # If we found a base verb for this group, add all conjugations to it
+            if base_verb:
+                if base_verb not in conjugations:
+                    conjugations[base_verb] = []
+                conjugations[base_verb].extend(group_conjugations)
         
         # Sort conjugations by a standard order
         pronoun_order = [
