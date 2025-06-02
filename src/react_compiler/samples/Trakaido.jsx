@@ -839,8 +839,7 @@ const FlashCardApp = () => {
                 } else if (isSelected && !isCorrect) {
                   className += ' w-incorrect';
                 } else if (!isSelected) {
-                  ```text
-className += ' w-unselected';
+                  className += ' w-unselected';
                 }
               }
               const shouldShowAudioOnHover = audioEnabled && studyMode === 'english-to-lithuanian';

@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
   userName: '',
   animations: true,
   autoAdvance: false,
-  defaultDelay: 1.5 // seconds, range 0.3 to 5.0
+  defaultDelay: 2.5 // seconds, range 1.0 to 7.5
 };
 
 /**
@@ -264,14 +264,14 @@ export const useGlobalSettings = () => {
               <div 
                 className="w-range-input-wrapper" 
                 style={{ 
-                  '--range-progress': `${((settings.defaultDelay - 0.3) / (5.0 - 0.3)) * 100}%` 
+                  '--range-progress': `${((settings.defaultDelay - 1.0) / (7.5 - 1.0)) * 100}%` 
                 }}
               >
                 <input
                   type="range"
-                  min="0.3"
-                  max="5.0"
-                  step="0.1"
+                  min="1.0"
+                  max="7.5"
+                  step="0.125"
                   value={settings.defaultDelay}
                   onChange={(e) => {
                     const newValue = parseFloat(e.target.value);
@@ -279,16 +279,16 @@ export const useGlobalSettings = () => {
                     // Update the progress variable directly for immediate visual feedback
                     e.target.parentNode.style.setProperty(
                       '--range-progress', 
-                      `${((newValue - 0.3) / (5.0 - 0.3)) * 100}%`
+                      `${((newValue - 1.0) / (7.5 - 1.0)) * 100}%`
                     );
                   }}
                   className="w-setting-input"
                 />
               </div>
               <div className="w-range-value-display">
-                <span className="w-range-value-min">0.3s</span>
+                <span className="w-range-value-min">1.0s</span>
                 <span className="w-range-value-current">{settings.defaultDelay}s</span>
-                <span className="w-range-value-max">5.0s</span>
+                <span className="w-range-value-max">7.5s</span>
               </div>
               <p className="w-setting-description">
                 Default timing for transitions and auto-advance delays
