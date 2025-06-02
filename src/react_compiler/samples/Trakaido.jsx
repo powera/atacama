@@ -145,7 +145,7 @@ const FlashCardApp = () => {
     if (quizMode === 'multiple-choice' && allWords.length > 0) {
       generateMultipleChoiceOptions();
     }
-  }, [currentCard, quizMode, allWords, studyMode]);
+  }, [currentCard, quizMode, allWords, studyMode, settings.difficulty]);
 
   // Pre-load audio for multiple choice options when audio is enabled
   useEffect(() => {
@@ -158,6 +158,11 @@ const FlashCardApp = () => {
     if (!allWords[currentCard]) return;
     const currentWord = allWords[currentCard];
     const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+    
+    // Determine number of options based on difficulty
+    const numOptions = settings.difficulty === 'easy' ? 4 : settings.difficulty === 'medium' ? 6 : 8;
+    const numWrongAnswers = numOptions - 1;
+    
     const sameCorpusWords = allWords.filter(word => 
       word.corpus === currentWord.corpus && 
       (studyMode === 'english-to-lithuanian' ? word.lithuanian : word.english) !== correctAnswer
@@ -170,21 +175,30 @@ const FlashCardApp = () => {
       if (answer !== correctAnswer && !wrongAnswersSet.has(answer)) {
         wrongAnswersSet.add(answer);
         wrongAnswers.push(answer);
-        if (wrongAnswers.length >= 3) break;
+        if (wrongAnswers.length >= numWrongAnswers) break;
       }
     }
     // Pad with any other words if needed
-    if (wrongAnswers.length < 3) {
+    if (wrongAnswers.length < numWrongAnswers) {
       const fallbackWords = allWords
         .map(w => (studyMode === 'english-to-lithuanian' ? w.lithuanian : w.english))
         .filter(ans => ans !== correctAnswer && !wrongAnswersSet.has(ans));
-      while (wrongAnswers.length < 3 && fallbackWords.length > 0) {
+      while (wrongAnswers.length < numWrongAnswers && fallbackWords.length > 0) {
         const randIdx = Math.floor(Math.random() * fallbackWords.length);
         const fallback = fallbackWords.splice(randIdx, 1)[0];
         wrongAnswers.push(fallback);
       }
     }
-    const options = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5);
+    
+    let options = [correctAnswer, ...wrongAnswers];
+    
+    // Sort alphabetically for medium and hard difficulty, otherwise shuffle
+    if (settings.difficulty === 'medium' || settings.difficulty === 'hard') {
+      options = options.sort();
+    } else {
+      options = options.sort(() => Math.random() - 0.5);
+    }
+    
     setMultipleChoiceOptions(options);
   };
 
