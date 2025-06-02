@@ -188,8 +188,9 @@ const FlashCardApp = () => {
     );
     const wrongAnswersSet = new Set();
     const wrongAnswers = [];
-    // Gather wrong answers from same corpus
-    for (const word of sameCorpusWords) {
+    // Gather wrong answers from same corpus - shuffle first to get random decoys
+    const shuffledSameCorpusWords = [...sameCorpusWords].sort(() => Math.random() - 0.5);
+    for (const word of shuffledSameCorpusWords) {
       const answer = studyMode === 'english-to-lithuanian' ? word.lithuanian : word.english;
       if (answer !== correctAnswer && !wrongAnswersSet.has(answer)) {
         wrongAnswersSet.add(answer);
@@ -201,7 +202,8 @@ const FlashCardApp = () => {
     if (wrongAnswers.length < numWrongAnswers) {
       const fallbackWords = allWords
         .map(w => (studyMode === 'english-to-lithuanian' ? w.lithuanian : w.english))
-        .filter(ans => ans !== correctAnswer && !wrongAnswersSet.has(ans));
+        .filter(ans => ans !== correctAnswer && !wrongAnswersSet.has(ans))
+        .sort(() => Math.random() - 0.5); // Shuffle fallback words too
       while (wrongAnswers.length < numWrongAnswers && fallbackWords.length > 0) {
         const randIdx = Math.floor(Math.random() * fallbackWords.length);
         const fallback = fallbackWords.splice(randIdx, 1)[0];
