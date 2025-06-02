@@ -214,6 +214,16 @@ const FlashCardApp = () => {
     // Sort alphabetically for medium and hard difficulty, otherwise shuffle
     if (settings.difficulty === 'medium' || settings.difficulty === 'hard') {
       options = options.sort();
+      // Rearrange to fill columns first (left column, then right column)
+      const rearranged = [];
+      const half = Math.ceil(options.length / 2);
+      for (let i = 0; i < half; i++) {
+        rearranged.push(options[i]);
+        if (i + half < options.length) {
+          rearranged.push(options[i + half]);
+        }
+      }
+      options = rearranged;
     } else {
       options = options.sort(() => Math.random() - 0.5);
     }
@@ -480,20 +490,6 @@ const FlashCardApp = () => {
   // Show "no groups selected" message but keep the Study Materials section visible
   const showNoGroupsMessage = !currentWord && totalSelectedWords === 0;
 
-  if (!currentWord) {
-    return (
-      <div className="w-container">
-        <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>
-        <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📭 No Words Available</div>
-            <div>No vocabulary words found for the selected groups. Please try selecting different groups.</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const question = studyMode === 'english-to-lithuanian' ? currentWord.english : currentWord.lithuanian;
   const answer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
 
@@ -629,70 +625,68 @@ const FlashCardApp = () => {
         </div>
       )}
 
-      {!showNoGroupsMessage && (
-        <div className="w-mode-selector">
-          {!fullScreen && <h3>Study Options:</h3>}
-          <button
-            className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
-            onClick={() => setStudyMode('english-to-lithuanian')}
+      <div className="w-mode-selector">
+        {!fullScreen && <h3>Study Options:</h3>}
+        <button
+          className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
+          onClick={() => setStudyMode('english-to-lithuanian')}
+        >
+          English → Lithuanian
+        </button>
+        <button
+          className={`w-mode-option ${studyMode === 'lithuanian-to-english' ? 'w-active' : ''}`}
+          onClick={() => setStudyMode('lithuanian-to-english')}
+        >
+          Lithuanian → English
+        </button>
+        <button
+          className={`w-mode-option ${quizMode === 'flashcard' ? 'w-active' : ''}`}
+          onClick={() => setQuizMode('flashcard')}
+        >
+          Flash Cards
+        </button>
+        <button
+          className={`w-mode-option ${quizMode === 'multiple-choice' ? 'w-active' : ''}`}
+          onClick={() => setQuizMode('multiple-choice')}
+        >
+          Multiple Choice
+        </button>
+        <button
+          className={`w-mode-option ${quizMode === 'conjugations' ? 'w-active' : ''}`}
+          onClick={() => setQuizMode('conjugations')}
+        >
+          📖 Conjugations
+        </button>
+        <button
+          className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
+          onClick={shuffleCards}
+        >
+          🔀 {shuffled ? 'Shuffled' : 'Ordered'}
+        </button>
+        <SettingsToggle className="w-mode-option">
+          ⚙️ Settings
+        </SettingsToggle>
+        {audioEnabled && availableVoices.length > 0 && (
+          <select 
+            value={selectedVoice || ''} 
+            onChange={(e) => setSelectedVoice(e.target.value)}
+            style={{
+              padding: 'var(--spacing-small) var(--spacing-base)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--border-radius)',
+              background: 'var(--color-background)',
+              color: 'var(--color-text)',
+              fontSize: '0.9rem'
+            }}
           >
-            English → Lithuanian
-          </button>
-          <button
-            className={`w-mode-option ${studyMode === 'lithuanian-to-english' ? 'w-active' : ''}`}
-            onClick={() => setStudyMode('lithuanian-to-english')}
-          >
-            Lithuanian → English
-          </button>
-          <button
-            className={`w-mode-option ${quizMode === 'flashcard' ? 'w-active' : ''}`}
-            onClick={() => setQuizMode('flashcard')}
-          >
-            Flash Cards
-          </button>
-          <button
-            className={`w-mode-option ${quizMode === 'multiple-choice' ? 'w-active' : ''}`}
-            onClick={() => setQuizMode('multiple-choice')}
-          >
-            Multiple Choice
-          </button>
-          <button
-            className={`w-mode-option ${quizMode === 'conjugations' ? 'w-active' : ''}`}
-            onClick={() => setQuizMode('conjugations')}
-          >
-            📖 Conjugations
-          </button>
-          <button
-            className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
-            onClick={shuffleCards}
-          >
-            🔀 {shuffled ? 'Shuffled' : 'Ordered'}
-          </button>
-          <SettingsToggle className="w-mode-option">
-            ⚙️ Settings
-          </SettingsToggle>
-          {audioEnabled && availableVoices.length > 0 && (
-            <select 
-              value={selectedVoice || ''} 
-              onChange={(e) => setSelectedVoice(e.target.value)}
-              style={{
-                padding: 'var(--spacing-small) var(--spacing-base)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--border-radius)',
-                background: 'var(--color-background)',
-                color: 'var(--color-text)',
-                fontSize: '0.9rem'
-              }}
-            >
-              {availableVoices.map(voice => (
-                <option key={voice} value={voice}>
-                  🎤 {voice}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
+            {availableVoices.map(voice => (
+              <option key={voice} value={voice}>
+                🎤 {voice}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {!showNoGroupsMessage && (
         <div className="w-progress">
@@ -704,8 +698,8 @@ const FlashCardApp = () => {
       {showNoGroupsMessage ? (
         <div className="w-card">
           <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📚 No Groups Selected</div>
-            <div>Please select at least one group to study from the options above.</div>
+            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📭 No Words Available</div>
+            <div>No vocabulary words found for the selected groups. Please try selecting different groups.</div>
           </div>
         </div>
       ) : quizMode === 'conjugations' ? (
@@ -820,6 +814,17 @@ const FlashCardApp = () => {
               const shouldShowAudioOnHover = audioEnabled && studyMode === 'english-to-lithuanian';
               const audioWord = option; // In EN->LT mode, options are Lithuanian words
               
+              // Find the translation for incorrect selected answer
+              let incorrectTranslation = null;
+              if (showAnswer && isSelected && !isCorrect) {
+                const wrongWord = allWords.find(w => 
+                  (studyMode === 'english-to-lithuanian' ? w.lithuanian : w.english) === option
+                );
+                if (wrongWord) {
+                  incorrectTranslation = studyMode === 'english-to-lithuanian' ? wrongWord.english : wrongWord.lithuanian;
+                }
+              }
+              
               return (
                 <button
                   key={index}
@@ -830,7 +835,14 @@ const FlashCardApp = () => {
                   disabled={showAnswer}
                 >
                   <div className="choice-content">
-                    <span>{option}</span>
+                    <div style={{ textAlign: 'center' }}>
+                      <span>{option}</span>
+                      {incorrectTranslation && (
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>
+                          ({incorrectTranslation})
+                        </div>
+                      )}
+                    </div>
                     {audioEnabled && showAnswer && isCorrect && (
                       <button 
                         className="w-audio-button"
