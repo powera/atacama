@@ -490,8 +490,8 @@ const FlashCardApp = () => {
   // Show "no groups selected" message but keep the Study Materials section visible
   const showNoGroupsMessage = !currentWord && totalSelectedWords === 0;
 
-  const question = studyMode === 'english-to-lithuanian' ? currentWord.english : currentWord.lithuanian;
-  const answer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+  const question = currentWord ? (studyMode === 'english-to-lithuanian' ? currentWord.english : currentWord.lithuanian) : '';
+  const answer = currentWord ? (studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english) : '';
 
   return (
     <div className={`w-container ${fullScreen ? 'w-fullscreen' : ''}`}>
@@ -798,6 +798,7 @@ const FlashCardApp = () => {
           <div className="w-multiple-choice">
             {multipleChoiceOptions.map((option, index) => {
               const currentWord = allWords[currentCard];
+              if (!currentWord) return null;
               const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
               const isCorrect = option === correctAnswer;
               const isSelected = option === selectedAnswer;
