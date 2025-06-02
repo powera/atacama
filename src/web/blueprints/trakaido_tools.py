@@ -199,11 +199,10 @@ def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
         # Get all verb words from verbs corpus
         verbs_corpus = all_words.get("verbs", {})
         
-        # First, collect all conjugations by group (since each group contains one verb's conjugations)
+        # Track current verb being processed within each group
         for group_name, words in verbs_corpus.items():
-            # Extract base verb from the first person singular form in this group
-            base_verb = None
-            group_conjugations = []
+            current_verb = None
+            current_verb_conjugations = []
             
             for word_pair in words:
                 english = word_pair["english"]
@@ -216,25 +215,39 @@ def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
                     "corpus": "verbs",
                     "group": group_name
                 }
-                group_conjugations.append(conjugation_entry)
                 
-                # Extract base verb from "I verb" pattern (first person singular)
+                # Check if this is a first person singular (start of new verb)
                 if english.startswith("I "):
+                    # If we were tracking a previous verb, save it
+                    if current_verb and current_verb_conjugations:
+                        if current_verb not in conjugations:
+                            conjugations[current_verb] = []
+                        conjugations[current_verb].extend(current_verb_conjugations)
+                    
+                    # Start tracking new verb
                     import re
                     match = re.search(r'^I (.+)$', english)
                     if match:
                         verb_part = match.group(1)
                         # Handle irregular verbs like "I am" -> "be"
                         if verb_part == "am":
-                            base_verb = "be"
+                            current_verb = "be"
                         else:
-                            base_verb = verb_part
+                            current_verb = verb_part
+                        current_verb_conjugations = [conjugation_entry]
+                    else:
+                        current_verb = None
+                        current_verb_conjugations = []
+                else:
+                    # Add to current verb's conjugations
+                    if current_verb:
+                        current_verb_conjugations.append(conjugation_entry)
             
-            # If we found a base verb for this group, add all conjugations to it
-            if base_verb:
-                if base_verb not in conjugations:
-                    conjugations[base_verb] = []
-                conjugations[base_verb].extend(group_conjugations)
+            # Don't forget the last verb in the group
+            if current_verb and current_verb_conjugations:
+                if current_verb not in conjugations:
+                    conjugations[current_verb] = []
+                conjugations[current_verb].extend(current_verb_conjugations)
         
         # Sort conjugations by a standard order
         pronoun_order = [
