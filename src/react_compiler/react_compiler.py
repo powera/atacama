@@ -61,8 +61,8 @@ class WidgetBuilder:
         
         # Define hook file mappings
         hook_files = {
-            'useFullscreen': 'fullscreen.js',
-            'useGlobalSettings': 'globalSettings.js'
+            'useFullscreen': 'useFullscreen.js',
+            'useGlobalSettings': 'useGlobalSettings.js'
         }
         
         # Get the directory where this file is located
