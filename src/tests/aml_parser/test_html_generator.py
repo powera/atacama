@@ -55,19 +55,19 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         """).strip()
         
         html = self.generate_html(text)
-        self.assertHtmlEqual(html, """
-                <p>Before quote</p>
-                <div class="mlq">
-                    <button type="button" class="mlq-collapse" aria-label="Toggle visibility">
-                        <span class="mlq-collapse-icon">−</span>
-                    </button>
-                    <div class="mlq-content">
-                        <p>First quoted paragraph</p>
-                        <p>Second quoted paragraph</p>
-                    </div>
-                </div>
-                <p>After quote</p>
-        """)
+        self.assertHtmlEqual(html, 
+            '<p>Before quote</p> '
+            '<div class="mlq">'
+            '<button type="button" class="mlq-collapse" aria-label="Toggle visibility">'
+            '<span class="mlq-collapse-icon">-</span>'
+            '</button>'
+            '<div class="mlq-content">'
+            '<p>First quoted paragraph</p> '
+            '<p>Second quoted paragraph</p>'
+            '</div>'
+            '</div> '
+            '<p>After quote</p>'
+        )
 
     def test_colored_multi_quote_blocks(self):
         """Test colored multi-paragraph quote block formatting."""
@@ -119,12 +119,12 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         text = "<red>Important warning"
         html = self.generate_html(text)
         
-        self.assertHtmlEqual(html, """
-            <p><span class="colorblock color-red">
-                <span class="sigil">💡</span>
-                <span class="colortext-content">Important warning</span>
-            </span></p>
-        """)
+        self.assertHtmlEqual(html, 
+            '<p><span class="colorblock color-red">'
+            '<span class="sigil">💡</span>'
+            '<span class="colortext-content">Important warning</span>'
+            '</span></p>'
+        )
 
     def test_nested_color_tags(self):
         """Test nested color tag formatting."""
