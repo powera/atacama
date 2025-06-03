@@ -156,6 +156,17 @@ class TestAtacamaLexer(unittest.TestCase):
             (TokenType.TEXT, "Section 2")
         ])
 
+    def test_more_tag(self):
+        """Lexer should recognize --MORE-- tags."""
+        text = "Before\n--MORE--\nAfter"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Before"),
+            (TokenType.NEWLINE, "\n"),
+            (TokenType.MORE_TAG, "--MORE--"),
+            (TokenType.NEWLINE, "\n"),
+            (TokenType.TEXT, "After")
+        ])
+
     def test_position_tracking(self):
         """Lexer should track line and column numbers accurately."""
         text = "Line 1\nLine 2"

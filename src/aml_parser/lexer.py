@@ -118,9 +118,12 @@ class AtacamaLexer:
 
     def _try_handle_section_break_or_more(self, tok_line: int, tok_col: int) -> Optional[Token]:
         if self.current_char == '-':
-            if self._match_and_consume("--MORE--"):
+            # Check for --MORE-- first (8 characters)
+            if self.text.startswith("--MORE--", self.pos):
+                self._advance_n(8)
                 return Token(TokenType.MORE_TAG, "--MORE--", tok_line, tok_col)
-            if self.text.startswith("----", self.pos):
+            # Then check for ---- section break (4 characters)
+            elif self.text.startswith("----", self.pos):
                 peek_after = self._peek(4)
                 if peek_after is None or peek_after.isspace() or peek_after == '\n':
                     self._advance_n(4)

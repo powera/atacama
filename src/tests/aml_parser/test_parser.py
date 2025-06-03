@@ -46,6 +46,21 @@ class TestAtacamaParser(unittest.TestCase):
         self.assertEqual(len(ast.children), 5)  # text, newline, HR, newline, text
         self.assert_node_type(ast.children[2], NodeType.HR)
 
+    def test_more_tags(self):
+        """Parser should handle --MORE-- tags."""
+        text = dedent("""
+            First part
+            --MORE--
+            Second part
+        """).strip()
+        
+        ast = self.parse_text(text)
+        self.assert_node_type(ast, NodeType.DOCUMENT)
+        
+        # Should have text, newline, MORE_TAG, newline, text nodes
+        self.assertEqual(len(ast.children), 5)
+        self.assert_node_type(ast.children[2], NodeType.MORE_TAG)
+
     def test_multi_quote_blocks(self):
         """Parser should handle multi-line quote blocks (MLQ)."""
         text = dedent("""
