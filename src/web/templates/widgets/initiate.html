@@ -51,6 +51,26 @@
                     <small>Channel where this widget will be available.</small>
                 </div>
 
+                <div class="form-group">
+                    <label>AI Model:</label>
+                    <div class="model-options">
+                        <label class="model-option">
+                            <input type="radio" name="ai_model" value="nano" checked>
+                            <span class="model-info">
+                                <strong>Nano (Fast)</strong>
+                                <small>Quick widget generation, lower cost</small>
+                            </span>
+                        </label>
+                        <label class="model-option">
+                            <input type="radio" name="ai_model" value="mini">
+                            <span class="model-info">
+                                <strong>GPT-4.1-mini (Better)</strong>
+                                <small>Higher quality code generation, more detailed</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="button primary" id="create-button">
                         <span class="button-text">Create Widget with AI</span>
@@ -128,6 +148,62 @@
     display: flex;
     gap: 1rem;
     margin-top: 2rem;
+}
+
+.model-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.model-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.model-option:hover {
+    background: var(--color-background-secondary);
+    border-color: var(--color-primary);
+}
+
+.model-option input[type="radio"] {
+    margin: 0;
+    margin-top: 0.1rem;
+}
+
+.model-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.model-info strong {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.model-info small {
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.model-option:has(input:checked) {
+    background: var(--color-primary-light, rgba(59, 130, 246, 0.1));
+    border-color: var(--color-primary);
+}
+
+.model-option:has(input:checked) .model-info strong {
+    color: var(--color-primary);
 }
 
 .examples {
@@ -220,6 +296,14 @@
     .form-actions {
         flex-direction: column;
     }
+    
+    .model-options {
+        gap: 0.5rem;
+    }
+    
+    .model-option {
+        padding: 0.5rem;
+    }
 }
 </style>
 
@@ -232,11 +316,13 @@ document.getElementById('initiate-form').addEventListener('submit', async functi
     const progressMessage = document.getElementById('progress-message');
     
     // Get form data
+    const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
     const formData = {
         slug: document.getElementById('slug').value,
         title: document.getElementById('title').value,
         description: document.getElementById('description').value,
-        channel: document.getElementById('channel').value
+        channel: document.getElementById('channel').value,
+        use_advanced_model: selectedModel === 'mini'
     };
     
     // Validate slug format

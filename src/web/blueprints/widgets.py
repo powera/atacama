@@ -576,6 +576,7 @@ def initiate_widget():
         description = data.get('description', '').strip()
         title = data.get('title', '').strip()
         channel = data.get('channel', 'private')
+        use_advanced_model = data.get('use_advanced_model', False)
         
         # Validate inputs
         if not slug:
@@ -607,7 +608,8 @@ def initiate_widget():
         result = widget_initiator.create_widget(
             slug=slug,
             description=description,
-            widget_title=title
+            widget_title=title,
+            use_advanced_model=use_advanced_model
         )
         
         if not result['success']:

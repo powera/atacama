@@ -7,7 +7,7 @@ from pathlib import Path
 
 import tiktoken
 
-from common.llm.openai_client import generate_chat, DEFAULT_MODEL
+from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +64,8 @@ class WidgetInitiator:
         self, 
         slug: str,
         description: str, 
-        widget_title: str = None
+        widget_title: str = None,
+        use_advanced_model: bool = False
     ) -> Dict[str, Any]:
         """
         Create a new widget from a description.
@@ -73,11 +74,16 @@ class WidgetInitiator:
             slug: URL slug for the widget
             description: Simple description of what the widget should do
             widget_title: Title of the widget (defaults to formatted slug)
+            use_advanced_model: If True, use GPT-4.1-mini instead of nano
 
         Returns:
             Dict containing widget_code, success, error, and usage stats
         """
         try:
+            # Select the appropriate model
+            selected_model = PROD_MODEL if use_advanced_model else DEFAULT_MODEL
+            logger.info(f"Using model: {selected_model} for widget creation")
+            
             # Generate widget title from slug if not provided
             if not widget_title:
                 widget_title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
@@ -101,7 +107,7 @@ class WidgetInitiator:
             # Generate widget code
             response = generate_chat(
                 prompt=full_prompt,
-                model=self.model,
+                model=selected_model,
                 brief=False,
                 max_tokens=int(max_tokens),
             )
