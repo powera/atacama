@@ -6,7 +6,7 @@ from pathlib import Path
 
 import tiktoken
 
-from common.llm.openai_client import generate_chat, DEFAULT_MODEL
+from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -109,7 +109,8 @@ Ensure the widget provides an excellent mobile user experience.'''
         current_code: str, 
         prompt: str, 
         improvement_type: str = 'custom',
-        widget_title: str = "Widget"
+        widget_title: str = "Widget",
+        use_advanced_model: bool = False
     ) -> Dict[str, Any]:
         """
         Improve widget code using AI.
@@ -119,11 +120,16 @@ Ensure the widget provides an excellent mobile user experience.'''
             prompt: The improvement prompt
             improvement_type: Type of improvement ('canned', 'custom', 'manual')
             widget_title: Title of the widget for context
+            use_advanced_model: If True, use GPT-4.1-mini instead of nano
 
         Returns:
             Dict containing improved_code, success, error, and usage stats
         """
         try:
+            # Select the appropriate model
+            selected_model = PROD_MODEL if use_advanced_model else DEFAULT_MODEL
+            logger.info(f"Using model: {selected_model} for widget improvement")
+            
             # Build the full prompt with context
             full_prompt = self._build_improvement_prompt(
                 current_code, prompt, widget_title
@@ -144,7 +150,7 @@ Ensure the widget provides an excellent mobile user experience.'''
             # Generate improved code
             response = generate_chat(
                 prompt=full_prompt,
-                model=self.model,
+                model=selected_model,
                 brief=False,
                 max_tokens=int(max_tokens),
             )

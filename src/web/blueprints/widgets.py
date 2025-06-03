@@ -308,6 +308,7 @@ def improve_widget(slug):
         base_version = data.get('base_version', 'current')
         prompt = data.get('prompt', '')
         improvement_type = data.get('improvement_type', 'custom')
+        use_advanced_model = data.get('use_advanced_model', False)
         
         # Get the base code
         if base_version == 'current':
@@ -346,7 +347,8 @@ def improve_widget(slug):
                     current_code=base_code,
                     prompt=prompt,
                     improvement_type=improvement_type,
-                    widget_title=widget_title
+                    widget_title=widget_title,
+                    use_advanced_model=use_advanced_model
                 )
                 
                 improvement_jobs[job_id]['status'] = 'completed'

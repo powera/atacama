@@ -34,6 +34,27 @@
             </select>
         </div>
 
+        <!-- Model Selection -->
+        <div class="model-selection">
+            <h3>AI Model</h3>
+            <div class="model-options">
+                <label class="model-option">
+                    <input type="radio" name="ai_model" value="nano" checked>
+                    <span class="model-info">
+                        <strong>Nano (Fast)</strong>
+                        <small>Quick improvements, lower cost</small>
+                    </span>
+                </label>
+                <label class="model-option">
+                    <input type="radio" name="ai_model" value="mini">
+                    <span class="model-info">
+                        <strong>GPT-4.1-mini (Better)</strong>
+                        <small>Higher quality improvements, more detailed</small>
+                    </span>
+                </label>
+            </div>
+        </div>
+
         <!-- Improvement Options -->
         <div class="improvement-options">
             <h3>Improvement Type</h3>
@@ -263,6 +284,9 @@
                     progressFill.style.width = '70%';
                 }, 1000);
 
+                // Get selected model
+                const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
+
                 // Make the improvement request
                 return fetch('{{ url_for("widgets.improve_widget", slug=widget.slug) }}', {
                     method: 'POST',
@@ -272,7 +296,8 @@
                     body: JSON.stringify({
                         base_version: document.getElementById('base-version').value,
                         prompt: prompt,
-                        improvement_type: type
+                        improvement_type: type,
+                        use_advanced_model: selectedModel === 'mini'
                     })
                 });
             })
