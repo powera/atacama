@@ -122,6 +122,17 @@ def create_app(testing: bool = False) -> Flask:
             'domain_manager': get_domain_manager(),
             'channel_manager': get_channel_manager()
         }
+
+    # Add template context processor for development mode
+    @app.context_processor
+    def inject_development_mode():
+        """Inject development mode flag based on FLASK_ENV environment variable."""
+        is_development = constants.is_development_mode()
+        flask_env = os.getenv('FLASK_ENV', 'production').lower()
+        return {
+            'is_development': is_development,
+            'flask_env': flask_env
+        }
     
     # Request logging (skip for testing)
     if not testing:

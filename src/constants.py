@@ -56,3 +56,12 @@ def reset() -> None:
     INITIALIZED = False
     DB_PATH = _PROD_DB_PATH
     _TEST_DB_PATH = None
+
+def is_development_mode() -> bool:
+    """
+    Check if the application is running in development mode.
+    
+    :return: True if FLASK_ENV is set to 'development', False otherwise
+    """
+    flask_env = os.getenv('FLASK_ENV', 'production').lower()
+    return flask_env == 'development'

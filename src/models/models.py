@@ -7,6 +7,7 @@ import enum
 
 from sqlalchemy.orm import DeclarativeBase
 
+import constants
 from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
 
@@ -229,10 +230,14 @@ class ReactWidget(Message):
     versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", foreign_keys="[WidgetVersion.widget_id]", cascade="all, delete-orphan")
     active_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", foreign_keys=[active_version_id], post_update=True)
     
-    def build(self):
-        """Build the widget code into a browser-ready bundle."""
+    def build(self, development_mode: bool = None):
+        """Build the widget code into a browser-ready bundle."""        
         builder = WidgetBuilder()
         widget_name = self.title.replace(' ', '')
+        
+        # Determine development mode from environment if not explicitly provided
+        if development_mode is None:
+            development_mode = constants.is_development_mode()
         
         # We auto-detect the dependencies
         all_deps = builder.check_react_libraries(self.code)
@@ -242,7 +247,8 @@ class ReactWidget(Message):
         success, built_code, error = builder.build_widget(
             self.code, 
             widget_name,
-            external_dependencies=deps
+            external_dependencies=deps,
+            development_mode=development_mode
         )
         
         if success:
@@ -304,12 +310,16 @@ class WidgetVersion(Base):
     widget: Mapped["ReactWidget"] = relationship("ReactWidget", back_populates="versions", foreign_keys=[widget_id])
     previous_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", remote_side=[id])
     
-    def build(self):
+    def build(self, development_mode: bool = None):
         """Build this version of the widget code."""
         import hashlib
         
         builder = WidgetBuilder()
         widget_name = self.widget.title.replace(' ', '')
+        
+        # Determine development mode from environment if not explicitly provided
+        if development_mode is None:
+            development_mode = constants.is_development_mode()
         
         # Set code hash if not already set
         if not self.code_hash:
@@ -323,7 +333,8 @@ class WidgetVersion(Base):
         success, built_code, error = builder.build_widget(
             self.code, 
             widget_name,
-            external_dependencies=deps
+            external_dependencies=deps,
+            development_mode=development_mode
         )
         
         if success:

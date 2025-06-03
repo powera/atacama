@@ -109,7 +109,7 @@ class WidgetBuilder:
         # But only add the destructuring for the first hook to avoid duplicates
         if 'react' in str(imports_found).lower() and is_first_hook:
             # Add React hooks extraction at the top
-            react_hooks = ['useState', 'useEffect', 'useRef', 'useCallback']
+            react_hooks = ['useState', 'useEffect', 'useRef', 'useCallback', 'useMemo']
             hook_extraction = "// Access React hooks from the global React object\n"
             hook_extraction += "const { " + ", ".join(react_hooks) + " } = React;\n\n"
             code = hook_extraction + code
@@ -215,7 +215,7 @@ class WidgetBuilder:
         # Add React hooks destructuring once at the beginning
         if hooks_needed:
             hooks_code = "// Access React hooks from the global React object\n"
-            hooks_code += "const { useState, useEffect, useRef, useCallback } = React;\n\n"
+            hooks_code += "const { useState, useEffect, useRef, useCallback, useMemo } = React;\n\n"
         
         # Process each hook
         for i, hook_name in enumerate(hooks_needed):
@@ -337,7 +337,7 @@ class WidgetBuilder:
             logger.info(f"No existing export found, adding export for {widget_name}")
             return f"{code}\n\n// Export the component\nexport default {widget_name};"
     
-    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None) -> Tuple[bool, str, str]:
+    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None, development_mode: bool = False) -> Tuple[bool, str, str]:
         """
         Build a widget with webpack to create a browser-ready bundle.
         
@@ -345,6 +345,7 @@ class WidgetBuilder:
         :param widget_name: Name of the widget
         :param dependencies: List of dependencies to include (e.g., ['recharts', 'lodash'])
         :param external_dependencies: List of dependencies to treat as external (not bundled)
+        :param development_mode: Whether to build in development mode (disables minification)
         :return: Tuple of (success, built_code, error_message)
         """
         dependencies = dependencies or []
@@ -398,10 +399,14 @@ class WidgetBuilder:
                     logger.warning(f"Using default external name '{externals[dep]}' for dependency '{dep}'")
             
             # Create webpack.config.js
+            webpack_mode = 'development' if development_mode else 'production'
+            minimize_setting = 'false' if development_mode else 'true'
+            
             webpack_config = f"""
 const path = require('path');
 
 module.exports = {{
+    mode: '{webpack_mode}',
     entry: './src/widget.js',
     output: {{
         path: path.resolve(__dirname, 'dist'),
@@ -428,7 +433,7 @@ module.exports = {{
         extensions: ['.js', '.jsx']
     }},
     optimization: {{
-        minimize: true
+        minimize: {minimize_setting}
     }}
 }};
 """
@@ -472,8 +477,8 @@ module.exports = {{
                 return False, "", f"npm install failed: {install_result.stderr}"
             
             # Build with webpack
-            logger.info(f"Building widget {widget_name}")
-            build_result = subprocess.run(['npx', 'webpack', '--mode', 'production'], 
+            logger.info(f"Building widget {widget_name} in {webpack_mode} mode")
+            build_result = subprocess.run(['npx', 'webpack', '--mode', webpack_mode], 
                                           env=env,
                                           cwd=temp_dir, 
                                           capture_output=True, 
@@ -491,10 +496,11 @@ module.exports = {{
             
             # Wrap final code to make it available
             hooks_comment = f", Built-in hooks: {', '.join(hooks_needed)}" if hooks_needed else ""
+            mode_comment = f", Mode: {webpack_mode}"
             final_code = f"""
 // Widget: {widget_name}
 // Dependencies: {', '.join(dependencies) if dependencies else 'none'}
-// External dependencies: {', '.join(external_dependencies) if external_dependencies else 'none'}{hooks_comment}
+// External dependencies: {', '.join(external_dependencies) if external_dependencies else 'none'}{hooks_comment}{mode_comment}
 (function() {{
     {built_code}
     
@@ -535,9 +541,9 @@ module.exports = {{
             'lucide-react'
         ]
         
-        # Find all import statements
-        import_pattern = r'import\s+.*?from\s+[\'"]([^\'"]*)/?.*?[\'"]'
-        imports = re.findall(import_pattern, code)
+        # Find all import statements (including multiline imports)
+        import_pattern = r'import\s+(?:{[^}]*}|\w+|\*\s+as\s+\w+)\s+from\s+[\'"]([^\'"]*)[\'"];'
+        imports = re.findall(import_pattern, code, re.DOTALL)
         
         # Process imports to get base library names
         found_libraries = []
