@@ -178,6 +178,23 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.header-actions .button.secondary {
+    background: var(--color-background);
+    color: var(--color-text);
+    border: 2px solid var(--color-border);
+}
+
+.header-actions .button.secondary:hover {
+    background: var(--color-border);
+    border-color: var(--color-primary);
+}
+
 .widgets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

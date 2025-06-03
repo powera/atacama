@@ -7,10 +7,13 @@
     <header class="page-header">
         <h1>React Widgets</h1>
         {% if g.user %}
-            <a href="{{ url_for('widgets.create_widget') }}" class="button primary">Create New Widget</a>
+            <div class="header-actions">
+                <a href="{{ url_for('widgets.initiate_widget') }}" class="button primary">Create with AI</a>
+                <a href="{{ url_for('widgets.create_widget') }}" class="button secondary">Create Manually</a>
+            </div>
         {% endif %}
     </header>
-    
+
     {% if not widgets %}
         <div class="empty-state">
             <h2>No Widgets Found</h2>
@@ -30,11 +33,11 @@
                             {{ widget.title }}
                         </a>
                     </h2>
-                    
+
                     {% if widget.description %}
                         <p class="widget-description">{{ widget.description }}</p>
                     {% endif %}
-                    
+
                     <div class="widget-meta">
                         <span class="widget-channel">
                             📦 {{ channel_manager.get_display_name(widget.channel) }}
@@ -51,7 +54,7 @@
                             <span class="widget-status">📝 Draft</span>
                         {% endif %}
                     </div>
-                    
+
                     {% if g.user and (g.user.id == widget.author_id or 
                                      (g.user.admin_channel_access and widget.channel in g.user.admin_channel_access)) %}
                         <div class="widget-actions">

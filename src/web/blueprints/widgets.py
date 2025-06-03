@@ -13,6 +13,7 @@ from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
 from common.llm.widget_improver import widget_improver
+from common.llm.widget_initiator import widget_initiator
 
 from models.messages import get_user_allowed_channels
 
@@ -558,3 +559,112 @@ def test_version(slug):
             channel_config=get_channel_manager().get_channel_config(widget.channel),
             test_mode=True
         )
+
+
+@widgets_bp.route('/widget/initiate', methods=['GET', 'POST'])
+@require_admin
+def initiate_widget():
+    """Create a new React widget using AI from a simple description."""
+    if request.method == 'POST':
+        data = request.get_json()
+        slug = data.get('slug', '').strip()
+        description = data.get('description', '').strip()
+        title = data.get('title', '').strip()
+        channel = data.get('channel', 'private')
+        
+        # Validate inputs
+        if not slug:
+            return jsonify({
+                'success': False,
+                'error': 'Slug is required'
+            }), 400
+            
+        if not description:
+            return jsonify({
+                'success': False,
+                'error': 'Description is required'
+            }), 400
+        
+        # Check if slug already exists
+        with db.session() as session:
+            existing = session.query(ReactWidget).filter_by(slug=slug).first()
+            if existing:
+                return jsonify({
+                    'success': False,
+                    'error': 'A widget with this slug already exists'
+                }), 400
+        
+        # Generate widget title from slug if not provided
+        if not title:
+            title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
+        
+        # Use AI to generate the widget code
+        result = widget_initiator.create_widget(
+            slug=slug,
+            description=description,
+            widget_title=title
+        )
+        
+        if not result['success']:
+            return jsonify({
+                'success': False,
+                'error': f"Failed to generate widget: {result['error']}"
+            }), 500
+        
+        # Create the widget in the database
+        try:
+            with db.session() as session:
+                widget = ReactWidget(
+                    slug=slug,
+                    title=title,
+                    code=result['widget_code'],
+                    description=description,
+                    channel=channel,
+                    author=g.user,
+                    published=False
+                )
+                
+                session.add(widget)
+                session.flush()  # To get widget ID
+                
+                # Create initial version
+                code_hash = hashlib.md5(result['widget_code'].encode('utf-8')).hexdigest()
+                initial_version = WidgetVersion(
+                    widget_id=widget.id,
+                    version_number=1,
+                    code=result['widget_code'],
+                    code_hash=code_hash,
+                    improvement_type='ai_generated',
+                    dev_comments='Initial AI-generated widget from description',
+                    ai_model_used='openai'
+                )
+                session.add(initial_version)
+                session.flush()
+                
+                # Build the initial version
+                build_success = initial_version.build()
+                logger.info(f"Created AI-generated widget {slug}, build success: {build_success}")
+                
+                session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'widget_slug': slug,
+                    'widget_title': title,
+                    'build_success': build_success,
+                    'usage_stats': result['usage_stats'],
+                    'redirect_url': url_for('widgets.edit_widget', slug=slug)
+                })
+                
+        except Exception as e:
+            logger.error(f"Error creating widget in database: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f"Failed to create widget: {str(e)}"
+            }), 500
+    
+    # GET request - show the initiation form
+    return render_template(
+        'widgets/initiate.html',
+        channel_manager=get_channel_manager()
+    )

@@ -1,0 +1,294 @@
+
+{% extends "layouts/default.html" %}
+
+{% block title %}Create Widget with AI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Create Widget with AI</h1>
+        <a href="{{ url_for('widgets.list_widgets') }}" class="button secondary">Back to Widgets</a>
+    </div>
+
+    <div class="widget-initiator">
+        <div class="form-card">
+            <h2>Describe Your Widget</h2>
+            <p>Tell the AI what kind of widget you want to create. Be specific about the functionality you need.</p>
+            
+            <form id="initiate-form">
+                <div class="form-group">
+                    <label for="slug">Widget Slug:</label>
+                    <input type="text" id="slug" name="slug" required 
+                           placeholder="compound-interest-calculator"
+                           pattern="[a-z0-9-]+"
+                           title="Use lowercase letters, numbers, and hyphens only">
+                    <small>URL-friendly identifier (lowercase, hyphens only). Will be used in the widget URL.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Widget Title (optional):</label>
+                    <input type="text" id="title" name="title" 
+                           placeholder="Compound Interest Calculator">
+                    <small>Human-readable title. If left blank, will be generated from the slug.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4" required
+                              placeholder="Build a widget to calculate compound interest. It should allow users to enter principal amount, interest rate, time period, and compounding frequency. Show the final amount and interest earned with a clear breakdown."></textarea>
+                    <small>Describe what the widget should do. Include specific features, inputs, outputs, and any special requirements.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="channel">Channel:</label>
+                    <select id="channel" name="channel">
+                        {% for channel_id, channel_config in channel_manager.get_all_channels().items() %}
+                            <option value="{{ channel_id }}" {% if channel_id == 'private' %}selected{% endif %}>
+                                {{ channel_config.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small>Channel where this widget will be available.</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="button primary" id="create-button">
+                        <span class="button-text">Create Widget with AI</span>
+                        <span class="button-loading" style="display: none;">Creating...</span>
+                    </button>
+                    <a href="{{ url_for('widgets.list_widgets') }}" class="button secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="examples-card">
+            <h3>Example Descriptions</h3>
+            <div class="examples">
+                <div class="example">
+                    <strong>Compound Interest Calculator:</strong>
+                    <p>Build a widget to calculate compound interest. Allow users to enter principal amount, interest rate, time period, and compounding frequency. Show the final amount and interest earned with a breakdown chart.</p>
+                </div>
+                <div class="example">
+                    <strong>Minesweeper Game:</strong>
+                    <p>Create a classic minesweeper game with a grid of cells. Users can click to reveal cells and right-click to flag potential mines. Include difficulty levels, timer, and mine counter.</p>
+                </div>
+                <div class="example">
+                    <strong>Color Palette Generator:</strong>
+                    <p>Build a tool that generates beautiful color palettes. Allow users to pick a base color and generate complementary, analogous, or triadic color schemes. Show hex codes and allow copying to clipboard.</p>
+                </div>
+                <div class="example">
+                    <strong>Unit Converter:</strong>
+                    <p>Create a comprehensive unit converter for length, weight, temperature, and volume. Include common units and provide real-time conversion as users type.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progress-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3>Creating Widget</h3>
+            <div class="progress-info">
+                <p id="progress-message">Generating widget code with AI...</p>
+                <div class="progress-spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.widget-initiator {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.form-card, .examples-card {
+    background: var(--color-card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-card h2, .examples-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+
+.form-card p {
+    color: var(--color-text-secondary);
+    margin-bottom: 2rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.examples {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.example {
+    padding: 1rem;
+    background: var(--color-background);
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+}
+
+.example strong {
+    color: var(--color-primary);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.example p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--color-card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+}
+
+.progress-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.progress-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--color-border);
+    border-top: 4px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.button-loading {
+    display: none;
+}
+
+.button:disabled .button-text {
+    display: none;
+}
+
+.button:disabled .button-loading {
+    display: inline;
+}
+
+@media (max-width: 768px) {
+    .widget-initiator {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+document.getElementById('initiate-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const button = document.getElementById('create-button');
+    const modal = document.getElementById('progress-modal');
+    const progressMessage = document.getElementById('progress-message');
+    
+    // Get form data
+    const formData = {
+        slug: document.getElementById('slug').value,
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        channel: document.getElementById('channel').value
+    };
+    
+    // Validate slug format
+    const slugPattern = /^[a-z0-9-]+$/;
+    if (!slugPattern.test(formData.slug)) {
+        alert('Slug must contain only lowercase letters, numbers, and hyphens.');
+        return;
+    }
+    
+    // Show progress modal
+    button.disabled = true;
+    modal.style.display = 'flex';
+    progressMessage.textContent = 'Generating widget code with AI...';
+    
+    try {
+        const response = await fetch('{{ url_for("widgets.initiate_widget") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            progressMessage.textContent = 'Widget created successfully! Redirecting...';
+            setTimeout(() => {
+                window.location.href = result.redirect_url;
+            }, 1000);
+        } else {
+            modal.style.display = 'none';
+            button.disabled = false;
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        modal.style.display = 'none';
+        button.disabled = false;
+        alert('Error: ' + error.message);
+    }
+});
+
+// Auto-generate title from slug
+document.getElementById('slug').addEventListener('input', function(e) {
+    const titleField = document.getElementById('title');
+    if (!titleField.value) {
+        const slug = e.target.value;
+        const title = slug.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        titleField.value = title;
+    }
+});
+</script>
+{% endblock %}
