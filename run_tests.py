@@ -52,7 +52,8 @@ def discover_test_modules() -> dict:
     categories = {
         'common': [],
         'web': [],
-        'parser': []
+        'parser': [],
+        'react_compiler': []
     }
     
     # Since we've changed the working directory to src, the tests are now in ./tests
@@ -108,6 +109,11 @@ def run_test_suite(categories: Optional[List[str]] = None,
             test_modules = []
             for category in categories:
                 if category in all_tests:
+                    # Warn about expensive tests
+                    if category == 'react_compiler' and all_tests[category]:
+                        print("Warning: React Compiler tests are expensive and require Node.js/npm.")
+                        print("Consider using: python3 run_react_compiler_tests.py")
+                        print("Continuing with React Compiler tests...\n")
                     test_modules.extend(all_tests[category])
         else:
             test_modules = [
@@ -169,7 +175,7 @@ if __name__ == '__main__':
     
     parser.add_argument(
         '--category',
-        choices=['common', 'web', 'parser'],
+        choices=['common', 'web', 'parser', 'react_compiler'],
         action='append',
         help='Test categories to run (can specify multiple)'
     )
@@ -221,9 +227,10 @@ Examples:
   %(prog)s --list-tests           # List all available tests
 
 Test categories:
-  common  - Core utilities and configuration tests
-  web     - Web server and API tests
-  parser  - Markup parser tests
+  common         - Core utilities and configuration tests
+  web            - Web server and API tests
+  parser         - Markup parser tests
+  react_compiler - React Compiler tests (expensive, requires Node.js/npm)
     """ % {'prog': parser.prog}
     
     args = parser.parse_args()
