@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFullscreen } from './useFullscreen';
 import { useGlobalSettings } from './useGlobalSettings';
-import { LucidePlay, LucideRefreshCw, LucideCheck, LucideX, LucideClock } from 'lucide-react';
+import { Play, RefreshCw, Check, X, Clock } from 'lucide-react';
 
 const BasketballGame = () => {
   // Refs and hooks for fullscreen and settings
@@ -139,7 +139,7 @@ const BasketballGame = () => {
         <div className="header-actions">
           <SettingsToggle />
           <button className="w-button" onClick={startGame}>
-            <LucidePlay className="w-5" /> Start Game
+            <Play className="w-5" /> Start Game
           </button>
         </div>
       </div>
@@ -167,7 +167,7 @@ const BasketballGame = () => {
             <div className="w-stat-item">
               <div className="w-stat-value">{formatTime(gameTime)}</div>
               <div className="w-stat-label">
-                <LucideClock className="w-4 inline" /> Time
+                <Clock className="w-4 inline" /> Time
               </div>
             </div>
           </div>
@@ -210,7 +210,7 @@ const BasketballGame = () => {
             Shots Taken: {playerShots} | Made Shots: {playerMadeShots}
           </p>
           <button className="w-button" onClick={startGame}>
-            <LucideRefreshCw className="w-5" /> Play Again
+            <RefreshCw className="w-5" /> Play Again
           </button>
         </div>
       )}
