@@ -321,6 +321,9 @@ def improve_widget(slug):
                 }), 400
             base_code = version.code
         
+        # Extract widget data while in session context
+        widget_title = widget.title
+        
         # Generate unique job ID
         job_id = str(uuid.uuid4())
         
@@ -343,7 +346,7 @@ def improve_widget(slug):
                     current_code=base_code,
                     prompt=prompt,
                     improvement_type=improvement_type,
-                    widget_title=widget.title
+                    widget_title=widget_title
                 )
                 
                 improvement_jobs[job_id]['status'] = 'completed'
