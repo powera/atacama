@@ -82,6 +82,51 @@ class WidgetBuilder:
         
         return hooks
     
+    def _transform_hook_for_bundling(self, hook_code: str, hook_name: str, is_first_hook: bool = True) -> str:
+        """
+        Transform a hook's code to work properly when bundled.
+        Converts ES6 imports/exports to work within the webpack bundle.
+        
+        :param hook_code: Original hook source code
+        :param hook_name: Name of the hook
+        :param is_first_hook: Whether this is the first hook being processed
+        :return: Transformed hook code
+        """
+        # Remove ES6 import statements and collect what was imported
+        import_pattern = r"import\s+(?:{([^}]+)}|(\w+))\s+from\s+['\"]([^'\"]+)['\"];"
+        imports_found = []
+        
+        def replace_import(match):
+            if match.group(1):  # Named imports
+                imports_found.append((match.group(1), match.group(3)))
+            else:  # Default import
+                imports_found.append((match.group(2), match.group(3)))
+            return ""  # Remove the import line
+        
+        code = re.sub(import_pattern, replace_import, hook_code)
+        
+        # For hooks, we know they use React hooks, so we'll access them from React
+        # But only add the destructuring for the first hook to avoid duplicates
+        if 'react' in str(imports_found).lower() and is_first_hook:
+            # Add React hooks extraction at the top
+            react_hooks = ['useState', 'useEffect', 'useRef', 'useCallback']
+            hook_extraction = "// Access React hooks from the global React object\n"
+            hook_extraction += "const { " + ", ".join(react_hooks) + " } = React;\n\n"
+            code = hook_extraction + code
+        
+        # Remove export statements and just ensure the hook is defined
+        # Handle: export const hookName = ...
+        code = re.sub(r'export\s+const\s+' + re.escape(hook_name) + r'\s*=', f'const {hook_name} =', code)
+        # Handle: export default hookName;
+        code = re.sub(r'export\s+default\s+' + re.escape(hook_name) + r';?', '', code)
+        # Handle: export { hookName };
+        code = re.sub(r'export\s*{\s*' + re.escape(hook_name) + r'\s*};?', '', code)
+        
+        # Add a comment to indicate this is a built-in hook
+        code = f"// Built-in hook: {hook_name}\n" + code
+        
+        return code
+    
     def _detect_hook_imports(self, widget_code: str) -> List[str]:
         """
         Detect imports of built-in hooks from widget code.
@@ -119,6 +164,81 @@ class WidgetBuilder:
                             hooks_needed.append(clean_file_name)
         
         return list(set(hooks_needed))  # Remove duplicates
+    
+    def _prepare_widget_code_with_hooks(self, widget_code: str, hooks_needed: List[str]) -> str:
+        """
+        Prepare widget code by inlining the hooks and removing their imports.
+        
+        :param widget_code: Original widget code
+        :param hooks_needed: List of hooks to inline
+        :return: Transformed widget code with inlined hooks
+        """
+        # First, remove all imports for built-in hooks
+        for hook_name in hooks_needed:
+            # Remove import { hookName } from './hookName';
+            widget_code = re.sub(
+                rf'import\s+{{\s*{re.escape(hook_name)}\s*}}\s+from\s+[\'"]\./{re.escape(hook_name)}[\'"];?\n?',
+                '', widget_code
+            )
+            # Remove import hookName from './hookName';
+            widget_code = re.sub(
+                rf'import\s+{re.escape(hook_name)}\s+from\s+[\'"]\./{re.escape(hook_name)}[\'"];?\n?',
+                '', widget_code
+            )
+            
+        # Handle React imports in widget code to avoid duplicates
+        if hooks_needed:
+            # Pattern to match React imports with destructured hooks
+            react_import_pattern = r'import\s+React\s*,\s*\{\s*([^}]+)\s*\}\s+from\s+[\'"]react[\'"];?\n?'
+            react_match = re.search(react_import_pattern, widget_code)
+            
+            if react_match:
+                # Replace the React import with just the default import
+                widget_code = re.sub(react_import_pattern, 'import React from \'react\';\n', widget_code)
+                logger.info("Replaced React destructured import with default import to avoid duplicates")
+            else:
+                # Check for other React import patterns that might conflict
+                # Pattern for just destructured imports: import { useState, useEffect } from 'react';
+                destructured_only_pattern = r'import\s+\{\s*([^}]+)\s*\}\s+from\s+[\'"]react[\'"];?\n?'
+                if re.search(destructured_only_pattern, widget_code):
+                    # Replace with React default import
+                    widget_code = re.sub(destructured_only_pattern, 'import React from \'react\';\n', widget_code)
+                    logger.info("Replaced React destructured-only import with default import to avoid duplicates")
+                elif not re.search(r'import\s+React\s+from\s+[\'"]react[\'"]', widget_code):
+                    # No React import found, add one
+                    widget_code = 'import React from \'react\';\n' + widget_code
+                    logger.info("Added React default import")
+
+        # Build the hooks code to prepend
+        hooks_code = ""
+        
+        # Add React hooks destructuring once at the beginning
+        if hooks_needed:
+            hooks_code = "// Access React hooks from the global React object\n"
+            hooks_code += "const { useState, useEffect, useRef, useCallback } = React;\n\n"
+        
+        # Process each hook
+        for i, hook_name in enumerate(hooks_needed):
+            if hook_name in self.BUILT_IN_HOOKS:
+                # Transform hook without adding React destructuring (we already did it)
+                transformed_hook = self._transform_hook_for_bundling(
+                    self.BUILT_IN_HOOKS[hook_name], 
+                    hook_name,
+                    is_first_hook=False  # Never add React destructuring for individual hooks
+                )
+                # Remove any React destructuring that might still be in the hook code
+                transformed_hook = re.sub(
+                    r'//\s*Access React hooks from the global React object\s*\n\s*const\s*\{\s*[^}]+\s*\}\s*=\s*React;\s*\n+',
+                    '',
+                    transformed_hook
+                )
+                hooks_code += transformed_hook + "\n\n"
+        
+        # Combine hooks code with widget code
+        if hooks_code:
+            widget_code = hooks_code + "\n" + widget_code
+        
+        return widget_code
     
     def _create_hook_files(self, temp_dir: str, hooks_needed: List[str]) -> None:
         """
@@ -324,14 +444,14 @@ module.exports = {{
             with open(os.path.join(temp_dir, '.babelrc'), 'w') as f:
                 json.dump(babel_config, f, indent=2)
             
-            # Create src directory and write widget code
+            # Create src directory
             src_dir = os.path.join(temp_dir, 'src')
             os.makedirs(src_dir)
             
-            # Create hook files if needed
+            # Prepare widget code with inlined hooks
             if hooks_needed:
-                self._create_hook_files(temp_dir, hooks_needed)
-                logger.info(f"Created {len(hooks_needed)} hook files for widget {widget_name}")
+                widget_code = self._prepare_widget_code_with_hooks(widget_code, hooks_needed)
+                logger.info(f"Inlined {len(hooks_needed)} hooks into widget code")
             
             # Handle exports intelligently
             wrapped_code = self._handle_exports(widget_code, widget_name)

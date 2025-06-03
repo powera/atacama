@@ -42,7 +42,7 @@
                 <div class="form-group">
                     <label for="channel">Channel:</label>
                     <select id="channel" name="channel">
-                        {% for channel_id, channel_config in channel_manager.get_all_channels().items() %}
+                        {% for channel_id, channel_config in channel_manager.channels.items() %}
                             <option value="{{ channel_id }}" {% if channel_id == 'private' %}selected{% endif %}>
                                 {{ channel_config.name }}
                             </option>
@@ -280,9 +280,17 @@ document.getElementById('initiate-form').addEventListener('submit', async functi
 });
 
 // Auto-generate title from slug
+let titleManuallyEdited = false;
+
+// Track if user manually edits the title
+document.getElementById('title').addEventListener('input', function() {
+    titleManuallyEdited = true;
+});
+
+// Auto-generate title from slug only if not manually edited
 document.getElementById('slug').addEventListener('input', function(e) {
-    const titleField = document.getElementById('title');
-    if (!titleField.value) {
+    if (!titleManuallyEdited) {
+        const titleField = document.getElementById('title');
         const slug = e.target.value;
         const title = slug.split('-').map(word => 
             word.charAt(0).toUpperCase() + word.slice(1)
