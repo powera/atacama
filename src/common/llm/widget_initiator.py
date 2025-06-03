@@ -162,6 +162,10 @@ AVAILABLE BUILT-IN HOOKS:
 2. GLOBAL SETTINGS HOOK (import {{ useGlobalSettings }} from './useGlobalSettings'):
 {self.global_settings_hook}
 
+EXTERNAL MODULES (use only if necessary):
+- lucide-react: Icon library (import {{ IconName }} from 'lucide-react')
+- recharts: Charting library for data visualization
+
 INSTRUCTIONS:
 1. Create a complete, functional React component that fulfills the description
 2. Use modern React patterns (hooks, functional components)
@@ -169,10 +173,11 @@ INSTRUCTIONS:
 4. Use the provided CSS variables and classes for styling
 5. Consider adding fullscreen support if it would enhance the widget
 6. Consider adding global settings integration if appropriate (audio, difficulty, user preferences)
-7. Use lucide-react icons where appropriate (import from 'lucide-react')
-8. Make sure the component name exactly matches: {widget_title.replace(' ', '')}
-9. Include helpful comments explaining the functionality
-10. Return ONLY the React component code, no explanation
+7. PREFER EMOJI over icons - use emoji characters (🎮, 📊, ⚙️, 🔍, etc.) instead of icon libraries
+8. Only use external modules (lucide-react, recharts) when necessary for complex functionality
+9. Make sure the component name exactly matches: {widget_title.replace(' ', '')}
+10. Include helpful comments explaining the functionality
+11. Return ONLY the React component code, no explanation
 
 STYLING GUIDELINES:
 - Use CSS custom properties (--color-primary, --color-background, etc.)
@@ -183,7 +188,6 @@ STYLING GUIDELINES:
 EXAMPLE WIDGET STRUCTURE:
 ```jsx
 import React, {{ useState, useEffect }} from 'react';
-import {{ SomeIcon, AnotherIcon }} from 'lucide-react';
 import {{ useFullscreen }} from './useFullscreen';
 import {{ useGlobalSettings }} from './useGlobalSettings';
 
@@ -197,18 +201,21 @@ const {widget_title.replace(' ', '')} = () => {{
   return (
     <div ref={{containerRef}} className={{isFullscreen ? 'w-fullscreen' : 'w-container'}}>
       <div className="widget-header">
-        <h1>{widget_title}</h1>
+        <h1>🎮 {widget_title}</h1>
         <div className="widget-controls">
           <SettingsToggle />
           <button onClick={{toggleFullscreen}}>
-            {{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}}
+            {{isFullscreen ? '🔙 Exit Fullscreen' : '🔍 Fullscreen'}}
           </button>
         </div>
       </div>
       
       {{/* Main widget content */}}
       <div className="widget-content">
-        {{/* Your widget implementation */}}
+        {{/* Your widget implementation with emoji for visual elements */}}
+        <button>▶️ Start</button>
+        <button>⏸️ Pause</button>
+        <div>📊 Score: {{score}}</div>
       </div>
       
       <SettingsModal />
