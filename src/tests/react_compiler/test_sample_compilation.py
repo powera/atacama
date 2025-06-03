@@ -257,7 +257,58 @@ class TestSampleCompilation(unittest.TestCase):
             self.assertIn("External dependencies:", compiled_code)
         
         logger.info("Trakaido sample compilation test passed!")
-    
+
+    def test_mathquiz_sample_compilation(self):
+        """Test compilation of MathQuiz.jsx sample."""
+        logger.info("Testing MathQuiz sample compilation...")
+        
+        # Load the sample
+        widget_code = self._load_sample_file('MathQuiz.jsx')
+        widget_name = 'MathQuizWidget'  # Will rename MathPracticeWidget -> MathQuizWidget
+        
+        # Extract dependencies
+        dependencies, external_dependencies = self._extract_dependencies_from_imports(widget_code)
+        logger.info(f"MathQuiz dependencies: {dependencies}")
+        logger.info(f"MathQuiz external dependencies: {external_dependencies}")
+        
+        # Compile the widget
+        success, compiled_code, error_message = self.widget_builder.build_widget(
+            widget_code=widget_code,
+            widget_name=widget_name,
+            dependencies=dependencies,
+            external_dependencies=external_dependencies
+        )
+        
+        # Assert compilation succeeded
+        self.assertTrue(success, f"MathQuiz compilation failed: {error_message}")
+        self.assertIsNotNone(compiled_code, "Compiled code should not be None")
+        self.assertNotEqual(compiled_code.strip(), "", "Compiled code should not be empty")
+        
+        # Validate JavaScript syntax
+        self.assertTrue(
+            self._validate_compiled_javascript(compiled_code),
+            "Compiled MathQuiz code should be valid JavaScript"
+        )
+        
+        # Check that the widget is exported globally
+        self.assertTrue(
+            self._check_global_export(compiled_code, widget_name),
+            f"MathQuiz widget should be exported as window.{widget_name}"
+        )
+        
+        # Check UMD export structure
+        self.assertTrue(
+            self._check_umd_export(compiled_code, widget_name),
+            f"MathQuiz widget should have UMD export structure Widget_{widget_name}"
+        )
+        
+        # Check that the compiled code contains expected metadata
+        self.assertIn(f"Widget: {widget_name}", compiled_code)
+        if external_dependencies:
+            self.assertIn("External dependencies:", compiled_code)
+        
+        logger.info("MathQuiz sample compilation test passed!")
+
     def test_hook_detection_and_inlining(self):
         """Test that hooks are properly detected and inlined."""
         logger.info("Testing hook detection and inlining...")
