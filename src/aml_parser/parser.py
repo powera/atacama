@@ -415,7 +415,32 @@ class AtacamaParser:
         # These children will be used for the actual 'node_type' if parsing is successful,
         # OR they will be appended to 'text_fallback_node.children' if parsing fails (e.g. no end marker).
         parsed_children_for_node = []
-        while self.peek() and self.peek().type != end_type and self.peek().type != TokenType.NEWLINE:
+        
+        # Keep track of nesting depth for proper handling of nested brackets
+        nesting_depth = 0
+        
+        while self.peek():
+            current_token = self.peek()
+            
+            # Stop parsing on newline, or if we hit structural elements
+            if current_token.type in {TokenType.NEWLINE, TokenType.SECTION_BREAK, TokenType.MORE_TAG}:
+                break
+                
+            # Handle nested start tokens
+            if current_token.type == start_type:
+                nesting_depth += 1
+                
+            # Handle end tokens - only break if we're at the top level
+            if current_token.type == end_type:
+                if nesting_depth == 0:
+                    break  # This is our closing token
+                else:
+                    nesting_depth -= 1
+                    
+            # Stop if we encounter tokens that typically end color blocks or parentheses
+            if current_token.type in {TokenType.PARENTHESIS_END} and nesting_depth == 0:
+                break
+
             if inline_node := self.parse_inline_content():
                 parsed_children_for_node.append(inline_node)
             else:
@@ -428,7 +453,7 @@ class AtacamaParser:
             # Create the proper node with the original start_token and the collected children.
             return Node(type=node_type, token=start_token, children=parsed_children_for_node)
         else:
-            # No end marker (or newline encountered first).
+            # No end marker found.
             # Return the text_fallback_node, which contains the start delimiter as text,
             # and append the children parsed so far.
             text_fallback_node.children.extend(parsed_children_for_node)

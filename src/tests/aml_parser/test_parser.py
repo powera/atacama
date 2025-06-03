@@ -200,6 +200,14 @@ class TestAtacamaParser(unittest.TestCase):
         literal_nodes = [n for n in ast.children if n.type == NodeType.LITERAL]
         self.assertEqual(len(literal_nodes), 1)
 
+    def test_unclosed_literal_blocks(self):
+        """Parser should handle unclosed literal blocks gracefully."""
+        text = "Text with <<unclosed literal"
+        ast = self.parse_text(text)
+        # Should convert unclosed literal to text
+        self.assertTrue(any(n.type == NodeType.TEXT and '<<' in n.token.value 
+                          for n in ast.children))
+
     def test_emphasis(self):
         """Parser should handle emphasized text."""
         text = "This is *emphasized* text"
@@ -242,6 +250,26 @@ class TestAtacamaParser(unittest.TestCase):
         for expected_type in expected_types:
             self.assertTrue(any(n.type == expected_type for n in ast.children),
                 f"Expected to find node type {expected_type.name}")
+
+    def test_unclosed_literal_in_color_block(self):
+        """Parser should handle unclosed literal blocks within color blocks."""
+        text = dedent("""
+            He defines a << contract guaranteed by law >> to be a type of security. (<red> I would define a security as << a financial instrument structured in a regular way, publicly registered, and based in the interest in some real property.) (<orange> this definition is *intended* to exclude << derivatives >>; they are not securities)
+            
+            --MORE--
+            
+            The differences
+        """).strip()
+        
+        ast = self.parse_text(text)
+        self.assert_node_type(ast, NodeType.DOCUMENT)
+        
+        # Should have various nodes including MORE_TAG
+        more_nodes = [n for n in ast.children if n.type == NodeType.MORE_TAG]
+        self.assertEqual(len(more_nodes), 1)
+        
+        # Should handle the unclosed literal gracefully without crashing
+        self.assertGreater(len(ast.children), 3)
 
 if __name__ == '__main__':
       unittest.main()
