@@ -33,14 +33,48 @@ The useFullscreen hook is already implemented in fullscreen.js - just import and
         },
         'global_settings': {
             'name': 'Add Global Settings Support',
-            'prompt': '''Enhance this React widget to support global application settings. Add:
-- Theme support (dark/light mode compatibility)
-- User preference integration
-- Configurable colors and styling
-- Accessibility improvements
-- Settings persistence
+            'prompt': '''Enhance this React widget to integrate with the global settings system using the existing useGlobalSettings hook.
 
-Use CSS custom properties (--var-name) for themeable values and ensure the widget respects the global design system.'''
+IMPORTANT: DO NOT implement settings functionality yourself. Use the pre-built hook instead.
+
+Required changes:
+1. Add this import at the top: import { useGlobalSettings } from './useGlobalSettings'
+2. Inside your component, add: const { settings, SettingsModal, SettingsToggle } = useGlobalSettings();
+3. Add the SettingsToggle button in an appropriate place in the UI (typically in a header or toolbar area)
+4. Add the SettingsModal component at the end of your component's JSX
+5. Use the available settings to customize the widget behavior:
+   - settings.audioEnabled: Enable/disable audio feedback
+   - settings.difficulty: 'easy', 'medium', or 'hard' difficulty level
+   - settings.userName: User's name for personalization
+   - settings.animations: Enable/disable smooth transitions
+   - settings.autoAdvance: Auto-advance after correct answers
+   - settings.defaultDelay: Default timing (1.0-7.5 seconds) for transitions
+
+Example integration:
+```jsx
+const MyWidget = () => {
+  const { settings, SettingsModal, SettingsToggle } = useGlobalSettings();
+  
+  return (
+    <div className="w-container">
+      <div className="w-header">
+        <h1>Widget Title</h1>
+        <SettingsToggle />
+      </div>
+      
+      {/* Use settings to customize behavior */}
+      <div className={`difficulty-${settings.difficulty}`}>
+        {settings.userName && <p>Hello, {settings.userName}!</p>}
+        {/* Widget content here */}
+      </div>
+      
+      <SettingsModal />
+    </div>
+  );
+};
+```
+
+The useGlobalSettings hook provides all necessary components and state management - just import and use it.'''
         },
         'accessibility': {
             'name': 'Improve Accessibility',
@@ -89,6 +123,7 @@ Ensure the widget provides an excellent mobile user experience.'''
         css_files = [
             'src/web/css/common.css',
             'src/web/css/widget_tools.css',
+            'src/web/css/widget_settings.css',
         ]
 
         css_content = ""
