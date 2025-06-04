@@ -486,7 +486,7 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
             
             elif message.message_type.value == 'widget':
                 widget = db_session.query(ReactWidget).get(message.id)
-                if widget and widget.published:
+                if widget:
                     type_specific_data = widget
                     title = widget.title
                     preview = widget.description or 'Interactive React widget'
