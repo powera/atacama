@@ -1,5 +1,53 @@
 /* Style for message text sections */
 
+/* Atacama colortext color variables - Default light theme */
+:root {
+    /* Color scheme specific for Atacama colortext blocks */
+    --color-xantham: #A0522D;
+    --color-red: #FF4136;
+    --color-orange: #FF851B;
+    --color-quote: #B8860B;
+    --color-green: #2ECC40;
+    --color-teal: #39CCCC;
+    --color-blue: #0074D9;
+    --color-violet: #673AB7;
+    --color-mogue: #4A006A;
+    --color-gray: #666666;
+    --color-hazel: #8B4513;
+}
+
+/* Atacama colortext color variables - Dark theme */
+[data-theme="dark"] {
+    /* Color scheme specific for Atacama colortext blocks - adjusted for dark mode visibility */
+    --color-xantham: #d4734f;
+    --color-red: #ff6b63;
+    --color-orange: #ffab5e;
+    --color-quote: #ffd700;
+    --color-green: #50ff62;
+    --color-teal: #50e5e5;
+    --color-blue: #4a9eff;
+    --color-violet: #9c6fdf;
+    --color-mogue: #b54aff;
+    --color-gray: #a0a0a0;
+    --color-hazel: #d4734f;
+}
+
+/* Atacama colortext color variables - High contrast theme */
+[data-theme="high-contrast"] {
+    /* Color scheme specific for Atacama colortext blocks - maintain high contrast ratios */
+    --color-xantham: #6f3030;
+    --color-red: #770000;
+    --color-orange: #7f4500;
+    --color-quote: #7f7f00;
+    --color-green: #007f00;
+    --color-teal: #155e5e;
+    --color-blue: #00125b;
+    --color-violet: #3f0b48;
+    --color-mogue: #200820;
+    --color-gray: #4f4f4f;
+    --color-hazel: #ffa500;
+}
+
 /* Base message layout */
 .message {
     max-width: min(90vw, 100%);  /* either 90% of window, or 100% of container */
