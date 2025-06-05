@@ -577,6 +577,7 @@ def initiate_widget():
         title = data.get('title', '').strip()
         channel = data.get('channel', 'private')
         use_advanced_model = data.get('use_advanced_model', False)
+        look_and_feel = data.get('look_and_feel', {})
         
         # Validate inputs
         if not slug:
@@ -609,7 +610,8 @@ def initiate_widget():
             slug=slug,
             description=description,
             widget_title=title,
-            use_advanced_model=use_advanced_model
+            use_advanced_model=use_advanced_model,
+            look_and_feel=look_and_feel
         )
         
         if not result['success']:
@@ -673,5 +675,6 @@ def initiate_widget():
     # GET request - show the initiation form
     return render_template(
         'widgets/initiate.html',
-        channel_manager=get_channel_manager()
+        channel_manager=get_channel_manager(),
+        look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS
     )

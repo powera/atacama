@@ -15,6 +15,38 @@ logger = get_logger(__name__)
 class WidgetInitiator:
     """Handles AI-powered widget creation from simple descriptions."""
 
+    # Look and feel options with descriptions
+    LOOK_AND_FEEL_OPTIONS = {
+        'tone': {
+            'playful': 'The widget should have a fun and lighthearted tone with casual language and engaging interactions',
+            'serious': 'The widget should maintain a professional and focused tone with formal language and clear purpose',
+            'educational': 'The widget should take a learning-focused approach with explanations and guided discovery',
+            'professional': 'The widget should emphasize business efficiency and reliability with a polished presentation'
+        },
+        'complexity': {
+            'minimal': 'Keep the interface simple and clean with only essential features',
+            'balanced': 'Create a well-rounded interface with core features and some useful enhancements',
+            'feature-rich': 'Build a comprehensive interface with advanced features and extensive customization options'
+        },
+        'interaction': {
+            'guided': 'Design the user experience with step-by-step guidance, clear instructions, and structured flow',
+            'exploratory': 'Encourage user discovery and experimentation with an open-ended, flexible approach',
+            'game-like': 'Make the experience interactive and engaging with challenges, rewards, and game mechanics'
+        },
+        'visual': {
+            'clean': 'Use a minimalist design with plenty of whitespace and subtle, understated styling',
+            'colorful': 'Create a vibrant design with rich colors, visual variety, and eye-catching elements',
+            'themed': 'Follow a cohesive visual theme or style that creates a unified aesthetic experience',
+            'data-focused': 'Optimize the design for displaying information with clear data presentation and metrics'
+        },
+        'feedback': {
+            'immediate': 'Provide instant responses and real-time updates to keep users informed of their actions',
+            'subtle': 'Use gentle and unobtrusive feedback that guides without interrupting the user flow',
+            'celebratory': 'Give enthusiastic and rewarding feedback that celebrates achievements and progress',
+            'informative': 'Offer detailed and educational feedback that explains what happened and why'
+        }
+    }
+
     def __init__(self, model: str = DEFAULT_MODEL):
         self.model = model
         self.common_css = self._load_common_css()
@@ -65,7 +97,8 @@ class WidgetInitiator:
         slug: str,
         description: str, 
         widget_title: str = None,
-        use_advanced_model: bool = False
+        use_advanced_model: bool = False,
+        look_and_feel: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
         Create a new widget from a description.
@@ -75,6 +108,7 @@ class WidgetInitiator:
             description: Simple description of what the widget should do
             widget_title: Title of the widget (defaults to formatted slug)
             use_advanced_model: If True, use GPT-4.1-mini instead of nano
+            look_and_feel: Dict with keys 'tone', 'complexity', 'interaction', 'visual', 'feedback'
 
         Returns:
             Dict containing widget_code, success, error, and usage stats
@@ -90,7 +124,7 @@ class WidgetInitiator:
 
             # Build the full prompt with context
             full_prompt = self._build_creation_prompt(
-                slug, description, widget_title
+                slug, description, widget_title, look_and_feel
             )
             logger.info(f"Creating widget '{widget_title}' with slug '{slug}' from description: {description[:100]}...")
 
@@ -141,8 +175,24 @@ class WidgetInitiator:
                 'usage_stats': {}
             }
 
-    def _build_creation_prompt(self, slug: str, description: str, widget_title: str) -> str:
+    def _build_creation_prompt(self, slug: str, description: str, widget_title: str, look_and_feel: Optional[Dict[str, str]] = None) -> str:
         """Build the full prompt for widget creation."""
+        
+        # Build look and feel guidance
+        look_and_feel_guidance = ""
+        if look_and_feel:
+            guidance_parts = []
+            for category, selected_value in look_and_feel.items():
+                if category in self.LOOK_AND_FEEL_OPTIONS and selected_value in self.LOOK_AND_FEEL_OPTIONS[category]:
+                    guidance_parts.append(self.LOOK_AND_FEEL_OPTIONS[category][selected_value])
+            
+            if guidance_parts:
+                look_and_feel_guidance = f"""
+LOOK AND FEEL REQUIREMENTS:
+{'. '.join(guidance_parts)}.
+
+"""
+        
         return f"""You are an expert React developer creating a new React widget from scratch.
 
 WIDGET REQUIREMENTS:
@@ -150,6 +200,7 @@ WIDGET REQUIREMENTS:
 - Widget Slug: {slug}
 - Component Name: {widget_title.replace(' ', '')}
 - Description: {description}
+- Look and Feel: {look_and_feel_guidance}
 
 AVAILABLE CSS STYLES:
 {self.common_css}
@@ -171,13 +222,14 @@ INSTRUCTIONS:
 2. Use modern React patterns (hooks, functional components)
 3. Make the component interactive and engaging
 4. Use the provided CSS variables and classes for styling
-5. Consider adding fullscreen support if it would enhance the widget
-6. Consider adding global settings integration if appropriate (audio, difficulty, user preferences)
-7. PREFER EMOJI over icons - use emoji characters (🎮, 📊, ⚙️, 🔍, etc.) instead of icon libraries
-8. Only use external modules (lucide-react, recharts) when necessary for complex functionality
-9. Make sure the component name exactly matches: {widget_title.replace(' ', '')}
-10. Include helpful comments explaining the functionality
-11. Return ONLY the React component code, no explanation
+5. Follow the LOOK AND FEEL REQUIREMENTS above - they define the tone, complexity, interaction style, visual design, and feedback approach
+6. Consider adding fullscreen support if it would enhance the widget
+7. Consider adding global settings integration if appropriate (audio, difficulty, user preferences)
+8. PREFER EMOJI over icons - use emoji characters (🎮, 📊, ⚙️, 🔍, etc.) instead of icon libraries
+9. Only use external modules (lucide-react, recharts) when necessary for complex functionality
+10. Make sure the component name exactly matches: {widget_title.replace(' ', '')}
+11. Include helpful comments explaining the functionality
+12. Return ONLY the React component code, no explanation
 
 STYLING GUIDELINES:
 - Use CSS custom properties (--color-primary, --color-background, etc.)

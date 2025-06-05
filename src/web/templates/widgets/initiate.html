@@ -52,6 +52,71 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Look and Feel:</label>
+                    <div class="look-and-feel-options">
+                        <div class="look-feel-row">
+                            <div class="look-feel-item">
+                                <label for="tone">Tone:</label>
+                                <select id="tone" name="tone">
+                                    {% for value, description in look_and_feel_options.tone.items() %}
+                                        <option value="{{ value }}" {% if value == 'playful' %}selected{% endif %}>
+                                            {{ value.title() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="look-feel-item">
+                                <label for="complexity">Complexity:</label>
+                                <select id="complexity" name="complexity">
+                                    {% for value, description in look_and_feel_options.complexity.items() %}
+                                        <option value="{{ value }}" {% if value == 'balanced' %}selected{% endif %}>
+                                            {{ value.title() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="look-feel-row">
+                            <div class="look-feel-item">
+                                <label for="interaction">Interaction:</label>
+                                <select id="interaction" name="interaction">
+                                    {% for value, description in look_and_feel_options.interaction.items() %}
+                                        <option value="{{ value }}" {% if value == 'exploratory' %}selected{% endif %}>
+                                            {{ value.title() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="look-feel-item">
+                                <label for="visual">Visual:</label>
+                                <select id="visual" name="visual">
+                                    {% for value, description in look_and_feel_options.visual.items() %}
+                                        <option value="{{ value }}" {% if value == 'clean' %}selected{% endif %}>
+                                            {{ value.title() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="look-feel-row">
+                            <div class="look-feel-item">
+                                <label for="feedback">Feedback:</label>
+                                <select id="feedback" name="feedback">
+                                    {% for value, description in look_and_feel_options.feedback.items() %}
+                                        <option value="{{ value }}" {% if value == 'immediate' %}selected{% endif %}>
+                                            {{ value.title() }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="look-feel-description" id="look-feel-description">
+                        <small id="combined-description">Choose the style and behavior preferences for your widget.</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label>AI Model:</label>
                     <div class="model-options">
                         <label class="model-option">
@@ -206,6 +271,63 @@
     color: var(--color-primary);
 }
 
+.look-and-feel-options {
+    margin-top: 0.5rem;
+}
+
+.look-feel-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.look-feel-row:last-child {
+    margin-bottom: 0;
+}
+
+.look-feel-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.look-feel-item label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 0;
+}
+
+.look-feel-item select {
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.9rem;
+}
+
+.look-feel-item select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.look-feel-description {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-background-secondary, #f8f9fa);
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+}
+
+.look-feel-description small {
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    display: block;
+}
+
 .examples {
     display: flex;
     flex-direction: column;
@@ -304,6 +426,11 @@
     .model-option {
         padding: 0.5rem;
     }
+    
+    .look-feel-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 }
 </style>
 
@@ -322,7 +449,14 @@ document.getElementById('initiate-form').addEventListener('submit', async functi
         title: document.getElementById('title').value,
         description: document.getElementById('description').value,
         channel: document.getElementById('channel').value,
-        use_advanced_model: selectedModel === 'mini'
+        use_advanced_model: selectedModel === 'mini',
+        look_and_feel: {
+            tone: document.getElementById('tone').value,
+            complexity: document.getElementById('complexity').value,
+            interaction: document.getElementById('interaction').value,
+            visual: document.getElementById('visual').value,
+            feedback: document.getElementById('feedback').value
+        }
     };
     
     // Validate slug format
@@ -384,5 +518,36 @@ document.getElementById('slug').addEventListener('input', function(e) {
         titleField.value = title;
     }
 });
+
+// Look and feel options data
+const lookAndFeelOptions = {{ look_and_feel_options | tojson }};
+
+// Function to update the combined description
+function updateCombinedDescription() {
+    const tone = document.getElementById('tone').value;
+    const complexity = document.getElementById('complexity').value;
+    const interaction = document.getElementById('interaction').value;
+    const visual = document.getElementById('visual').value;
+    const feedback = document.getElementById('feedback').value;
+    
+    const descriptions = [
+        lookAndFeelOptions.tone[tone],
+        lookAndFeelOptions.complexity[complexity],
+        lookAndFeelOptions.interaction[interaction],
+        lookAndFeelOptions.visual[visual],
+        lookAndFeelOptions.feedback[feedback]
+    ];
+    
+    const combinedDescription = descriptions.join('. ') + '.';
+    document.getElementById('combined-description').textContent = combinedDescription;
+}
+
+// Add event listeners to all look and feel dropdowns
+['tone', 'complexity', 'interaction', 'visual', 'feedback'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', updateCombinedDescription);
+});
+
+// Initialize the description on page load
+updateCombinedDescription();
 </script>
 {% endblock %}
