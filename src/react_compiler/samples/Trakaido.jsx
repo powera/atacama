@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalSettings } from './useGlobalSettings';  // This is the correct syntax for now; it is awkward and possibly should be updated.
+import { useFullscreen } from './useFullscreen';
 
 // API configuration
 const API_BASE = '/api/lithuanian';
@@ -53,6 +54,9 @@ const FlashCardApp = () => {
     usedSettings: ['audioEnabled', 'soundVolume', 'autoAdvance', 'defaultDelay', 'difficulty']
   });
 
+  // Fullscreen functionality
+  const { isFullscreen, toggleFullscreen, containerRef } = useFullscreen();
+
   const [corporaData, setCorporaData] = useState({}); // Cache for corpus structures
   const [currentCard, setCurrentCard] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -65,7 +69,7 @@ const FlashCardApp = () => {
   const [quizMode, setQuizMode] = useState('flashcard');
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [fullScreen, setFullScreen] = useState(false);
+
   const [audioCache, setAudioCache] = useState({});
   const [hoverTimeout, setHoverTimeout] = useState(null);
   const [availableVoices, setAvailableVoices] = useState([]);
@@ -526,7 +530,7 @@ const FlashCardApp = () => {
   const answer = currentWord ? (studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english) : '';
 
   return (
-    <div className={`w-container ${fullScreen ? 'w-fullscreen' : ''}`}>
+    <div ref={containerRef} className={`w-container ${isFullscreen ? 'w-fullscreen' : ''}`}>
       <style>{`
         .answer-text {
           font-size: 1.5rem;
@@ -586,13 +590,13 @@ const FlashCardApp = () => {
         }
       `}</style>
 
-      <button className="w-fullscreen-toggle" onClick={() => setFullScreen(!fullScreen)}>
-        {fullScreen ? '🗗' : '⛶'}
+      <button className="w-fullscreen-toggle" onClick={toggleFullscreen}>
+        {isFullscreen ? '🗗' : '⛶'}
       </button>
 
-      {!fullScreen && <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>}
+      {!isFullscreen && <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>}
 
-      {!fullScreen && (
+      {!isFullscreen && (
         <div className="w-card">
           <div 
             style={{ 
