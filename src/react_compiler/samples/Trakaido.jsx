@@ -899,6 +899,23 @@ const FlashCardApp = () => {
                 }
               }
 
+              // Find the translation for any answer when showAnswer is true
+              let translation = null;
+              if (showAnswer) {
+                if (isCorrect) {
+                  // For correct answer, show the opposite translation
+                  translation = studyMode === 'lithuanian-to-english' ? currentWord.lithuanian : currentWord.english;
+                } else {
+                  // For incorrect answers, find the word that matches this option
+                  const wrongWord = allWords.find(w => 
+                    (studyMode === 'lithuanian-to-english' ? w.english : w.lithuanian) === option
+                  );
+                  if (wrongWord) {
+                    translation = studyMode === 'lithuanian-to-english' ? wrongWord.lithuanian : wrongWord.english;
+                  }
+                }
+              }
+
               return (
                 <button
                   key={index}
@@ -909,6 +926,11 @@ const FlashCardApp = () => {
                   <div className="choice-content">
                     <div style={{ textAlign: 'center' }}>
                       <span>{option}</span>
+                      {translation && showAnswer && (
+                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>
+                          ({translation})
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
