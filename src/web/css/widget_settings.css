@@ -87,6 +87,115 @@
     transform: scale(1.1);
 }
 
+/* === SETTINGS TABS NAVIGATION === */
+
+.w-settings-tabs {
+    display: flex;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border, #ddd);
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.w-settings-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.w-settings-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 1rem 0.75rem;
+    cursor: pointer;
+    color: var(--color-text-secondary, #666);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 60px;
+    position: relative;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.w-settings-tab:hover {
+    color: var(--color-primary, #0074D9);
+    background: var(--color-annotation-bg, rgba(0, 0, 0, 0.02));
+}
+
+.w-settings-tab.active {
+    color: var(--color-primary, #0074D9);
+    border-bottom-color: var(--color-primary, #0074D9);
+    background: var(--color-annotation-bg, rgba(0, 116, 217, 0.05));
+}
+
+.w-settings-tab-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.w-settings-tab-label {
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+/* Responsive tab adjustments */
+@media screen and (max-width: 768px) {
+    .w-settings-tab {
+        padding: 0.75rem 0.5rem;
+        min-height: 50px;
+    }
+    
+    .w-settings-tab-icon {
+        font-size: 1.1rem;
+    }
+    
+    .w-settings-tab-label {
+        font-size: 0.8rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .w-settings-tab {
+        padding: 0.5rem 0.25rem;
+        min-height: 45px;
+    }
+    
+    .w-settings-tab-icon {
+        font-size: 1rem;
+    }
+    
+    .w-settings-tab-label {
+        font-size: 0.75rem;
+    }
+}
+
+/* Dark theme tab adjustments */
+[data-theme="dark"] .w-settings-tab:hover {
+    background: var(--color-annotation-bg, rgba(255, 255, 255, 0.05));
+}
+
+[data-theme="dark"] .w-settings-tab.active {
+    background: var(--color-annotation-bg, rgba(0, 116, 217, 0.1));
+}
+
+/* High contrast theme tab adjustments */
+[data-theme="high-contrast"] .w-settings-tab {
+    border-bottom-width: 4px;
+}
+
+[data-theme="high-contrast"] .w-settings-tab:hover,
+[data-theme="high-contrast"] .w-settings-tab.active {
+    background: var(--color-text);
+    color: var(--color-background);
+}
+
 /* === SETTINGS FORM LAYOUT === */
 
 .w-settings-form {
