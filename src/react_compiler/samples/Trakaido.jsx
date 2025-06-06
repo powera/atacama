@@ -168,37 +168,65 @@ const FlashCardApp = () => {
 
   // Generate multiple choice options when card changes or mode changes
   useEffect(() => {
-    if (quizMode === 'multiple-choice' && allWords.length > 0) {
+    if ((quizMode === 'multiple-choice' || quizMode === 'listening') && allWords.length > 0) {
       generateMultipleChoiceOptions();
     }
   }, [currentCard, quizMode, allWords, studyMode, settings.difficulty]);
 
   // Pre-load audio for multiple choice options when audio is enabled
   useEffect(() => {
-    if (audioEnabled && quizMode === 'multiple-choice' && multipleChoiceOptions.length > 0) {
+    if (audioEnabled && (quizMode === 'multiple-choice' || quizMode === 'listening') && multipleChoiceOptions.length > 0) {
       preloadMultipleChoiceAudio();
     }
   }, [audioEnabled, quizMode, studyMode, multipleChoiceOptions, selectedVoice]);
 
+  // Auto-play audio in listening mode when card changes
+  useEffect(() => {
+    if (quizMode === 'listening' && audioEnabled && allWords.length > 0 && allWords[currentCard]) {
+      // Small delay to ensure the UI has updated
+      const timer = setTimeout(() => {
+        playAudio(allWords[currentCard].lithuanian);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [currentCard, quizMode, audioEnabled, allWords]);
+
   const generateMultipleChoiceOptions = () => {
     const currentWord = allWords[currentCard];
     if (!currentWord) return;
-    const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+    
+    // For listening mode, determine correct answer based on listening mode type
+    let correctAnswer;
+    if (quizMode === 'listening') {
+      // In listening mode: LT->LT shows Lithuanian options, LT->EN shows English options
+      correctAnswer = studyMode === 'lithuanian-to-english' ? currentWord.english : currentWord.lithuanian;
+    } else {
+      // Regular multiple choice mode
+      correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+    }
 
     // Determine number of options based on difficulty
     const numOptions = settings.difficulty === 'easy' ? 4 : settings.difficulty === 'medium' ? 6 : 8;
     const numWrongAnswers = numOptions - 1;
 
+    // Determine which field to use for filtering and generating wrong answers
+    let answerField;
+    if (quizMode === 'listening') {
+      answerField = studyMode === 'lithuanian-to-english' ? 'english' : 'lithuanian';
+    } else {
+      answerField = studyMode === 'english-to-lithuanian' ? 'lithuanian' : 'english';
+    }
+
     const sameCorpusWords = allWords.filter(word => 
       word.corpus === currentWord.corpus && 
-      (studyMode === 'english-to-lithuanian' ? word.lithuanian : word.english) !== correctAnswer
+      word[answerField] !== correctAnswer
     );
     const wrongAnswersSet = new Set();
     const wrongAnswers = [];
     // Gather wrong answers from same corpus - shuffle first to get random decoys
     const shuffledSameCorpusWords = [...sameCorpusWords].sort(() => Math.random() - 0.5);
     for (const word of shuffledSameCorpusWords) {
-      const answer = studyMode === 'english-to-lithuanian' ? word.lithuanian : word.english;
+      const answer = word[answerField];
       if (answer !== correctAnswer && !wrongAnswersSet.has(answer)) {
         wrongAnswersSet.add(answer);
         wrongAnswers.push(answer);
@@ -208,7 +236,7 @@ const FlashCardApp = () => {
     // Pad with any other words if needed
     if (wrongAnswers.length < numWrongAnswers) {
       const fallbackWords = allWords
-        .map(w => (studyMode === 'english-to-lithuanian' ? w.lithuanian : w.english))
+        .map(w => w[answerField])
         .filter(ans => ans !== correctAnswer && !wrongAnswersSet.has(ans))
         .sort(() => Math.random() - 0.5); // Shuffle fallback words too
       while (wrongAnswers.length < numWrongAnswers && fallbackWords.length > 0) {
@@ -331,7 +359,14 @@ const FlashCardApp = () => {
 
   const handleMultipleChoiceAnswer = (selectedOption) => {
     const currentWord = allWords[currentCard];
-    const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+    let correctAnswer;
+    if (quizMode === 'listening') {
+      // In listening mode: LT->EN shows English options, LT->LT shows Lithuanian options
+      correctAnswer = studyMode === 'lithuanian-to-english' ? currentWord.english : currentWord.lithuanian;
+    } else {
+      // Regular multiple choice mode
+      correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+    }
     setSelectedAnswer(selectedOption);
     setShowAnswer(true);
     const isCorrect = selectedOption === correctAnswer;
@@ -662,7 +697,7 @@ const FlashCardApp = () => {
       )}
 
       <div className="w-mode-selector">
-        {!fullScreen && <h3>Study Options:</h3>}
+        {!isFullscreen && <h3>Study Options:</h3>}
         <button
           className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
           onClick={() => setStudyMode('english-to-lithuanian')}
@@ -686,6 +721,12 @@ const FlashCardApp = () => {
           onClick={() => setQuizMode('multiple-choice')}
         >
           Multiple Choice
+        </button>
+        <button
+          className={`w-mode-option ${quizMode === 'listening' ? 'w-active' : ''}`}
+          onClick={() => setQuizMode('listening')}
+        >
+          🎧 Listening
         </button>
         <button
           className={`w-mode-option ${quizMode === 'conjugations' ? 'w-active' : ''}`}
@@ -808,6 +849,73 @@ const FlashCardApp = () => {
             </div>
           )}
         </div>
+      ) : quizMode === 'listening' && currentWord ? (
+        <div>
+          <div className="w-card">
+            <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
+            <div className="w-question" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>
+                🎧 Listen and choose the correct answer:
+              </div>
+              <button 
+                className="w-audio-button"
+                onClick={() => playAudio(currentWord.lithuanian)}
+                title="Play pronunciation"
+                style={{ 
+                  fontSize: '2rem',
+                  padding: 'var(--spacing-base)',
+                  background: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius)',
+                  cursor: 'pointer',
+                  marginBottom: 'var(--spacing-base)'
+                }}
+              >
+                🔊 Play Audio
+              </button>
+              <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+                {studyMode === 'lithuanian-to-english' 
+                  ? 'Choose the English translation:'
+                  : 'Choose the matching Lithuanian word:'}
+              </div>
+            </div>
+          </div>
+          <div className="w-multiple-choice">
+            {multipleChoiceOptions.map((option, index) => {
+              const currentWord = allWords[currentCard];
+              if (!currentWord) return null;
+              const correctAnswer = studyMode === 'lithuanian-to-english' ? currentWord.english : currentWord.lithuanian;
+              const isCorrect = option === correctAnswer;
+              const isSelected = option === selectedAnswer;
+              let className = 'w-choice-option';
+              if (showAnswer) {
+                if (isCorrect) {
+                  className += ' w-correct';
+                } else if (isSelected && !isCorrect) {
+                  className += ' w-incorrect';
+                } else if (!isSelected) {
+                  className += ' w-unselected';
+                }
+              }
+
+              return (
+                <button
+                  key={index}
+                  className={className}
+                  onClick={() => !showAnswer && handleMultipleChoiceAnswer(option)}
+                  disabled={showAnswer}
+                >
+                  <div className="choice-content">
+                    <div style={{ textAlign: 'center' }}>
+                      <span>{option}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ) : currentWord ? (
         <div>
           <div className="w-card">
@@ -835,7 +943,13 @@ const FlashCardApp = () => {
             {multipleChoiceOptions.map((option, index) => {
               const currentWord = allWords[currentCard];
               if (!currentWord) return null;
-              const correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+              // Use same logic as handleMultipleChoiceAnswer for consistency
+              let correctAnswer;
+              if (quizMode === 'listening') {
+                correctAnswer = studyMode === 'lithuanian-to-english' ? currentWord.english : currentWord.lithuanian;
+              } else {
+                correctAnswer = studyMode === 'english-to-lithuanian' ? currentWord.lithuanian : currentWord.english;
+              }
               const isCorrect = option === correctAnswer;
               const isSelected = option === selectedAnswer;
               let className = 'w-choice-option';
