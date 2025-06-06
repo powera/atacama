@@ -10,6 +10,10 @@ from flask import Blueprint, send_file, request, abort, Response, jsonify
 import constants  # for LITHUANIAN_AUDIO_DIR
 from common.base.logging_config import get_logger
 from data.trakaido.wordlists import get_all_word_pairs_flat, all_words
+from data.trakaido.declensions import (
+    declensions, get_noun_declension, get_nouns_by_case, 
+    get_declension_stats, CASE_NAMES, NOUN_KEYS
+)
 
 logger = get_logger(__name__)
 
@@ -39,6 +43,12 @@ def lithuanian_api_index() -> Response:
             "conjugations": {
                 "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb",
                 "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb"
+            },
+            "declensions": {
+                "GET /api/lithuanian/declensions": "Get all noun declensions",
+                "GET /api/lithuanian/declensions/cases": "List all available cases",
+                "GET /api/lithuanian/declensions/cases/{case_name}": "Get all nouns with their forms for a specific case",
+                "GET /api/lithuanian/declensions/{noun}": "Get complete declension for a specific noun"
             },
             "audio": {
                 "GET /api/lithuanian/audio/voices": "List all available voices",
@@ -468,4 +478,90 @@ def serve_lithuanian_audio(word: str) -> Union[Response, tuple]:
         return send_file(file_path, mimetype='audio/mpeg')
     except Exception as e:
         logger.error(f"Error serving Lithuanian audio for word '{word}': {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+# Declension API endpoints
+
+@trakaido_bp.route('/api/lithuanian/declensions')
+def get_all_declensions() -> Union[Response, tuple]:
+    """
+    Get all noun declensions.
+    
+    :return: JSON response with all declension data
+    """
+    try:
+        return jsonify({
+            "declensions": declensions,
+            "total_nouns": len(declensions),
+            "available_nouns": NOUN_KEYS
+        })
+    except Exception as e:
+        logger.error(f"Error getting all declensions: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/lithuanian/declensions/cases')
+def list_cases() -> Union[Response, tuple]:
+    """
+    List all available cases.
+    
+    :return: JSON response with all case names
+    """
+    try:
+        return jsonify({
+            "cases": CASE_NAMES,
+            "total_cases": len(CASE_NAMES)
+        })
+    except Exception as e:
+        logger.error(f"Error listing cases: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/lithuanian/declensions/cases/<case_name>')
+def get_nouns_for_case(case_name: str) -> Union[Response, tuple]:
+    """
+    Get all nouns with their forms for a specific case.
+    
+    :param case_name: Name of the case (nominative, genitive, etc.)
+    :return: JSON response with nouns for the specified case
+    """
+    try:
+        if case_name not in CASE_NAMES:
+            return jsonify({
+                "error": f"Invalid case name '{case_name}'. Available cases: {CASE_NAMES}"
+            }), 400
+        
+        nouns_data = get_nouns_by_case(case_name)
+        return jsonify({
+            "case": case_name,
+            "nouns": nouns_data,
+            "total_nouns": len(nouns_data)
+        })
+    except Exception as e:
+        logger.error(f"Error getting nouns for case '{case_name}': {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/lithuanian/declensions/<noun>')
+def get_specific_noun_declension(noun: str) -> Union[Response, tuple]:
+    """
+    Get complete declension for a specific noun.
+    
+    :param noun: The nominative form of the noun
+    :return: JSON response with complete declension data
+    """
+    try:
+        declension_data = get_noun_declension(noun)
+        if not declension_data:
+            return jsonify({
+                "error": f"Noun '{noun}' not found. Available nouns: {NOUN_KEYS}"
+            }), 404
+        
+        return jsonify({
+            "noun": noun,
+            "declension": declension_data
+        })
+    except Exception as e:
+        logger.error(f"Error getting declension for noun '{noun}': {str(e)}")
         return jsonify({"error": str(e)}), 500
