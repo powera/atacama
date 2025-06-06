@@ -12,6 +12,7 @@ from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
 
 from react_compiler import WidgetBuilder
+from react_compiler.lib import sanitize_widget_title_for_component_name
 logger = get_logger(__name__)
 
 class Base(DeclarativeBase):
@@ -315,7 +316,7 @@ class WidgetVersion(Base):
         import hashlib
         
         builder = WidgetBuilder()
-        widget_name = self.widget.title.replace(' ', '')
+        widget_name = sanitize_widget_title_for_component_name(self.widget.title)
         
         # Determine development mode from environment if not explicitly provided
         if development_mode is None:

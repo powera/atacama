@@ -14,6 +14,7 @@ from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
 from common.llm.widget_improver import widget_improver
 from common.llm.widget_initiator import widget_initiator
+from react_compiler.lib import sanitize_widget_title_for_component_name
 
 from models.messages import get_user_allowed_channels
 
@@ -61,7 +62,8 @@ def view_widget(slug):
         return render_template(
             'widget.html',
             widget=widget,
-            channel_config=channel_config
+            channel_config=channel_config,
+            sanitized_component_name=sanitize_widget_title_for_component_name(widget.title)
         )
     
 

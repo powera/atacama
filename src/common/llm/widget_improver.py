@@ -8,6 +8,7 @@ import tiktoken
 
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.base.logging_config import get_logger
+from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
 
@@ -225,7 +226,7 @@ Ensure the widget provides an excellent mobile user experience.'''
 
 WIDGET CONTEXT:
 - Widget Title: {widget_title}
-- Component should be named: {widget_title.replace(' ', '')}
+- Component should be named: {sanitize_widget_title_for_component_name(widget_title)}
 
 CURRENT CSS STYLES AVAILABLE:
 {self.common_css}

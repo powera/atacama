@@ -112,7 +112,7 @@ if (typeof window !== 'undefined') {
 <!-- Mount the widget -->
 <script>
     try {
-        const componentName = '{{ widget.title }}'.replace(/\s+/g, '');
+        const componentName = '{{ sanitized_component_name }}';
         const Component = window[componentName];
         
         if (Component) {

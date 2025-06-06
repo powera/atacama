@@ -10,6 +10,7 @@ import tiktoken
 import constants
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.base.logging_config import get_logger
+from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
 
@@ -201,7 +202,7 @@ LOOK AND FEEL REQUIREMENTS:
 WIDGET REQUIREMENTS:
 - Widget Title: {widget_title}
 - Widget Slug: {slug}
-- Component Name: {widget_title.replace(' ', '')}
+- Component Name: {sanitize_widget_title_for_component_name(widget_title)}
 - Description: {description}
 - Look and Feel: {look_and_feel_guidance}
 
@@ -230,7 +231,7 @@ INSTRUCTIONS:
 7. Consider adding global settings integration if appropriate (audio, difficulty, user preferences)
 8. PREFER EMOJI over icons - use emoji characters (🎮, 📊, ⚙️, 🔍, etc.) instead of icon libraries
 9. Only use external modules (lucide-react, recharts) when necessary for complex functionality
-10. Make sure the component name exactly matches: {widget_title.replace(' ', '')}
+10. Make sure the component name exactly matches: {sanitize_widget_title_for_component_name(widget_title)}
 11. Include helpful comments explaining the functionality
 12. Return ONLY the React component code, no explanation
 
@@ -246,7 +247,7 @@ import React, {{ useState, useEffect }} from 'react';
 import {{ useFullscreen }} from './useFullscreen';
 import {{ useGlobalSettings }} from './useGlobalSettings';
 
-const {widget_title.replace(' ', '')} = () => {{
+const {sanitize_widget_title_for_component_name(widget_title)} = () => {{
   const [state, setState] = useState(initialValue);
   const {{ isFullscreen, toggleFullscreen, containerRef }} = useFullscreen();
   const {{ settings, SettingsToggle, SettingsModal }} = useGlobalSettings();
@@ -278,7 +279,7 @@ const {widget_title.replace(' ', '')} = () => {{
   );
 }};
 
-export default {widget_title.replace(' ', '')};
+export default {sanitize_widget_title_for_component_name(widget_title)};
 ```
 
 Please create a complete, functional React widget based on the description: "{description}"
