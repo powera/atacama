@@ -845,12 +845,161 @@ nouns_four = {
   ]
 }
 
+#!/usr/bin/python3
+
+"""Common high-frequency English words for Lithuanian language learning."""
+
+common_words = {
+  "Time & Life": [
+    { "english": "life", "lithuanian": "gyvenimas" },
+    { "english": "day", "lithuanian": "diena" },
+    { "english": "night", "lithuanian": "naktis" },
+    { "english": "morning", "lithuanian": "rytas" },
+    { "english": "evening", "lithuanian": "vakaras" },
+    { "english": "century", "lithuanian": "amžius" },
+    { "english": "decade", "lithuanian": "dešimtmetis" },
+    { "english": "year", "lithuanian": "metai" },
+    { "english": "month", "lithuanian": "mėnuo" },
+    { "english": "week", "lithuanian": "savaitė" },
+    { "english": "hour", "lithuanian": "valanda" },
+    { "english": "minute", "lithuanian": "minutė" },
+    { "english": "moment", "lithuanian": "akimirka" },
+    { "english": "death", "lithuanian": "mirtis" },
+    { "english": "age", "lithuanian": "amžius" },
+    { "english": "early", "lithuanian": "anksti" },
+    { "english": "late", "lithuanian": "vėlu" },
+    { "english": "today", "lithuanian": "šiandien" },
+    { "english": "young", "lithuanian": "jaunas" },
+    { "english": "old", "lithuanian": "senas" },
+    { "english": "history", "lithuanian": "istorija" },
+    { "english": "past", "lithuanian": "praeitis" }
+  ],
+  
+  "Places & Direction": [
+    { "english": "place", "lithuanian": "vieta" },
+    { "english": "home", "lithuanian": "namai" },
+    { "english": "room", "lithuanian": "kambarys" },
+    { "english": "door", "lithuanian": "durys" },
+    { "english": "city", "lithuanian": "miestas" },
+    { "english": "country", "lithuanian": "šalis" },
+    { "english": "state", "lithuanian": "valstija" },
+    { "english": "area", "lithuanian": "sritis" },
+    { "english": "land", "lithuanian": "žemė" },
+    { "english": "road", "lithuanian": "kelias" },
+    { "english": "street", "lithuanian": "gatvė" },
+    { "english": "wall", "lithuanian": "siena" },
+    { "english": "north", "lithuanian": "šiaurė" },
+    { "english": "south", "lithuanian": "pietūs" },
+    { "english": "east", "lithuanian": "rytai" },
+    { "english": "west", "lithuanian": "vakarai" },
+    { "english": "inside", "lithuanian": "viduje" },
+    { "english": "outside", "lithuanian": "lauke" },
+    { "english": "behind", "lithuanian": "už" }
+  ],
+  
+  "People & Relationships": [
+    { "english": "men", "lithuanian": "vyrai" },
+    { "english": "women", "lithuanian": "moterys" },
+    { "english": "man", "lithuanian": "vyras" },
+    { "english": "woman", "lithuanian": "moteris" },
+    { "english": "boy", "lithuanian": "berniukas" },
+    { "english": "girl", "lithuanian": "mergaitė" },
+    { "english": "children", "lithuanian": "vaikai" },
+    { "english": "child", "lithuanian": "vaikas" },
+    { "english": "father", "lithuanian": "tėvas" },
+    { "english": "mother", "lithuanian": "motina" },
+    { "english": "son", "lithuanian": "sūnus" },
+    { "english": "family", "lithuanian": "šeima" },
+    { "english": "friend", "lithuanian": "draugas" },
+    { "english": "friends", "lithuanian": "draugai" },
+    { "english": "brother", "lithuanian": "brolis" },
+    { "english": "sister", "lithuanian": "sesuo" },
+    { "english": "wife", "lithuanian": "žmona" },
+    { "english": "husband", "lithuanian": "vyras" },
+    { "english": "person", "lithuanian": "žmogus" },
+    { "english": "someone", "lithuanian": "kažkas" },
+    { "english": "anyone", "lithuanian": "bet kas" },
+    { "english": "everyone", "lithuanian": "visi" },
+    { "english": "nobody", "lithuanian": "niekas" }
+  ],
+  
+  "Thinking & Communication": [
+    { "english": "mind", "lithuanian": "protas" },
+    { "english": "idea", "lithuanian": "idėja" },
+    { "english": "thought", "lithuanian": "mintis" },
+    { "english": "word", "lithuanian": "žodis" },
+    { "english": "language", "lithuanian": "kalba" },
+    { "english": "voice", "lithuanian": "balsas" },
+    { "english": "question", "lithuanian": "klausimas" },
+    { "english": "answer", "lithuanian": "atsakymas" },
+    { "english": "reason", "lithuanian": "priežastis" },
+    { "english": "truth", "lithuanian": "tiesa" },
+    { "english": "story", "lithuanian": "istorija" },
+    { "english": "example", "lithuanian": "pavyzdys" },
+    { "english": "sense", "lithuanian": "pojūtis" },
+    { "english": "feeling", "lithuanian": "jausmas" },
+    { "english": "listen", "lithuanian": "klausyti" },
+    { "english": "talk", "lithuanian": "kalbėti" },
+    { "english": "information", "lithuanian": "informacija" },
+    { "english": "news", "lithuanian": "naujienos" },
+    { "english": "problem", "lithuanian": "problema" },
+    { "english": "website", "lithuanian": "tinklalapis" }
+  ],
+  
+  "Descriptive Words": [
+    { "english": "good", "lithuanian": "geras" },
+    { "english": "bad", "lithuanian": "blogas" },
+    { "english": "big", "lithuanian": "didelis" },
+    { "english": "small", "lithuanian": "mažas" },
+    { "english": "high", "lithuanian": "aukštas" },
+    { "english": "low", "lithuanian": "žemas" },
+    { "english": "long", "lithuanian": "ilgas" },
+    { "english": "short", "lithuanian": "trumpas" },
+    { "english": "wide", "lithuanian": "platus" },
+    { "english": "deep", "lithuanian": "gilus" },
+    { "english": "strong", "lithuanian": "stiprus" },
+    { "english": "easy", "lithuanian": "lengvas" },
+    { "english": "difficult", "lithuanian": "sunkus" },
+    { "english": "beautiful", "lithuanian": "gražus" },
+    { "english": "nice", "lithuanian": "gražus" },
+    { "english": "cold", "lithuanian": "šaltas" },
+    { "english": "hot", "lithuanian": "karštas" },
+    { "english": "dark", "lithuanian": "tamsus" },
+    { "english": "wet", "lithuanian": "drėgnas" },
+    { "english": "dry", "lithuanian": "sausas" }
+  ],
+  
+  "Social & Political": [
+    { "english": "government", "lithuanian": "vyriausybė" },
+    { "english": "law", "lithuanian": "įstatymas" },
+    { "english": "society", "lithuanian": "visuomenė" },
+    { "english": "public", "lithuanian": "viešas" },
+    { "english": "social", "lithuanian": "socialinis" },
+    { "english": "political", "lithuanian": "politinis" },
+    { "english": "international", "lithuanian": "tarptautinis" },
+    { "english": "national", "lithuanian": "nacionalinis" },
+    { "english": "business", "lithuanian": "verslas" },
+    { "english": "company", "lithuanian": "įmonė" },
+    { "english": "money", "lithuanian": "pinigai" },
+    { "english": "service", "lithuanian": "paslauga" },
+    { "english": "trade", "lithuanian": "prekyba" },
+    { "english": "war", "lithuanian": "karas" },
+    { "english": "peace", "lithuanian": "taika" },
+    { "english": "military", "lithuanian": "karinis" },
+    { "english": "army", "lithuanian": "armija" },
+    { "english": "navy", "lithuanian": "jūrų laivynas" },
+    { "english": "battle", "lithuanian": "mūšis" },
+    { "english": "war", "lithuanian": "karas" },
+  ]
+}
+
 all_words = {
   "nouns_one": nouns_one,
   "nouns_two": nouns_two,
   "nouns_three": nouns_three,
   "nouns_four": nouns_four,
   "verbs": verbs_one,
+  "common_words": common_words
 }
 
 def get_all_word_pairs_flat():
@@ -924,3 +1073,46 @@ def check_for_duplicates():
             word_translations[english] = [lithuanian]
     
     return exact_duplicates, semantic_duplicates
+
+
+def find_missing_words(input_words):
+    """
+    Find English words that are not already in the app's wordlists.
+    
+    Args:
+        input_words: Either a list of words ["word1", "word2"] or a file path 
+                    containing one word per line.
+    
+    Returns:
+        list: A list of English words (in order) that are not found in any 
+              of the app's wordlists.
+    """
+    # Get all existing English words from the app
+    existing_words = set()
+    flat_words = get_all_word_pairs_flat()
+    for word_pair in flat_words:
+        existing_words.add(word_pair['english'].lower())
+    
+    # Determine if input_words is a file path or a list
+    if isinstance(input_words, str):
+        # It's a file path
+        try:
+            with open(input_words, 'r', encoding='utf-8') as file:
+                words_to_check = [line.strip() for line in file if line.strip()]
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {input_words}")
+        except Exception as e:
+            raise Exception(f"Error reading file {input_words}: {e}")
+    elif isinstance(input_words, list):
+        # It's a list of words
+        words_to_check = input_words
+    else:
+        raise TypeError("input_words must be either a list of words or a file path string")
+    
+    # Find missing words (preserve order)
+    missing_words = []
+    for word in words_to_check:
+        if word.lower() not in existing_words:
+            missing_words.append(word)
+    
+    return missing_words
