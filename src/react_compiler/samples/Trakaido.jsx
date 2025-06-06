@@ -44,6 +44,18 @@ const fetchConjugations = async () => {
   }
 };
 
+const fetchDeclensions = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/declensions`);
+    if (!response.ok) throw new Error('Failed to fetch declensions');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Failed to fetch declensions:', error);
+    return { declensions: {}, available_nouns: [] };
+  }
+};
+
 const FlashCardApp = () => {
   // Global settings integration
   const { 
@@ -82,6 +94,10 @@ const FlashCardApp = () => {
   const [availableVerbs, setAvailableVerbs] = useState([]);
   const [selectedVerb, setSelectedVerb] = useState(null);
   const [loadingConjugations, setLoadingConjugations] = useState(false);
+  const [declensions, setDeclensions] = useState({});
+  const [availableNouns, setAvailableNouns] = useState([]);
+  const [selectedNoun, setSelectedNoun] = useState(null);
+  const [loadingDeclensions, setLoadingDeclensions] = useState(false);
   const [autoAdvanceTimer, setAutoAdvanceTimer] = useState(null);
 
   // Use global settings for audio and auto-advance
@@ -95,15 +111,18 @@ const FlashCardApp = () => {
       setLoading(true);
       setError(null);
       try {
-        const [corpora, voices, conjugationData] = await Promise.all([
+        const [corpora, voices, conjugationData, declensionData] = await Promise.all([
           fetchCorpora(),
           fetchAvailableVoices(),
-          fetchConjugations()
+          fetchConjugations(),
+          fetchDeclensions()
         ]);
         setAvailableCorpora(corpora);
         setAvailableVoices(voices);
         setConjugations(conjugationData.conjugations);
         setAvailableVerbs(conjugationData.verbs);
+        setDeclensions(declensionData.declensions);
+        setAvailableNouns(declensionData.available_nouns);
         if (voices.length > 0) {
           setSelectedVoice(voices[0]);
         }
@@ -527,6 +546,104 @@ const FlashCardApp = () => {
     );
   };
 
+  // Render declension table
+  const renderDeclensionTable = (noun) => {
+    const nounData = declensions[noun];
+    if (!nounData) return null;
+
+    const cases = ['nominative', 'genitive', 'dative', 'accusative', 'instrumental', 'locative', 'vocative'];
+
+    return (
+      <div style={{ marginTop: 'var(--spacing-base)' }}>
+        <h4>Declension Table for "{noun}" ({nounData.english})</h4>
+        <div style={{ 
+          fontSize: '0.9rem', 
+          color: 'var(--color-text-muted)', 
+          marginBottom: 'var(--spacing-small)' 
+        }}>
+          Gender: {nounData.gender} | Type: {nounData.declension_type}
+        </div>
+        <table style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          border: '1px solid var(--color-border)',
+          marginTop: 'var(--spacing-small)'
+        }}>
+          <thead>
+            <tr style={{ background: 'var(--color-annotation-bg)' }}>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Case</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Question</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Form</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Example</th>
+              <th style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)' }}>Audio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cases.map(caseName => {
+              const caseData = nounData.cases[caseName];
+              if (!caseData) return null;
+              return (
+                <tr key={caseName}>
+                  <td style={{ 
+                    padding: 'var(--spacing-small)', 
+                    border: '1px solid var(--color-border)', 
+                    fontWeight: 'bold',
+                    textTransform: 'capitalize'
+                  }}>
+                    {caseName}
+                  </td>
+                  <td style={{ 
+                    padding: 'var(--spacing-small)', 
+                    border: '1px solid var(--color-border)',
+                    fontSize: '0.85rem',
+                    fontStyle: 'italic'
+                  }}>
+                    {caseData.question}
+                  </td>
+                  <td style={{ 
+                    padding: 'var(--spacing-small)', 
+                    border: '1px solid var(--color-border)',
+                    fontWeight: 'bold',
+                    cursor: audioEnabled ? 'pointer' : 'default'
+                  }}
+                  onMouseEnter={() => audioEnabled && handleHoverStart(caseData.form)}
+                  onMouseLeave={handleHoverEnd}
+                  >
+                    {caseData.form}
+                  </td>
+                  <td style={{ 
+                    padding: 'var(--spacing-small)', 
+                    border: '1px solid var(--color-border)',
+                    fontSize: '0.9rem'
+                  }}>
+                    <div style={{ marginBottom: '2px' }}>
+                      <strong>LT:</strong> {caseData.sentence_lithuanian}
+                    </div>
+                    <div style={{ color: 'var(--color-text-muted)' }}>
+                      <strong>EN:</strong> {caseData.sentence_english}
+                    </div>
+                  </td>
+                  <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
+                    {audioEnabled && (
+                      <button 
+                        className="w-audio-button"
+                        onClick={() => playAudio(caseData.form)}
+                        title="Play pronunciation"
+                        style={{ fontSize: '0.9rem' }}
+                      >
+                        🔊
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -735,6 +852,12 @@ const FlashCardApp = () => {
           📖 Conjugations
         </button>
         <button
+          className={`w-mode-option ${quizMode === 'declensions' ? 'w-active' : ''}`}
+          onClick={() => setQuizMode('declensions')}
+        >
+          📋 Declensions
+        </button>
+        <button
           className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
           onClick={shuffleCards}
         >
@@ -809,6 +932,37 @@ const FlashCardApp = () => {
             </select>
           </div>
           {selectedVerb && renderConjugationTable(selectedVerb)}
+        </div>
+      ) : quizMode === 'declensions' ? (
+        <div className="w-card">
+          <h3>Lithuanian Noun Declensions</h3>
+          <div style={{ marginBottom: 'var(--spacing-base)' }}>
+            <label htmlFor="noun-select" style={{ marginRight: 'var(--spacing-small)' }}>
+              Select a noun:
+            </label>
+            <select 
+              id="noun-select"
+              value={selectedNoun || ''} 
+              onChange={(e) => setSelectedNoun(e.target.value)}
+              style={{
+                padding: 'var(--spacing-small) var(--spacing-base)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--border-radius)',
+                background: 'var(--color-background)',
+                color: 'var(--color-text)',
+                fontSize: '0.9rem',
+                minWidth: '150px'
+              }}
+            >
+              <option value="">Choose a noun...</option>
+              {availableNouns.map(noun => (
+                <option key={noun} value={noun}>
+                  {noun} ({declensions[noun]?.english || ''})
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedNoun && renderDeclensionTable(selectedNoun)}
         </div>
       ) : quizMode === 'flashcard' ? (
         <div className="w-card w-card-interactive" onClick={() => setShowAnswer(!showAnswer)}>
@@ -1061,7 +1215,7 @@ const FlashCardApp = () => {
       )}
 
       {/* Navigation controls */}
-      {!showNoGroupsMessage && quizMode !== 'conjugations' && (
+      {!showNoGroupsMessage && quizMode !== 'conjugations' && quizMode !== 'declensions' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
             <button className="w-button" onClick={prevCard}>← Previous</button>
@@ -1073,7 +1227,7 @@ const FlashCardApp = () => {
       )}
 
       {/* Stats with Reset button */}
-      {!showNoGroupsMessage && quizMode !== 'conjugations' && (
+      {!showNoGroupsMessage && quizMode !== 'conjugations' && quizMode !== 'declensions' && (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div className="w-stat-item" style={{ margin: 0 }}>
