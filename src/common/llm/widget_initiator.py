@@ -7,6 +7,7 @@ from pathlib import Path
 
 import tiktoken
 
+import constants
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.base.logging_config import get_logger
 
@@ -56,9 +57,9 @@ class WidgetInitiator:
     def _load_common_css(self) -> str:
         """Load common CSS for context."""
         css_files = [
-            'src/web/css/common.css',
-            'src/web/css/widget_tools.css',
-            'src/web/css/widget.css'
+            os.path.join(constants.WEB_DIR, 'css', 'common.css'),
+            os.path.join(constants.WEB_DIR, 'css', 'widget_tools.css'),
+            os.path.join(constants.WEB_DIR, 'css', 'widget.css')
         ]
 
         css_content = ""
@@ -77,7 +78,8 @@ class WidgetInitiator:
     def _load_fullscreen_hook(self) -> str:
         """Load fullscreen hook code for reference."""
         try:
-            with open('src/react_compiler/js/fullscreen.js', 'r') as f:
+            fullscreen_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'fullscreen.js')
+            with open(fullscreen_path, 'r') as f:
                 return f.read()
         except FileNotFoundError:
             logger.warning("Fullscreen hook file not found")
@@ -86,7 +88,8 @@ class WidgetInitiator:
     def _load_global_settings_hook(self) -> str:
         """Load global settings hook code for reference."""
         try:
-            with open('src/react_compiler/js/globalSettings.js', 'r') as f:
+            global_settings_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'globalSettings.js')
+            with open(global_settings_path, 'r') as f:
                 return f.read()
         except FileNotFoundError:
             logger.warning("Global settings hook file not found")
