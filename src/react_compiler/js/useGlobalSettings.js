@@ -380,13 +380,22 @@ export const useGlobalSettings = (options = {}) => {
                 max="1"
                 step="0.1"
                 value={settings.soundVolume}
-                onChange={(e) => {
+                onInput={(e) => {
                   const newValue = parseFloat(e.target.value);
-                  updateSetting('soundVolume', newValue);
+                  // Update visual feedback immediately without triggering re-render
                   e.target.parentNode.style.setProperty(
                     '--range-progress', 
                     `${newValue * 100}%`
                   );
+                  // Update the displayed value
+                  const valueDisplay = e.target.parentNode.parentNode.querySelector('.w-range-value-current');
+                  if (valueDisplay) {
+                    valueDisplay.textContent = `${Math.round(newValue * 100)}%`;
+                  }
+                }}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  updateSetting('soundVolume', newValue);
                 }}
                 className="w-setting-input"
                 disabled={!settings.audioEnabled}
@@ -433,13 +442,22 @@ export const useGlobalSettings = (options = {}) => {
                 max="7.5"
                 step="0.25"
                 value={settings.defaultDelay}
-                onChange={(e) => {
+                onInput={(e) => {
                   const newValue = parseFloat(e.target.value);
-                  updateSetting('defaultDelay', newValue);
+                  // Update visual feedback immediately without triggering re-render
                   e.target.parentNode.style.setProperty(
                     '--range-progress', 
                     `${((newValue - 1.0) / (7.5 - 1.0)) * 100}%`
                   );
+                  // Update the displayed value
+                  const valueDisplay = e.target.parentNode.parentNode.querySelector('.w-range-value-current');
+                  if (valueDisplay) {
+                    valueDisplay.textContent = `${newValue}s`;
+                  }
+                }}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  updateSetting('defaultDelay', newValue);
                 }}
                 className="w-setting-input"
               />
