@@ -1,5 +1,3 @@
-
-```markdown
 # Atacama
 
 A semantic web publishing platform for sharing richly formatted messages, articles, and interactive content.
@@ -129,18 +127,6 @@ Compiled widgets are:
 - Integrated into the Atacama rendering system
 - Cached for optimal performance
 
-### Testing
-
-The platform includes comprehensive testing for the React Compiler:
-- Unit tests for compilation logic
-- Integration tests with sample widgets
-- Expensive tests requiring Node.js/npm (run separately)
-
-Run React Compiler tests:
-```bash
-python3 run_react_compiler_tests.py
-```
-
 ## Architecture
 
 ### Backend
@@ -202,43 +188,18 @@ sudo apt-get install nodejs npm
 ```
 src/
 ├── aml_parser/          # Atacama markup parser
-│   ├── lexer.py         # Token lexing
-│   ├── parser.py        # AST parsing
-│   ├── html_generator.py # HTML generation
-│   ├── chess.py         # Chess notation support
-│   ├── colorblocks.py   # Color block processing
-│   └── pinyin.py        # Chinese text annotations
 ├── common/              # Shared utilities and models
 │   ├── base/            # Logging and request handling
 │   ├── config/          # Configuration management
 │   └── llm/             # LLM integration and widget AI tools
 ├── models/              # Database models
-│   ├── database.py      # Database configuration
-│   ├── messages.py      # Message models
-│   ├── users.py         # User models
-│   ├── quotes.py        # Quote models
-│   └── models.py        # Additional models
 ├── react_compiler/      # React widget compilation system
 │   ├── react_compiler.py # Main compiler logic
 │   ├── js/              # Built-in hooks
-│   │   ├── useFullscreen.js
-│   │   └── useGlobalSettings.js
 │   └── samples/         # Sample widget demonstrations
-│       ├── Basketball.jsx
-│       ├── Trakaido.jsx
-│       ├── MathQuiz.jsx
-│       └── UnitConversion.jsx
 ├── spaceship/           # Spaceship visualization server
 ├── tests/               # Test suite
-│   ├── aml_parser/      # Parser tests
-│   ├── common/          # Common module tests
-│   ├── models/          # Database model tests
-│   ├── react_compiler/  # React Compiler integration tests
-│   └── web/             # Web application tests
 ├── util/                # Utility scripts
-│   ├── importer.py      # Data import utilities
-│   ├── export.py        # Data export utilities
-│   └── messages.py      # Message utilities
 ├── web/                 # Flask web application
 │   ├── blueprints/      # Modular route handlers
 │   │   ├── content.py   # Content viewing
@@ -253,9 +214,6 @@ src/
 │   │   └── ...          # Additional templates
 │   ├── css/             # Stylesheets
 │   ├── js/              # Client-side JavaScript
-│   │   ├── third_party/ # External libraries (React, etc.)
-│   │   ├── atacama.js   # Main application JS
-│   │   └── diff.js      # Diff utilities
 │   ├── react/           # React build system
 │   ├── static/          # Static assets
 │   └── decorators/      # Request decorators
@@ -271,9 +229,7 @@ Atacama is in active development with the following components operational:
 - Rich text formatting with custom parser
 - User authentication and preferences
 - Admin interface for user management
-- **React widget system with compilation and hosting**
-- **Built-in hooks and dependency management**
-- **Widget AI tools for improvement and generation**
+- React widget system with AI tools for generation, compilation, and hosting
 - Multi-theme support
 - Domain configuration for multi-site hosting
 
@@ -284,13 +240,3 @@ Atacama is in active development with the following components operational:
 ## Contributing
 
 [Contributing guidelines to be added]
-
-### Widget Development
-
-When contributing widgets:
-1. Add `.jsx` files to `src/react_compiler/samples/`
-2. Follow React best practices and use built-in hooks when possible
-3. Test compilation with `run_react_compiler_tests.py`
-4. Document any special dependencies or requirements
-5. Ensure widgets export the expected component name
-```
