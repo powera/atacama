@@ -1081,7 +1081,7 @@ const FlashCardApp = () => {
                     <div style={{ textAlign: 'center' }}>
                       <span>{option}</span>
                       {translation && showAnswer && (
-                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', marginTop: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: (isCorrect || isSelected) ? 'rgba(255,255,255,0.8)' : 'var(--color-text-secondary)', marginTop: '4px' }}>
                           ({translation})
                         </div>
                       )}
