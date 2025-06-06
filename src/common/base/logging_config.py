@@ -81,6 +81,20 @@ def configure_logging(
     app_logger = logging.getLogger('web')
     app_logger.setLevel(getattr(logging, app_log_level.upper()))
     
+    # Create a symlink to the current log file for easy access
+    current_log_path = log_dir / 'current.log'
+    try:
+        # Remove existing symlink if it exists
+        if current_log_path.is_symlink() or current_log_path.exists():
+            current_log_path.unlink()
+        
+        # Create new symlink pointing to the current log file
+        current_log_path.symlink_to(log_file_path.name)
+        
+    except Exception as e:
+        # Don't fail startup if symlink creation fails
+        logging.warning(f"Failed to create current.log symlink: {e}")
+    
     # Log the initialization
     logging.info(f"Logging initialized: root_level={log_level}, app_level={app_log_level}, log_file={log_file_path}")
 
