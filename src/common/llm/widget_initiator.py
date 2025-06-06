@@ -79,17 +79,17 @@ class WidgetInitiator:
     def _load_fullscreen_hook(self) -> str:
         """Load fullscreen hook code for reference."""
         try:
-            fullscreen_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'fullscreen.js')
+            fullscreen_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'useFullscreen.js')
             with open(fullscreen_path, 'r') as f:
                 return f.read()
         except FileNotFoundError:
             logger.warning("Fullscreen hook file not found")
             return ""
-
+ 
     def _load_global_settings_hook(self) -> str:
         """Load global settings hook code for reference."""
         try:
-            global_settings_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'globalSettings.js')
+            global_settings_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'useGlobalSettings.js')
             with open(global_settings_path, 'r') as f:
                 return f.read()
         except FileNotFoundError:
