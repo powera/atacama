@@ -564,6 +564,7 @@ def test_version(slug):
             'widget.html',
             widget=test_widget,
             channel_config=get_channel_manager().get_channel_config(widget.channel),
+            sanitized_component_name=sanitize_widget_title_for_component_name(test_widget.title),
             test_mode=True
         )
 

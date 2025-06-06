@@ -32,15 +32,27 @@ const fetchAvailableVoices = async () => {
   }
 };
 
-const fetchConjugations = async () => {
+const fetchVerbCorpuses = async () => {
   try {
-    const response = await fetch(`${API_BASE}/conjugations`);
+    const response = await fetch(`${API_BASE}/conjugations/corpuses`);
+    if (!response.ok) throw new Error('Failed to fetch verb corpuses');
+    const data = await response.json();
+    return data.verb_corpuses;
+  } catch (error) {
+    console.warn('Failed to fetch verb corpuses:', error);
+    return ['verbs_present']; // fallback to default
+  }
+};
+
+const fetchConjugations = async (corpus = 'verbs_present') => {
+  try {
+    const response = await fetch(`${API_BASE}/conjugations?corpus=${encodeURIComponent(corpus)}`);
     if (!response.ok) throw new Error('Failed to fetch conjugations');
     const data = await response.json();
     return data;
   } catch (error) {
     console.warn('Failed to fetch conjugations:', error);
-    return { conjugations: {}, verbs: [] };
+    return { conjugations: {}, verbs: [], corpus };
   }
 };
 
@@ -94,6 +106,8 @@ const FlashCardApp = () => {
   const [availableVerbs, setAvailableVerbs] = useState([]);
   const [selectedVerb, setSelectedVerb] = useState(null);
   const [loadingConjugations, setLoadingConjugations] = useState(false);
+  const [availableVerbCorpuses, setAvailableVerbCorpuses] = useState([]);
+  const [selectedVerbCorpus, setSelectedVerbCorpus] = useState('verbs_present');
   const [declensions, setDeclensions] = useState({});
   const [availableNouns, setAvailableNouns] = useState([]);
   const [selectedNoun, setSelectedNoun] = useState(null);
@@ -111,14 +125,16 @@ const FlashCardApp = () => {
       setLoading(true);
       setError(null);
       try {
-        const [corpora, voices, conjugationData, declensionData] = await Promise.all([
+        const [corpora, voices, verbCorpuses, conjugationData, declensionData] = await Promise.all([
           fetchCorpora(),
           fetchAvailableVoices(),
+          fetchVerbCorpuses(),
           fetchConjugations(),
           fetchDeclensions()
         ]);
         setAvailableCorpora(corpora);
         setAvailableVoices(voices);
+        setAvailableVerbCorpuses(verbCorpuses);
         setConjugations(conjugationData.conjugations);
         setAvailableVerbs(conjugationData.verbs);
         setDeclensions(declensionData.declensions);
@@ -209,6 +225,27 @@ const FlashCardApp = () => {
       return () => clearTimeout(timer);
     }
   }, [currentCard, quizMode, audioEnabled, allWords]);
+
+  // Reload conjugations when verb corpus changes
+  useEffect(() => {
+    const loadConjugationsForCorpus = async () => {
+      if (selectedVerbCorpus && !loading) {
+        setLoadingConjugations(true);
+        try {
+          const conjugationData = await fetchConjugations(selectedVerbCorpus);
+          setConjugations(conjugationData.conjugations);
+          setAvailableVerbs(conjugationData.verbs);
+          // Reset selected verb when corpus changes
+          setSelectedVerb(null);
+        } catch (error) {
+          console.error('Failed to load conjugations for corpus:', selectedVerbCorpus, error);
+        } finally {
+          setLoadingConjugations(false);
+        }
+      }
+    };
+    loadConjugationsForCorpus();
+  }, [selectedVerbCorpus, loading]);
 
   const generateMultipleChoiceOptions = () => {
     const currentWord = allWords[currentCard];
@@ -905,6 +942,40 @@ const FlashCardApp = () => {
       ) : quizMode === 'conjugations' ? (
         <div className="w-card">
           <h3>Lithuanian Verb Conjugations</h3>
+          
+          {/* Corpus selector */}
+          <div style={{ marginBottom: 'var(--spacing-base)' }}>
+            <label htmlFor="corpus-select" style={{ marginRight: 'var(--spacing-small)' }}>
+              Verb tense:
+            </label>
+            <select 
+              id="corpus-select"
+              value={selectedVerbCorpus} 
+              onChange={(e) => setSelectedVerbCorpus(e.target.value)}
+              disabled={loadingConjugations}
+              style={{
+                padding: 'var(--spacing-small) var(--spacing-base)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--border-radius)',
+                background: 'var(--color-background)',
+                color: 'var(--color-text)',
+                fontSize: '0.9rem',
+                minWidth: '150px',
+                marginRight: 'var(--spacing-base)'
+              }}
+            >
+              {availableVerbCorpuses.map(corpus => (
+                <option key={corpus} value={corpus}>
+                  {corpus === 'verbs_present' ? 'Present Tense' : 
+                   corpus === 'verbs_past' ? 'Past Tense' : 
+                   corpus.replace('verbs_', '').replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+            {loadingConjugations && <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Loading...</span>}
+          </div>
+
+          {/* Verb selector */}
           <div style={{ marginBottom: 'var(--spacing-base)' }}>
             <label htmlFor="verb-select" style={{ marginRight: 'var(--spacing-small)' }}>
               Select a verb:
@@ -913,6 +984,7 @@ const FlashCardApp = () => {
               id="verb-select"
               value={selectedVerb || ''} 
               onChange={(e) => setSelectedVerb(e.target.value)}
+              disabled={loadingConjugations || availableVerbs.length === 0}
               style={{
                 padding: 'var(--spacing-small) var(--spacing-base)',
                 border: '1px solid var(--color-border)',
@@ -931,6 +1003,7 @@ const FlashCardApp = () => {
               ))}
             </select>
           </div>
+          
           {selectedVerb && renderConjugationTable(selectedVerb)}
         </div>
       ) : quizMode === 'declensions' ? (

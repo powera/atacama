@@ -12,7 +12,7 @@ from common.base.logging_config import get_logger
 from data.trakaido.wordlists import get_all_word_pairs_flat, all_words
 from data.trakaido.declensions import (
     declensions, get_noun_declension, get_nouns_by_case, 
-    get_declension_stats, CASE_NAMES, NOUN_KEYS
+    CASE_NAMES, NOUN_KEYS
 )
 
 logger = get_logger(__name__)
@@ -41,8 +41,9 @@ def lithuanian_api_index() -> Response:
                 "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
             },
             "conjugations": {
-                "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb",
-                "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb"
+                "GET /api/lithuanian/conjugations/corpuses": "List all available verb corpuses",
+                "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb (param: corpus, defaults to 'verbs_present')",
+                "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb (param: corpus, defaults to 'verbs_present')"
             },
             "declensions": {
                 "GET /api/lithuanian/declensions": "Get all noun declensions",
@@ -197,7 +198,7 @@ def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[s
         logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
         return []
 
-def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
+def extract_verb_conjugations(corpus="verbs_present") -> Dict[str, List[Dict[str, str]]]:
     """
     Extract verb conjugations from the wordlists and group them by base verb.
     
@@ -207,7 +208,7 @@ def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
         conjugations = {}
         
         # Get all verb words from verbs corpus
-        verbs_corpus = all_words.get("verbs", {})
+        verbs_corpus = all_words.get(corpus, {})
         
         # Track current verb being processed within each group
         for group_name, words in verbs_corpus.items():
@@ -222,7 +223,7 @@ def extract_verb_conjugations() -> Dict[str, List[Dict[str, str]]]:
                 conjugation_entry = {
                     "english": english,
                     "lithuanian": lithuanian,
-                    "corpus": "verbs",
+                    "corpus": corpus,
                     "group": group_name
                 }
                 
@@ -402,16 +403,47 @@ def get_all_words() -> Union[Response, tuple]:
         logger.error(f"Error getting all words: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@trakaido_bp.route('/api/lithuanian/conjugations/corpuses')
+def list_verb_corpuses() -> Union[Response, tuple]:
+    """
+    Get a list of available verb corpuses.
+    
+    :return: JSON response with available verb corpuses
+    """
+    try:
+        all_corpora = get_wordlist_corpora()
+        verb_corpora = [corpus for corpus in all_corpora if corpus.startswith('verbs_')]
+        
+        return jsonify({
+            "verb_corpuses": verb_corpora,
+            "count": len(verb_corpora)
+        })
+    except Exception as e:
+        logger.error(f"Error getting verb corpuses: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @trakaido_bp.route('/api/lithuanian/conjugations')
 def get_verb_conjugations() -> Union[Response, tuple]:
     """
     Get all verb conjugations grouped by base verb.
+    Supports optional 'corpus' query parameter to specify which verb corpus to use.
     
     :return: JSON response with verb conjugations
     """
     try:
-        conjugations = extract_verb_conjugations()
+        corpus = request.args.get('corpus', 'verbs_present')
+        
+        # Validate corpus exists and is a verb corpus
+        available_corpora = get_wordlist_corpora()
+        if corpus not in available_corpora:
+            return jsonify({"error": f"Corpus '{corpus}' not found. Available: {available_corpora}"}), 404
+        
+        if not corpus.startswith('verbs_'):
+            return jsonify({"error": f"Corpus '{corpus}' is not a verb corpus"}), 400
+        
+        conjugations = extract_verb_conjugations(corpus)
         return jsonify({
+            "corpus": corpus,
             "conjugations": conjugations,
             "verbs": list(conjugations.keys()),
             "count": len(conjugations)
@@ -424,18 +456,30 @@ def get_verb_conjugations() -> Union[Response, tuple]:
 def get_specific_verb_conjugation(verb: str) -> Union[Response, tuple]:
     """
     Get conjugation for a specific verb.
+    Supports optional 'corpus' query parameter to specify which verb corpus to use.
     
     :param verb: The base verb (e.g., "walk", "eat")
     :return: JSON response with conjugation table
     """
     try:
-        conjugations = extract_verb_conjugations()
+        corpus = request.args.get('corpus', 'verbs_present')
+        
+        # Validate corpus exists and is a verb corpus
+        available_corpora = get_wordlist_corpora()
+        if corpus not in available_corpora:
+            return jsonify({"error": f"Corpus '{corpus}' not found. Available: {available_corpora}"}), 404
+        
+        if not corpus.startswith('verbs_'):
+            return jsonify({"error": f"Corpus '{corpus}' is not a verb corpus"}), 400
+        
+        conjugations = extract_verb_conjugations(corpus)
         
         if verb not in conjugations:
-            return jsonify({"error": f"Verb '{verb}' not found"}), 404
+            return jsonify({"error": f"Verb '{verb}' not found in corpus '{corpus}'"}), 404
         
         return jsonify({
             "verb": verb,
+            "corpus": corpus,
             "conjugations": conjugations[verb]
         })
     except Exception as e:
