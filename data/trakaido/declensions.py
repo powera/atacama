@@ -557,6 +557,31 @@ def get_nouns_by_case(case_name):
             })
     return result
 
+def get_all_forms():
+    """
+    Get all declension forms for all nouns.
+    
+    Returns:
+        list: List of dictionaries with all noun forms and their details
+    """
+    all_forms = []
+    for noun_key, noun_data in declensions.items():
+        for case_name, case_data in noun_data["cases"].items():
+            all_forms.append({
+                "noun": noun_key,
+                "english": noun_data["english"],
+                "gender": noun_data["gender"],
+                "declension_type": noun_data["declension_type"],
+                "case": case_name,
+                "form": case_data["form"],
+                "question": case_data["question"],
+                "sentence_lithuanian": case_data["sentence_lithuanian"],
+                "sentence_english": case_data["sentence_english"]
+            })
+    return all_forms
+
+
+
 # Helper function to get declension statistics
 def get_declension_stats():
     """
