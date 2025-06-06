@@ -75,6 +75,9 @@ const saveSettings = (settings) => {
 /**
  * Custom hook for global settings management
  * 
+ * @param {Object} options - Configuration options
+ * @param {Array<string>} options.usedSettings - Array of setting keys that should be shown on the first page
+ * 
  * @returns {Object} Object containing:
  *   - settings: current settings object
  *   - updateSetting: function to update a single setting
@@ -93,7 +96,9 @@ const saveSettings = (settings) => {
  *     updateSetting, 
  *     SettingsModal,
  *     SettingsToggle
- *   } = useGlobalSettings();
+ *   } = useGlobalSettings({
+ *     usedSettings: ['audioEnabled', 'difficulty', 'autoAdvance']
+ *   });
  *   
  *   return (
  *     <div>
@@ -107,10 +112,11 @@ const saveSettings = (settings) => {
  *   );
  * };
  */
-export const useGlobalSettings = () => {
+export const useGlobalSettings = (options = {}) => {
+  const { usedSettings = [] } = options;
   const [settings, setSettings] = useState(loadSettings);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(usedSettings.length > 0 ? 'used' : 'general');
   const modalRef = useRef(null);
   const scrollPositionRef = useRef(0);
 
@@ -245,18 +251,409 @@ export const useGlobalSettings = () => {
   }, [toggleGlobalSettings]);
 
   /**
+   * Helper function to render individual setting components
+   */
+  const renderSetting = (settingKey) => {
+    switch (settingKey) {
+      case 'userName':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Your Name</label>
+            <input
+              type="text"
+              value={settings.userName}
+              onChange={(e) => updateSetting('userName', e.target.value)}
+              placeholder="Enter your name (optional)"
+              className="w-setting-input"
+            />
+            <p className="w-setting-description">
+              Personalize your experience with widgets
+            </p>
+          </div>
+        );
+
+      case 'difficulty':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Default Difficulty</label>
+            <select
+              value={settings.difficulty}
+              onChange={(e) => updateSetting('difficulty', e.target.value)}
+              className="w-setting-select"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <p className="w-setting-description">
+              Default difficulty for learning widgets
+            </p>
+          </div>
+        );
+
+      case 'adaptiveDifficulty':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.adaptiveDifficulty}
+                onChange={(e) => updateSetting('adaptiveDifficulty', e.target.checked)}
+              />
+              Adaptive Difficulty
+            </label>
+            <p className="w-setting-description">
+              Automatically adjust difficulty based on your performance
+            </p>
+          </div>
+        );
+
+      case 'hintsEnabled':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.hintsEnabled}
+                onChange={(e) => updateSetting('hintsEnabled', e.target.checked)}
+              />
+              Enable Hints
+            </label>
+            <p className="w-setting-description">
+              Show helpful hints when available
+            </p>
+          </div>
+        );
+
+      case 'preferredLanguage':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Preferred Language</label>
+            <select
+              value={settings.preferredLanguage}
+              onChange={(e) => updateSetting('preferredLanguage', e.target.value)}
+              className="w-setting-select"
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+            </select>
+            <p className="w-setting-description">
+              Language for multi-language widgets
+            </p>
+          </div>
+        );
+
+      case 'audioEnabled':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.audioEnabled}
+                onChange={(e) => updateSetting('audioEnabled', e.target.checked)}
+              />
+              Enable Audio
+            </label>
+            <p className="w-setting-description">
+              Play sounds and audio feedback in widgets
+            </p>
+          </div>
+        );
+
+      case 'soundVolume':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Sound Volume</label>
+            <div 
+              className="w-range-input-wrapper" 
+              style={{ 
+                '--range-progress': `${settings.soundVolume * 100}%` 
+              }}
+            >
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={settings.soundVolume}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  updateSetting('soundVolume', newValue);
+                  e.target.parentNode.style.setProperty(
+                    '--range-progress', 
+                    `${newValue * 100}%`
+                  );
+                }}
+                className="w-setting-input"
+                disabled={!settings.audioEnabled}
+              />
+            </div>
+            <div className="w-range-value-display">
+              <span className="w-range-value-min">🔇</span>
+              <span className="w-range-value-current">{Math.round(settings.soundVolume * 100)}%</span>
+              <span className="w-range-value-max">🔊</span>
+            </div>
+          </div>
+        );
+
+      case 'hapticFeedback':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.hapticFeedback}
+                onChange={(e) => updateSetting('hapticFeedback', e.target.checked)}
+              />
+              Haptic Feedback
+            </label>
+            <p className="w-setting-description">
+              Vibration feedback on mobile devices
+            </p>
+          </div>
+        );
+
+      case 'defaultDelay':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Default Timing</label>
+            <div 
+              className="w-range-input-wrapper" 
+              style={{ 
+                '--range-progress': `${((settings.defaultDelay - 1.0) / (7.5 - 1.0)) * 100}%` 
+              }}
+            >
+              <input
+                type="range"
+                min="1.0"
+                max="7.5"
+                step="0.25"
+                value={settings.defaultDelay}
+                onChange={(e) => {
+                  const newValue = parseFloat(e.target.value);
+                  updateSetting('defaultDelay', newValue);
+                  e.target.parentNode.style.setProperty(
+                    '--range-progress', 
+                    `${((newValue - 1.0) / (7.5 - 1.0)) * 100}%`
+                  );
+                }}
+                className="w-setting-input"
+              />
+            </div>
+            <div className="w-range-value-display">
+              <span className="w-range-value-min">1.0s</span>
+              <span className="w-range-value-current">{settings.defaultDelay}s</span>
+              <span className="w-range-value-max">7.5s</span>
+            </div>
+            <p className="w-setting-description">
+              Default timing for transitions and auto-advance delays
+            </p>
+          </div>
+        );
+
+      case 'autoAdvance':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.autoAdvance}
+                onChange={(e) => updateSetting('autoAdvance', e.target.checked)}
+              />
+              Auto-Advance
+            </label>
+            <p className="w-setting-description">
+              Automatically advance to next question after correct answers
+            </p>
+          </div>
+        );
+
+      case 'theme':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Theme</label>
+            <select
+              value={settings.theme}
+              onChange={(e) => updateSetting('theme', e.target.value)}
+              className="w-setting-select"
+            >
+              <option value="auto">Auto (System)</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="high-contrast">High Contrast</option>
+            </select>
+            <p className="w-setting-description">
+              Choose your preferred color theme
+            </p>
+          </div>
+        );
+
+      case 'fontSize':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-label">Font Size</label>
+            <select
+              value={settings.fontSize}
+              onChange={(e) => updateSetting('fontSize', e.target.value)}
+              className="w-setting-select"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+            <p className="w-setting-description">
+              Adjust text size for better readability
+            </p>
+          </div>
+        );
+
+      case 'animations':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.animations}
+                onChange={(e) => updateSetting('animations', e.target.checked)}
+              />
+              Enable Animations
+            </label>
+            <p className="w-setting-description">
+              Show smooth transitions and animations
+            </p>
+          </div>
+        );
+
+      case 'reducedMotion':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.reducedMotion}
+                onChange={(e) => updateSetting('reducedMotion', e.target.checked)}
+              />
+              Reduce Motion
+            </label>
+            <p className="w-setting-description">
+              Minimize animations for motion sensitivity
+            </p>
+          </div>
+        );
+
+      case 'screenReaderMode':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.screenReaderMode}
+                onChange={(e) => updateSetting('screenReaderMode', e.target.checked)}
+              />
+              Screen Reader Mode
+            </label>
+            <p className="w-setting-description">
+              Optimize for screen reader compatibility
+            </p>
+          </div>
+        );
+
+      case 'highContrastMode':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.highContrastMode}
+                onChange={(e) => updateSetting('highContrastMode', e.target.checked)}
+              />
+              High Contrast Mode
+            </label>
+            <p className="w-setting-description">
+              Increase visual contrast for better visibility
+            </p>
+          </div>
+        );
+
+      case 'keyboardShortcuts':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.keyboardShortcuts}
+                onChange={(e) => updateSetting('keyboardShortcuts', e.target.checked)}
+              />
+              Enable Keyboard Shortcuts
+            </label>
+            <p className="w-setting-description">
+              Use keyboard shortcuts for navigation
+            </p>
+          </div>
+        );
+
+      case 'anonymousMode':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.anonymousMode}
+                onChange={(e) => updateSetting('anonymousMode', e.target.checked)}
+              />
+              Anonymous Mode
+            </label>
+            <p className="w-setting-description">
+              Don't track progress or statistics
+            </p>
+          </div>
+        );
+
+      case 'shareProgress':
+        return (
+          <div key={settingKey} className="w-setting-group">
+            <label className="w-setting-checkbox">
+              <input
+                type="checkbox"
+                checked={settings.shareProgress}
+                onChange={(e) => updateSetting('shareProgress', e.target.checked)}
+                disabled={settings.anonymousMode}
+              />
+              Allow Progress Sharing
+            </label>
+            <p className="w-setting-description">
+              Share achievements and progress with others
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  /**
    * Settings Modal Component
    */
   const SettingsModal = () => {
     if (!showGlobalSettings) return null;
 
-    const tabs = [
+    // Create tabs array, adding "Used Settings" tab if usedSettings is provided
+    const tabs = [];
+    if (usedSettings.length > 0) {
+      tabs.push({ id: 'used', label: 'Used Settings', icon: '⭐' });
+    }
+    tabs.push(
       { id: 'general', label: 'General', icon: '⚙️' },
       { id: 'audio', label: 'Audio & Feedback', icon: '🔊' },
       { id: 'visual', label: 'Visual', icon: '🎨' },
       { id: 'accessibility', label: 'Accessibility', icon: '♿' },
       { id: 'privacy', label: 'Privacy', icon: '🔒' }
-    ];
+    );
 
     return (
       <div className="w-settings-overlay">
@@ -286,366 +683,67 @@ export const useGlobalSettings = () => {
           </div>
 
           <div className="w-settings-form">
+            {/* Used Settings Tab */}
+            {activeTab === 'used' && (
+              <>
+                {usedSettings.length > 0 ? (
+                  usedSettings.map(settingKey => renderSetting(settingKey))
+                ) : (
+                  <div className="w-setting-group">
+                    <p className="w-setting-description">
+                      No specific settings have been configured for this widget.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
             {/* General Tab */}
             {activeTab === 'general' && (
               <>
-                {/* User Name Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Your Name</label>
-                  <input
-                    type="text"
-                    value={settings.userName}
-                    onChange={(e) => updateSetting('userName', e.target.value)}
-                    placeholder="Enter your name (optional)"
-                    className="w-setting-input"
-                  />
-                  <p className="w-setting-description">
-                    Personalize your experience with widgets
-                  </p>
-                </div>
-
-                {/* Difficulty Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Default Difficulty</label>
-                  <select
-                    value={settings.difficulty}
-                    onChange={(e) => updateSetting('difficulty', e.target.value)}
-                    className="w-setting-select"
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                  <p className="w-setting-description">
-                    Default difficulty for learning widgets
-                  </p>
-                </div>
-
-                {/* Adaptive Difficulty */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.adaptiveDifficulty}
-                      onChange={(e) => updateSetting('adaptiveDifficulty', e.target.checked)}
-                    />
-                    Adaptive Difficulty
-                  </label>
-                  <p className="w-setting-description">
-                    Automatically adjust difficulty based on your performance
-                  </p>
-                </div>
-
-                {/* Hints Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.hintsEnabled}
-                      onChange={(e) => updateSetting('hintsEnabled', e.target.checked)}
-                    />
-                    Enable Hints
-                  </label>
-                  <p className="w-setting-description">
-                    Show helpful hints when available
-                  </p>
-                </div>
-
-                {/* Language Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Preferred Language</label>
-                  <select
-                    value={settings.preferredLanguage}
-                    onChange={(e) => updateSetting('preferredLanguage', e.target.value)}
-                    className="w-setting-select"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="zh">中文</option>
-                    <option value="ja">日本語</option>
-                  </select>
-                  <p className="w-setting-description">
-                    Language for multi-language widgets
-                  </p>
-                </div>
+                {renderSetting('userName')}
+                {renderSetting('difficulty')}
+                {renderSetting('adaptiveDifficulty')}
+                {renderSetting('hintsEnabled')}
+                {renderSetting('preferredLanguage')}
               </>
             )}
 
             {/* Audio & Feedback Tab */}
             {activeTab === 'audio' && (
               <>
-                {/* Audio Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.audioEnabled}
-                      onChange={(e) => updateSetting('audioEnabled', e.target.checked)}
-                    />
-                    Enable Audio
-                  </label>
-                  <p className="w-setting-description">
-                    Play sounds and audio feedback in widgets
-                  </p>
-                </div>
-
-                {/* Volume Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Sound Volume</label>
-                  <div 
-                    className="w-range-input-wrapper" 
-                    style={{ 
-                      '--range-progress': `${settings.soundVolume * 100}%` 
-                    }}
-                  >
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={settings.soundVolume}
-                      onChange={(e) => {
-                        const newValue = parseFloat(e.target.value);
-                        updateSetting('soundVolume', newValue);
-                        e.target.parentNode.style.setProperty(
-                          '--range-progress', 
-                          `${newValue * 100}%`
-                        );
-                      }}
-                      className="w-setting-input"
-                      disabled={!settings.audioEnabled}
-                    />
-                  </div>
-                  <div className="w-range-value-display">
-                    <span className="w-range-value-min">🔇</span>
-                    <span className="w-range-value-current">{Math.round(settings.soundVolume * 100)}%</span>
-                    <span className="w-range-value-max">🔊</span>
-                  </div>
-                </div>
-
-                {/* Haptic Feedback */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.hapticFeedback}
-                      onChange={(e) => updateSetting('hapticFeedback', e.target.checked)}
-                    />
-                    Haptic Feedback
-                  </label>
-                  <p className="w-setting-description">
-                    Vibration feedback on mobile devices
-                  </p>
-                </div>
-
-                {/* Default Delay Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Default Timing</label>
-                  <div 
-                    className="w-range-input-wrapper" 
-                    style={{ 
-                      '--range-progress': `${((settings.defaultDelay - 1.0) / (7.5 - 1.0)) * 100}%` 
-                    }}
-                  >
-                    <input
-                      type="range"
-                      min="1.0"
-                      max="7.5"
-                      step="0.25"
-                      value={settings.defaultDelay}
-                      onChange={(e) => {
-                        const newValue = parseFloat(e.target.value);
-                        updateSetting('defaultDelay', newValue);
-                        e.target.parentNode.style.setProperty(
-                          '--range-progress', 
-                          `${((newValue - 1.0) / (7.5 - 1.0)) * 100}%`
-                        );
-                      }}
-                      className="w-setting-input"
-                    />
-                  </div>
-                  <div className="w-range-value-display">
-                    <span className="w-range-value-min">1.0s</span>
-                    <span className="w-range-value-current">{settings.defaultDelay}s</span>
-                    <span className="w-range-value-max">7.5s</span>
-                  </div>
-                  <p className="w-setting-description">
-                    Default timing for transitions and auto-advance delays
-                  </p>
-                </div>
-
-                {/* Auto Advance Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.autoAdvance}
-                      onChange={(e) => updateSetting('autoAdvance', e.target.checked)}
-                    />
-                    Auto-Advance
-                  </label>
-                  <p className="w-setting-description">
-                    Automatically advance to next question after correct answers
-                  </p>
-                </div>
+                {renderSetting('audioEnabled')}
+                {renderSetting('soundVolume')}
+                {renderSetting('hapticFeedback')}
+                {renderSetting('defaultDelay')}
+                {renderSetting('autoAdvance')}
               </>
             )}
 
             {/* Visual Tab */}
             {activeTab === 'visual' && (
               <>
-                {/* Theme Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Theme</label>
-                  <select
-                    value={settings.theme}
-                    onChange={(e) => updateSetting('theme', e.target.value)}
-                    className="w-setting-select"
-                  >
-                    <option value="auto">Auto (System)</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="high-contrast">High Contrast</option>
-                  </select>
-                  <p className="w-setting-description">
-                    Choose your preferred color theme
-                  </p>
-                </div>
-
-                {/* Font Size Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-label">Font Size</label>
-                  <select
-                    value={settings.fontSize}
-                    onChange={(e) => updateSetting('fontSize', e.target.value)}
-                    className="w-setting-select"
-                  >
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large</option>
-                  </select>
-                  <p className="w-setting-description">
-                    Adjust text size for better readability
-                  </p>
-                </div>
-
-                {/* Animations Setting */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.animations}
-                      onChange={(e) => updateSetting('animations', e.target.checked)}
-                    />
-                    Enable Animations
-                  </label>
-                  <p className="w-setting-description">
-                    Show smooth transitions and animations
-                  </p>
-                </div>
-
-                {/* Reduced Motion */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.reducedMotion}
-                      onChange={(e) => updateSetting('reducedMotion', e.target.checked)}
-                    />
-                    Reduce Motion
-                  </label>
-                  <p className="w-setting-description">
-                    Minimize animations for motion sensitivity
-                  </p>
-                </div>
+                {renderSetting('theme')}
+                {renderSetting('fontSize')}
+                {renderSetting('animations')}
+                {renderSetting('reducedMotion')}
               </>
             )}
 
             {/* Accessibility Tab */}
             {activeTab === 'accessibility' && (
               <>
-                {/* Screen Reader Mode */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.screenReaderMode}
-                      onChange={(e) => updateSetting('screenReaderMode', e.target.checked)}
-                    />
-                    Screen Reader Mode
-                  </label>
-                  <p className="w-setting-description">
-                    Optimize for screen reader compatibility
-                  </p>
-                </div>
-
-                {/* High Contrast Mode */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.highContrastMode}
-                      onChange={(e) => updateSetting('highContrastMode', e.target.checked)}
-                    />
-                    High Contrast Mode
-                  </label>
-                  <p className="w-setting-description">
-                    Increase visual contrast for better visibility
-                  </p>
-                </div>
-
-                {/* Keyboard Shortcuts */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.keyboardShortcuts}
-                      onChange={(e) => updateSetting('keyboardShortcuts', e.target.checked)}
-                    />
-                    Enable Keyboard Shortcuts
-                  </label>
-                  <p className="w-setting-description">
-                    Use keyboard shortcuts for navigation
-                  </p>
-                </div>
+                {renderSetting('screenReaderMode')}
+                {renderSetting('highContrastMode')}
+                {renderSetting('keyboardShortcuts')}
               </>
             )}
 
             {/* Privacy Tab */}
             {activeTab === 'privacy' && (
               <>
-                {/* Anonymous Mode */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.anonymousMode}
-                      onChange={(e) => updateSetting('anonymousMode', e.target.checked)}
-                    />
-                    Anonymous Mode
-                  </label>
-                  <p className="w-setting-description">
-                    Don't track progress or statistics
-                  </p>
-                </div>
-
-                {/* Share Progress */}
-                <div className="w-setting-group">
-                  <label className="w-setting-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={settings.shareProgress}
-                      onChange={(e) => updateSetting('shareProgress', e.target.checked)}
-                      disabled={settings.anonymousMode}
-                    />
-                    Allow Progress Sharing
-                  </label>
-                  <p className="w-setting-description">
-                    Share achievements and progress with others
-                  </p>
-                </div>
+                {renderSetting('anonymousMode')}
+                {renderSetting('shareProgress')}
               </>
             )}
           </div>

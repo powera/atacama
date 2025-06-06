@@ -49,7 +49,9 @@ const FlashCardApp = () => {
     settings, 
     SettingsModal, 
     SettingsToggle 
-  } = useGlobalSettings();
+  } = useGlobalSettings({
+    usedSettings: ['audioEnabled', 'soundVolume', 'autoAdvance', 'defaultDelay', 'difficulty']
+  });
 
   const [corporaData, setCorporaData] = useState({}); // Cache for corpus structures
   const [currentCard, setCurrentCard] = useState(0);
@@ -875,7 +877,7 @@ const FlashCardApp = () => {
                       )}
                     </div>
                     {audioEnabled && showAnswer && isCorrect && (
-                      <button 
+                      <span 
                         className="w-audio-button"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -883,10 +885,26 @@ const FlashCardApp = () => {
                           playAudio(correctLithuanianWord);
                         }}
                         title="Play pronunciation"
-                        style={{ fontSize: '1rem' }}
+                        style={{ 
+                          fontSize: '1rem',
+                          cursor: 'pointer',
+                          display: 'inline-block',
+                          padding: '4px',
+                          borderRadius: '4px'
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const correctLithuanianWord = studyMode === 'english-to-lithuanian' ? option : currentWord.lithuanian;
+                            playAudio(correctLithuanianWord);
+                          }
+                        }}
                       >
                         🔊
-                      </button>
+                      </span>
                     )}
                   </div>
                 </button>
