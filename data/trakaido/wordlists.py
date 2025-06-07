@@ -117,6 +117,105 @@ nouns_one = {
   ]
 }
 
+# New verb structure with table format
+verbs_new = {
+  "valgyti": {
+    "english": "to eat",
+    "present_tense": {
+      "1s": {"english": "I eat", "lithuanian": "aš valgau"},
+      "2s": {"english": "you(s.) eat", "lithuanian": "tu valgai"},
+      "3s-m": {"english": "he eats", "lithuanian": "jis valgo"},
+      "3s-f": {"english": "she eats", "lithuanian": "ji valgo"},
+      "3s-n": {"english": "it eats", "lithuanian": "tai valgo"},
+      "1p": {"english": "we eat", "lithuanian": "mes valgome"},
+      "2p": {"english": "you(pl.) eat", "lithuanian": "jūs valgote"},
+      "3p-m": {"english": "they(m.) eat", "lithuanian": "jie valgo"},
+      "3p-f": {"english": "they(f.) eat", "lithuanian": "jos valgo"}
+    },
+    "past_tense": {
+      "1s": {"english": "I ate", "lithuanian": "aš valgiau"},
+      "2s": {"english": "you(s.) ate", "lithuanian": "tu valgei"},
+      "3s-m": {"english": "he ate", "lithuanian": "jis valgė"},
+      "3s-f": {"english": "she ate", "lithuanian": "ji valgė"},
+      "3s-n": {"english": "it ate", "lithuanian": "tai valgė"},
+      "1p": {"english": "we ate", "lithuanian": "mes valgėme"},
+      "2p": {"english": "you(pl.) ate", "lithuanian": "jūs valgėte"},
+      "3p-m": {"english": "they(m.) ate", "lithuanian": "jie valgė"},
+      "3p-f": {"english": "they(f.) ate", "lithuanian": "jos valgė"}
+    },
+    "past_perfect": {
+      "1s": {"english": "I had eaten", "lithuanian": "aš buvau valgęs/valgiusi"},
+      "2s": {"english": "you(s.) had eaten", "lithuanian": "tu buvai valgęs/valgiusi"},
+      "3s-m": {"english": "he had eaten", "lithuanian": "jis buvo valgęs"},
+      "3s-f": {"english": "she had eaten", "lithuanian": "ji buvo valgiusi"},
+      "3s-n": {"english": "it had eaten", "lithuanian": "tai buvo valgę"},
+      "1p": {"english": "we had eaten", "lithuanian": "mes buvome valgę/valgiusios"},
+      "2p": {"english": "you(pl.) had eaten", "lithuanian": "jūs buvote valgę/valgiusios"},
+      "3p-m": {"english": "they(m.) had eaten", "lithuanian": "jie buvo valgę"},
+      "3p-f": {"english": "they(f.) had eaten", "lithuanian": "jos buvo valgiusios"}
+    },
+    "future": {
+      "1s": {"english": "I will eat", "lithuanian": "aš valgysiu"},
+      "2s": {"english": "you(s.) will eat", "lithuanian": "tu valgysi"},
+      "3s-m": {"english": "he will eat", "lithuanian": "jis valgys"},
+      "3s-f": {"english": "she will eat", "lithuanian": "ji valgys"},
+      "3s-n": {"english": "it will eat", "lithuanian": "tai valgys"},
+      "1p": {"english": "we will eat", "lithuanian": "mes valgysime"},
+      "2p": {"english": "you(pl.) will eat", "lithuanian": "jūs valgysite"},
+      "3p-m": {"english": "they(m.) will eat", "lithuanian": "jie valgys"},
+      "3p-f": {"english": "they(f.) will eat", "lithuanian": "jos valgys"}
+    }
+  },
+  "gerti": {
+    "english": "to drink",
+    "present_tense": {
+      "1s": {"english": "I drink", "lithuanian": "aš geriu"},
+      "2s": {"english": "you(s.) drink", "lithuanian": "tu geri"},
+      "3s-m": {"english": "he drinks", "lithuanian": "jis geria"},
+      "3s-f": {"english": "she drinks", "lithuanian": "ji geria"},
+      "3s-n": {"english": "it drinks", "lithuanian": "tai geria"},
+      "1p": {"english": "we drink", "lithuanian": "mes geriame"},
+      "2p": {"english": "you(pl.) drink", "lithuanian": "jūs geriate"},
+      "3p-m": {"english": "they(m.) drink", "lithuanian": "jie geria"},
+      "3p-f": {"english": "they(f.) drink", "lithuanian": "jos geria"}
+    },
+    "past_tense": {
+      "1s": {"english": "I drank", "lithuanian": "aš gėriau"},
+      "2s": {"english": "you(s.) drank", "lithuanian": "tu gėrei"},
+      "3s-m": {"english": "he drank", "lithuanian": "jis gėrė"},
+      "3s-f": {"english": "she drank", "lithuanian": "ji gėrė"},
+      "3s-n": {"english": "it drank", "lithuanian": "tai gėrė"},
+      "1p": {"english": "we drank", "lithuanian": "mes gėrėme"},
+      "2p": {"english": "you(pl.) drank", "lithuanian": "jūs gėrėte"},
+      "3p-m": {"english": "they(m.) drank", "lithuanian": "jie gėrė"},
+      "3p-f": {"english": "they(f.) drank", "lithuanian": "jos gėrė"}
+    },
+    "past_perfect": {
+      "1s": {"english": "I had drunk", "lithuanian": "aš buvau gėręs/gėrusi"},
+      "2s": {"english": "you(s.) had drunk", "lithuanian": "tu buvai gėręs/gėrusi"},
+      "3s-m": {"english": "he had drunk", "lithuanian": "jis buvo gėręs"},
+      "3s-f": {"english": "she had drunk", "lithuanian": "ji buvo gėrusi"},
+      "3s-n": {"english": "it had drunk", "lithuanian": "tai buvo gėrę"},
+      "1p": {"english": "we had drunk", "lithuanian": "mes buvome gėrę/gėrusios"},
+      "2p": {"english": "you(pl.) had drunk", "lithuanian": "jūs buvote gėrę/gėrusios"},
+      "3p-m": {"english": "they(m.) had drunk", "lithuanian": "jie buvo gėrę"},
+      "3p-f": {"english": "they(f.) had drunk", "lithuanian": "jos buvo gėrusios"}
+    },
+    "future": {
+      "1s": {"english": "I will drink", "lithuanian": "aš gersiu"},
+      "2s": {"english": "you(s.) will drink", "lithuanian": "tu gersi"},
+      "3s-m": {"english": "he will drink", "lithuanian": "jis gers"},
+      "3s-f": {"english": "she will drink", "lithuanian": "ji gers"},
+      "3s-n": {"english": "it will drink", "lithuanian": "tai gers"},
+      "1p": {"english": "we will drink", "lithuanian": "mes gersime"},
+      "2p": {"english": "you(pl.) will drink", "lithuanian": "jūs gersite"},
+      "3p-m": {"english": "they(m.) will drink", "lithuanian": "jie gers"},
+      "3p-f": {"english": "they(f.) will drink", "lithuanian": "jos gers"}
+    }
+  }
+}
+
+
 verbs_present = {
   "Basic Daily Verbs": [
     # valgyti (to eat)
