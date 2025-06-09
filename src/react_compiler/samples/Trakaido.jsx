@@ -33,12 +33,26 @@ const FlashCardApp = () => {
   const [currentCard, setCurrentCard] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [availableCorpora, setAvailableCorpora] = useState([]);
-  const [selectedGroups, setSelectedGroups] = useState({}); // {corpus: [group1, group2]}
-  const [studyMode, setStudyMode] = useState('english-to-lithuanian');
+  // Initialize selectedGroups from localStorage if available
+  const [selectedGroups, setSelectedGroups] = useState(() => {
+    const savedGroups = safeStorage?.getItem('flashcard-selected-groups');
+    try {
+      return savedGroups ? JSON.parse(savedGroups) : {};
+    } catch (error) {
+      console.error('Error parsing saved corpus groups:', error);
+      return {};
+    }
+  }); // {corpus: [group1, group2]}
+  
+  // Initialize local settings from localStorage where available
+  const [studyMode, setStudyMode] = useState(() => {
+    return safeStorage?.getItem('flashcard-study-mode') || 'english-to-lithuanian';
+  });
   const [stats, setStats] = useState({ correct: 0, incorrect: 0, total: 0 });
-  const [shuffled, setShuffled] = useState(true);
   const [showCorpora, setShowCorpora] = useState(false);
-  const [quizMode, setQuizMode] = useState('flashcard');
+  const [quizMode, setQuizMode] = useState(() => {
+    return safeStorage?.getItem('flashcard-quiz-mode') || 'flashcard';
+  });
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [grammarMode, setGrammarMode] = useState('conjugations');
@@ -92,19 +106,30 @@ const FlashCardApp = () => {
           setSelectedVoice(voices[0]);
         }
         const corporaStructures = {};
-        const defaultSelectedGroups = {};
+        // Only set default groups if we don't have any saved in localStorage
+        const useDefaults = Object.keys(selectedGroups).length === 0;
+        const defaultSelectedGroups = useDefaults ? {} : null;
+        
         for (const corpus of corpora) {
           try {
             const structure = await fetchCorpusStructure(corpus);
             corporaStructures[corpus] = structure;
-            const groups = Object.keys(structure.groups);
-            defaultSelectedGroups[corpus] = groups;
+            
+            // If we're using defaults, set all groups as selected
+            if (useDefaults) {
+              const groups = Object.keys(structure.groups);
+              defaultSelectedGroups[corpus] = groups;
+            }
           } catch (err) {
             console.warn(`Failed to load structure for corpus: ${corpus}`, err);
           }
         }
         setCorporaData(corporaStructures);
-        setSelectedGroups(defaultSelectedGroups);
+        
+        // Only update selectedGroups if we're using defaults
+        if (useDefaults) {
+          setSelectedGroups(defaultSelectedGroups);
+        }
       } catch (err) {
         console.error('Failed to load initial data:', err);
         setError('Failed to load vocabulary data. Please try refreshing the page.');
@@ -114,6 +139,45 @@ const FlashCardApp = () => {
     };
     loadInitialData();
   }, []);
+
+  // Helper function to safely access localStorage
+  const safeStorage = {
+    getItem: (key, defaultValue = null) => {
+      try {
+        return localStorage.getItem(key) || defaultValue;
+      } catch (error) {
+        console.error(`Error reading ${key} from localStorage:`, error);
+        return defaultValue;
+      }
+    },
+    setItem: (key, value) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (error) {
+        console.error(`Error saving ${key} to localStorage:`, error);
+      }
+    },
+    removeItem: (key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Error removing ${key} from localStorage:`, error);
+      }
+    }
+  };
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    safeStorage.setItem('flashcard-selected-groups', JSON.stringify(selectedGroups));
+  }, [selectedGroups]);
+
+  useEffect(() => {
+    safeStorage.setItem('flashcard-study-mode', studyMode);
+  }, [studyMode]);
+
+  useEffect(() => {
+    safeStorage.setItem('flashcard-quiz-mode', quizMode);
+  }, [quizMode]);
 
   // Generate words list when selected groups change
   useEffect(() => {
@@ -137,9 +201,8 @@ const FlashCardApp = () => {
           });
         }
       });
-      if (shuffled) {
-        words = words.sort(() => Math.random() - 0.5);
-      }
+      // Always shuffle the cards
+      words = words.sort(() => Math.random() - 0.5);
       setAllWords(words);
       setCurrentCard(0);
       setShowAnswer(false);
@@ -148,7 +211,7 @@ const FlashCardApp = () => {
     if (!loading) {
       generateWordsList();
     }
-  }, [selectedGroups, shuffled, loading, corporaData]);
+  }, [selectedGroups, loading, corporaData]);
 
   // Generate multiple choice options when card changes or mode changes
   useEffect(() => {
@@ -278,15 +341,31 @@ const FlashCardApp = () => {
     await audioManager.preloadMultipleAudio(multipleChoiceOptions, selectedVoice);
   };
 
-  const shuffleCards = () => {
-    setShuffled(prev => !prev);
-  };
+
 
   const resetCards = () => {
     setCurrentCard(0);
     setShowAnswer(false);
     setStats({ correct: 0, incorrect: 0, total: 0 });
     setSelectedAnswer(null);
+  };
+  
+  const resetAllSettings = () => {
+    // Clear localStorage items
+    safeStorage.removeItem('flashcard-selected-groups');
+    safeStorage.removeItem('flashcard-study-mode');
+    safeStorage.removeItem('flashcard-quiz-mode');
+    
+    // Reset state to defaults
+    setStudyMode('english-to-lithuanian');
+    setQuizMode('flashcard');
+    
+    // For corpus groups, we need to reset to all groups
+    const defaultSelectedGroups = {};
+    Object.keys(corporaData).forEach(corpus => {
+      defaultSelectedGroups[corpus] = Object.keys(corporaData[corpus]?.groups || {});
+    });
+    setSelectedGroups(defaultSelectedGroups);
   };
 
   const nextCard = () => {
@@ -848,11 +927,13 @@ const FlashCardApp = () => {
             </select>
           )}
         </div>
+
         <button
-          className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
-          onClick={shuffleCards}
+          className="w-mode-option"
+          onClick={resetAllSettings}
+          title="Reset all local settings including selected corpuses"
         >
-          🔀 {shuffled ? 'Shuffled' : 'Ordered'}
+          🔄 Reset Local Settings
         </button>
         <SettingsToggle className="w-mode-option">
           ⚙️ Settings
@@ -875,7 +956,6 @@ const FlashCardApp = () => {
       {!showNoGroupsMessage && (
         <div className="w-progress">
           Card {currentCard + 1} of {allWords.length}
-          {shuffled && " (shuffled)"}
         </div>
       )}
 
