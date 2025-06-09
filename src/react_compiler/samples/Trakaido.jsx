@@ -1,72 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalSettings } from './useGlobalSettings';  // This is the correct syntax for now; it is awkward and possibly should be updated.
 import { useFullscreen } from './useFullscreen';
+import { 
+  fetchCorpora, 
+  fetchCorpusStructure, 
+  fetchAvailableVoices, 
+  fetchVerbCorpuses, 
+  fetchConjugations, 
+  fetchDeclensions,
+  AudioManager
+} from './lithuanianApi';
 
-// API configuration
-const API_BASE = '/api/lithuanian';
-
-// API helper functions
-const fetchCorpora = async () => {
-  const response = await fetch(`${API_BASE}/wordlists`);
-  if (!response.ok) throw new Error('Failed to fetch corpora');
-  const data = await response.json();
-  return data.corpora;
-};
-
-const fetchCorpusStructure = async (corpus) => {
-  const response = await fetch(`${API_BASE}/wordlists/${encodeURIComponent(corpus)}`);
-  if (!response.ok) throw new Error(`Failed to fetch structure for corpus: ${corpus}`);
-  const data = await response.json();
-  return data;
-};
-
-const fetchAvailableVoices = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/audio/voices`);
-    if (!response.ok) throw new Error('Failed to fetch voices');
-    const data = await response.json();
-    return data.voices;
-  } catch (error) {
-    console.warn('Failed to fetch available voices:', error);
-    return [];
-  }
-};
-
-const fetchVerbCorpuses = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/conjugations/corpuses`);
-    if (!response.ok) throw new Error('Failed to fetch verb corpuses');
-    const data = await response.json();
-    return data.verb_corpuses;
-  } catch (error) {
-    console.warn('Failed to fetch verb corpuses:', error);
-    return ['verbs_present']; // fallback to default
-  }
-};
-
-const fetchConjugations = async (corpus = 'verbs_present') => {
-  try {
-    const response = await fetch(`${API_BASE}/conjugations?corpus=${encodeURIComponent(corpus)}`);
-    if (!response.ok) throw new Error('Failed to fetch conjugations');
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.warn('Failed to fetch conjugations:', error);
-    return { conjugations: {}, verbs: [], corpus };
-  }
-};
-
-const fetchDeclensions = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/declensions`);
-    if (!response.ok) throw new Error('Failed to fetch declensions');
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.warn('Failed to fetch declensions:', error);
-    return { declensions: {}, available_nouns: [] };
-  }
-};
+// The CSS classes available are primarily in widget_tools.css .
 
 const FlashCardApp = () => {
   // Global settings integration
@@ -94,7 +39,7 @@ const FlashCardApp = () => {
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
-  const [audioCache, setAudioCache] = useState({});
+  const [audioManager] = useState(() => new AudioManager());
   const [hoverTimeout, setHoverTimeout] = useState(null);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
@@ -326,24 +271,7 @@ const FlashCardApp = () => {
 
   const preloadMultipleChoiceAudio = async () => {
     if (!selectedVoice) return;
-    const promises = multipleChoiceOptions.map(async (option) => {
-      try {
-        const cacheKey = `${option}-${selectedVoice}`;
-        if (!audioCache[cacheKey]) {
-          const audioUrl = `${API_BASE}/audio/${encodeURIComponent(option)}?voice=${encodeURIComponent(selectedVoice)}`;
-          const audio = new Audio(audioUrl);
-          await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', resolve);
-            audio.addEventListener('error', reject);
-            audio.load();
-          });
-          setAudioCache(prev => ({ ...prev, [cacheKey]: audio }));
-        }
-      } catch (error) {
-        console.warn(`Failed to preload audio for: ${option}`, error);
-      }
-    });
-    await Promise.allSettled(promises);
+    await audioManager.preloadMultipleAudio(multipleChoiceOptions, selectedVoice);
   };
 
   const shuffleCards = () => {
@@ -444,31 +372,14 @@ const FlashCardApp = () => {
     }
   };
 
-  const playAudio = async (word) => {
-    if (!audioEnabled) return;
-    try {
-      const cacheKey = `${word}-${selectedVoice}`;
-      if (audioCache[cacheKey]) {
-        const audio = audioCache[cacheKey].cloneNode();
-        await audio.play();
-        return;
-      }
-      const audioUrl = `${API_BASE}/audio/${encodeURIComponent(word)}${selectedVoice ? `?voice=${encodeURIComponent(selectedVoice)}` : ''}`;
-      const audio = new Audio(audioUrl);
-      setAudioCache(prev => ({ ...prev, [cacheKey]: audio }));
-      await audio.play();
-    } catch (error) {
-      console.warn('Audio playback failed:', error);
-    }
+  const playAudio = async (word, onlyCached = false) => {
+    audioManager.playAudio(word, selectedVoice, audioEnabled, onlyCached);
   };
 
   const handleHoverStart = (word) => {
     if (!audioEnabled || !selectedVoice) return;
     const timeout = setTimeout(() => {
-      const cacheKey = `${word}-${selectedVoice}`;
-      if (audioCache[cacheKey]) {
-        playAudio(word);
-      }
+      playAudio(word, onlyCached =true); // Only play if cached
     }, 900);
     setHoverTimeout(timeout);
   };
@@ -687,9 +598,9 @@ const FlashCardApp = () => {
       <div className="w-container">
         <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>
         <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>Loading vocabulary data...</div>
-            <div style={{ color: 'var(--color-text-secondary)' }}>This may take a moment</div>
+          <div className="w-text-center w-mb-large">
+            <div className="w-question w-mb-large">Loading vocabulary data...</div>
+            <div className="w-stat-label">This may take a moment</div>
           </div>
         </div>
       </div>
@@ -701,9 +612,9 @@ const FlashCardApp = () => {
       <div className="w-container">
         <h1>🇱🇹 Lithuanian Vocabulary Flash Cards</h1>
         <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)', color: 'var(--color-error)' }}>⚠️ Error</div>
-            <div style={{ marginBottom: 'var(--spacing-base)' }}>{error}</div>
+          <div className="w-text-center w-mb-large">
+            <div className="w-feedback w-error">⚠️ Error</div>
+            <div className="w-mb-large">{error}</div>
             <button className="w-button" onClick={() => window.location.reload()}>🔄 Retry</button>
           </div>
         </div>
@@ -788,17 +699,15 @@ const FlashCardApp = () => {
       {!isFullscreen && (
         <div className="w-card">
           <div 
+            className="w-game-header"
             style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
               cursor: 'pointer', 
               marginBottom: showCorpora ? 'var(--spacing-base)' : '0'
             }}
             onClick={() => setShowCorpora(!showCorpora)}
           >
             <h3>Study Materials ({totalSelectedWords} words selected)</h3>
-            <button className="w-button-secondary" style={{ padding: 'var(--spacing-small)' }}>
+            <button className="w-button-secondary">
               {showCorpora ? '▼' : '▶'}
             </button>
           </div>
@@ -907,14 +816,7 @@ const FlashCardApp = () => {
           <select 
             value={selectedVoice || ''} 
             onChange={(e) => setSelectedVoice(e.target.value)}
-            style={{
-              padding: 'var(--spacing-small) var(--spacing-base)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--border-radius)',
-              background: 'var(--color-background)',
-              color: 'var(--color-text)',
-              fontSize: '0.9rem'
-            }}
+            className="w-mode-option"
           >
             {availableVoices.map(voice => (
               <option key={voice} value={voice}>
@@ -934,8 +836,8 @@ const FlashCardApp = () => {
 
       {showNoGroupsMessage ? (
         <div className="w-card">
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-large)' }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>📭 No Words Available</div>
+          <div className="w-text-center w-mb-large">
+            <div className="w-question w-mb-large">📭 No Words Available</div>
             <div>No vocabulary words found for the selected groups. Please try selecting different groups.</div>
           </div>
         </div>
@@ -953,16 +855,8 @@ const FlashCardApp = () => {
               value={selectedVerbCorpus} 
               onChange={(e) => setSelectedVerbCorpus(e.target.value)}
               disabled={loadingConjugations}
-              style={{
-                padding: 'var(--spacing-small) var(--spacing-base)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--border-radius)',
-                background: 'var(--color-background)',
-                color: 'var(--color-text)',
-                fontSize: '0.9rem',
-                minWidth: '150px',
-                marginRight: 'var(--spacing-base)'
-              }}
+              className="w-mode-option"
+              style={{ minWidth: '150px', marginRight: 'var(--spacing-base)' }}
             >
               {availableVerbCorpuses.map(corpus => (
                 <option key={corpus} value={corpus}>
@@ -985,15 +879,8 @@ const FlashCardApp = () => {
               value={selectedVerb || ''} 
               onChange={(e) => setSelectedVerb(e.target.value)}
               disabled={loadingConjugations || availableVerbs.length === 0}
-              style={{
-                padding: 'var(--spacing-small) var(--spacing-base)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--border-radius)',
-                background: 'var(--color-background)',
-                color: 'var(--color-text)',
-                fontSize: '0.9rem',
-                minWidth: '150px'
-              }}
+              className="w-mode-option"
+              style={{ minWidth: '150px' }}
             >
               <option value="">Choose a verb...</option>
               {availableVerbs.map(verb => (
@@ -1017,15 +904,8 @@ const FlashCardApp = () => {
               id="noun-select"
               value={selectedNoun || ''} 
               onChange={(e) => setSelectedNoun(e.target.value)}
-              style={{
-                padding: 'var(--spacing-small) var(--spacing-base)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--border-radius)',
-                background: 'var(--color-background)',
-                color: 'var(--color-text)',
-                fontSize: '0.9rem',
-                minWidth: '150px'
-              }}
+              className="w-mode-option"
+              style={{ minWidth: '150px' }}
             >
               <option value="">Choose a noun...</option>
               {availableNouns.map(noun => (
@@ -1080,22 +960,16 @@ const FlashCardApp = () => {
         <div>
           <div className="w-card">
             <div className="w-badge">{currentWord.corpus} → {currentWord.group}</div>
-            <div className="w-question" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.2rem', marginBottom: 'var(--spacing-base)' }}>
+            <div className="w-question w-text-center">
+              <div className="w-mb-large">
                 🎧 Listen and choose the correct answer:
               </div>
               <button 
-                className="w-audio-button"
+                className="w-button"
                 onClick={() => playAudio(currentWord.lithuanian)}
                 title="Play pronunciation"
                 style={{ 
-                  fontSize: '2rem',
-                  padding: 'var(--spacing-base)',
-                  background: 'var(--color-primary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 'var(--border-radius)',
-                  cursor: 'pointer',
+                  fontSize: '1.5rem',
                   marginBottom: 'var(--spacing-base)'
                 }}
               >
@@ -1289,47 +1163,37 @@ const FlashCardApp = () => {
 
       {/* Navigation controls */}
       {!showNoGroupsMessage && quizMode !== 'conjugations' && quizMode !== 'declensions' && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
-            <button className="w-button" onClick={prevCard}>← Previous</button>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
-            <button className="w-button" onClick={nextCard}>Next →</button>
-          </div>
+        <div className="w-nav-controls">
+          <button className="w-button" onClick={prevCard}>← Previous</button>
+          <div className="w-nav-center"></div>
+          <button className="w-button" onClick={nextCard}>Next →</button>
         </div>
       )}
 
       {/* Stats with Reset button */}
       {!showNoGroupsMessage && quizMode !== 'conjugations' && quizMode !== 'declensions' && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2rem', marginTop: 'var(--spacing-large)', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div className="w-stat-item" style={{ margin: 0 }}>
-              <div className="w-stat-value" style={{ color: 'var(--color-success)' }}>
-                {stats.correct}
-              </div>
-              <div className="w-stat-label">Correct</div>
+        <div className="w-stats">
+          <div className="w-stat-item">
+            <div className="w-stat-value" style={{ color: 'var(--color-success)' }}>
+              {stats.correct}
             </div>
+            <div className="w-stat-label">Correct</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div className="w-stat-item" style={{ margin: 0 }}>
-              <div className="w-stat-value" style={{ color: 'var(--color-error)' }}>
-                {stats.incorrect}
-              </div>
-              <div className="w-stat-label">Incorrect</div>
+          <div className="w-stat-item">
+            <div className="w-stat-value" style={{ color: 'var(--color-error)' }}>
+              {stats.incorrect}
             </div>
+            <div className="w-stat-label">Incorrect</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div className="w-stat-item" style={{ margin: 0 }}>
-              <div className="w-stat-value" style={{ color: 'var(--color-primary)' }}>
-                {stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0}%
-              </div>
-              <div className="w-stat-label">Accuracy</div>
+          <div className="w-stat-item">
+            <div className="w-stat-value">
+              {stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0}%
             </div>
+            <div className="w-stat-label">Accuracy</div>
           </div>
           <button 
             className="w-button-secondary" 
             onClick={resetCards}
-            style={{ fontSize: '0.8rem', padding: 'var(--spacing-small) var(--spacing-base)' }}
           >
             🔄 Reset
           </button>
