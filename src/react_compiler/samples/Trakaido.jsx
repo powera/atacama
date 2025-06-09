@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalSettings } from './useGlobalSettings';  // This is the correct syntax for now; it is awkward and possibly should be updated.
 import { useFullscreen } from './useFullscreen';
-import { 
+
+// Use the namespaced lithuanianApi from window
+// These are provided by the script tag in widget.html: <script src="/js/lithuanianApi.js"></script>
+const { 
   fetchCorpora, 
   fetchCorpusStructure, 
   fetchAvailableVoices, 
@@ -9,7 +12,7 @@ import {
   fetchConjugations, 
   fetchDeclensions,
   AudioManager
-} from './lithuanianApi';
+} = window.lithuanianApi;
 
 // The CSS classes available are primarily in widget_tools.css .
 

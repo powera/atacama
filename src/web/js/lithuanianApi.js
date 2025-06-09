@@ -138,3 +138,19 @@ export class AudioManager {
 
 // Make API_BASE available for other potential usages
 export const getApiBase = () => API_BASE;
+
+// Create a namespaced API on the window object
+if (typeof window !== 'undefined') {
+  // Create lithuanianApi namespace
+  window.lithuanianApi = {
+    fetchCorpora,
+    fetchCorpusStructure,
+    fetchAvailableVoices,
+    fetchVerbCorpuses,
+    fetchConjugations,
+    fetchDeclensions,
+    getAudioUrl,
+    AudioManager,
+    getApiBase
+  };
+}
