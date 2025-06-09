@@ -41,6 +41,7 @@ const FlashCardApp = () => {
   const [quizMode, setQuizMode] = useState('flashcard');
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState([]);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [grammarMode, setGrammarMode] = useState('conjugations');
 
   const [audioManager] = useState(() => new AudioManager());
   const [hoverTimeout, setHoverTimeout] = useState(null);
@@ -764,48 +765,89 @@ const FlashCardApp = () => {
 
       <div className="w-mode-selector">
         {!isFullscreen && <h3>Study Options:</h3>}
-        <button
-          className={`w-mode-option ${studyMode === 'english-to-lithuanian' ? 'w-active' : ''}`}
-          onClick={() => setStudyMode('english-to-lithuanian')}
-        >
-          English → Lithuanian
-        </button>
-        <button
-          className={`w-mode-option ${studyMode === 'lithuanian-to-english' ? 'w-active' : ''}`}
-          onClick={() => setStudyMode('lithuanian-to-english')}
-        >
-          Lithuanian → English
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'flashcard' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('flashcard')}
-        >
-          Flash Cards
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'multiple-choice' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('multiple-choice')}
-        >
-          Multiple Choice
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'listening' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('listening')}
-        >
-          🎧 Listening
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'conjugations' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('conjugations')}
-        >
-          📖 Conjugations
-        </button>
-        <button
-          className={`w-mode-option ${quizMode === 'declensions' ? 'w-active' : ''}`}
-          onClick={() => setQuizMode('declensions')}
-        >
-          📋 Declensions
-        </button>
+        <div className="w-dropdown-container" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.5rem',
+          margin: '0 0.5rem'
+        }}>
+          <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Mode:</label>
+          <select 
+            style={{
+              padding: '0.5rem',
+              borderRadius: 'var(--border-radius)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-card-bg)',
+              minHeight: '44px',
+              cursor: 'pointer',
+              fontSize: '0.9rem'
+            }}
+            value={quizMode === 'conjugations' || quizMode === 'declensions' ? 'grammar' : quizMode}
+            onChange={(e) => {
+              const selectedMode = e.target.value;
+              if (selectedMode === 'grammar') {
+                setQuizMode(grammarMode);
+              } else {
+                setQuizMode(selectedMode);
+              }
+            }}
+          >
+            <option value="flashcard">Flash Cards</option>
+            <option value="multiple-choice">Multiple Choice</option>
+            <option value="listening">🎧 Listening</option>
+            <option value="grammar">Grammar</option>
+          </select>
+        </div>
+        
+        <div className="w-dropdown-container" style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.5rem',
+          margin: '0 0.5rem'
+        }}>
+          <label style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+            {(quizMode === 'conjugations' || quizMode === 'declensions') ? 'Grammar Type:' : 'Direction:'}
+          </label>
+          {(quizMode === 'conjugations' || quizMode === 'declensions') ? (
+            <select 
+              style={{
+                padding: '0.5rem',
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card-bg)',
+                minHeight: '44px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+              value={quizMode}
+              onChange={(e) => {
+                const selectedGrammarMode = e.target.value;
+                setQuizMode(selectedGrammarMode);
+                setGrammarMode(selectedGrammarMode);
+              }}
+            >
+              <option value="conjugations">📖 Conjugations</option>
+              <option value="declensions">📋 Declensions</option>
+            </select>
+          ) : (
+            <select 
+              style={{
+                padding: '0.5rem',
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card-bg)',
+                minHeight: '44px',
+                cursor: 'pointer',
+                fontSize: '0.9rem'
+              }}
+              value={studyMode}
+              onChange={(e) => setStudyMode(e.target.value)}
+            >
+              <option value="english-to-lithuanian">English → Lithuanian</option>
+              <option value="lithuanian-to-english">Lithuanian → English</option>
+            </select>
+          )}
+        </div>
         <button
           className={`w-mode-option ${shuffled ? 'w-active' : ''}`}
           onClick={shuffleCards}
