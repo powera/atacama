@@ -110,6 +110,48 @@ const FlashCardApp = () => {
   const audioEnabled = settings.audioEnabled;
   const autoAdvance = settings.autoAdvance;
   const defaultDelay = settings.defaultDelay;
+  
+  // AudioButton component with access to app settings and playAudio function
+  const AudioButton = ({ word, size = 'normal' }) => {
+    // Define styles based on size
+    const buttonStyle = {
+      fontSize: size === 'small' ? '0.8rem' : size === 'large' ? '1.5rem' : '1rem',
+      cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    };
+    
+    // If audio is disabled, show muted icon
+    if (!audioEnabled) {
+      return (
+        <span 
+          className="w-audio-button w-audio-disabled"
+          title="Audio is disabled in settings"
+          style={{
+            ...buttonStyle,
+            opacity: 0.5
+          }}
+        >
+          🔇
+        </span>
+      );
+    }
+    
+    return (
+      <button 
+        className="w-audio-button"
+        onClick={(e) => {
+          e.stopPropagation();
+          playAudio(word);
+        }}
+        title="Play pronunciation"
+        style={buttonStyle}
+      >
+        🔊
+      </button>
+    );
+  };
 
   // Load initial data
   useEffect(() => {
@@ -610,16 +652,10 @@ const FlashCardApp = () => {
                     {conj.lithuanian}
                   </td>
                   <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
-                    {audioEnabled && (
-                      <button 
-                        className="w-audio-button"
-                        onClick={() => playAudio(conj.lithuanian)}
-                        title="Play pronunciation"
-                        style={{ fontSize: '0.9rem' }}
-                      >
-                        🔊
-                      </button>
-                    )}
+                    <AudioButton 
+                      word={conj.lithuanian}
+                      size="small"
+                    />
                   </td>
                 </tr>
               );
@@ -708,16 +744,10 @@ const FlashCardApp = () => {
                     </div>
                   </td>
                   <td style={{ padding: 'var(--spacing-small)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
-                    {audioEnabled && (
-                      <button 
-                        className="w-audio-button"
-                        onClick={() => playAudio(caseData.form)}
-                        title="Play pronunciation"
-                        style={{ fontSize: '0.9rem' }}
-                      >
-                        🔊
-                      </button>
-                    )}
+                    <AudioButton 
+                      word={caseData.form}
+                      size="small"
+                    />
                   </td>
                 </tr>
               );
@@ -1180,15 +1210,9 @@ const FlashCardApp = () => {
                           borderBottom: '1px solid var(--color-border)',
                           textAlign: 'center'
                         }}>
-                          {audioEnabled && (
-                            <button 
-                              className="w-audio-button"
-                              onClick={() => playAudio(word.lithuanian)}
-                              title="Play pronunciation"
-                            >
-                              🔊
-                            </button>
-                          )}
+                          <AudioButton 
+                            word={word.lithuanian}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -1212,18 +1236,9 @@ const FlashCardApp = () => {
           {showAnswer && (
             <div className="answer-text">
               <span>{answer}</span>
-              {audioEnabled && (
-                <button 
-                  className="w-audio-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    playAudio(currentWord.lithuanian);
-                  }}
-                  title="Play pronunciation"
-                >
-                  🔊
-                </button>
-              )}
+              <AudioButton 
+                word={currentWord.lithuanian}
+              />
             </div>
           )}
           {!showAnswer && (
@@ -1245,17 +1260,13 @@ const FlashCardApp = () => {
               <div className="w-mb-large">
                 🎧 Listen and choose the correct answer:
               </div>
-              <button 
-                className="w-button"
-                onClick={() => playAudio(currentWord.lithuanian)}
-                title="Play pronunciation"
-                style={{ 
-                  fontSize: '1.5rem',
-                  marginBottom: 'var(--spacing-base)'
-                }}
-              >
-                🔊 Play Audio
-              </button>
+              <div style={{ marginBottom: 'var(--spacing-base)' }}>
+                <AudioButton 
+                  word={currentWord.lithuanian}
+                  size="large"
+                />
+                <span style={{ marginLeft: '0.5rem', fontSize: '1.2rem' }}>Play Audio</span>
+              </div>
               <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                 {studyMode === 'lithuanian-to-english' 
                   ? 'Choose the English translation:'
@@ -1398,35 +1409,12 @@ const FlashCardApp = () => {
                         </div>
                       )}
                     </div>
-                    {audioEnabled && showAnswer && isCorrect && (
-                      <span 
-                        className="w-audio-button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const correctLithuanianWord = studyMode === 'english-to-lithuanian' ? option : currentWord.lithuanian;
-                          playAudio(correctLithuanianWord);
-                        }}
-                        title="Play pronunciation"
-                        style={{ 
-                          fontSize: '1rem',
-                          cursor: 'pointer',
-                          display: 'inline-block',
-                          padding: '4px',
-                          borderRadius: '4px'
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const correctLithuanianWord = studyMode === 'english-to-lithuanian' ? option : currentWord.lithuanian;
-                            playAudio(correctLithuanianWord);
-                          }
-                        }}
-                      >
-                        🔊
-                      </span>
+                    {showAnswer && isCorrect && (
+                      <div style={{ display: 'inline-block', marginLeft: '8px' }}>
+                        <AudioButton 
+                          word={studyMode === 'english-to-lithuanian' ? option : currentWord.lithuanian}
+                        />
+                      </div>
                     )}
                   </div>
                 </button>
