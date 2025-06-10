@@ -16,6 +16,32 @@ const {
 
 // The CSS classes available are primarily in widget_tools.css .
 
+// Helper function to safely access localStorage
+const safeStorage = {
+  getItem: (key, defaultValue = null) => {
+    try {
+      return localStorage.getItem(key) || defaultValue;
+    } catch (error) {
+      console.error(`Error reading ${key} from localStorage:`, error);
+      return defaultValue;
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.error(`Error saving ${key} to localStorage:`, error);
+    }
+  },
+  removeItem: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing ${key} from localStorage:`, error);
+    }
+  }
+};
+
 const FlashCardApp = () => {
   // Global settings integration
   const { 
@@ -43,7 +69,7 @@ const FlashCardApp = () => {
       return {};
     }
   }); // {corpus: [group1, group2]}
-  
+
   // Initialize local settings from localStorage where available
   const [studyMode, setStudyMode] = useState(() => {
     return safeStorage?.getItem('flashcard-study-mode') || 'english-to-lithuanian';
@@ -109,12 +135,12 @@ const FlashCardApp = () => {
         // Only set default groups if we don't have any saved in localStorage
         const useDefaults = Object.keys(selectedGroups).length === 0;
         const defaultSelectedGroups = useDefaults ? {} : null;
-        
+
         for (const corpus of corpora) {
           try {
             const structure = await fetchCorpusStructure(corpus);
             corporaStructures[corpus] = structure;
-            
+
             // If we're using defaults, set all groups as selected
             if (useDefaults) {
               const groups = Object.keys(structure.groups);
@@ -125,7 +151,7 @@ const FlashCardApp = () => {
           }
         }
         setCorporaData(corporaStructures);
-        
+
         // Only update selectedGroups if we're using defaults
         if (useDefaults) {
           setSelectedGroups(defaultSelectedGroups);
@@ -139,32 +165,6 @@ const FlashCardApp = () => {
     };
     loadInitialData();
   }, []);
-
-  // Helper function to safely access localStorage
-  const safeStorage = {
-    getItem: (key, defaultValue = null) => {
-      try {
-        return localStorage.getItem(key) || defaultValue;
-      } catch (error) {
-        console.error(`Error reading ${key} from localStorage:`, error);
-        return defaultValue;
-      }
-    },
-    setItem: (key, value) => {
-      try {
-        localStorage.setItem(key, value);
-      } catch (error) {
-        console.error(`Error saving ${key} to localStorage:`, error);
-      }
-    },
-    removeItem: (key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (error) {
-        console.error(`Error removing ${key} from localStorage:`, error);
-      }
-    }
-  };
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
@@ -262,7 +262,7 @@ const FlashCardApp = () => {
   const generateMultipleChoiceOptions = () => {
     const currentWord = allWords[currentCard];
     if (!currentWord) return;
-    
+
     // For listening mode, determine correct answer based on listening mode type
     let correctAnswer;
     if (quizMode === 'listening') {
@@ -349,17 +349,17 @@ const FlashCardApp = () => {
     setStats({ correct: 0, incorrect: 0, total: 0 });
     setSelectedAnswer(null);
   };
-  
+
   const resetAllSettings = () => {
     // Clear localStorage items
     safeStorage.removeItem('flashcard-selected-groups');
     safeStorage.removeItem('flashcard-study-mode');
     safeStorage.removeItem('flashcard-quiz-mode');
-    
+
     // Reset state to defaults
     setStudyMode('english-to-lithuanian');
     setQuizMode('flashcard');
-    
+
     // For corpus groups, we need to reset to all groups
     const defaultSelectedGroups = {};
     Object.keys(corporaData).forEach(corpus => {
@@ -480,6 +480,7 @@ const FlashCardApp = () => {
       const newGroups = currentGroups.includes(group)
         ? currentGroups.filter(g => g !== group)
         : [...currentGroups, g];
+      safeStorage.setItem('flashcard-selected-groups', JSON.stringify({...prev, [corpus]: newGroups}));
       return { ...prev, [corpus]: newGroups };
     });
   };
@@ -489,9 +490,11 @@ const FlashCardApp = () => {
       const allGroups = Object.keys(corporaData[corpus]?.groups || {});
       const currentGroups = prev[corpus] || [];
       const allSelected = allGroups.length > 0 && allGroups.every(g => currentGroups.includes(g));
+      const newGroups = allSelected ? [] : allGroups;
+      safeStorage.setItem('flashcard-selected-groups', JSON.stringify({...prev, [corpus]: newGroups}));
       return {
         ...prev,
-        [corpus]: allSelected ? [] : allGroups
+        [corpus]: newGroups
       };
     });
   };
@@ -869,6 +872,7 @@ const FlashCardApp = () => {
               } else {
                 setQuizMode(selectedMode);
               }
+              safeStorage.setItem('flashcard-quiz-mode', selectedMode === 'grammar' ? grammarMode : selectedMode);
             }}
           >
             <option value="flashcard">Flash Cards</option>
@@ -877,7 +881,7 @@ const FlashCardApp = () => {
             <option value="grammar">Grammar</option>
           </select>
         </div>
-        
+
         <div className="w-dropdown-container" style={{ 
           display: 'flex', 
           flexDirection: 'column', 
@@ -903,6 +907,7 @@ const FlashCardApp = () => {
                 const selectedGrammarMode = e.target.value;
                 setQuizMode(selectedGrammarMode);
                 setGrammarMode(selectedGrammarMode);
+                safeStorage.setItem('flashcard-quiz-mode', selectedGrammarMode);
               }}
             >
               <option value="conjugations">📖 Conjugations</option>
@@ -920,7 +925,10 @@ const FlashCardApp = () => {
                 fontSize: '0.9rem'
               }}
               value={studyMode}
-              onChange={(e) => setStudyMode(e.target.value)}
+              onChange={(e) => {
+                setStudyMode(e.target.value);
+                safeStorage.setItem('flashcard-study-mode', e.target.value);
+              }}
             >
               <option value="english-to-lithuanian">English → Lithuanian</option>
               <option value="lithuanian-to-english">Lithuanian → English</option>
@@ -969,7 +977,7 @@ const FlashCardApp = () => {
       ) : quizMode === 'conjugations' ? (
         <div className="w-card">
           <h3>Lithuanian Verb Conjugations</h3>
-          
+
           {/* Corpus selector */}
           <div style={{ marginBottom: 'var(--spacing-base)' }}>
             <label htmlFor="corpus-select" style={{ marginRight: 'var(--spacing-small)' }}>
@@ -1015,7 +1023,7 @@ const FlashCardApp = () => {
               ))}
             </select>
           </div>
-          
+
           {selectedVerb && renderConjugationTable(selectedVerb)}
         </div>
       ) : quizMode === 'declensions' ? (
