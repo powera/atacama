@@ -9,8 +9,8 @@ from flask import Blueprint, send_file, request, abort, Response, jsonify
 
 import constants  # for LITHUANIAN_AUDIO_DIR
 from common.base.logging_config import get_logger
-from data.trakaido_wordlists.trakaido_wordlists.wordlists import get_all_word_pairs_flat, all_words
-from data.trakaido_wordlists.trakaido_wordlists.declensions import (
+from data.trakaido_wordlists.lang_lt.wordlists import get_all_word_pairs_flat, all_words
+from data.trakaido_wordlists.lang_lt.declensions import (
     declensions, get_noun_declension, get_nouns_by_case, 
     CASE_NAMES, NOUN_KEYS
 )
