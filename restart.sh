@@ -7,7 +7,7 @@ set -e
 cd /home/atacama/atacama/
 
 # Pull latest changes from git
-git pull
+git pull --recurse-submodules
 
 # Build React components
 echo "Building React components..."
