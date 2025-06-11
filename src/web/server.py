@@ -92,6 +92,12 @@ def create_app(testing: bool = False) -> Flask:
     else:
         app.secret_key = 'test-key'
     
+    # Configure CORS for development mode
+    if constants.is_development_mode():
+        from flask_cors import CORS
+        CORS(app, origins="*", supports_credentials=True)
+        logger.info("CORS disabled for development mode - allowing all origins")
+    
     # Initialize managers
     init_channel_manager()
     init_domain_manager()
