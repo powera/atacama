@@ -14,6 +14,9 @@ from data.trakaido_wordlists.lang_lt.declensions import (
     declensions, get_noun_declension, get_nouns_by_case, 
     CASE_NAMES, NOUN_KEYS
 )
+from data.trakaido_wordlists.lang_lt.verbs import (
+    verbs_new
+)
 
 logger = get_logger(__name__)
 
@@ -198,82 +201,48 @@ def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[s
         logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
         return []
 
-def extract_verb_conjugations(corpus="verbs_present") -> Dict[str, List[Dict[str, str]]]:
+def extract_verb_conjugations(tense="present_tense") -> Dict[str, List[Dict[str, str]]]:
     """
-    Extract verb conjugations from the wordlists and group them by base verb.
+    Extract verb conjugations from the per-verb data tables and group them by base verb.
     
+    :param tense: The tense to extract ('present_tense', 'past_tense', 'future')
     :return: Dictionary mapping base verbs to their conjugation lists
     """
     try:
         conjugations = {}
         
-        # Get all verb words from verbs corpus
-        verbs_corpus = all_words.get(corpus, {})
+        # Define the standard order for conjugation forms
+        person_order = ["1s", "2s", "3s-m", "3s-f", "3s-n", "1p", "2p", "3p-m", "3p-f"]
         
-        # Track current verb being processed within each group
-        for group_name, words in verbs_corpus.items():
-            current_verb = None
-            current_verb_conjugations = []
-            
-            for word_pair in words:
-                english = word_pair["english"]
-                lithuanian = word_pair["lithuanian"]
+        # Iterate through all verbs in the new data structure
+        for infinitive, verb_data in verbs_new.items():
+            if tense not in verb_data:
+                continue
                 
-                # Create conjugation entry
-                conjugation_entry = {
-                    "english": english,
-                    "lithuanian": lithuanian,
-                    "corpus": corpus,
-                    "group": group_name
-                }
-                
-                # Check if this is a first person singular (start of new verb)
-                if english.startswith("I "):
-                    # If we were tracking a previous verb, save it
-                    if current_verb and current_verb_conjugations:
-                        if current_verb not in conjugations:
-                            conjugations[current_verb] = []
-                        conjugations[current_verb].extend(current_verb_conjugations)
-                    
-                    # Start tracking new verb
-                    import re
-                    match = re.search(r'^I (.+)$', english)
-                    if match:
-                        verb_part = match.group(1)
-                        # Handle irregular verbs like "I am" -> "be"
-                        if verb_part == "am":
-                            current_verb = "be"
-                        else:
-                            current_verb = verb_part
-                        current_verb_conjugations = [conjugation_entry]
-                    else:
-                        current_verb = None
-                        current_verb_conjugations = []
-                else:
-                    # Add to current verb's conjugations
-                    if current_verb:
-                        current_verb_conjugations.append(conjugation_entry)
+            # Extract the base verb from the English translation
+            english_infinitive = verb_data.get("english", "")
+            base_verb = english_infinitive.replace("to ", "") if english_infinitive.startswith("to ") else infinitive
             
-            # Don't forget the last verb in the group
-            if current_verb and current_verb_conjugations:
-                if current_verb not in conjugations:
-                    conjugations[current_verb] = []
-                conjugations[current_verb].extend(current_verb_conjugations)
+            # Create conjugation list for this verb
+            verb_conjugations = []
+            tense_data = verb_data[tense]
+            
+            # Process conjugations in the standard order
+            for person_key in person_order:
+                if person_key in tense_data:
+                    conjugation_entry = {
+                        "english": tense_data[person_key]["english"],
+                        "lithuanian": tense_data[person_key]["lithuanian"],
+                        "infinitive": infinitive,
+                        "tense": tense,
+                        "person": person_key
+                    }
+                    verb_conjugations.append(conjugation_entry)
+            
+            # Store conjugations using the base verb as key
+            conjugations[base_verb] = verb_conjugations
         
-        # Sort conjugations by a standard order
-        pronoun_order = [
-            "I", "you(s.)", "he", "she", "it", 
-            "we", "you(pl.)", "they(m.)", "they(f.)"
-        ]
-        
-        for verb, verb_conjugations in conjugations.items():
-            verb_conjugations.sort(key=lambda x: next(
-                (i for i, pronoun in enumerate(pronoun_order) 
-                 if x["english"].startswith(pronoun + " ")), 
-                999
-            ))
-        
-        logger.debug(f"Extracted {len(conjugations)} verb conjugation sets")
+        logger.debug(f"Extracted {len(conjugations)} verb conjugation sets for tense '{tense}'")
         return conjugations
     
     except Exception as e:
@@ -426,24 +395,42 @@ def list_verb_corpuses() -> Union[Response, tuple]:
 def get_verb_conjugations() -> Union[Response, tuple]:
     """
     Get all verb conjugations grouped by base verb.
-    Supports optional 'corpus' query parameter to specify which verb corpus to use.
+    Supports optional 'tense' query parameter to specify which tense to use.
+    Also supports legacy 'corpus' parameter for backward compatibility.
     
     :return: JSON response with verb conjugations
     """
     try:
-        corpus = request.args.get('corpus', 'verbs_present')
+        # Support both new 'tense' parameter and legacy 'corpus' parameter
+        tense = request.args.get('tense')
+        corpus = request.args.get('corpus')
         
-        # Validate corpus exists and is a verb corpus
-        available_corpora = get_wordlist_corpora()
-        if corpus not in available_corpora:
-            return jsonify({"error": f"Corpus '{corpus}' not found. Available: {available_corpora}"}), 404
+        if tense:
+            selected_tense = tense
+        elif corpus:
+            # Map legacy corpus names to tenses
+            corpus_to_tense = {
+                'verbs_present': 'present_tense',
+                'verbs_past': 'past_tense', 
+                'verbs_future': 'future'
+            }
+            selected_tense = corpus_to_tense.get(corpus, 'present_tense')
+        else:
+            selected_tense = 'present_tense'
         
-        if not corpus.startswith('verbs_'):
-            return jsonify({"error": f"Corpus '{corpus}' is not a verb corpus"}), 400
+        # Validate tense exists
+        available_tenses = set()
+        for verb_data in verbs_new.values():
+            for key in verb_data.keys():
+                if key != "english":
+                    available_tenses.add(key)
         
-        conjugations = extract_verb_conjugations(corpus)
+        if selected_tense not in available_tenses:
+            return jsonify({"error": f"Tense '{selected_tense}' not found. Available: {sorted(list(available_tenses))}"}), 404
+        
+        conjugations = extract_verb_conjugations(selected_tense)
         return jsonify({
-            "corpus": corpus,
+            "tense": selected_tense,
             "conjugations": conjugations,
             "verbs": list(conjugations.keys()),
             "count": len(conjugations)
@@ -456,35 +443,89 @@ def get_verb_conjugations() -> Union[Response, tuple]:
 def get_specific_verb_conjugation(verb: str) -> Union[Response, tuple]:
     """
     Get conjugation for a specific verb.
-    Supports optional 'corpus' query parameter to specify which verb corpus to use.
+    Supports optional 'tense' query parameter to specify which tense to use.
+    Also supports legacy 'corpus' parameter for backward compatibility.
     
-    :param verb: The base verb (e.g., "walk", "eat")
+    :param verb: The base verb (e.g., "walk", "eat") or Lithuanian infinitive (e.g., "valgyti")
     :return: JSON response with conjugation table
     """
     try:
-        corpus = request.args.get('corpus', 'verbs_present')
+        # Support both new 'tense' parameter and legacy 'corpus' parameter
+        tense = request.args.get('tense')
+        corpus = request.args.get('corpus')
         
-        # Validate corpus exists and is a verb corpus
-        available_corpora = get_wordlist_corpora()
-        if corpus not in available_corpora:
-            return jsonify({"error": f"Corpus '{corpus}' not found. Available: {available_corpora}"}), 404
+        if tense:
+            selected_tense = tense
+        elif corpus:
+            # Map legacy corpus names to tenses
+            corpus_to_tense = {
+                'verbs_present': 'present_tense',
+                'verbs_past': 'past_tense', 
+                'verbs_future': 'future'
+            }
+            selected_tense = corpus_to_tense.get(corpus, 'present_tense')
+        else:
+            selected_tense = 'present_tense'
         
-        if not corpus.startswith('verbs_'):
-            return jsonify({"error": f"Corpus '{corpus}' is not a verb corpus"}), 400
+        # Validate tense exists
+        available_tenses = set()
+        for verb_data in verbs_new.values():
+            for key in verb_data.keys():
+                if key != "english":
+                    available_tenses.add(key)
         
-        conjugations = extract_verb_conjugations(corpus)
+        if selected_tense not in available_tenses:
+            return jsonify({"error": f"Tense '{selected_tense}' not found. Available: {sorted(list(available_tenses))}"}), 404
         
-        if verb not in conjugations:
-            return jsonify({"error": f"Verb '{verb}' not found in corpus '{corpus}'"}), 404
+        # Try to find the verb by infinitive first, then by base verb
+        verb_conjugation = None
+        matched_infinitive = None
+        
+        # Check if the verb is a Lithuanian infinitive
+        if verb in verbs_new and selected_tense in verbs_new[verb]:
+            matched_infinitive = verb
+            verb_data = verbs_new[verb]
+            verb_conjugation = []
+            
+            person_order = ["1s", "2s", "3s-m", "3s-f", "3s-n", "1p", "2p", "3p-m", "3p-f"]
+            tense_data = verb_data[selected_tense]
+            
+            for person_key in person_order:
+                if person_key in tense_data:
+                    conjugation_entry = {
+                        "english": tense_data[person_key]["english"],
+                        "lithuanian": tense_data[person_key]["lithuanian"],
+                        "infinitive": matched_infinitive,
+                        "tense": selected_tense,
+                        "person": person_key
+                    }
+                    verb_conjugation.append(conjugation_entry)
+        else:
+            # Try to find by base verb (English)
+            conjugations = extract_verb_conjugations(selected_tense)
+            if verb in conjugations:
+                verb_conjugation = conjugations[verb]
+                # Find the infinitive for this base verb
+                for infinitive, verb_data in verbs_new.items():
+                    english_infinitive = verb_data.get("english", "")
+                    base_verb = english_infinitive.replace("to ", "") if english_infinitive.startswith("to ") else infinitive
+                    if base_verb == verb:
+                        matched_infinitive = infinitive
+                        break
+        
+        if not verb_conjugation:
+            return jsonify({"error": f"Verb '{verb}' not found for tense '{selected_tense}'"}), 404
         
         return jsonify({
             "verb": verb,
-            "corpus": corpus,
-            "conjugations": conjugations[verb]
+            "infinitive": matched_infinitive,
+            "tense": selected_tense,
+            "conjugations": verb_conjugation
         })
     except Exception as e:
         logger.error(f"Error getting conjugation for verb '{verb}': {str(e)}")
         return jsonify({"error": str(e)}), 500
+    
 
 # API Routes for audio
 @trakaido_bp.route('/api/lithuanian/audio/voices')
