@@ -25,6 +25,11 @@ trakaido_bp = Blueprint('trakaido', __name__)
 LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
 
 
+@trakaido_bp.route("/trakaido")
+def trakaido_index() -> Response:
+    """Serve the index page."""
+    return send_file(constants.WEB_DIR + "/static/trakaido.html")
+
 @trakaido_bp.route('/api/lithuanian')
 def lithuanian_api_index() -> Response:
     """
