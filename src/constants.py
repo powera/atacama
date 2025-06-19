@@ -6,6 +6,15 @@ from typing import Optional
 TESTING: bool = False 
 INITIALIZED: bool = False
 
+def is_development_mode() -> bool:
+    """
+    Check if the application is running in development mode.
+    
+    :return: True if FLASK_ENV is set to 'development', False otherwise
+    """
+    flask_env = os.getenv('FLASK_ENV', 'production').lower()
+    return flask_env == 'development'
+
 # Get the src directory
 SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SRC_DIR)
@@ -22,7 +31,22 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 REACT_COMPILER_JS_DIR = os.path.join(SRC_DIR, 'react_compiler', "js")
 
-LITHUANIAN_AUDIO_DIR = '/home/atacama/trakaido/'
+# Audio directories
+_PROD_LITHUANIAN_AUDIO_DIR = '/home/atacama/trakaido/'
+_DEV_LITHUANIAN_AUDIO_DIR = '/Users/powera/repo/trakaido/audio/lithuanian-audio-cache'
+
+def get_lithuanian_audio_dir() -> str:
+    """
+    Get the Lithuanian audio directory based on the current environment.
+    
+    :return: Path to the Lithuanian audio directory
+    """
+    if is_development_mode():
+        return _DEV_LITHUANIAN_AUDIO_DIR
+    return _PROD_LITHUANIAN_AUDIO_DIR
+
+# Dynamic audio directory based on environment
+LITHUANIAN_AUDIO_DIR = get_lithuanian_audio_dir()
 
 # Database path - will be updated when testing mode is set
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
@@ -56,12 +80,3 @@ def reset() -> None:
     INITIALIZED = False
     DB_PATH = _PROD_DB_PATH
     _TEST_DB_PATH = None
-
-def is_development_mode() -> bool:
-    """
-    Check if the application is running in development mode.
-    
-    :return: True if FLASK_ENV is set to 'development', False otherwise
-    """
-    flask_env = os.getenv('FLASK_ENV', 'production').lower()
-    return flask_env == 'development'
