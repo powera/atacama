@@ -75,16 +75,25 @@
   class AudioManager {
     constructor() {
       this.audioCache = {};
+      this.currentlyPlaying = null;
     }
 
     async playAudio(word, voice, audioEnabled = true, onlyCached = false) {
       if (!audioEnabled) return;
       
+      // If audio is currently playing, ignore this request
+      if (this.currentlyPlaying && !this.currentlyPlaying.ended) {
+        return;
+      }
+      
       try {
         const cacheKey = `${word}-${voice}`;
         
         if (this.audioCache[cacheKey]) {
-          const audio = this.audioCache[cacheKey].cloneNode();
+          const audio = this.audioCache[cacheKey];
+          // Reset audio to beginning in case it was played before
+          audio.currentTime = 0;
+          this.currentlyPlaying = audio;
           await audio.play();
           return;
         }
@@ -96,7 +105,16 @@
         
         const audioUrl = getAudioUrl(word, voice);
         const audio = new Audio(audioUrl);
+        
+        // Wait for audio to be ready before caching and playing
+        await new Promise((resolve, reject) => {
+          audio.addEventListener('canplaythrough', resolve, { once: true });
+          audio.addEventListener('error', reject, { once: true });
+          audio.load();
+        });
+        
         this.audioCache[cacheKey] = audio;
+        this.currentlyPlaying = audio;
         await audio.play();
       } catch (error) {
         console.warn(`Failed to play audio for: ${word}`, error);
@@ -110,8 +128,8 @@
           const audioUrl = getAudioUrl(word, voice);
           const audio = new Audio(audioUrl);
           await new Promise((resolve, reject) => {
-            audio.addEventListener('canplaythrough', resolve);
-            audio.addEventListener('error', reject);
+            audio.addEventListener('canplaythrough', resolve, { once: true });
+            audio.addEventListener('error', reject, { once: true });
             audio.load();
           });
           this.audioCache[cacheKey] = audio;
