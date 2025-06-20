@@ -2,6 +2,9 @@ __pycache__
 *.swp
 data/cedict/cedict_1_0_ts_utf-8_mdbg.txt
 
+# User data
+data/trakaido
+
 # Mac files
 .DS_Store
 .DS_Store?

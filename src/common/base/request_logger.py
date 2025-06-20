@@ -56,6 +56,16 @@ class RequestLogger:
         info_handler.addFilter(lambda record: record.levelno >= logging.INFO)
         request_logger.addHandler(info_handler)
 
+        # Add console handler if environment variable is set (for development)
+        if os.getenv('ATACAMA_REQUEST_LOG_CONSOLE'):
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.DEBUG)
+            console_formatter = logging.Formatter(
+                'REQUEST: %(asctime)s - %(levelname)s - %(message)s'
+            )
+            console_handler.setFormatter(console_formatter)
+            request_logger.addHandler(console_handler)
+
         # Register before_request handler
         @app.before_request
         def before_request():
@@ -120,7 +130,14 @@ class RequestLogger:
                         if k.lower() not in self.SENSITIVE_PARAMS
                     }
                     if sanitized_body:
-                        debug_entry['request_body'] = sanitized_body
+                        # Convert to JSON string and limit to 480 bytes
+                        body_json = json.dumps(sanitized_body)
+                        if len(body_json.encode('utf-8')) > 480:
+                            # Truncate and add indicator
+                            truncated_body = body_json.encode('utf-8')[:480].decode('utf-8', errors='ignore')
+                            debug_entry['request_body'] = truncated_body + "...[TRUNCATED]"
+                        else:
+                            debug_entry['request_body'] = body_json
 
             # Log detailed info at DEBUG level
             request_logger.debug(json.dumps(debug_entry))

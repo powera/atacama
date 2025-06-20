@@ -131,9 +131,6 @@ class DomainManager:
         # Strip port from host if present
         if ':' in host:
             host = host.split(':', 1)[0]
-            
-        # Log the host lookup
-        logger.debug(f"Looking up domain for host: {host}")
         
         # Check the exact host first
         if host in self.host_to_domain:
@@ -162,7 +159,8 @@ class DomainManager:
             return host
             
         # Fall back to default
-        logger.debug(f"No match found for host: {host}, using default domain")
+        if host != "localhost":
+            logger.debug(f"No match found for host: {host}, using default domain")
         return self.default_domain
         
     def get_domain_config(self, domain_key: str) -> DomainConfig:
