@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
   
 from common.config.channel_config import get_channel_manager, AccessLevel
 from models.database import db
-from models.models import Email, Quote, email_quotes
+from models.models import Email, Quote, Message, email_quotes
 
 import aml_parser
 
@@ -187,7 +187,7 @@ def set_message_channel(message_id: int, channel_name: str) -> Tuple[bool, Optio
     with db.session() as session:
         try:
             # Get the message
-            message = session.query(Email).get(message_id)
+            message = session.query(Message).get(message_id)
             
             # Validate message exists
             if not message:
