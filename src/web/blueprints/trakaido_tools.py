@@ -10,7 +10,7 @@ from flask import Blueprint, send_file, request, abort, Response, jsonify, g
 
 import constants  # for LITHUANIAN_AUDIO_DIR, DATA_DIR
 from common.base.logging_config import get_logger
-from web.decorators import require_auth
+from web.decorators import require_auth, optional_auth
 from data.trakaido_wordlists.lang_lt.wordlists import get_all_word_pairs_flat, all_words
 from data.trakaido_wordlists.lang_lt.declensions import (
     declensions, get_noun_declension, get_nouns_by_case, 
@@ -76,6 +76,9 @@ def lithuanian_api_index() -> Response:
                 "PUT /api/trakaido/corpuschoices/": "Save all corpus choices for authenticated user",
                 "POST /api/trakaido/corpuschoices/corpus": "Update choices for a specific corpus",
                 "GET /api/trakaido/corpuschoices/corpus/{corpus}": "Get choices for a specific corpus"
+            },
+            "userinfo": {
+                "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
             }
         }
     }
@@ -266,6 +269,45 @@ def extract_verb_conjugations(tense="present_tense") -> Dict[str, List[Dict[str,
     except Exception as e:
         logger.error(f"Error extracting verb conjugations: {str(e)}")
         return {}
+
+@trakaido_bp.route('/api/trakaido/userinfo/')
+@optional_auth
+def get_user_info() -> Response:
+    """
+    Get user authentication status and basic information.
+    
+    This endpoint returns whether the user is logged in and can save
+    journey stats and corpus choices. Used for app customization.
+    
+    :return: JSON response with user authentication status
+    """
+    try:
+        # Check if user is authenticated by looking at the global context
+        # The specific implementation depends on how authentication is handled
+        is_authenticated = hasattr(g, 'user') and g.user is not None
+        
+        response_data = {
+            "authenticated": is_authenticated,
+            "can_save_journey_stats": is_authenticated,
+            "can_save_corpus_choices": is_authenticated
+        }
+        
+        # If user is authenticated, add basic user info
+        if is_authenticated:
+            response_data["user"] = {
+                "id": getattr(g.user, 'id', None) if hasattr(g.user, 'id') else None,
+                "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None
+            }
+        
+        return jsonify(response_data)
+    except Exception as e:
+        logger.error(f"Error getting user info: {str(e)}")
+        return jsonify({
+            "authenticated": False,
+            "can_save_journey_stats": False,
+            "can_save_corpus_choices": False,
+            "error": "Unable to determine authentication status"
+        })
 
 # API Routes for wordlists
 @trakaido_bp.route('/api/lithuanian/wordlists')
