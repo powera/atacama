@@ -18,12 +18,16 @@ def serve_js(filename: str) -> Response:
     Serve JavaScript files from the js directory.
     
     :param filename: Name of the JS file to serve
-    :return: JS file response
+    :return: JS file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
         js_dir = os.path.join(constants.WEB_DIR, 'js')
-        return send_from_directory(js_dir, filename)
+        response = send_from_directory(js_dir, filename)
+        # Set cache headers for 1 hour (3600 seconds)
+        response.cache_control.max_age = 3600
+        response.cache_control.public = True
+        return response
     except Exception as e:
         logger.error(f"Error serving JS file {filename}: {str(e)}")
         raise
@@ -34,12 +38,16 @@ def serve_css(filename: str) -> Response:
     Serve CSS files from the css directory.
     
     :param filename: Name of the CSS file to serve
-    :return: CSS file response
+    :return: CSS file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
         css_dir = os.path.join(constants.WEB_DIR, 'css')
-        return send_from_directory(css_dir, filename)
+        response = send_from_directory(css_dir, filename)
+        # Set cache headers for 1 hour (3600 seconds)
+        response.cache_control.max_age = 3600
+        response.cache_control.public = True
+        return response
     except Exception as e:
         logger.error(f"Error serving CSS file {filename}: {str(e)}")
         raise
@@ -49,11 +57,15 @@ def serve_favicon() -> Response:
     """
     Serve the favicon.ico file from the static directory.
     
-    :return: Favicon file response
+    :return: Favicon file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        return send_from_directory(constants.STATIC_DIR, 'favicon_multisize.ico')
+        response = send_from_directory(constants.STATIC_DIR, 'favicon_multisize.ico')
+        # Set cache headers for 1 hour (3600 seconds)
+        response.cache_control.max_age = 3600
+        response.cache_control.public = True
+        return response
     except Exception as e:
         logger.error(f"Error serving favicon: {str(e)}")
         raise
@@ -68,7 +80,11 @@ def serve_touch_icon() -> Response:
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        return send_from_directory(constants.STATIC_DIR, 'apple-touch-icon.png')
+        response = send_from_directory(constants.STATIC_DIR, 'apple-touch-icon.png')
+        # Set cache headers for 1 hour (3600 seconds)
+        response.cache_control.max_age = 3600
+        response.cache_control.public = True
+        return response
     except Exception as e:
         logger.error(f"Error serving touch icon: {str(e)}")
         raise
