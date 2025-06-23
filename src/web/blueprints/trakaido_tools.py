@@ -289,15 +289,31 @@ def get_user_info() -> Response:
         response_data = {
             "authenticated": is_authenticated,
             "can_save_journey_stats": is_authenticated,
-            "can_save_corpus_choices": is_authenticated
+            "can_save_corpus_choices": is_authenticated,
+            "has_journey_stats_file": False,
+            "has_corpus_choice_file": False
         }
         
-        # If user is authenticated, add basic user info
+        # If user is authenticated, add basic user info and check for existing files
         if is_authenticated:
+            user_id = getattr(g.user, 'id', None) if hasattr(g.user, 'id') else None
+            
             response_data["user"] = {
-                "id": getattr(g.user, 'id', None) if hasattr(g.user, 'id') else None,
+                "id": user_id,
                 "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None
             }
+            
+            # Check if user has existing files
+            if user_id:
+                try:
+                    journey_stats_path = get_journey_stats_file_path(str(user_id))
+                    corpus_choices_path = get_corpus_choices_file_path(str(user_id))
+                    
+                    response_data["has_journey_stats_file"] = os.path.exists(journey_stats_path)
+                    response_data["has_corpus_choice_file"] = os.path.exists(corpus_choices_path)
+                except Exception as file_check_error:
+                    logger.warning(f"Error checking user files for user {user_id}: {str(file_check_error)}")
+                    # Keep defaults (False) if file check fails
         
         return jsonify(response_data)
     except Exception as e:
@@ -306,6 +322,8 @@ def get_user_info() -> Response:
             "authenticated": False,
             "can_save_journey_stats": False,
             "can_save_corpus_choices": False,
+            "has_journey_stats_file": False,
+            "has_corpus_choice_file": False,
             "error": "Unable to determine authentication status"
         })
 
