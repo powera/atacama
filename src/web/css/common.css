@@ -279,11 +279,6 @@ button:disabled,
     .container {
         padding: var(--spacing-base);
     }
-    
-    button,
-    .button {
-        width: 100%;
-    }
 }
 
 /* Print styles */
