@@ -26,10 +26,14 @@ trakaido_bp = Blueprint('trakaido', __name__)
 
 LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
 
+TRAKAIDO_PATH_PROD = "/home/atacama/trakaido_react/build/index.html"
 
 @trakaido_bp.route("/trakaido")
 def trakaido_index() -> Response:
     """Serve the index page."""
+    if os.path.exists(TRAKAIDO_PATH_PROD):
+        # In production, serve the compiled index.html from the Trakaido repo
+        return send_file(TRAKAIDO_PATH_PROD)
     return send_file(constants.WEB_DIR + "/static/trakaido.html")
 
 @trakaido_bp.route('/api/lithuanian')
