@@ -11,7 +11,7 @@ from flask import Blueprint, send_file, request, abort, Response, jsonify, g
 import constants  # for LITHUANIAN_AUDIO_DIR, DATA_DIR
 from common.base.logging_config import get_logger
 from web.decorators import require_auth, optional_auth
-from data.trakaido_wordlists.lang_lt.wordlists import get_all_word_pairs_flat, all_words
+from data.trakaido_wordlists.lang_lt.wordlists import get_all_word_pairs_flat, all_words, levels
 from data.trakaido_wordlists.lang_lt.declensions import (
     declensions, get_noun_declension, get_nouns_by_case, 
     CASE_NAMES, NOUN_KEYS
@@ -50,6 +50,7 @@ def lithuanian_api_index() -> Response:
             "wordlists": {
                 "GET /api/lithuanian/wordlists": "List all wordlist corpora",
                 "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora",
+                "GET /api/lithuanian/wordlists/levels": "Get all learning levels with their corpus/group references",
                 "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, corpus, group)",
                 "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
                 "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
@@ -452,6 +453,19 @@ def get_all_words() -> Union[Response, tuple]:
         return jsonify({"words": words})
     except Exception as e:
         logger.error(f"Error getting all words: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@trakaido_bp.route('/api/lithuanian/wordlists/levels')
+def get_levels() -> Union[Response, tuple]:
+    """
+    Get all learning levels with their corpus/group references.
+    
+    :return: JSON response with levels data
+    """
+    try:
+        return jsonify({"levels": levels})
+    except Exception as e:
+        logger.error(f"Error getting levels: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @trakaido_bp.route('/api/lithuanian/conjugations/corpuses')
