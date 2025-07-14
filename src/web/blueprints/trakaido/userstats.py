@@ -67,7 +67,7 @@ def load_journey_stats(user_id: str) -> Dict[str, Any]:
             for word_key, word_stats in data["stats"].items():
                 filtered_word_stats = {}
                 for stat_type, stat_data in word_stats.items():
-                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen"]:
+                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
                         filtered_word_stats[stat_type] = stat_data
                     else:
                         logger.debug(f"Filtering out invalid stat type '{stat_type}' for word '{word_key}'")
@@ -96,7 +96,7 @@ def save_journey_stats(user_id: str, stats: Dict[str, Any]) -> bool:
             for word_key, word_stats in stats["stats"].items():
                 filtered_word_stats = {}
                 for stat_type, stat_data in word_stats.items():
-                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen"]:
+                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
                         filtered_word_stats[stat_type] = stat_data
                     else:
                         logger.debug(f"Filtering out invalid stat type '{stat_type}' for word '{word_key}' before saving")
@@ -121,11 +121,8 @@ def save_journey_stats_with_daily_update(user_id: str, stats: Dict[str, Any]) ->
     :return: True if successful, False otherwise
     """
     try:
-        # Ensure daily snapshots exist BEFORE saving updated stats
-        # This prevents contaminating yesterday's baseline with today's data
         if not ensure_daily_snapshots(user_id):
             logger.warning(f"Failed to ensure daily snapshots for user {user_id}")
-            # Don't fail the whole operation, just log the warning
         
         # Save the overall stats after ensuring snapshots
         if not save_journey_stats(user_id, stats):
@@ -151,7 +148,7 @@ def filter_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
     """
     filtered_stats = {}
     for stat_type, stat_data in word_stats.items():
-        if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen"]:
+        if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
             filtered_stats[stat_type] = stat_data
         else:
             logger.debug(f"Filtering out invalid stat type '{stat_type}'")
@@ -560,7 +557,12 @@ def increment_word_stats() -> Union[Response, tuple]:
             all_stats["stats"][word_key][stat_type]["incorrect"] += 1
         
         # Update lastSeen timestamp
-        all_stats["stats"][word_key]["lastSeen"] = int(datetime.now().timestamp() * 1000)
+        current_timestamp = int(datetime.now().timestamp() * 1000)
+        all_stats["stats"][word_key]["lastSeen"] = current_timestamp
+        
+        # Update lastCorrectAnswer timestamp if the answer was correct
+        if correct:
+            all_stats["stats"][word_key]["lastCorrectAnswer"] = current_timestamp
         
         # Mark word as exposed
         all_stats["stats"][word_key]["exposed"] = True
