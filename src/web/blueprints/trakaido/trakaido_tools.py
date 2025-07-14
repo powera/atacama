@@ -22,7 +22,30 @@ from data.trakaido_wordlists.lang_lt.verbs import verbs_new
 from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
 from web.decorators import optional_auth, require_auth
 from .shared import *
-from .userstats import get_journey_stats_file_path
+from .userstats import get_journey_stats_file_path, USERSTATS_API_DOCS
+from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS
+from .wordlists import WORDLISTS_API_DOCS
+from .audio import AUDIO_API_DOCS
+
+##############################################################################
+
+# API Documentation for endpoints in this file
+CONJUGATIONS_API_DOCS = {
+    "GET /api/lithuanian/conjugations/corpuses": "List all available verb corpuses",
+    "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb (param: corpus, defaults to 'verbs_present')",
+    "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb (param: corpus, defaults to 'verbs_present')"
+}
+
+DECLENSIONS_API_DOCS = {
+    "GET /api/lithuanian/declensions": "Get all noun declensions",
+    "GET /api/lithuanian/declensions/cases": "List all available cases",
+    "GET /api/lithuanian/declensions/cases/{case_name}": "Get all nouns with their forms for a specific case",
+    "GET /api/lithuanian/declensions/{noun}": "Get complete declension for a specific noun"
+}
+
+USERINFO_API_DOCS = {
+    "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
+}
 
 @trakaido_bp.route("/trakaido")
 def trakaido_index() -> Response:
@@ -43,44 +66,13 @@ def lithuanian_api_index() -> Response:
         "name": "Lithuanian Language Learning API",
         "version": "1.0.0",
         "endpoints": {
-            "wordlists": {
-                "GET /api/lithuanian/wordlists": "List all wordlist corpora",
-                "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora",
-                "GET /api/lithuanian/wordlists/levels": "Get all learning levels with their corpus/group references",
-                "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, corpus, group)",
-                "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
-                "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
-            },
-            "conjugations": {
-                "GET /api/lithuanian/conjugations/corpuses": "List all available verb corpuses",
-                "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb (param: corpus, defaults to 'verbs_present')",
-                "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb (param: corpus, defaults to 'verbs_present')"
-            },
-            "declensions": {
-                "GET /api/lithuanian/declensions": "Get all noun declensions",
-                "GET /api/lithuanian/declensions/cases": "List all available cases",
-                "GET /api/lithuanian/declensions/cases/{case_name}": "Get all nouns with their forms for a specific case",
-                "GET /api/lithuanian/declensions/{noun}": "Get complete declension for a specific noun"
-            },
-            "audio": {
-                "GET /api/lithuanian/audio/voices": "List all available voices",
-                "GET /api/lithuanian/audio/{word}": "Get audio for a Lithuanian word (param: voice)"
-            },
-            "journeystats": {
-                "GET /api/trakaido/journeystats/": "Get all journey stats for authenticated user",
-                "PUT /api/trakaido/journeystats/": "Save all journey stats for authenticated user",
-                "POST /api/trakaido/journeystats/word": "Update stats for a specific word",
-                "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word"
-            },
-            "corpuschoices": {
-                "GET /api/trakaido/corpuschoices/": "Get all corpus choices for authenticated user",
-                "PUT /api/trakaido/corpuschoices/": "Save all corpus choices for authenticated user",
-                "POST /api/trakaido/corpuschoices/corpus": "Update choices for a specific corpus",
-                "GET /api/trakaido/corpuschoices/corpus/{corpus}": "Get choices for a specific corpus"
-            },
-            "userinfo": {
-                "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
-            }
+            "wordlists": WORDLISTS_API_DOCS,
+            "conjugations": CONJUGATIONS_API_DOCS,
+            "declensions": DECLENSIONS_API_DOCS,
+            "audio": AUDIO_API_DOCS,
+            "userstats": USERSTATS_API_DOCS,
+            "corpuschoices": CORPUSCHOICES_API_DOCS,
+            "userinfo": USERINFO_API_DOCS
         }
     }
     return jsonify(api_info)

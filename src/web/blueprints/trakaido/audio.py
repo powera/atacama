@@ -13,6 +13,14 @@ import constants
 from .shared import LITHUANIAN_CHARS, logger, sanitize_lithuanian_word, trakaido_bp
 
 
+##############################################################################
+
+# API Documentation for audio endpoints
+AUDIO_API_DOCS = {
+    "GET /api/lithuanian/audio/voices": "List all available voices",
+    "GET /api/lithuanian/audio/{word}": "Get audio for a Lithuanian word (param: voice)"
+}
+
 def get_available_voices() -> List[str]:
     """
     Get a list of available voice directories.

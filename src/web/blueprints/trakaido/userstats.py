@@ -14,6 +14,16 @@ import constants
 from web.decorators import optional_auth, require_auth
 from .shared import *
 
+##############################################################################
+
+# API Documentation for journey stats endpoints
+USERSTATS_API_DOCS = {
+    "GET /api/trakaido/journeystats/": "Get all journey stats for authenticated user",
+    "PUT /api/trakaido/journeystats/": "Save all journey stats for authenticated user",
+    "POST /api/trakaido/journeystats/word": "Update stats for a specific word",
+    "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word"
+}
+
 # Journey Stats related functions
 VALID_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing"}
 

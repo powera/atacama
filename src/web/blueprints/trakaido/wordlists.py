@@ -16,6 +16,16 @@ from .shared import *
 
 ##############################################################################
 
+# API Documentation for wordlists endpoints
+WORDLISTS_API_DOCS = {
+    "GET /api/lithuanian/wordlists": "List all wordlist corpora",
+    "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora",
+    "GET /api/lithuanian/wordlists/levels": "Get all learning levels with their corpus/group references",
+    "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, corpus, group)",
+    "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
+    "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus"
+}
+
 # API Routes for wordlists
 @trakaido_bp.route('/api/lithuanian/wordlists')
 def list_wordlist_corpora() -> Union[Response, tuple]:

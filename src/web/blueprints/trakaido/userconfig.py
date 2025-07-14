@@ -14,6 +14,16 @@ import constants
 from web.decorators import require_auth
 from .shared import trakaido_bp, logger, ensure_user_data_dir, get_wordlist_corpora, get_groups
 
+##############################################################################
+
+# API Documentation for corpus choices endpoints
+CORPUSCHOICES_API_DOCS = {
+    "GET /api/trakaido/corpuschoices/": "Get all corpus choices for authenticated user",
+    "PUT /api/trakaido/corpuschoices/": "Save all corpus choices for authenticated user",
+    "POST /api/trakaido/corpuschoices/corpus": "Update choices for a specific corpus",
+    "GET /api/trakaido/corpuschoices/corpus/{corpus}": "Get choices for a specific corpus"
+}
+
 # Corpus Choices related functions
 def get_corpus_choices_file_path(user_id: str) -> str:
     """
