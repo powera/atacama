@@ -146,31 +146,31 @@ def create_app(testing: bool = False) -> Flask:
         request_logger = RequestLogger(app)
 
     # Register blueprints
-    from web.blueprints.quotes import quotes_bp
+    from web.blueprints.blog.quotes import quotes_bp
     app.register_blueprint(quotes_bp)
 
-    from web.blueprints.static import static_bp
+    from web.blueprints.core.static import static_bp
     app.register_blueprint(static_bp)
 
-    from web.blueprints.auth import auth_bp
+    from web.blueprints.core.auth import auth_bp
     app.register_blueprint(auth_bp)
 
-    from web.blueprints.content import content_bp
+    from web.blueprints.blog.content import content_bp
     app.register_blueprint(content_bp)
 
-    from web.blueprints.feeds import feeds_bp
+    from web.blueprints.blog.feeds import feeds_bp
     app.register_blueprint(feeds_bp)
 
-    from web.blueprints.nav import nav_bp
+    from web.blueprints.core.nav import nav_bp
     app.register_blueprint(nav_bp)
 
-    from web.blueprints.article import articles_bp
+    from web.blueprints.blog.article import articles_bp
     app.register_blueprint(articles_bp)
 
-    from web.blueprints.widgets import widgets_bp
+    from web.blueprints.blog.widgets import widgets_bp
     app.register_blueprint(widgets_bp)
 
-    from web.blueprints.submit import submit_bp
+    from web.blueprints.blog.submit import submit_bp
     app.register_blueprint(submit_bp)
 
     from web.blueprints.react_api import api_bp
@@ -182,13 +182,13 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.statistics import statistics_bp
     app.register_blueprint(statistics_bp)
 
-    from web.blueprints.debug import debug_bp
+    from web.blueprints.core.debug import debug_bp
     app.register_blueprint(debug_bp)
 
-    from web.blueprints.errors import errors_bp
+    from web.blueprints.core.errors import errors_bp
     app.register_blueprint(errors_bp)
 
-    from web.blueprints.trakaido_tools import trakaido_bp
+    from web.blueprints.trakaido.trakaido_tools import trakaido_bp
     app.register_blueprint(trakaido_bp)
 
     return app

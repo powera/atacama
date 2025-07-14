@@ -10,7 +10,7 @@ from common.config.channel_config import get_channel_manager
 from models import get_or_create_user
 from models.database import db
 from models.models import Email
-from web.blueprints.errors import handle_error
+from web.blueprints.core.errors import handle_error
 from web.decorators import navigable, require_auth
 
 logger = get_logger(__name__)
