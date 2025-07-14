@@ -1181,3 +1181,272 @@
         margin-bottom: 0.75rem;
     }
 }
+
+/* === MULTI WORD SEQUENCE ACTIVITY === */
+
+.multi-word-sequence-activity {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-large);
+    padding: var(--spacing-base);
+}
+
+/* Header section with instructions and replay button */
+.sequence-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-base);
+    text-align: center;
+    padding: var(--spacing-base);
+    background: var(--color-card-background);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+}
+
+.sequence-instructions h3 {
+    margin: 0 0 var(--spacing-small) 0;
+    color: var(--color-primary);
+    font-size: 1.2rem;
+}
+
+.sequence-hint {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.sequence-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-small);
+}
+
+/* Sequence control buttons use existing w-button classes with minor adjustments */
+.sequence-controls .w-button {
+    padding: var(--spacing-small) var(--spacing-base);
+    font-size: 1rem;
+}
+
+.sequence-controls .w-button:not(:first-child) {
+    margin-left: var(--spacing-small);
+}
+
+/* Options grid - responsive layout */
+.sequence-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-base);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.sequence-option {
+    background: var(--color-card-background);
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-base);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sequence-option:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sequence-option:disabled {
+    cursor: not-allowed;
+}
+
+.sequence-option-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-small);
+    width: 100%;
+    position: relative;
+}
+
+.sequence-selection-number {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+.sequence-option-text {
+    text-align: center;
+}
+
+.sequence-option-lithuanian {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--color-text);
+    margin-bottom: 0.25rem;
+}
+
+.sequence-option-english {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.sequence-audio-container {
+    margin-top: var(--spacing-small);
+}
+
+/* Option states */
+.sequence-option.sequence-selected {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.sequence-option.sequence-correct {
+    border-color: var(--color-success);
+    background: var(--color-success-light);
+}
+
+.sequence-option.sequence-incorrect {
+    border-color: var(--color-error);
+    background: var(--color-error-light);
+}
+
+.sequence-option.sequence-unselected {
+    opacity: 0.6;
+    background: var(--color-background);
+}
+
+.sequence-option.sequence-missed {
+    border-color: var(--color-primary);
+    background: rgba(var(--color-primary-rgb), 0.1);
+}
+
+/* Answer reveal section */
+.sequence-answer-reveal {
+    background: var(--color-card-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-base);
+    margin-top: var(--spacing-base);
+}
+
+.sequence-answer-reveal h4 {
+    margin: 0 0 var(--spacing-base) 0;
+    color: var(--color-primary);
+    text-align: center;
+}
+
+.sequence-correct-order {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-small);
+}
+
+.sequence-correct-word {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-small);
+    padding: var(--spacing-small);
+    background: var(--color-success-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-success);
+}
+
+.sequence-word-number {
+    font-weight: bold;
+    color: var(--color-success);
+    min-width: 1.5rem;
+}
+
+.sequence-word-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+/* Responsive design */
+@media screen and (min-width: 768px) {
+    .sequence-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+    
+    .sequence-instructions {
+        flex: 1;
+    }
+    
+    .sequence-controls {
+        margin-top: 0;
+    }
+    
+    .sequence-options-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .sequence-correct-order {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-base);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .sequence-options-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-small);
+    }
+    
+    .sequence-option {
+        min-height: 60px;
+        padding: var(--spacing-small);
+    }
+    
+    .sequence-option-lithuanian {
+        font-size: 1rem;
+    }
+    
+    .sequence-option-english {
+        font-size: 0.8rem;
+    }
+}
+
+/* Error state for multi-word sequence mode */
+.multi-word-sequence-error {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-large);
+    padding: var(--spacing-large);
+    text-align: center;
+    background: var(--color-card-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+.multi-word-sequence-error h3 {
+    color: var(--color-error);
+    margin: 0 0 var(--spacing-base) 0;
+}
+
+.multi-word-sequence-error p {
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
