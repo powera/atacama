@@ -173,9 +173,6 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.blog.submit import submit_bp
     app.register_blueprint(submit_bp)
 
-    from web.blueprints.react_api import api_bp
-    app.register_blueprint(api_bp)
-
     from web.blueprints.admin import admin_bp
     app.register_blueprint(admin_bp)
 

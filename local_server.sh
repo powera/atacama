@@ -9,13 +9,6 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Change to project root directory
 cd "$SCRIPT_DIR"
 
-# Always build React components
-echo "Building React components..."
-cd src/web/react
-npm ci
-npm run build
-cd ../../..  # Return to project root
-
 # Set environment variables for development
 export FLASK_APP=src/web/server.py
 export FLASK_ENV=development
