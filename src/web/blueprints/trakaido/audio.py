@@ -1,14 +1,16 @@
 """Audio API handlers for Lithuanian language learning."""
 
+# Standard library imports
 import os
 import random
-import re
 from typing import List, Optional, Union
 
-from flask import send_file, request, abort, Response, jsonify
+# Third-party imports
+from flask import Response, abort, jsonify, request, send_file
 
-import constants  # for LITHUANIAN_AUDIO_DIR
-from .shared import trakaido_bp, LITHUANIAN_CHARS, logger, sanitize_lithuanian_word
+# Local application imports
+import constants
+from .shared import LITHUANIAN_CHARS, logger, sanitize_lithuanian_word, trakaido_bp
 
 
 def get_available_voices() -> List[str]:

@@ -1,11 +1,17 @@
 """Shared data and utilities for the Trakaido Lithuanian language learning module."""
 
+# Standard library imports
+import os
 import re
+from typing import Dict, List, Optional, Union
+
+# Third-party imports
 from flask import Blueprint
 
+# Local application imports
+import constants
 from common.base.logging_config import get_logger
-
-from typing import List, Optional, Union, Dict
+from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
 
 # Create the blueprint that will be used by all trakaido modules
 trakaido_bp = Blueprint('trakaido', __name__)
@@ -44,7 +50,17 @@ def sanitize_lithuanian_word(word: str) -> str:
     return sanitized
 
 
-from data.trakaido_wordlists.lang_lt.wordlists import get_all_word_pairs_flat, all_words, levels
+def ensure_user_data_dir(user_id: str) -> str:
+    """
+    Ensure the user's data directory exists.
+    
+    :param user_id: The user's database ID
+    :return: Path to the user's data directory
+    """
+    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
+    os.makedirs(user_data_dir, exist_ok=True)
+    return user_data_dir
+
 
 # Wordlist related functions
 def get_wordlist_corpora() -> List[str]:

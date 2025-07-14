@@ -1,6 +1,11 @@
-from . import shared
-from . import trakaido_tools
+"""Trakaido Lithuanian language learning blueprint package."""
+
+# Local application imports
+from . import shared  # Shared utils imported first
+
 from . import audio
+from . import trakaido_tools
+from . import userstats
 from . import wordlists
 
 __all__ = [

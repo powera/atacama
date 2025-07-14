@@ -1,12 +1,16 @@
-"""Audio API handlers for Lithuanian language learning."""
+"""Wordlist API handlers for Lithuanian language learning."""
 
+# Standard library imports
 import os
 import random
 import re
+from typing import Union
 
-from flask import send_file, request, abort, Response, jsonify
+# Third-party imports
+from flask import Response, abort, jsonify, request, send_file
 
-import constants  # for LITHUANIAN_AUDIO_DIR
+# Local application imports
+import constants
 from .shared import *
 
 
