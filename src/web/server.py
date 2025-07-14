@@ -185,9 +185,7 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.core.errors import errors_bp
     app.register_blueprint(errors_bp)
 
-    from web.blueprints.trakaido.trakaido_tools import trakaido_bp
-    # Import audio module to register its routes with the trakaido blueprint
-    from web.blueprints.trakaido import audio
+    from web.blueprints.trakaido import trakaido_bp
     app.register_blueprint(trakaido_bp)
 
     return app
