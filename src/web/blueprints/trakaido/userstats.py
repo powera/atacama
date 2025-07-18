@@ -1,6 +1,7 @@
 """Activity stats management for Lithuanian language learning."""
 
 # Standard library imports
+import gzip
 import json
 import os
 from datetime import datetime, timezone, timedelta
@@ -219,6 +220,7 @@ class DailyStats(BaseStats):
         super().__init__(user_id)
         self.date = date
         self.stats_type = stats_type
+        self._loaded_from_gzip = False
     
     @property
     def file_path(self) -> str:
@@ -227,30 +229,106 @@ class DailyStats(BaseStats):
         os.makedirs(daily_dir, exist_ok=True)
         return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json")
     
+    @property
+    def gzip_file_path(self) -> str:
+        """Get the GZIP file path for this daily stats file."""
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, "daily")
+        os.makedirs(daily_dir, exist_ok=True)
+        return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json.gz")
+    
+    @property
+    def is_gzip_loaded(self) -> bool:
+        """Check if this instance was loaded from a GZIP file."""
+        return self._loaded_from_gzip
+    
+    def _load_from_gzip(self, file_path: str) -> Dict[str, Any]:
+        """Load stats from a GZIP file."""
+        try:
+            with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) and "stats" in data else {"stats": {}}
+        except Exception as e:
+            logger.error(f"Error loading GZIP stats from {file_path}: {str(e)}")
+            return {"stats": {}}
+    
+    def load(self) -> bool:
+        """Load the stats from the file, checking GZIP first."""
+        try:
+            # Check for GZIP file first
+            if os.path.exists(self.gzip_file_path):
+                logger.debug(f"Loading GZIP stats from {self.gzip_file_path}")
+                self._stats = self._load_from_gzip(self.gzip_file_path)
+                self._loaded = True
+                self._loaded_from_gzip = True
+                return True
+            
+            # Fall back to regular JSON file
+            if os.path.exists(self.file_path):
+                logger.debug(f"Loading regular stats from {self.file_path}")
+                self._stats = self._load_from_file(self.file_path)
+                self._loaded = True
+                self._loaded_from_gzip = False
+                return True
+            
+            # No file found
+            logger.debug(f"No stats file found for {self.date}_{self.stats_type}, returning empty stats")
+            self._stats = {"stats": {}}
+            self._loaded = True
+            self._loaded_from_gzip = False
+            return False
+        except Exception as e:
+            logger.error(f"Error loading daily stats for user {self.user_id} date {self.date}: {str(e)}")
+            self._stats = {"stats": {}}
+            self._loaded = True
+            self._loaded_from_gzip = False
+            return False
+    
+    def save(self) -> bool:
+        """Save the current stats to the file. GZIP files cannot be modified once written."""
+        if not self._loaded or self._stats is None:
+            logger.warning(f"Attempting to save unloaded daily stats for user {self.user_id}")
+            return False
+        
+        # Check if this was loaded from GZIP - if so, we cannot modify it
+        if self._loaded_from_gzip:
+            logger.warning(f"Cannot save daily stats for user {self.user_id} date {self.date} - loaded from GZIP file (read-only)")
+            return False
+        
+        # Save to regular JSON file
+        return self._save_to_file(self.file_path, self._stats)
+    
     @classmethod
     def exists(cls, user_id: str, date: str, stats_type: str = "current") -> bool:
-        """Check if a daily stats file exists."""
+        """Check if a daily stats file exists (either regular or GZIP)."""
         temp_instance = cls(user_id, date, stats_type)
-        return os.path.exists(temp_instance.file_path)
+        return os.path.exists(temp_instance.gzip_file_path) or os.path.exists(temp_instance.file_path)
     
     @staticmethod
     def get_available_dates(user_id: str, stats_type: str = "current") -> List[str]:
-        """Get all available dates for a user's daily stats files."""
+        """Get all available dates for a user's daily stats files (including GZIP)."""
         try:
             daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
             if not os.path.exists(daily_dir):
                 return []
             
-            dates = []
-            suffix = f"_{stats_type}.json"
+            dates = set()
+            json_suffix = f"_{stats_type}.json"
+            gzip_suffix = f"_{stats_type}.json.gz"
             
             for filename in os.listdir(daily_dir):
-                if filename.endswith(suffix):
-                    date_part = filename[:-len(suffix)]
-                    if len(date_part) == 10 and date_part.count('-') == 2:
-                        dates.append(date_part)
+                date_part = None
+                
+                # Check for regular JSON files
+                if filename.endswith(json_suffix):
+                    date_part = filename[:-len(json_suffix)]
+                # Check for GZIP files
+                elif filename.endswith(gzip_suffix):
+                    date_part = filename[:-len(gzip_suffix)]
+                
+                if date_part and len(date_part) == 10 and date_part.count('-') == 2:
+                    dates.add(date_part)
             
-            return sorted(dates)
+            return sorted(list(dates))
         except Exception as e:
             logger.error(f"Error getting available dates for user {user_id}: {str(e)}")
             return []
@@ -269,6 +347,33 @@ class DailyStats(BaseStats):
     def get_all_stat_totals(self) -> Dict[str, Dict[str, int]]:
         """Get total correct/incorrect counts for all stat types."""
         return {stat_type: self.get_stat_type_total(stat_type) for stat_type in VALID_STAT_TYPES}
+    
+    def compress_to_gzip(self) -> bool:
+        """Compress the regular JSON file to GZIP and remove the original."""
+        try:
+            # Check if regular file exists
+            if not os.path.exists(self.file_path):
+                logger.debug(f"No regular file to compress at {self.file_path}")
+                return False
+            
+            # Check if GZIP file already exists
+            if os.path.exists(self.gzip_file_path):
+                logger.warning(f"GZIP file already exists at {self.gzip_file_path}")
+                return False
+            
+            # Read the regular file and write to GZIP
+            with open(self.file_path, 'r', encoding='utf-8') as f_in:
+                with gzip.open(self.gzip_file_path, 'wt', encoding='utf-8') as f_out:
+                    f_out.write(f_in.read())
+            
+            # Remove the original file
+            os.remove(self.file_path)
+            
+            logger.debug(f"Successfully compressed {self.file_path} to {self.gzip_file_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error compressing file {self.file_path} to GZIP: {str(e)}")
+            return False
 
 
 # Daily Stats Functions
@@ -319,6 +424,49 @@ def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
         return False
 
 
+def compress_previous_day_files(user_id: str) -> bool:
+    """Compress previous day files to GZIP during daily rotation."""
+    try:
+        current_day = get_current_day_key()
+        current_date = datetime.strptime(current_day, "%Y-%m-%d")
+        
+        # Get all available dates for this user
+        available_dates = DailyStats.get_available_dates(user_id, "current")
+        available_dates.extend(DailyStats.get_available_dates(user_id, "yesterday"))
+        available_dates = list(set(available_dates))  # Remove duplicates
+        
+        compressed_count = 0
+        
+        for date_str in available_dates:
+            try:
+                file_date = datetime.strptime(date_str, "%Y-%m-%d")
+                
+                # Only compress files from previous days (not current day)
+                if file_date < current_date:
+                    for stats_type in ["current", "yesterday"]:
+                        daily_stats = DailyStats(user_id, date_str, stats_type)
+                        
+                        # Only compress if regular file exists and GZIP doesn't
+                        if (os.path.exists(daily_stats.file_path) and 
+                            not os.path.exists(daily_stats.gzip_file_path)):
+                            
+                            if daily_stats.compress_to_gzip():
+                                compressed_count += 1
+                                logger.debug(f"Compressed {date_str}_{stats_type}.json for user {user_id}")
+                            
+            except ValueError:
+                # Skip invalid date formats
+                continue
+        
+        if compressed_count > 0:
+            logger.info(f"Compressed {compressed_count} previous day files for user {user_id}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error compressing previous day files for user {user_id}: {str(e)}")
+        return False
+
+
 def ensure_daily_snapshots(user_id: str) -> bool:
     """Ensure that daily snapshots are properly set up for the current day."""
     try:
@@ -340,6 +488,9 @@ def ensure_daily_snapshots(user_id: str) -> bool:
             current_daily_stats.save()
             logger.debug(f"Created current snapshot for user {user_id} day {current_day}")
         
+        # Compress previous day files once current day is set up
+        compress_previous_day_files(user_id)
+        
         return True
     except Exception as e:
         logger.error(f"Error ensuring daily snapshots for user {user_id}: {str(e)}")
@@ -358,10 +509,18 @@ def calculate_daily_progress(user_id: str) -> Dict[str, Any]:
         current_daily_stats = DailyStats(user_id, current_day, "current")
         
         daily_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
+        daily_progress["exposed"] = {"new": 0, "total": 0}
         
         # Calculate progress for each word
         for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
             yesterday_word_stats = yesterday_daily_stats.get_word_stats(word_key)
+            
+            # Count exposed words
+            if current_word_stats.get("exposed", False):
+                daily_progress["exposed"]["total"] += 1
+                # Count new exposed words (words that exist in current but not in yesterday)
+                if not yesterday_word_stats:
+                    daily_progress["exposed"]["new"] += 1
             
             for stat_type in VALID_STAT_TYPES:
                 if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
@@ -378,7 +537,7 @@ def calculate_daily_progress(user_id: str) -> Dict[str, Any]:
                     daily_progress[stat_type]["correct"] += max(0, current_correct - yesterday_correct)
                     daily_progress[stat_type]["incorrect"] += max(0, current_incorrect - yesterday_incorrect)
         
-        return {"day": current_day, "progress": daily_progress}
+        return {"currentDay": current_day, "progress": daily_progress}
     except Exception as e:
         logger.error(f"Error calculating daily progress for user {user_id}: {str(e)}")
         return {"error": str(e)}
@@ -402,31 +561,30 @@ def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
             logger.debug(f"Found exact weekly baseline for user {user_id} on day {target_day}")
             return target_daily_stats
         
-        # Find closest available day before target
+        # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
+        # that is less than 7 days old from the target date
         target_date = datetime.strptime(target_day, "%Y-%m-%d")
-        current_dates = DailyStats.get_available_dates(user_id, "current")
         yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
         
         best_daily_stats = None
         best_date = None
         
-        # Check up to 14 days back from target
-        for days_back in range(1, 15):
-            check_date = target_date - timedelta(days=days_back)
+        # Check up to 7 days forward from target
+        for days_forward in range(1, 8):
+            check_date = target_date + timedelta(days=days_forward)
             check_day_key = check_date.strftime("%Y-%m-%d")
             
-            for snapshot_type, available_dates in [("current", current_dates), ("yesterday", yesterday_dates)]:
-                if check_day_key in available_dates:
-                    check_daily_stats = DailyStats(user_id, check_day_key, snapshot_type)
-                    if not check_daily_stats.is_empty():
-                        if best_date is None or check_date > best_date:
-                            best_daily_stats = check_daily_stats
-                            best_date = check_date
-                            logger.debug(f"Found weekly baseline for user {user_id} from {check_day_key} ({snapshot_type})")
-                        break
+            if check_day_key in yesterday_dates:
+                check_daily_stats = DailyStats(user_id, check_day_key, "yesterday")
+                if not check_daily_stats.is_empty():
+                    # We want the oldest (earliest) "yesterday" snapshot, so take the first one we find
+                    if best_date is None or check_date < best_date:
+                        best_daily_stats = check_daily_stats
+                        best_date = check_date
+                        logger.debug(f"Found weekly baseline for user {user_id} from {check_day_key} (yesterday)")
         
         if best_daily_stats:
-            logger.debug(f"Using weekly baseline from {best_date.strftime('%Y-%m-%d')} for user {user_id}")
+            logger.debug(f"Using weekly baseline from {best_date.strftime('%Y-%m-%d')} (yesterday) for user {user_id}")
             return best_daily_stats
         else:
             logger.debug(f"No suitable weekly baseline found for user {user_id}, using empty baseline")
@@ -454,10 +612,18 @@ def calculate_weekly_progress(user_id: str) -> Dict[str, Any]:
         week_ago_daily_stats = find_best_weekly_baseline(user_id, week_ago_day)
         
         weekly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
+        weekly_progress["exposed"] = {"new": 0, "total": 0}
         
         # Calculate progress for each word
         for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
             week_ago_word_stats = week_ago_daily_stats.get_word_stats(word_key)
+            
+            # Count exposed words
+            if current_word_stats.get("exposed", False):
+                weekly_progress["exposed"]["total"] += 1
+                # Count new exposed words (words that exist in current but not in week-ago baseline)
+                if not week_ago_word_stats:
+                    weekly_progress["exposed"]["new"] += 1
             
             for stat_type in VALID_STAT_TYPES:
                 if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
