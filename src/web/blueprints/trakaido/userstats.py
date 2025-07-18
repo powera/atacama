@@ -34,7 +34,7 @@ USERSTATS_API_DOCS = {
 
 # Activity Stats related constants
 VALID_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing", "blitz"}
-VALID_META_TYPES = {"exposed", "lastSeen", "lastCorrectAnswer"}
+VALID_META_TYPES = {"exposed", "lastSeen", "lastCorrectAnswer", "lastIncorrectAnswer"}
 
 def filter_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
     """Filter word stats to include only valid stat types."""
