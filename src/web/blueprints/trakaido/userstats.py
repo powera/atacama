@@ -385,6 +385,16 @@ def get_current_day_key() -> str:
     return now.strftime("%Y-%m-%d")
 
 
+def get_yesterday_day_key() -> str:
+    """Get yesterday's day key based on 0700 GMT cutoff."""
+    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
+    if now.hour < DAILY_CUTOFF_HOUR:
+        now = now - timedelta(days=2)  # Two days back if before cutoff
+    else:
+        now = now - timedelta(days=1)  # One day back if after cutoff
+    return now.strftime("%Y-%m-%d")
+
+
 def get_nonce_file_path(user_id: str, day_key: str) -> str:
     """Get the file path for a user's nonce tracking file."""
     daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
@@ -422,6 +432,80 @@ def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
     except Exception as e:
         logger.error(f"Error saving nonces for user {user_id} day {day_key}: {str(e)}")
         return False
+
+
+def get_all_nonce_files(user_id: str) -> List[str]:
+    """Get all nonce files for a user."""
+    try:
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+        if not os.path.exists(daily_dir):
+            return []
+        
+        nonce_files = []
+        for filename in os.listdir(daily_dir):
+            if filename.endswith("_nonces.json"):
+                date_part = filename[:-12]  # Remove "_nonces.json"
+                if len(date_part) == 10 and date_part.count('-') == 2:
+                    nonce_files.append(date_part)
+        
+        return sorted(nonce_files)
+    except Exception as e:
+        logger.error(f"Error getting nonce files for user {user_id}: {str(e)}")
+        return []
+
+
+def cleanup_old_nonce_files(user_id: str) -> bool:
+    """Remove nonce files older than today and yesterday."""
+    try:
+        current_day = get_current_day_key()
+        yesterday_day = get_yesterday_day_key()
+        keep_dates = {current_day, yesterday_day}
+        
+        all_nonce_dates = get_all_nonce_files(user_id)
+        removed_count = 0
+        
+        for date_str in all_nonce_dates:
+            if date_str not in keep_dates:
+                nonce_file = get_nonce_file_path(user_id, date_str)
+                try:
+                    if os.path.exists(nonce_file):
+                        os.remove(nonce_file)
+                        removed_count += 1
+                        logger.debug(f"Removed old nonce file for user {user_id} date {date_str}")
+                except Exception as e:
+                    logger.error(f"Error removing nonce file {nonce_file}: {str(e)}")
+        
+        if removed_count > 0:
+            logger.info(f"Cleaned up {removed_count} old nonce files for user {user_id}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error cleaning up old nonce files for user {user_id}: {str(e)}")
+        return False
+
+
+def check_nonce_duplicates(user_id: str, nonce: str) -> bool:
+    """Check if nonce exists in today's or yesterday's nonce lists."""
+    try:
+        current_day = get_current_day_key()
+        yesterday_day = get_yesterday_day_key()
+        
+        # Check today's nonces
+        today_nonces = load_nonces(user_id, current_day)
+        if nonce in today_nonces:
+            logger.warning(f"Duplicate nonce '{nonce}' found in today's list for user {user_id}")
+            return True
+        
+        # Check yesterday's nonces
+        yesterday_nonces = load_nonces(user_id, yesterday_day)
+        if nonce in yesterday_nonces:
+            logger.warning(f"Duplicate nonce '{nonce}' found in yesterday's list for user {user_id}")
+            return True
+        
+        return False
+    except Exception as e:
+        logger.error(f"Error checking nonce duplicates for user {user_id}: {str(e)}")
+        return True  # Return True to be safe and reject the nonce
 
 
 def compress_previous_day_files(user_id: str) -> bool:
@@ -490,6 +574,9 @@ def ensure_daily_snapshots(user_id: str) -> bool:
         
         # Compress previous day files once current day is set up
         compress_previous_day_files(user_id)
+        
+        # Clean up old nonce files (keep only today and yesterday)
+        cleanup_old_nonce_files(user_id)
         
         return True
     except Exception as e:
@@ -763,10 +850,8 @@ def increment_word_stats():
         
         current_day = get_current_day_key()
         
-        # Check if nonce has already been used
-        used_nonces = load_nonces(user_id, current_day)
-        if nonce in used_nonces:
-            logger.warning(f"Duplicate nonce '{nonce}' for user {user_id} on day {current_day}")
+        # Check if nonce has already been used (today or yesterday)
+        if check_nonce_duplicates(user_id, nonce):
             return jsonify({"error": "Nonce already used"}), 409
         
         # Ensure daily snapshots exist
@@ -803,7 +888,8 @@ def increment_word_stats():
         if not journey_stats.save_with_daily_update():
             return jsonify({"error": "Failed to save stats"}), 500
         
-        # Add nonce to used nonces
+        # Add nonce to today's used nonces
+        used_nonces = load_nonces(user_id, current_day)
         used_nonces.add(nonce)
         if not save_nonces(user_id, current_day, used_nonces):
             logger.warning(f"Failed to save nonce for user {user_id} day {current_day}")
