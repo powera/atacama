@@ -22,7 +22,7 @@ from data.trakaido_wordlists.lang_lt.verbs import verbs_new
 from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
 from web.decorators import optional_auth, require_auth
 from .shared import *
-from .userstats import get_journey_stats_file_path, USERSTATS_API_DOCS
+from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
 from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS
 from .wordlists import WORDLISTS_API_DOCS
 from .audio import AUDIO_API_DOCS
@@ -162,7 +162,7 @@ def get_user_info() -> Response:
             # Check if user has existing files
             if user_id:
                 try:
-                    journey_stats_path = get_journey_stats_file_path(str(user_id))
+                    journey_stats_path = user_has_activity_stats(str(user_id))
                     corpus_choices_path = get_corpus_choices_file_path(str(user_id))
                     
                     response_data["has_journey_stats_file"] = os.path.exists(journey_stats_path)

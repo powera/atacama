@@ -1,21 +1,24 @@
-
-"""Journey stats management for Lithuanian language learning."""
+"""Activity stats management for Lithuanian language learning."""
 
 # Standard library imports
 import json
 import os
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 # Third-party imports
-from flask import Response, abort, g, jsonify, request, send_file
+from flask import g, jsonify, request
 
 # Local application imports
 import constants
-from web.decorators import optional_auth, require_auth
+from web.decorators import require_auth
 from .shared import *
 
 ##############################################################################
+
+# Daily stats constants
+DAILY_CUTOFF_HOUR = 7  # 0700 GMT
+DAILY_CUTOFF_TIMEZONE = timezone.utc
 
 # API Documentation for journey stats endpoints
 USERSTATS_API_DOCS = {
@@ -24,244 +27,268 @@ USERSTATS_API_DOCS = {
     "POST /api/trakaido/journeystats/word": "Update stats for a specific word",
     "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word",
     "POST /api/trakaido/journeystats/increment": "Increment stats for a single question with nonce",
-    "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)"
+    "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
+    "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)"
 }
 
-# Journey Stats related functions
-VALID_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing"}
-
-# Daily stats constants
-DAILY_CUTOFF_HOUR = 7  # 0700 GMT
-DAILY_CUTOFF_TIMEZONE = timezone.utc
-
-def get_journey_stats_file_path(user_id: str) -> str:
-    """
-    Get the file path for a user's journey stats.
-    
-    :param user_id: The user's database ID
-    :return: Path to the user's Lithuanian journey stats file
-    """
-    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
-    return os.path.join(user_data_dir, "lithuanian.json")
-
-
-def load_journey_stats(user_id: str) -> Dict[str, Any]:
-    """
-    Load journey stats for a user from their JSON file.
-    
-    :param user_id: The user's database ID
-    :return: Dictionary containing the user's journey stats
-    """
-    try:
-        stats_file = get_journey_stats_file_path(user_id)
-        if not os.path.exists(stats_file):
-            logger.debug(f"DEBUG: No stats file found for user {user_id}, returning empty stats")
-            return {"stats": {}}
-        
-        with open(stats_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        # Filter out invalid stat types
-        filtered_stats = {}
-        if "stats" in data:
-            for word_key, word_stats in data["stats"].items():
-                filtered_word_stats = {}
-                for stat_type, stat_data in word_stats.items():
-                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
-                        filtered_word_stats[stat_type] = stat_data
-                    else:
-                        logger.debug(f"Filtering out invalid stat type '{stat_type}' for word '{word_key}'")
-                filtered_stats[word_key] = filtered_word_stats
-        
-        return {"stats": filtered_stats}
-    except Exception as e:
-        logger.error(f"Error loading journey stats for user {user_id}: {str(e)}")
-        return {"stats": {}}
-
-def save_journey_stats(user_id: str, stats: Dict[str, Any]) -> bool:
-    """
-    Save journey stats for a user to their JSON file.
-    
-    :param user_id: The user's database ID
-    :param stats: Dictionary containing the user's journey stats
-    :return: True if successful, False otherwise
-    """
-    try:
-        ensure_user_data_dir(user_id)
-        stats_file = get_journey_stats_file_path(user_id)
-        
-        # Filter out invalid stat types before saving
-        filtered_data = {"stats": {}}
-        if "stats" in stats:
-            for word_key, word_stats in stats["stats"].items():
-                filtered_word_stats = {}
-                for stat_type, stat_data in word_stats.items():
-                    if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
-                        filtered_word_stats[stat_type] = stat_data
-                    else:
-                        logger.debug(f"Filtering out invalid stat type '{stat_type}' for word '{word_key}' before saving")
-                filtered_data["stats"][word_key] = filtered_word_stats
-        
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(filtered_data, f, indent=2, ensure_ascii=False)
-        
-        logger.debug(f"Successfully saved journey stats for user {user_id}")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving journey stats for user {user_id}: {str(e)}")
-        return False
-
-
-def save_journey_stats_with_daily_update(user_id: str, stats: Dict[str, Any]) -> bool:
-    """
-    Save journey stats and update daily snapshots.
-    
-    :param user_id: The user's database ID
-    :param stats: Dictionary containing the user's journey stats
-    :return: True if successful, False otherwise
-    """
-    try:
-        if not ensure_daily_snapshots(user_id):
-            logger.warning(f"Failed to ensure daily snapshots for user {user_id}")
-        
-        # Save the overall stats after ensuring snapshots
-        if not save_journey_stats(user_id, stats):
-            return False
-        
-        # Update current daily snapshot
-        current_day = get_current_day_key()
-        if not save_daily_stats_snapshot(user_id, current_day, "current", stats):
-            logger.warning(f"Failed to update current daily snapshot for user {user_id}")
-            # Don't fail the whole operation, just log the warning
-        
-        return True
-    except Exception as e:
-        logger.error(f"Error saving journey stats with daily update for user {user_id}: {str(e)}")
-        return False
+# Activity Stats related constants
+VALID_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing", "blitz"}
+VALID_META_TYPES = {"exposed", "lastSeen", "lastCorrectAnswer"}
 
 def filter_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Filter word stats to include only valid stat types.
-    
-    :param word_stats: Raw word stats dictionary
-    :return: Filtered word stats dictionary
-    """
+    """Filter word stats to include only valid stat types."""
     filtered_stats = {}
     for stat_type, stat_data in word_stats.items():
-        if stat_type in VALID_STAT_TYPES or stat_type in ["exposed", "lastSeen", "lastCorrectAnswer"]:
+        if stat_type in VALID_STAT_TYPES or stat_type in VALID_META_TYPES:
             filtered_stats[stat_type] = stat_data
         else:
             logger.debug(f"Filtering out invalid stat type '{stat_type}'")
     return filtered_stats
 
 
+def user_has_activity_stats(user_id: str) -> bool:
+    """Check if a user has any activity stats."""
+    try:
+        journey_stats = JourneyStats(user_id)
+        return not journey_stats.is_empty()
+    except Exception as e:
+        logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
+        return False
+
+
+class BaseStats:
+    """Base class for stats management with common functionality."""
+    
+    def __init__(self, user_id: str):
+        self.user_id = str(user_id)
+        self._stats = None
+        self._loaded = False
+    
+    @property
+    def file_path(self) -> str:
+        """Get the file path for this stats file. Must be implemented by subclasses."""
+        raise NotImplementedError
+    
+    def _load_from_file(self, file_path: str) -> Dict[str, Any]:
+        """Load stats from the specified file path."""
+        if not os.path.exists(file_path):
+            logger.debug(f"No stats file found at {file_path}, returning empty stats")
+            return {"stats": {}}
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return data if isinstance(data, dict) and "stats" in data else {"stats": {}}
+    
+    def _save_to_file(self, file_path: str, stats: Dict[str, Any]) -> bool:
+        """Save stats to the specified file path."""
+        try:
+            ensure_user_data_dir(self.user_id)
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(stats, f, indent=2, ensure_ascii=False)
+            
+            logger.debug(f"Successfully saved stats to {file_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving stats to {file_path}: {str(e)}")
+            return False
+    
+    def load(self) -> bool:
+        """Load the stats from the file."""
+        try:
+            self._stats = self._load_from_file(self.file_path)
+            self._loaded = True
+            return True
+        except Exception as e:
+            logger.error(f"Error loading stats for user {self.user_id}: {str(e)}")
+            self._stats = {"stats": {}}
+            self._loaded = True
+            return False
+    
+    def save(self) -> bool:
+        """Save the current stats to the file."""
+        if not self._loaded or self._stats is None:
+            logger.warning(f"Attempting to save unloaded stats for user {self.user_id}")
+            return False
+        return self._save_to_file(self.file_path, self._stats)
+    
+    @property
+    def stats(self) -> Dict[str, Any]:
+        """Get the stats dictionary. Loads from file if not already loaded."""
+        if not self._loaded:
+            self.load()
+        return self._stats or {"stats": {}}
+    
+    @stats.setter
+    def stats(self, value: Dict[str, Any]):
+        """Set the stats dictionary."""
+        self._stats = value
+        self._loaded = True
+    
+    def get_word_stats(self, word_key: str) -> Dict[str, Any]:
+        """Get stats for a specific word."""
+        return self.stats["stats"].get(word_key, {})
+    
+    def set_word_stats(self, word_key: str, word_stats: Dict[str, Any]):
+        """Set stats for a specific word."""
+        if not self._loaded:
+            self.load()
+        if "stats" not in self._stats:
+            self._stats["stats"] = {}
+        self._stats["stats"][word_key] = word_stats
+    
+    def is_empty(self) -> bool:
+        """Check if the stats are empty (no word stats)."""
+        return not bool(self.stats["stats"])
+
+
+class JourneyStats(BaseStats):
+    """Manages access to a user's main journey stats file (lithuanian.json)."""
+    
+    @property
+    def file_path(self) -> str:
+        """Get the file path for this user's journey stats file."""
+        user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id)
+        return os.path.join(user_data_dir, "lithuanian.json")
+    
+    def load(self) -> bool:
+        """Load the stats from the file with filtering."""
+        try:
+            data = self._load_from_file(self.file_path)
+            
+            # Filter out invalid stat types
+            filtered_stats = {}
+            if "stats" in data:
+                for word_key, word_stats in data["stats"].items():
+                    filtered_stats[word_key] = filter_word_stats(word_stats)
+            
+            self._stats = {"stats": filtered_stats}
+            self._loaded = True
+            return True
+        except Exception as e:
+            logger.error(f"Error loading journey stats for user {self.user_id}: {str(e)}")
+            self._stats = {"stats": {}}
+            self._loaded = True
+            return False
+    
+    def save(self) -> bool:
+        """Save the current stats to the file with filtering."""
+        if not self._loaded or self._stats is None:
+            logger.warning(f"Attempting to save unloaded journey stats for user {self.user_id}")
+            return False
+        
+        # Filter out invalid stat types before saving
+        filtered_data = {"stats": {}}
+        if "stats" in self._stats:
+            for word_key, word_stats in self._stats["stats"].items():
+                filtered_data["stats"][word_key] = filter_word_stats(word_stats)
+        
+        return self._save_to_file(self.file_path, filtered_data)
+    
+    def set_word_stats(self, word_key: str, word_stats: Dict[str, Any]):
+        """Set stats for a specific word (with filtering)."""
+        super().set_word_stats(word_key, filter_word_stats(word_stats))
+    
+    def save_with_daily_update(self) -> bool:
+        """Save journey stats and update daily snapshots."""
+        try:
+            if not ensure_daily_snapshots(self.user_id):
+                logger.warning(f"Failed to ensure daily snapshots for user {self.user_id}")
+            
+            if not self.save():
+                return False
+            
+            # Update current daily snapshot
+            current_day = get_current_day_key()
+            current_daily_stats = DailyStats(self.user_id, current_day, "current")
+            current_daily_stats.stats = self._stats
+            if not current_daily_stats.save():
+                logger.warning(f"Failed to update current daily snapshot for user {self.user_id}")
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error saving journey stats with daily update for user {self.user_id}: {str(e)}")
+            return False
+
+
+class DailyStats(BaseStats):
+    """Manages access to a single daily stats file for a specific user and date."""
+    
+    def __init__(self, user_id: str, date: str, stats_type: str = "current"):
+        super().__init__(user_id)
+        self.date = date
+        self.stats_type = stats_type
+    
+    @property
+    def file_path(self) -> str:
+        """Get the file path for this daily stats file."""
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, "daily")
+        os.makedirs(daily_dir, exist_ok=True)
+        return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json")
+    
+    @classmethod
+    def exists(cls, user_id: str, date: str, stats_type: str = "current") -> bool:
+        """Check if a daily stats file exists."""
+        temp_instance = cls(user_id, date, stats_type)
+        return os.path.exists(temp_instance.file_path)
+    
+    @staticmethod
+    def get_available_dates(user_id: str, stats_type: str = "current") -> List[str]:
+        """Get all available dates for a user's daily stats files."""
+        try:
+            daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+            if not os.path.exists(daily_dir):
+                return []
+            
+            dates = []
+            suffix = f"_{stats_type}.json"
+            
+            for filename in os.listdir(daily_dir):
+                if filename.endswith(suffix):
+                    date_part = filename[:-len(suffix)]
+                    if len(date_part) == 10 and date_part.count('-') == 2:
+                        dates.append(date_part)
+            
+            return sorted(dates)
+        except Exception as e:
+            logger.error(f"Error getting available dates for user {user_id}: {str(e)}")
+            return []
+    
+    def get_stat_type_total(self, stat_type: str) -> Dict[str, int]:
+        """Get total correct/incorrect counts for a specific stat type across all words."""
+        totals = {"correct": 0, "incorrect": 0}
+        
+        for word_stats in self.stats["stats"].values():
+            if stat_type in word_stats and isinstance(word_stats[stat_type], dict):
+                totals["correct"] += word_stats[stat_type].get("correct", 0)
+                totals["incorrect"] += word_stats[stat_type].get("incorrect", 0)
+        
+        return totals
+    
+    def get_all_stat_totals(self) -> Dict[str, Dict[str, int]]:
+        """Get total correct/incorrect counts for all stat types."""
+        return {stat_type: self.get_stat_type_total(stat_type) for stat_type in VALID_STAT_TYPES}
+
+
 # Daily Stats Functions
 def get_current_day_key() -> str:
-    """
-    Get the current day key based on 0700 GMT cutoff.
-    
-    :return: Day key in format YYYY-MM-DD
-    """
+    """Get the current day key based on 0700 GMT cutoff."""
     now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    # If it's before 7 AM, consider it the previous day
     if now.hour < DAILY_CUTOFF_HOUR:
         now = now - timedelta(days=1)
     return now.strftime("%Y-%m-%d")
 
 
-def get_daily_stats_dir(user_id: str) -> str:
-    """
-    Get the directory path for a user's daily stats.
-    
-    :param user_id: The user's database ID
-    :return: Path to the user's daily stats directory
-    """
-    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
-    os.makedirs(user_data_dir, exist_ok=True)
-    return user_data_dir
-
-
-def get_daily_stats_file_path(user_id: str, day_key: str, stats_type: str) -> str:
-    """
-    Get the file path for a user's daily stats file.
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :param stats_type: Either 'current' or 'yesterday'
-    :return: Path to the daily stats file
-    """
-    daily_dir = get_daily_stats_dir(user_id)
-    return os.path.join(daily_dir, f"{day_key}_{stats_type}.json")
-
-
 def get_nonce_file_path(user_id: str, day_key: str) -> str:
-    """
-    Get the file path for a user's nonce tracking file.
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :return: Path to the nonce file
-    """
-    daily_dir = get_daily_stats_dir(user_id)
+    """Get the file path for a user's nonce tracking file."""
+    daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+    os.makedirs(daily_dir, exist_ok=True)
     return os.path.join(daily_dir, f"{day_key}_nonces.json")
 
 
-def load_daily_stats_snapshot(user_id: str, day_key: str, stats_type: str) -> Dict[str, Any]:
-    """
-    Load a daily stats snapshot (current or yesterday).
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :param stats_type: Either 'current' or 'yesterday'
-    :return: Dictionary containing the daily stats snapshot
-    """
-    try:
-        stats_file = get_daily_stats_file_path(user_id, day_key, stats_type)
-        if not os.path.exists(stats_file):
-            logger.debug(f"No {stats_type} stats file found for user {user_id} day {day_key}, returning empty stats")
-            return {"stats": {}}
-        
-        with open(stats_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        return data if isinstance(data, dict) and "stats" in data else {"stats": {}}
-    except Exception as e:
-        logger.error(f"Error loading {stats_type} daily stats for user {user_id} day {day_key}: {str(e)}")
-        return {"stats": {}}
-
-
-def save_daily_stats_snapshot(user_id: str, day_key: str, stats_type: str, stats: Dict[str, Any]) -> bool:
-    """
-    Save a daily stats snapshot (current or yesterday).
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :param stats_type: Either 'current' or 'yesterday'
-    :param stats: Dictionary containing the daily stats snapshot
-    :return: True if successful, False otherwise
-    """
-    try:
-        ensure_user_data_dir(user_id)
-        stats_file = get_daily_stats_file_path(user_id, day_key, stats_type)
-        
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2, ensure_ascii=False)
-        
-        logger.debug(f"Successfully saved {stats_type} daily stats for user {user_id} day {day_key}")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving {stats_type} daily stats for user {user_id} day {day_key}: {str(e)}")
-        return False
-
-
 def load_nonces(user_id: str, day_key: str) -> set:
-    """
-    Load used nonces for a specific day.
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :return: Set of used nonces
-    """
+    """Load used nonces for a specific day."""
     try:
         nonce_file = get_nonce_file_path(user_id, day_key)
         if not os.path.exists(nonce_file):
@@ -277,14 +304,7 @@ def load_nonces(user_id: str, day_key: str) -> set:
 
 
 def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
-    """
-    Save used nonces for a specific day.
-    
-    :param user_id: The user's database ID
-    :param day_key: Day key in format YYYY-MM-DD
-    :param nonces: Set of used nonces
-    :return: True if successful, False otherwise
-    """
+    """Save used nonces for a specific day."""
     try:
         ensure_user_data_dir(user_id)
         nonce_file = get_nonce_file_path(user_id, day_key)
@@ -300,30 +320,24 @@ def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
 
 
 def ensure_daily_snapshots(user_id: str) -> bool:
-    """
-    Ensure that daily snapshots are properly set up for the current day.
-    This should be called before any daily stats operations.
-    
-    :param user_id: The user's database ID
-    :return: True if successful, False otherwise
-    """
+    """Ensure that daily snapshots are properly set up for the current day."""
     try:
         current_day = get_current_day_key()
         
         # Check if we need to create yesterday's snapshot
-        yesterday_stats = load_daily_stats_snapshot(user_id, current_day, "yesterday")
-        if not yesterday_stats["stats"]:
-            # Load current overall stats as yesterday's baseline
-            overall_stats = load_journey_stats(user_id)
-            save_daily_stats_snapshot(user_id, current_day, "yesterday", overall_stats)
+        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday")
+        if not DailyStats.exists(user_id, current_day, "yesterday") or yesterday_daily_stats.is_empty():
+            journey_stats = JourneyStats(user_id)
+            yesterday_daily_stats.stats = journey_stats.stats
+            yesterday_daily_stats.save()
             logger.debug(f"Created yesterday snapshot for user {user_id} day {current_day}")
         
-        # Ensure current snapshot exists (can be empty)
-        current_stats = load_daily_stats_snapshot(user_id, current_day, "current")
-        if not os.path.exists(get_daily_stats_file_path(user_id, current_day, "current")):
-            # Initialize with current overall stats
-            overall_stats = load_journey_stats(user_id)
-            save_daily_stats_snapshot(user_id, current_day, "current", overall_stats)
+        # Ensure current snapshot exists
+        current_daily_stats = DailyStats(user_id, current_day, "current")
+        if not DailyStats.exists(user_id, current_day, "current"):
+            journey_stats = JourneyStats(user_id)
+            current_daily_stats.stats = journey_stats.stats
+            current_daily_stats.save()
             logger.debug(f"Created current snapshot for user {user_id} day {current_day}")
         
         return True
@@ -333,31 +347,21 @@ def ensure_daily_snapshots(user_id: str) -> bool:
 
 
 def calculate_daily_progress(user_id: str) -> Dict[str, Any]:
-    """
-    Calculate daily progress by comparing current and yesterday snapshots.
-    
-    :param user_id: The user's database ID
-    :return: Dictionary containing daily progress stats
-    """
+    """Calculate daily progress by comparing current and yesterday snapshots."""
     try:
         current_day = get_current_day_key()
         
-        # Ensure snapshots exist
         if not ensure_daily_snapshots(user_id):
             return {"error": "Failed to ensure daily snapshots"}
         
-        yesterday_stats = load_daily_stats_snapshot(user_id, current_day, "yesterday")
-        current_stats = load_daily_stats_snapshot(user_id, current_day, "current")
+        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday")
+        current_daily_stats = DailyStats(user_id, current_day, "current")
         
-        daily_progress = {}
+        daily_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
         
-        # Calculate progress for each stat type
-        for stat_type in VALID_STAT_TYPES:
-            daily_progress[stat_type] = {"correct": 0, "incorrect": 0}
-        
-        # Go through all words in current stats
-        for word_key, current_word_stats in current_stats["stats"].items():
-            yesterday_word_stats = yesterday_stats["stats"].get(word_key, {})
+        # Calculate progress for each word
+        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
+            yesterday_word_stats = yesterday_daily_stats.get_word_stats(word_key)
             
             for stat_type in VALID_STAT_TYPES:
                 if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
@@ -374,40 +378,133 @@ def calculate_daily_progress(user_id: str) -> Dict[str, Any]:
                     daily_progress[stat_type]["correct"] += max(0, current_correct - yesterday_correct)
                     daily_progress[stat_type]["incorrect"] += max(0, current_incorrect - yesterday_incorrect)
         
-        return {
-            "day": current_day,
-            "progress": daily_progress
-        }
+        return {"day": current_day, "progress": daily_progress}
     except Exception as e:
         logger.error(f"Error calculating daily progress for user {user_id}: {str(e)}")
+        return {"error": str(e)}
+
+
+def get_week_ago_day_key() -> str:
+    """Get the day key for 7 days ago based on 0700 GMT cutoff."""
+    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
+    if now.hour < DAILY_CUTOFF_HOUR:
+        now = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+    return week_ago.strftime("%Y-%m-%d")
+
+
+def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
+    """Find the best available baseline stats for weekly comparison."""
+    try:
+        # Try exact target day first
+        target_daily_stats = DailyStats(user_id, target_day, "current")
+        if DailyStats.exists(user_id, target_day, "current") and not target_daily_stats.is_empty():
+            logger.debug(f"Found exact weekly baseline for user {user_id} on day {target_day}")
+            return target_daily_stats
+        
+        # Find closest available day before target
+        target_date = datetime.strptime(target_day, "%Y-%m-%d")
+        current_dates = DailyStats.get_available_dates(user_id, "current")
+        yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
+        
+        best_daily_stats = None
+        best_date = None
+        
+        # Check up to 14 days back from target
+        for days_back in range(1, 15):
+            check_date = target_date - timedelta(days=days_back)
+            check_day_key = check_date.strftime("%Y-%m-%d")
+            
+            for snapshot_type, available_dates in [("current", current_dates), ("yesterday", yesterday_dates)]:
+                if check_day_key in available_dates:
+                    check_daily_stats = DailyStats(user_id, check_day_key, snapshot_type)
+                    if not check_daily_stats.is_empty():
+                        if best_date is None or check_date > best_date:
+                            best_daily_stats = check_daily_stats
+                            best_date = check_date
+                            logger.debug(f"Found weekly baseline for user {user_id} from {check_day_key} ({snapshot_type})")
+                        break
+        
+        if best_daily_stats:
+            logger.debug(f"Using weekly baseline from {best_date.strftime('%Y-%m-%d')} for user {user_id}")
+            return best_daily_stats
+        else:
+            logger.debug(f"No suitable weekly baseline found for user {user_id}, using empty baseline")
+            empty_stats = DailyStats(user_id, target_day, "current")
+            empty_stats.stats = {"stats": {}}
+            return empty_stats
+        
+    except Exception as e:
+        logger.error(f"Error finding weekly baseline for user {user_id}: {str(e)}")
+        empty_stats = DailyStats(user_id, target_day, "current")
+        empty_stats.stats = {"stats": {}}
+        return empty_stats
+
+
+def calculate_weekly_progress(user_id: str) -> Dict[str, Any]:
+    """Calculate weekly progress by comparing current stats with stats from 7 days ago."""
+    try:
+        current_day = get_current_day_key()
+        week_ago_day = get_week_ago_day_key()
+        
+        if not ensure_daily_snapshots(user_id):
+            return {"error": "Failed to ensure daily snapshots"}
+        
+        current_daily_stats = DailyStats(user_id, current_day, "current")
+        week_ago_daily_stats = find_best_weekly_baseline(user_id, week_ago_day)
+        
+        weekly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
+        
+        # Calculate progress for each word
+        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
+            week_ago_word_stats = week_ago_daily_stats.get_word_stats(word_key)
+            
+            for stat_type in VALID_STAT_TYPES:
+                if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
+                    current_correct = current_word_stats[stat_type].get("correct", 0)
+                    current_incorrect = current_word_stats[stat_type].get("incorrect", 0)
+                    
+                    week_ago_correct = 0
+                    week_ago_incorrect = 0
+                    if stat_type in week_ago_word_stats and isinstance(week_ago_word_stats[stat_type], dict):
+                        week_ago_correct = week_ago_word_stats[stat_type].get("correct", 0)
+                        week_ago_incorrect = week_ago_word_stats[stat_type].get("incorrect", 0)
+                    
+                    # Calculate delta
+                    weekly_progress[stat_type]["correct"] += max(0, current_correct - week_ago_correct)
+                    weekly_progress[stat_type]["incorrect"] += max(0, current_incorrect - week_ago_incorrect)
+        
+        actual_baseline_day = week_ago_daily_stats.date if not week_ago_daily_stats.is_empty() else None
+        
+        return {
+            "currentDay": current_day,
+            "targetBaselineDay": week_ago_day,
+            "actualBaselineDay": actual_baseline_day,
+            "progress": weekly_progress
+        }
+    except Exception as e:
+        logger.error(f"Error calculating weekly progress for user {user_id}: {str(e)}")
         return {"error": str(e)}
 
 
 # Journey Stats API Routes
 @trakaido_bp.route('/api/trakaido/journeystats/', methods=['GET'])
 @require_auth
-def get_all_journey_stats() -> Union[Response, tuple]:
-    """
-    Get all journey stats for the authenticated user.
-    
-    :return: JSON response with all journey stats
-    """
+def get_all_journey_stats():
+    """Get all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        stats = load_journey_stats(user_id)
-        return jsonify(stats)
+        journey_stats = JourneyStats(user_id)
+        return jsonify(journey_stats.stats)
     except Exception as e:
         logger.error(f"Error getting all journey stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 @trakaido_bp.route('/api/trakaido/journeystats/', methods=['PUT'])
 @require_auth
-def save_all_journey_stats() -> Union[Response, tuple]:
-    """
-    Save all journey stats for the authenticated user.
-    
-    :return: JSON response indicating success or error
-    """
+def save_all_journey_stats():
+    """Save all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
         data = request.get_json()
@@ -415,8 +512,9 @@ def save_all_journey_stats() -> Union[Response, tuple]:
         if not data or "stats" not in data:
             return jsonify({"error": "Invalid request body. Expected 'stats' field."}), 400
         
-        success = save_journey_stats_with_daily_update(user_id, data)
-        if success:
+        journey_stats = JourneyStats(user_id)
+        journey_stats.stats = data
+        if journey_stats.save_with_daily_update():
             return jsonify({"success": True})
         else:
             return jsonify({"error": "Failed to save journey stats"}), 500
@@ -424,14 +522,11 @@ def save_all_journey_stats() -> Union[Response, tuple]:
         logger.error(f"Error saving all journey stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 @trakaido_bp.route('/api/trakaido/journeystats/word', methods=['POST'])
 @require_auth
-def update_word_stats() -> Union[Response, tuple]:
-    """
-    Update stats for a specific word for the authenticated user.
-    
-    :return: JSON response indicating success or error
-    """
+def update_word_stats():
+    """Update stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
         data = request.get_json()
@@ -442,18 +537,10 @@ def update_word_stats() -> Union[Response, tuple]:
         word_key = data["wordKey"]
         word_stats = data["wordStats"]
         
-        # Filter the word stats to include only valid types
-        filtered_word_stats = filter_word_stats(word_stats)
+        journey_stats = JourneyStats(user_id)
+        journey_stats.set_word_stats(word_key, word_stats)
         
-        # Load existing stats
-        all_stats = load_journey_stats(user_id)
-        
-        # Update the specific word stats
-        all_stats["stats"][word_key] = filtered_word_stats
-        
-        # Save back to file with daily update
-        success = save_journey_stats_with_daily_update(user_id, all_stats)
-        if success:
+        if journey_stats.save_with_daily_update():
             return jsonify({"success": True})
         else:
             return jsonify({"error": "Failed to update word stats"}), 500
@@ -461,21 +548,15 @@ def update_word_stats() -> Union[Response, tuple]:
         logger.error(f"Error updating word stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 @trakaido_bp.route('/api/trakaido/journeystats/word/<word_key>', methods=['GET'])
 @require_auth
-def get_word_stats(word_key: str) -> Union[Response, tuple]:
-    """
-    Get stats for a specific word for the authenticated user.
-    
-    :param word_key: The word key to get stats for
-    :return: JSON response with word stats
-    """
+def get_word_stats(word_key: str):
+    """Get stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        all_stats = load_journey_stats(user_id)
-        
-        word_stats = all_stats["stats"].get(word_key, {})
-        
+        journey_stats = JourneyStats(user_id)
+        word_stats = journey_stats.get_word_stats(word_key)
         return jsonify({"wordStats": word_stats})
     except Exception as e:
         logger.error(f"Error getting word stats for '{word_key}': {str(e)}")
@@ -484,20 +565,8 @@ def get_word_stats(word_key: str) -> Union[Response, tuple]:
 
 @trakaido_bp.route('/api/trakaido/journeystats/increment', methods=['POST'])
 @require_auth
-def increment_word_stats() -> Union[Response, tuple]:
-    """
-    Increment stats for a single question with nonce protection.
-    
-    Expected request body:
-    {
-        "wordKey": "word-translation",
-        "statType": "multipleChoice",
-        "correct": true,
-        "nonce": "unique-identifier"
-    }
-    
-    :return: JSON response indicating success or error
-    """
+def increment_word_stats():
+    """Increment stats for a single question with nonce protection."""
     try:
         user_id = str(g.user.id)
         data = request.get_json()
@@ -516,15 +585,13 @@ def increment_word_stats() -> Union[Response, tuple]:
         correct = data["correct"]
         nonce = data["nonce"]
         
-        # Validate stat type
+        # Validate inputs
         if stat_type not in VALID_STAT_TYPES:
             return jsonify({"error": f"Invalid stat type: {stat_type}. Valid types: {list(VALID_STAT_TYPES)}"}), 400
         
-        # Validate correct field
         if not isinstance(correct, bool):
             return jsonify({"error": "Field 'correct' must be a boolean"}), 400
         
-        # Validate nonce
         if not isinstance(nonce, str) or not nonce.strip():
             return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
         
@@ -541,34 +608,33 @@ def increment_word_stats() -> Union[Response, tuple]:
             return jsonify({"error": "Failed to initialize daily stats"}), 500
         
         # Load current overall stats
-        all_stats = load_journey_stats(user_id)
+        journey_stats = JourneyStats(user_id)
         
         # Initialize word stats if they don't exist
-        if word_key not in all_stats["stats"]:
-            all_stats["stats"][word_key] = {}
+        if word_key not in journey_stats.stats["stats"]:
+            journey_stats.stats["stats"][word_key] = {}
         
-        if stat_type not in all_stats["stats"][word_key]:
-            all_stats["stats"][word_key][stat_type] = {"correct": 0, "incorrect": 0}
+        if stat_type not in journey_stats.stats["stats"][word_key]:
+            journey_stats.stats["stats"][word_key][stat_type] = {"correct": 0, "incorrect": 0}
         
         # Increment the appropriate counter
         if correct:
-            all_stats["stats"][word_key][stat_type]["correct"] += 1
+            journey_stats.stats["stats"][word_key][stat_type]["correct"] += 1
         else:
-            all_stats["stats"][word_key][stat_type]["incorrect"] += 1
+            journey_stats.stats["stats"][word_key][stat_type]["incorrect"] += 1
         
-        # Update lastSeen timestamp
+        # Update timestamps
         current_timestamp = int(datetime.now().timestamp() * 1000)
-        all_stats["stats"][word_key]["lastSeen"] = current_timestamp
+        journey_stats.stats["stats"][word_key]["lastSeen"] = current_timestamp
         
-        # Update lastCorrectAnswer timestamp if the answer was correct
         if correct:
-            all_stats["stats"][word_key]["lastCorrectAnswer"] = current_timestamp
+            journey_stats.stats["stats"][word_key]["lastCorrectAnswer"] = current_timestamp
         
         # Mark word as exposed
-        all_stats["stats"][word_key]["exposed"] = True
+        journey_stats.stats["stats"][word_key]["exposed"] = True
         
-        # Save updated overall stats and update daily snapshots
-        if not save_journey_stats_with_daily_update(user_id, all_stats):
+        # Save updated stats
+        if not journey_stats.save_with_daily_update():
             return jsonify({"error": "Failed to save stats"}), 500
         
         # Add nonce to used nonces
@@ -583,7 +649,7 @@ def increment_word_stats() -> Union[Response, tuple]:
             "wordKey": word_key,
             "statType": stat_type,
             "correct": correct,
-            "newStats": all_stats["stats"][word_key][stat_type]
+            "newStats": journey_stats.stats["stats"][word_key][stat_type]
         })
         
     except Exception as e:
@@ -593,12 +659,8 @@ def increment_word_stats() -> Union[Response, tuple]:
 
 @trakaido_bp.route('/api/trakaido/journeystats/daily', methods=['GET'])
 @require_auth
-def get_daily_stats() -> Union[Response, tuple]:
-    """
-    Get daily stats (today's progress) for the authenticated user.
-    
-    :return: JSON response with daily progress stats
-    """
+def get_daily_stats():
+    """Get daily stats (today's progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
         daily_progress = calculate_daily_progress(user_id)
@@ -609,4 +671,21 @@ def get_daily_stats() -> Union[Response, tuple]:
         return jsonify(daily_progress)
     except Exception as e:
         logger.error(f"Error getting daily stats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/journeystats/weekly', methods=['GET'])
+@require_auth
+def get_weekly_stats():
+    """Get weekly stats (7-day progress) for the authenticated user."""
+    try:
+        user_id = str(g.user.id)
+        weekly_progress = calculate_weekly_progress(user_id)
+        
+        if "error" in weekly_progress:
+            return jsonify(weekly_progress), 500
+        
+        return jsonify(weekly_progress)
+    except Exception as e:
+        logger.error(f"Error getting weekly stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
