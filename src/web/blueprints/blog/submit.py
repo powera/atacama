@@ -68,7 +68,7 @@ def show_submit_form():
         ).limit(50).all()
         
         return render_template(
-            'submit.html',
+            'messages/submit.html',
             recent_messages=recent_messages,
             channels=channel_manager.channels,
             default_channel=channel_manager.default_channel,

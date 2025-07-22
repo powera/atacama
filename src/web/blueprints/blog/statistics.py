@@ -127,7 +127,7 @@ def channel_statistics():
         channel_stats.sort(key=lambda x: x['total_count'], reverse=True)
             
         return render_template(
-            'channel_statistics.html',
+            'admin/channel_statistics.html',
             channel_stats=channel_stats,
             activity_data=dict(date_counts),
             channel_manager=channel_manager

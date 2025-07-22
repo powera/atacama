@@ -141,7 +141,7 @@ def get_message(message_id: int) -> Response:
             channel_config = get_channel_manager().get_channel_config(message.channel)
             
             return render_template(
-                'message.html',
+                'messages/message.html',
                 message=message,
                 created_at=message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 raw_content=message.content,
@@ -202,7 +202,7 @@ def view_chain(message_id: int) -> Response:
     
     if request.headers.get('Accept', '').startswith('text/html'):
         return render_template(
-            'chain.html',
+            'messages/chain.html',
             messages=chain,
             target_id=message_id,
             channel=chain[0].channel if chain else None,
@@ -317,7 +317,7 @@ def message_stream(older_than_id: Optional[int] = None,
                 older_than_next_tstime = f"{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
 
         return render_template(
-            'stream.html',
+            'messages/stream.html',
             messages=messages,
             has_more=has_more,
             older_than_id=older_than_next_id,
@@ -526,7 +526,7 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
             older_than_next_tstime = f"{dt.hour:02d}{dt.minute:02d}{dt.second:02d}"
         
         return render_template(
-            'all_messages.html',
+            'messages/all_messages.html',
             messages=display_messages,
             has_more=has_more,
             older_than_tsdate=older_than_next_tsdate,
@@ -599,7 +599,7 @@ def channel_list(channel: str) -> Response:
         has_next = page < total_pages
         
         return render_template(
-            'channel_list.html',
+            'messages/channel_list.html',
             channel=channel,
             channel_config=config,
             messages=messages,

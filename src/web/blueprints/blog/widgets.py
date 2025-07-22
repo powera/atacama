@@ -59,7 +59,7 @@ def view_widget(slug):
         channel_config = channel_manager.get_channel_config(widget.channel)
         
         return render_template(
-            'widget.html',
+            'widgets/widget.html',
             widget=widget,
             channel_config=channel_config,
             sanitized_component_name=sanitize_widget_title_for_component_name(widget.title)
@@ -560,7 +560,7 @@ def test_version(slug):
         })()
         
         return render_template(
-            'widget.html',
+            'widgets/widget.html',
             widget=test_widget,
             channel_config=get_channel_manager().get_channel_config(widget.channel),
             sanitized_component_name=sanitize_widget_title_for_component_name(test_widget.title),
