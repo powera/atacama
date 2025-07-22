@@ -41,10 +41,9 @@ from models.models import Message, Article, ReactWidget, Quote, Email
 from models.users import is_user_admin
 from web.blueprints.core.errors import handle_error
 from web.decorators import navigable, navigable_per_channel, optional_auth, require_auth
+from .shared import content_bp
 
 logger = get_logger(__name__)
-
-content_bp = Blueprint('content', __name__)
 
 
 @content_bp.route('/channels', methods=['GET', 'POST'])
@@ -481,7 +480,7 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
                     type_specific_data = article
                     title = article.title
                     preview = article.processed_content[:200] + '...' if article.processed_content and len(article.processed_content) > 200 else article.processed_content
-                    message_url = url_for('articles.view_article', slug=article.slug)
+                    message_url = url_for('content.view_article', slug=article.slug)
                     display_date = article.published_at or article.created_at
             
             elif message.message_type.value == 'widget':

@@ -12,7 +12,7 @@
         <header class="stream-header">
             <h1>Draft Articles</h1>
             <div class="actions">
-                <a href="{{ url_for('articles.submit_article') }}" class="button">New Article</a>
+                <a href="{{ url_for('content.submit_article') }}" class="button">New Article</a>
             </div>
         </header>
         
@@ -27,8 +27,8 @@
                             {% endif %}
                         </div>
                         <div class="message-actions">
-                            <a href="{{ url_for('articles.edit_article', slug=article.slug) }}" class="button">Edit</a>
-                            <a href="{{ url_for('articles.view_article', slug=article.slug) }}" class="button secondary">Preview</a>
+                            <a href="{{ url_for('content.edit_article', slug=article.slug) }}" class="button">Edit</a>
+                            <a href="{{ url_for('content.view_article', slug=article.slug) }}" class="button secondary">Preview</a>
                         </div>
                     </header>
                     <div class="metadata">

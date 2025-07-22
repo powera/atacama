@@ -17,10 +17,9 @@ from common.llm.widget_initiator import widget_initiator
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 from models.messages import get_user_allowed_channels
+from .shared import widgets_bp
 
 logger = get_logger(__name__)
-
-widgets_bp = Blueprint('widgets', __name__)
 
 # Global storage for improvement jobs
 improvement_jobs = {}

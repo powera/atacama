@@ -14,12 +14,11 @@ from models.messages import check_channel_access
 from aml_parser.parser import parse
 from aml_parser.lexer import tokenize
 from aml_parser.html_generator import generate_html
+from .shared import content_bp
 
 logger = get_logger(__name__)
 
-articles_bp = Blueprint('articles', __name__)
-
-@articles_bp.route('/p/<slug>')
+@content_bp.route('/p/<slug>')
 @optional_auth
 def view_article(slug: str):
     """View a single article by its slug."""
@@ -41,7 +40,7 @@ def view_article(slug: str):
                            article=article,
                            channel_config=channel_config)
 
-@articles_bp.route('/articles/channel/<channel>')
+@content_bp.route('/articles/channel/<channel>')
 @optional_auth
 def article_stream(channel: str):
     """View stream of articles in a channel."""
@@ -65,7 +64,7 @@ def article_stream(channel: str):
                            available_channels=channel_manager.get_channel_names(),
                            channel_config=channel_manager.get_channel_config(channel))
 
-@articles_bp.route('/drafts')
+@content_bp.route('/drafts')
 @require_auth
 def list_drafts():
     """List unpublished articles for the current user."""
@@ -77,7 +76,7 @@ def list_drafts():
             
         return render_template('articles/drafts.html', articles=drafts)
 
-@articles_bp.route('/p/<slug>/edit', methods=['GET', 'POST'])
+@content_bp.route('/p/<slug>/edit', methods=['GET', 'POST'])
 @require_auth
 def edit_article(slug: str):
     """Edit an existing article."""
@@ -116,7 +115,7 @@ def edit_article(slug: str):
                 article.last_modified_at = datetime.utcnow()
                 session.commit()
                 
-                return redirect(url_for('articles.view_article', slug=article.slug))
+                return redirect(url_for('content.view_article', slug=article.slug))
                 
             except Exception as e:
                 logger.error(f"Error updating article: {str(e)}")
@@ -130,7 +129,7 @@ def edit_article(slug: str):
                            article=article,
                            channels=get_channel_manager().channels)
 
-@articles_bp.route('/submit/article', methods=['GET', 'POST'])
+@content_bp.route('/submit/article', methods=['GET', 'POST'])
 @require_auth
 def submit_article():
     """Submit a new article."""
@@ -162,7 +161,7 @@ def submit_article():
                 session.add(article)
                 session.commit()
                 
-                return redirect(url_for('articles.view_article', slug=article.slug))
+                return redirect(url_for('content.view_article', slug=article.slug))
                 
         except Exception as e:
             logger.error(f"Error creating article: {str(e)}")

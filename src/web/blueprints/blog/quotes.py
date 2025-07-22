@@ -14,10 +14,9 @@ from models.quotes import (
     search_quotes,
     QuoteValidationError
 )
+from .shared import quotes_bp
 
 logger = get_logger(__name__)
-
-quotes_bp = Blueprint('quotes', __name__)
 
 @quotes_bp.route('/quotes')
 @require_auth

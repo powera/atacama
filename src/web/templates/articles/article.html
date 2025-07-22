@@ -30,7 +30,7 @@
                     {% endif %}
                     {% if article.channel != 'private' %}
                         <br>
-                        Channel: <a href="{{ url_for('articles.article_stream', channel=article.channel) }}">{{ article.channel|title }}</a>
+                        Channel: <a href="{{ url_for('content.article_stream', channel=article.channel) }}">{{ article.channel|title }}</a>
                         {% if channel_config and channel_config.description %}
                             - {{ channel_config.description }}
                         {% endif %}

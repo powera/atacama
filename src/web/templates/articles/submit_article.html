@@ -15,7 +15,7 @@
         <div class="error">{{ error }}</div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('articles.submit_article') }}">
+        <form method="POST" action="{{ url_for('content.submit_article') }}">
             <div class="form-group">
                 <label for="title">Title:</label>
                 <input type="text" id="title" name="title" required>

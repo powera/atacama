@@ -15,7 +15,7 @@
         <div class="error">{{ error }}</div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('articles.edit_article', slug=article.slug) }}">
+        <form method="POST" action="{{ url_for('content.edit_article', slug=article.slug) }}">
             <div class="form-group">
                 <label for="title">Title:</label>
                 <input type="text" id="title" name="title" required value="{{ article.title }}">
@@ -63,7 +63,7 @@
             
             <div class="button-group">
                 <button type="submit">Save Changes</button>
-                <a href="{{ url_for('articles.view_article', slug=article.slug) }}" class="button secondary">Cancel</a>
+                <a href="{{ url_for('content.view_article', slug=article.slug) }}" class="button secondary">Cancel</a>
             </div>
         </form>
         

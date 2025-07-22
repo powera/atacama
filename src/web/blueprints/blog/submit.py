@@ -12,11 +12,11 @@ from models.database import db
 from models.models import Email
 from web.blueprints.core.errors import handle_error
 from web.decorators import navigable, require_auth
+from .shared import content_bp
 
 logger = get_logger(__name__)
-submit_bp = Blueprint('submit', __name__)
 
-@submit_bp.route('/api/preview', methods=['POST'])
+@content_bp.route('/api/preview', methods=['POST'])
 @require_auth
 def preview_message():
     """
@@ -49,7 +49,7 @@ def preview_message():
         logger.error(f"Error processing preview: {str(e)}")
         return handle_error("500", "Processing Error", "Failed to process message preview", str(e))
 
-@submit_bp.route('/submit', methods=['GET'])
+@content_bp.route('/submit', methods=['GET'])
 @require_auth
 @navigable(name="Submit new message", category="main")
 def show_submit_form():
@@ -74,7 +74,7 @@ def show_submit_form():
             default_channel=channel_manager.default_channel,
             colors=aml_parser.colorblocks.COLORS)
 
-@submit_bp.route('/submit', methods=['POST'])
+@content_bp.route('/submit', methods=['POST'])
 @require_auth
 def handle_submit():
     """

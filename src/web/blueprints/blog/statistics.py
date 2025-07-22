@@ -15,10 +15,9 @@ from models.database import db
 from common.base.logging_config import get_logger
 from models.models import Email, User
 from models.messages import get_user_allowed_channels
+from .shared import statistics_bp
 
 logger = get_logger(__name__)
-
-statistics_bp = Blueprint('statistics', __name__)
 
 @statistics_bp.route('/stats')
 @optional_auth

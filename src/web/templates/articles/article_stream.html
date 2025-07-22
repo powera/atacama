@@ -18,7 +18,7 @@
                     {% for channel in available_channels %}
                         {% if channel != 'private' %}
                             <li class="channel-item {% if current_channel == channel %}active{% endif %}">
-                                <a href="{{ url_for('articles.article_stream', channel=channel) }}" class="channel-link">
+                                <a href="{{ url_for('content.article_stream', channel=channel) }}" class="channel-link">
                                     {{ channel|title }}
                                 </a>
                             </li>
@@ -32,7 +32,7 @@
             <article class="stream-message message">
                 <header class="message-header">
                     <div class="message-header-main">
-                        <a href="{{ url_for('articles.view_article', slug=article.slug) }}" class="message-title">
+                        <a href="{{ url_for('content.view_article', slug=article.slug) }}" class="message-title">
                             {{ article.title }}
                         </a>
                         {% if article.channel != 'private' %}

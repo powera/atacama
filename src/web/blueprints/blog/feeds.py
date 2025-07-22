@@ -20,10 +20,9 @@ from common.config.domain_config import get_domain_manager
 from models.database import db
 from models.models import Email
 from web.blueprints.core.errors import handle_error
+from .shared import feeds_bp
 
 logger = get_logger(__name__)
-
-feeds_bp = Blueprint('feeds', __name__)
 
 
 @feeds_bp.route('/sitemap.xml')
