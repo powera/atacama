@@ -89,7 +89,6 @@ class BaseStats:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(stats, f, indent=2, ensure_ascii=False)
             
-            logger.debug(f"Successfully saved stats to {file_path}")
             return True
         except Exception as e:
             logger.error(f"Error saving stats to {file_path}: {str(e)}")
@@ -256,7 +255,6 @@ class DailyStats(BaseStats):
         try:
             # Check for GZIP file first
             if os.path.exists(self.gzip_file_path):
-                logger.debug(f"Loading GZIP stats from {self.gzip_file_path}")
                 self._stats = self._load_from_gzip(self.gzip_file_path)
                 self._loaded = True
                 self._loaded_from_gzip = True
@@ -264,7 +262,6 @@ class DailyStats(BaseStats):
             
             # Fall back to regular JSON file
             if os.path.exists(self.file_path):
-                logger.debug(f"Loading regular stats from {self.file_path}")
                 self._stats = self._load_from_file(self.file_path)
                 self._loaded = True
                 self._loaded_from_gzip = False
@@ -427,7 +424,6 @@ def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
         with open(nonce_file, 'w', encoding='utf-8') as f:
             json.dump({"nonces": list(nonces)}, f, indent=2)
         
-        logger.debug(f"Successfully saved nonces for user {user_id} day {day_key}")
         return True
     except Exception as e:
         logger.error(f"Error saving nonces for user {user_id} day {day_key}: {str(e)}")
@@ -893,9 +889,7 @@ def increment_word_stats():
         used_nonces.add(nonce)
         if not save_nonces(user_id, current_day, used_nonces):
             logger.warning(f"Failed to save nonce for user {user_id} day {current_day}")
-        
-        logger.debug(f"Successfully incremented {stat_type} stats for word '{word_key}' (correct: {correct}) for user {user_id}")
-        
+                
         return jsonify({
             "success": True,
             "wordKey": word_key,
