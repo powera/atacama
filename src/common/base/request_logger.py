@@ -110,6 +110,7 @@ class RequestLogger:
                 'ip_address': ip_address,
                 'user_agent': request.user_agent.string,
                 'referer': request.referrer,
+                'response_size': response.content_length or len(response.get_data()),
             })
 
             # Add sanitized query parameters
