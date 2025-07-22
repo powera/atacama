@@ -32,10 +32,10 @@
 [themes]
   [themes.default]
     name = "Default"
-    css_files = ["common.css", "flash.css", "atacama.css", "stream.css", "chess.css"]
+    css_files = ["common.css", "flash.css", "themes/atacama.css", "blog/stream.css", "chess.css"]
     
   [themes.shragafeivel]
     name = "Shragafeivel"
-    css_files = ["common.css", "flash.css", "atacama.css", "stream.css", "shragafeivel.css", "chess.css"]
+    css_files = ["common.css", "flash.css", "themes/atacama.css", "blog/stream.css", "themes/shragafeivel.css", "chess.css"]
     layout = "shragafeivel"
     banner = true

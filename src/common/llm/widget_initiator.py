@@ -59,8 +59,8 @@ class WidgetInitiator:
         """Load common CSS for context."""
         css_files = [
             os.path.join(constants.WEB_DIR, 'css', 'common.css'),
-            os.path.join(constants.WEB_DIR, 'css', 'widget_tools.css'),
-            os.path.join(constants.WEB_DIR, 'css', 'widget.css')
+            os.path.join(constants.WEB_DIR, 'css', 'widgets', 'widget_tools.css'),
+            os.path.join(constants.WEB_DIR, 'css', 'widgets', 'widget.css')
         ]
 
         css_content = ""

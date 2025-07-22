@@ -123,8 +123,8 @@ Ensure the widget provides an excellent mobile user experience.'''
         """Load common CSS for context."""
         css_files = [
             'src/web/css/common.css',
-            'src/web/css/widget_tools.css',
-            'src/web/css/widget_settings.css',
+            'src/web/css/widgets/widget_tools.css',
+            'src/web/css/widgets/widget_settings.css',
         ]
 
         css_content = ""
