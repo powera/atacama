@@ -71,7 +71,6 @@ def get_wordlist_corpora() -> List[str]:
     """
     try:
         corpora = list(all_words.keys())
-        logger.debug(f"Found {len(corpora)} wordlist corpora: {', '.join(corpora)}")
         return corpora
     except Exception as e:
         logger.error(f"Error getting wordlist corpora: {str(e)}")
@@ -90,7 +89,6 @@ def get_groups(corpus: str) -> List[str]:
             return []
         
         groups = list(all_words[corpus].keys())
-        logger.debug(f"Found {len(groups)} groups for {corpus}: {', '.join(groups)}")
         return groups
     except Exception as e:
         logger.error(f"Error getting groups for {corpus}: {str(e)}")
