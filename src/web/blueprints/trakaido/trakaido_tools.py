@@ -48,6 +48,7 @@ USERINFO_API_DOCS = {
 }
 
 @trakaido_bp.route("/trakaido")
+@trakaido_bp.route("/trakaido/")
 def trakaido_index() -> Response:
     """Serve the index page."""
     if os.path.exists(TRAKAIDO_PATH_PROD):
