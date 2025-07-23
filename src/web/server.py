@@ -71,11 +71,12 @@ def before_request_handler():
     g.theme_css_files = theme_config.css_files
     g.theme_layout = theme_config.layout
 
-def create_app(testing: bool = False) -> Flask:
+def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     """
     Create and configure Flask application instance.
     
     :param testing: Whether to configure app for testing
+    :param blueprint_set: Which set of blueprints to load ('BLOG' or 'TRAKAIDO')
     :return: Configured Flask app
     """
     # Initialize system state before creating app
@@ -152,13 +153,23 @@ def create_app(testing: bool = False) -> Flask:
         from common.base.request_logger import RequestLogger
         request_logger = RequestLogger(app)
 
-    # Register blueprints
-    # Blog blueprints
-    from web.blueprints.blog import BLOG_BLUEPRINTS
-    for blueprint in BLOG_BLUEPRINTS:
-        app.register_blueprint(blueprint)
+    # Register blueprints based on blueprint_set
+    if blueprint_set == 'BLOG':
+        # Blog blueprints
+        from web.blueprints.blog import BLOG_BLUEPRINTS
+        for blueprint in BLOG_BLUEPRINTS:
+            app.register_blueprint(blueprint)
+        
+        # Admin blueprint (blog-specific functionality)
+        from web.blueprints.admin import admin_bp
+        app.register_blueprint(admin_bp)
+        
+    elif blueprint_set == 'TRAKAIDO':
+        # Trakaido blueprints
+        from web.blueprints.trakaido import trakaido_bp
+        app.register_blueprint(trakaido_bp)
 
-    # Core blueprints
+    # Core blueprints (shared between both)
     from web.blueprints.core.static import static_bp
     app.register_blueprint(static_bp)
 
@@ -174,36 +185,29 @@ def create_app(testing: bool = False) -> Flask:
     from web.blueprints.core.errors import errors_bp
     app.register_blueprint(errors_bp)
 
-    # Other blueprints
-    from web.blueprints.admin import admin_bp
-    app.register_blueprint(admin_bp)
-
-    from web.blueprints.trakaido import trakaido_bp
-    app.register_blueprint(trakaido_bp)
-
     return app
 
 # The app instance will be created when needed
 app = None
 
-def get_app():
+def get_app(blueprint_set: str = 'BLOG'):
     """Get or create the Flask application instance."""
     global app
     if app is None:
-        app = create_app()
+        app = create_app(blueprint_set=blueprint_set)
     return app
 
-def run_server(host: str = '0.0.0.0', port: int = 5000, debug: bool = False) -> None:
+def run_server(host: str = '0.0.0.0', port: int = 5000, debug: bool = False, blueprint_set: str = 'BLOG') -> None:
     """Run the server and start the email fetcher daemon."""
     # Database initialization will happen automatically when needed
     # since system is already initialized by create_app()
-    logger.info(f"Starting message processor server on {host}:{port}")
+    logger.info(f"Starting {blueprint_set.lower()} server on {host}:{port}")
     
     if debug:
         # Use Flask's built-in development server for debug mode
-        app = get_app()
+        app = get_app(blueprint_set=blueprint_set)
         app.config['DEBUG'] = True
         app.run(host=host, port=port, debug=True)
     else:
         # Use Waitress for production
-        serve(get_app(), host=host, port=port)
+        serve(get_app(blueprint_set=blueprint_set), host=host, port=port)

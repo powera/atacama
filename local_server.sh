@@ -9,6 +9,34 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Change to project root directory
 cd "$SCRIPT_DIR"
 
+# Default values
+MODE="web"
+PORT="9123"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --mode)
+            MODE="$2"
+            shift 2
+            ;;
+        --port)
+            PORT="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--mode web|trakaido] [--port PORT]"
+            exit 1
+            ;;
+    esac
+done
+
+# Set default ports based on mode if not specified
+if [[ "$MODE" == "trakaido" && "$PORT" == "9123" ]]; then
+    PORT="9124"
+fi
+
 # Set environment variables for development
 export FLASK_APP=src/web/server.py
 export FLASK_ENV=development
@@ -18,6 +46,6 @@ export FLASK_DEBUG=1
 export ATACAMA_REQUEST_LOG_CONSOLE=1
 
 # Run the development server using launch.py
-echo "Starting development server on port 9123..."
+echo "Starting development $MODE server on port $PORT..."
 echo "Request logs will be output to console (STDERR)"
-python3 launch.py --mode=web --port=9123 --log-level=DEBUG
+python3 launch.py --mode="$MODE" --port="$PORT" --log-level=DEBUG

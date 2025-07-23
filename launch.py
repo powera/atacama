@@ -56,16 +56,17 @@ def parse_args():
     )
     
     # Component selection
-    parser.add_argument('--mode', choices=['web', 'spaceship'], 
-                      help='Server mode to run (web or spaceship)')
-    parser.add_argument('--web', action='store_true', help='Launch web server')
+    parser.add_argument('--mode', choices=['web', 'trakaido', 'spaceship'], 
+                      help='Server mode to run (web, trakaido, or spaceship)')
+    parser.add_argument('--web', action='store_true', help='Launch web server (blog)')
+    parser.add_argument('--trakaido', action='store_true', help='Launch trakaido API server')
     parser.add_argument('--spaceship', action='store_true', help='Launch spaceship server')
     
     # Server configuration
     parser.add_argument('--host', default='0.0.0.0', 
                        help='Host for server (default: 0.0.0.0)')
     parser.add_argument('--port', type=int, 
-                       help='Port for server (default: 5000 for web, 8998 for spaceship)')
+                       help='Port for server (default: 5000 for web, 5001 for trakaido, 8998 for spaceship)')
     
     # Development options
     parser.add_argument('--dev', action='store_true', 
@@ -86,10 +87,12 @@ def parse_args():
     # Examples and notes
     parser.epilog = """
 Examples:
-  %(prog)s --web                    # Launch web server on default port 5000
+  %(prog)s --web                    # Launch web server (blog) on default port 5000
+  %(prog)s --trakaido              # Launch trakaido API server on default port 5001
   %(prog)s --web --port 8080        # Launch web server on port 8080
   %(prog)s --spaceship             # Launch spaceship server
   %(prog)s --mode web --dev        # Launch web server in development mode
+  %(prog)s --mode trakaido --dev   # Launch trakaido server in development mode
 
 Note: Log files are created with timestamp and PID in the filename format: 
       atacama_YYYYMMDD_HHMMSS_pidNNNN.log
@@ -107,20 +110,28 @@ def main():
             # Legacy mode argument support
             if args.mode == 'web':
                 args.web = True
+                args.trakaido = False
+                args.spaceship = False
+            elif args.mode == 'trakaido':
+                args.trakaido = True
+                args.web = False
                 args.spaceship = False
             elif args.mode == 'spaceship':
                 args.spaceship = True
                 args.web = False
+                args.trakaido = False
         
         # Validate arguments
-        if not args.web and not args.spaceship:
+        if not args.web and not args.trakaido and not args.spaceship:
             print("Error: No component specified to launch.", file=sys.stderr)
-            print("Use --web or --spaceship to start a server.", file=sys.stderr)
+            print("Use --web, --trakaido, or --spaceship to start a server.", file=sys.stderr)
             print("Run 'python launch.py --help' for more information.", file=sys.stderr)
             return 1
         
-        if args.web and args.spaceship:
-            print("Error: Cannot launch both web and spaceship servers simultaneously.", file=sys.stderr)
+        # Count how many server types are specified
+        server_count = sum([args.web, args.trakaido, args.spaceship])
+        if server_count > 1:
+            print("Error: Cannot launch multiple servers simultaneously.", file=sys.stderr)
             return 1
         
         # Initialize system with configured log levels
@@ -139,9 +150,16 @@ def main():
             from web.server import run_server
             port = args.port or 5000
             if not args.quiet:
-                print(f"Starting web server on http://{args.host}:{port}")
-            logger.info(f"Starting web server on {args.host}:{port}")
-            run_server(host=args.host, port=port, debug=args.debug or args.dev)
+                print(f"Starting web server (blog) on http://{args.host}:{port}")
+            logger.info(f"Starting web server (blog) on {args.host}:{port}")
+            run_server(host=args.host, port=port, debug=args.debug or args.dev, blueprint_set='BLOG')
+        elif args.trakaido:
+            from web.server import run_server
+            port = args.port or 5001
+            if not args.quiet:
+                print(f"Starting trakaido API server on http://{args.host}:{port}")
+            logger.info(f"Starting trakaido API server on {args.host}:{port}")
+            run_server(host=args.host, port=port, debug=args.debug or args.dev, blueprint_set='TRAKAIDO')
         elif args.spaceship:
             from spaceship.server import run_server
             port = args.port or 8998
