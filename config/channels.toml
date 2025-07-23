@@ -137,6 +137,11 @@ description = "Wikipedia"
 access_level = "private"
 group = "Media"
 
+[channels.highphysics]
+description = "High Physics"
+access_level = "public"
+group = "Religion"
+
 [defaults]
 # Default channel for new messages
 default_channel = "private"

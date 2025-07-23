@@ -23,7 +23,7 @@
   [domains.shragafeivel]
     name = "Shragafeivel"
     domains = ["shragafeivel.com"]
-    channels = ["religion", "usconst", "chess", "education"]
+    channels = ["religion", "usconst", "chess", "education", "highphysics"]
     theme = "shragafeivel"
     # Optional domain-specific settings
     description = "Shragafeivel Collection"
