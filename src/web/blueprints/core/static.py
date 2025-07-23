@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from flask import Blueprint, send_from_directory, Response
+from flask import Blueprint, send_from_directory, send_file, Response
 
 import constants
 from common.base.logging_config import get_logger
@@ -11,6 +11,17 @@ from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
 static_bp = Blueprint('static', __name__)
+
+
+@static_bp.route("/trakaido")
+@static_bp.route("/trakaido/")
+def trakaido_index() -> Response:
+    """Serve the Trakaido single-page application."""
+    TRAKAIDO_PATH_PROD = "/home/atacama/trakaido_react/build/index.html"
+    if os.path.exists(TRAKAIDO_PATH_PROD):
+        # In production, serve the compiled index.html from the Trakaido repo
+        return send_file(TRAKAIDO_PATH_PROD)
+    return send_file(constants.WEB_DIR + "/static/trakaido.html")
 
 @static_bp.route('/js/<path:filename>')
 def serve_js(filename: str) -> Response:

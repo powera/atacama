@@ -47,15 +47,6 @@ USERINFO_API_DOCS = {
     "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
 }
 
-@trakaido_bp.route("/trakaido")
-@trakaido_bp.route("/trakaido/")
-def trakaido_index() -> Response:
-    """Serve the index page."""
-    if os.path.exists(TRAKAIDO_PATH_PROD):
-        # In production, serve the compiled index.html from the Trakaido repo
-        return send_file(TRAKAIDO_PATH_PROD)
-    return send_file(constants.WEB_DIR + "/static/trakaido.html")
-
 @trakaido_bp.route('/api/lithuanian')
 def lithuanian_api_index() -> Response:
     """
