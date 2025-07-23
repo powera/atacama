@@ -138,7 +138,8 @@ access_level = "private"
 group = "Media"
 
 [channels.highphysics]
-description = "High Physics"
+description = "General Relativity, Quantum Mechanics, etc."
+display_name = "High Physics"
 access_level = "public"
 group = "Religion"
 
