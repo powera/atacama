@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Set
 
 import constants
 from common.base.logging_config import get_logger
+from common.services.archive import ArchiveConfig
+
 logger = get_logger(__name__)
 
 @dataclass
@@ -26,6 +28,7 @@ class DomainConfig:
     theme: str
     description: Optional[str] = None
     domains: List[str] = None  # List of hostnames that map to this domain config
+    auto_archive_enabled: bool = False  # Whether to enable auto-archiving for this domain
     
     @property
     def allows_all_channels(self) -> bool:
@@ -55,6 +58,7 @@ class DomainManager:
         self.themes: Dict[str, ThemeConfig] = {}
         self.host_to_domain: Dict[str, str] = {}  # Maps hosts to domain configs
         self.default_domain = "default"
+        self.archive_config: Optional[ArchiveConfig] = None
         self._load_config()
         
     def _load_config(self) -> None:
@@ -63,6 +67,12 @@ class DomainManager:
             logger.info(f"Loading domain configuration from {self.config_path}")
             with open(self.config_path, 'rb') as f:
                 config = tomli.load(f)
+            
+            # Load archive configuration
+            archive_config = config.get('archive', {})
+            self.archive_config = ArchiveConfig(
+                excluded_domains=archive_config.get('excluded_domains', [])
+            )
             
             # Load theme configurations
             themes_config = config.get('themes', {})
@@ -82,7 +92,8 @@ class DomainManager:
                     channels=settings.get('channels', []),
                     theme=settings.get('theme', 'default'),
                     description=settings.get('description'),
-                    domains=settings.get('domains', [])
+                    domains=settings.get('domains', []),
+                    auto_archive_enabled=settings.get('auto_archive_enabled', False)
                 )
                 
                 # Map each hostname to this domain config
@@ -207,6 +218,14 @@ class DomainManager:
         """
         domain = self.get_domain_config(domain_key)
         return domain.channel_allowed(channel)
+    
+    def get_archive_config(self) -> Optional[ArchiveConfig]:
+        """
+        Get archive configuration.
+        
+        :return: Archive configuration or None if not loaded
+        """
+        return self.archive_config
 
 # Default configuration file path
 DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "domains.toml"

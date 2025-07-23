@@ -1,6 +1,12 @@
 # Domain configuration for Atacama
 # Maps domain names to channel settings and theme configurations
 
+# Archive configuration
+[archive]
+# Global archive settings
+# Domains to exclude from archiving (internal/local domains)
+excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
+
 [domains]
   # Main domain (default)
   [domains.default]
@@ -27,6 +33,8 @@
     theme = "shragafeivel"
     # Optional domain-specific settings
     description = "Shragafeivel Collection"
+    # Enable automatic archiving for this domain
+    auto_archive_enabled = true
     
 # Theme configurations
 [themes]

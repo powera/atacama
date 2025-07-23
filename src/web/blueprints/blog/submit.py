@@ -1,12 +1,17 @@
 """Blueprint for message submission and preview functionality."""
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for, g
 from sqlalchemy.orm import joinedload
 
 import aml_parser
 import aml_parser.colorblocks
+from aml_parser.lexer import tokenize, TokenType
+from aml_parser.parser import parse
+from aml_parser.html_generator import generate_html
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
+from common.config.domain_config import get_domain_manager
+from common.services.archive import get_archive_service
 from models import get_or_create_user
 from models.database import db
 from models.models import Email
@@ -121,15 +126,25 @@ def handle_submit():
             # Add message to session before processing content
             db_session.add(message)
 
-            # Process content with access to the message object
-            message.processed_content = aml_parser.process_message(
-                content,
+            # Process content with access to the message object and extract URLs
+            tokens = list(tokenize(content))
+            ast = parse(iter(tokens))
+            
+            # Extract URLs from tokens
+            extracted_urls = []
+            for token in tokens:
+                if token.type == TokenType.URL:
+                    extracted_urls.append(token.value)
+            
+            # Generate HTML content
+            message.processed_content = generate_html(
+                ast, 
                 message=message,
                 db_session=db_session
             )
             
-            message.preview_content = aml_parser.process_message(
-                content,
+            message.preview_content = generate_html(
+                ast,
                 message=message,
                 db_session=db_session,
                 truncated=True
@@ -137,6 +152,55 @@ def handle_submit():
             
             db_session.commit()
             message_id = message.id  # Get ID before session closes
+            # Note: processed_content and extracted_urls are already available from above
+        
+        # Archive URLs and posts if archive service is enabled
+        archive_service = get_archive_service()
+        if archive_service:
+            try:
+                # Archive URLs from the message content in a separate thread to avoid blocking
+                import threading
+                def archive_content():
+                    try:
+                        # 1. Always archive URLs found in message content (in production)
+                        archived_url_count = archive_service.archive_urls_from_content(
+                            urls=extracted_urls
+                        )
+                        if archived_url_count > 0:
+                            logger.info(f"Archived {archived_url_count} URLs from message {message_id} content")
+                        
+                        # 2. Archive the post itself if any domain with archiving supports this channel
+                        domain_manager = get_domain_manager()
+                        archiving_domains = []
+                        
+                        for domain_key, domain_config in domain_manager.domains.items():
+                            if (domain_config.auto_archive_enabled and 
+                                domain_config.channel_allowed(channel)):
+                                archiving_domains.append(domain_config)
+                        
+                        if archiving_domains:
+                            # Generate the message URL for archiving the post itself
+                            message_url = url_for('content.get_message', message_id=message_id, _external=True)
+                            
+                            # Use the first archiving domain to avoid duplicate submissions
+                            domain_config = archiving_domains[0]
+                            archived_post_count = archive_service.archive_message_post(
+                                message_url, domain_config
+                            )
+                            if archived_post_count > 0:
+                                domain_names = [d.name for d in archiving_domains]
+                                logger.info(f"Archived message post {message_id} for domains: {', '.join(domain_names)}")
+                        else:
+                            logger.debug(f"No domains with archiving enabled support channel {channel}")
+                            
+                    except Exception as e:
+                        logger.error(f"Error archiving content for message {message_id}: {e}")
+                
+                # Start archiving in background thread
+                archive_thread = threading.Thread(target=archive_content, daemon=True)
+                archive_thread.start()
+            except Exception as e:
+                logger.error(f"Error starting archive thread for message {message_id}: {e}")
         
         flash('Message submitted successfully!', 'success')
         return redirect(url_for('content.get_message', message_id=message_id))

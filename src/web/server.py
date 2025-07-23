@@ -13,6 +13,7 @@ import constants
 from models.database import db
 from common.config.channel_config import init_channel_manager, get_channel_manager
 from common.config.domain_config import init_domain_manager, get_domain_manager
+from common.services.archive import init_archive_service, get_archive_service
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 
@@ -100,7 +101,13 @@ def create_app(testing: bool = False) -> Flask:
     
     # Initialize managers
     init_channel_manager()
-    init_domain_manager()
+    domain_manager = init_domain_manager()
+    
+    # Initialize archive service with configuration from domain manager
+    archive_config = domain_manager.get_archive_config()
+    if archive_config:
+        init_archive_service(archive_config)
+        logger.info("Archive service initialized")
     
     # Register before request handler for domain/theme processing
     app.before_request(before_request_handler)
