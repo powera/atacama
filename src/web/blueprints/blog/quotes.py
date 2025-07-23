@@ -3,7 +3,7 @@ from sqlalchemy import select
 from typing import Dict, Any
 from common.base.logging_config import get_logger
 
-from web.decorators import require_auth, optional_auth
+from web.decorators import require_auth, optional_auth, navigable
 from models.database import db
 from models.models import Quote
 from models.quotes import (
@@ -20,6 +20,7 @@ logger = get_logger(__name__)
 
 @quotes_bp.route('/quotes')
 @require_auth
+@navigable(name="Quotes", description="View and manage tracked quotes", category="main")
 def list_quotes():
     """Display all tracked quotes with their metadata."""
     with db.session() as db_session:
