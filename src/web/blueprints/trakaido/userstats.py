@@ -641,7 +641,6 @@ def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
         # Try exact target day first
         target_daily_stats = DailyStats(user_id, target_day, "current")
         if DailyStats.exists(user_id, target_day, "current") and not target_daily_stats.is_empty():
-            logger.debug(f"Found exact weekly baseline for user {user_id} on day {target_day}")
             return target_daily_stats
         
         # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
@@ -664,10 +663,8 @@ def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
                     if best_date is None or check_date < best_date:
                         best_daily_stats = check_daily_stats
                         best_date = check_date
-                        logger.debug(f"Found weekly baseline for user {user_id} from {check_day_key} (yesterday)")
         
         if best_daily_stats:
-            logger.debug(f"Using weekly baseline from {best_date.strftime('%Y-%m-%d')} (yesterday) for user {user_id}")
             return best_daily_stats
         else:
             logger.debug(f"No suitable weekly baseline found for user {user_id}, using empty baseline")
