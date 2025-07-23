@@ -1,1 +1,1 @@
-pass
+"""Tests for models functionality."""
