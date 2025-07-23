@@ -11,9 +11,46 @@ _navigable_routes = {}
 # Store for per-channel navigable routes
 _per_channel_routes = {}
 
+def _detect_blueprint_name(route_func: Callable) -> str:
+    """
+    Detect the blueprint name from a Flask route function.
+    
+    This function inspects the route function to find blueprint information
+    that was added by the @blueprint.route() decorator.
+    
+    :param route_func: The route function to inspect
+    :return: Blueprint name if detected, otherwise module name
+    """
+    # Check if the function has blueprint information from Flask decorators
+    if hasattr(route_func, '_blueprint_name'):
+        return route_func._blueprint_name
+    
+    # Check if the function has a __self__ attribute (bound method)
+    if hasattr(route_func, '__self__') and hasattr(route_func.__self__, 'name'):
+        return route_func.__self__.name
+    
+    # Try to find blueprint info in the function's closure or attributes
+    func = route_func
+    while hasattr(func, '__wrapped__'):
+        if hasattr(func, '_blueprint_name'):
+            return func._blueprint_name
+        func = func.__wrapped__
+    
+    # Look for blueprint in the function's globals
+    if hasattr(route_func, '__globals__'):
+        for name, obj in route_func.__globals__.items():
+            if name.endswith('_bp') and hasattr(obj, 'name'):
+                # Found a blueprint object, check if this function is registered to it
+                # This is a heuristic - we assume the blueprint in the same module
+                # is the one this function belongs to
+                return obj.name
+    
+    # Fallback to module name
+    return route_func.__module__.split('.')[-1]
+
 def navigable(name: str, description: str = "", category: str = "main", 
               order: int = 100, requires_auth: Optional[bool] = None, 
-              requires_admin: bool = False) -> Callable:
+              requires_admin: bool = False, blueprint: Optional[str] = None) -> Callable:
     """
     Decorator to mark a route as navigable and include it in the site navigation.
     
@@ -23,11 +60,12 @@ def navigable(name: str, description: str = "", category: str = "main",
     :param order: Sort order within the category (lower numbers appear first)
     :param requires_auth: Whether this route requires authentication (auto-detected if None)
     :param requires_admin: Whether this route requires admin privileges
+    :param blueprint: Override blueprint name (if different from module name)
     :return: Decorated route function
     """
     def decorator(route_func: Callable) -> Callable:
-        # Get the blueprint name from the function
-        blueprint_name = route_func.__module__.split('.')[-1]
+        # Get the blueprint name - use override if provided, otherwise detect from route decorator
+        blueprint_name = blueprint if blueprint else _detect_blueprint_name(route_func)
         
         # Store the original endpoint name
         endpoint = f"{blueprint_name}.{route_func.__name__}"
@@ -100,8 +138,8 @@ def navigable_per_channel(name: str, description: str = "",
     :return: Decorated route function
     """
     def decorator(route_func: Callable) -> Callable:
-        # Get the blueprint name from the function
-        blueprint_name = route_func.__module__.split('.')[-1]
+        # Get the blueprint name - detect from route decorator
+        blueprint_name = _detect_blueprint_name(route_func)
         
         # Store the original endpoint name
         endpoint = f"{blueprint_name}.{route_func.__name__}"
