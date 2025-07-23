@@ -29,41 +29,44 @@ def navigation() -> str:
     channel_nav = []
     per_channel_routes = nav_items.get('per_channel', [])
     
-    for channel_name in sorted(channel_manager.get_channel_names()):
-        config = channel_manager.get_channel_config(channel_name)
-        if config and check_channel_access(channel_name, g.user):
-            display_name = channel_manager.get_display_name(channel_name)
-            channel_item = {
-                'name': display_name,
-                'channel': channel_name,
-                'description': config.description,
-                'links': []
-            }
-            
-            # Add per-channel routes
-            for route in per_channel_routes:
-                try:
-                    # Build URL with channel parameter
-                    route_kwargs = {route['channel_param']: channel_name}
-                    link_url = url_for(route['endpoint'], **route_kwargs)
-                    
-                    channel_item['links'].append({
-                        'name': route['name'],
-                        'url': link_url,
-                        'description': route['description'],
-                        'order': route['order']
-                    })
-                except Exception as e:
-                    # Route might not be available for this channel
-                    logger.debug(f"Could not generate URL for {route['endpoint']} with channel {channel_name}: {e}")
-                    
-            # Sort links by order
-            channel_item['links'].sort(key=lambda x: x.get('order', 100))
+    # Only build channel navigation if there are per-channel routes available
+    if per_channel_routes:
+        for channel_name in sorted(channel_manager.get_channel_names()):
+            config = channel_manager.get_channel_config(channel_name)
+            if config and check_channel_access(channel_name, g.user):
+                display_name = channel_manager.get_display_name(channel_name)
+                channel_item = {
+                    'name': display_name,
+                    'channel': channel_name,
+                    'description': config.description,
+                    'links': []
+                }
                 
-            channel_nav.append(channel_item)
+                # Add per-channel routes
+                for route in per_channel_routes:
+                    try:
+                        # Build URL with channel parameter
+                        route_kwargs = {route['channel_param']: channel_name}
+                        link_url = url_for(route['endpoint'], **route_kwargs)
+                        
+                        channel_item['links'].append({
+                            'name': route['name'],
+                            'url': link_url,
+                            'description': route['description'],
+                            'order': route['order']
+                        })
+                    except Exception as e:
+                        # Route might not be available for this channel
+                        logger.debug(f"Could not generate URL for {route['endpoint']} with channel {channel_name}: {e}")
+                        
+                # Sort links by order
+                channel_item['links'].sort(key=lambda x: x.get('order', 100))
+                    
+                channel_nav.append(channel_item)
     
-    # Add channel navigation to the items
-    nav_items['channel_nav'] = channel_nav
+    # Add channel navigation to the items only if there are channels with links
+    if channel_nav:
+        nav_items['channel_nav'] = channel_nav
     
     return render_template(
         'nav.html',
