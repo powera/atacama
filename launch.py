@@ -27,9 +27,9 @@ def get_log_filename():
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"atacama_{timestamp}_pid{pid}.log"
 
-def init_system(log_level="INFO", app_log_level="DEBUG"):
+def init_system(log_level="INFO", app_log_level="DEBUG", service=None):
     """Initialize system components."""
-    constants.init_production()
+    constants.init_production(service=service)
     
     # Create a unique log filename with PID and timestamp
     log_filename = get_log_filename()
@@ -134,12 +134,21 @@ def main():
             print("Error: Cannot launch multiple servers simultaneously.", file=sys.stderr)
             return 1
         
+        # Determine service for logging purposes
+        service = None
+        if args.web:
+            service = 'blog'
+        elif args.trakaido:
+            service = 'trakaido'
+        elif args.spaceship:
+            service = 'spaceship'
+        
         # Initialize system with configured log levels
         log_level = 'DEBUG' if args.debug else args.log_level
         if args.quiet:
             log_level = 'WARNING'
             
-        init_system(log_level=log_level, app_log_level=args.app_log_level)
+        init_system(log_level=log_level, app_log_level=args.app_log_level, service=service)
         
         # Get logger after initialization to ensure it's properly configured
         logger = get_logger(__name__)
