@@ -29,6 +29,23 @@ WORDLISTS_API_DOCS = {
 
 # NEW API
 
+# Helper function to find which level(s) a word belongs to based on corpus and group
+def find_word_levels(corpus: str, group: str) -> list:
+    """
+    Find which level(s) a word belongs to based on its corpus and group.
+    
+    :param corpus: The corpus name
+    :param group: The group name
+    :return: List of level names that contain this corpus/group combination
+    """
+    word_levels = []
+    for level_name, level_items in levels.items():
+        for level_item in level_items:
+            if level_item["corpus"] == corpus and level_item["group"] == group:
+                word_levels.append(level_name)
+                break  # Each level can only contain a corpus/group combination once
+    return word_levels
+
 # Helper function to get all word pairs in a flat structure (basic format for backward compatibility)
 def get_words_by_level(level_name: str) -> list:
     """
@@ -83,6 +100,11 @@ def get_wordlists() -> Union[Response, tuple]:
             if not words:
                 return jsonify({"error": f"Level '{level}' not found"}), 404
             
+            # Add level information to each word (they might belong to multiple levels)
+            for word in words:
+                word_levels = find_word_levels(word['corpus'], word['group'])
+                word['levels'] = word_levels
+            
             return jsonify({
                 "level": level,
                 "words": words,
@@ -97,10 +119,12 @@ def get_wordlists() -> Union[Response, tuple]:
             # Get all words from all groups in this corpus with enhanced format
             corpus_words = []
             for group_name, group_words in all_words[corpus].items():
+                word_levels = find_word_levels(corpus, group_name)
                 for word_pair in group_words:
                     enhanced_word = word_pair.copy()
                     enhanced_word['corpus'] = corpus
                     enhanced_word['group'] = group_name
+                    enhanced_word['levels'] = word_levels
                     corpus_words.append(enhanced_word)
             
             return jsonify({
@@ -110,8 +134,13 @@ def get_wordlists() -> Union[Response, tuple]:
             })
         
         else:
-            # Default: return all words with enhanced format
+            # Default: return all words with enhanced format including levels
             all_words_flat = get_all_word_pairs_flat()
+            # Add level information to each word
+            for word in all_words_flat:
+                word_levels = find_word_levels(word['corpus'], word['group'])
+                word['levels'] = word_levels
+            
             return jsonify({
                 "words": all_words_flat,
                 "count": len(all_words_flat)
