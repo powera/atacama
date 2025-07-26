@@ -11,7 +11,10 @@ from flask import Blueprint
 # Local application imports
 import constants
 from common.base.logging_config import get_logger
-from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
+from data.trakaido_wordlists.lang_lt.wordlists import (
+    all_words, get_all_word_pairs_flat, get_all_word_pairs_flat_basic, 
+    get_words_by_corpus_basic, get_words_by_level_enhanced, levels
+)
 
 # Create the blueprint that will be used by all trakaido modules
 trakaido_bp = Blueprint('trakaido', __name__)
@@ -96,28 +99,16 @@ def get_groups(corpus: str) -> List[str]:
 
 def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[str, str]]:
     """
-    Get words for a specific corpus and optional group.
+    Get words for a specific corpus and optional group with basic fields only.
+    
+    This function provides backward compatibility for existing API endpoints.
     
     :param corpus: The corpus name
     :param group: Optional group name
-    :return: List of word pairs
+    :return: List of word pairs with basic fields only
     """
     try:
-        if corpus not in all_words:
-            logger.error(f"Corpus not found: {corpus}")
-            return []
-        
-        if group:
-            if group not in all_words[corpus]:
-                logger.error(f"Group {group} not found in corpus {corpus}")
-                return []
-            return all_words[corpus][group]
-        
-        # If no group specified, return all words from all groups in this corpus
-        result = []
-        for grp, words in all_words[corpus].items():
-            result.extend(words)
-        return result
+        return get_words_by_corpus_basic(corpus, group)
     except Exception as e:
         logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
         return []
