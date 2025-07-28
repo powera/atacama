@@ -1,10 +1,11 @@
 """Archive.org integration service for automatic URL archiving."""
 
+import os
 import re
 import requests
 import time
 from typing import List, Set, Optional
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 from dataclasses import dataclass
 
 import constants
@@ -16,15 +17,23 @@ logger = get_logger(__name__)
 class ArchiveConfig:
     """Configuration for archive.org integration."""
     excluded_domains: List[str] = None
+    access_key: Optional[str] = None
+    secret_key: Optional[str] = None
     
     def __post_init__(self):
         if self.excluded_domains is None:
             self.excluded_domains = []
+        
+        # Load credentials from environment if not provided
+        if self.access_key is None:
+            self.access_key = os.getenv('SAVEPAGENOW_ACCESS_KEY')
+        if self.secret_key is None:
+            self.secret_key = os.getenv('SAVEPAGENOW_SECRET_KEY')
 
 class ArchiveService:
     """Service for submitting URLs to archive.org for archiving."""
     
-    ARCHIVE_ORG_SAVE_URL = "https://web.archive.org/save/"
+    ARCHIVE_ORG_SAVE_URL = "https://web.archive.org/save"
     URL_PATTERN = re.compile(r'https?://[a-zA-Z0-9\-._~:/?#\[\]@!$&\'()*+,;=%]+')
     
     def __init__(self, config: ArchiveConfig):
@@ -38,6 +47,16 @@ class ArchiveService:
         self.session.headers.update({
             'User-Agent': 'Atacama-Archive-Bot/1.0 (https://github.com/atacama/atacama)'
         })
+        
+        # Set up authentication if credentials are available
+        if self.config.access_key and self.config.secret_key:
+            auth_string = f"LOW {self.config.access_key}:{self.config.secret_key}"
+            self.session.headers.update({
+                'Authorization': auth_string
+            })
+            logger.info("Archive.org authentication configured")
+        else:
+            logger.info("Archive.org running in anonymous mode (rate limited to 3 requests/minute)")
         
     def is_domain_archived(self, domain_config) -> bool:
         """
@@ -126,7 +145,7 @@ class ArchiveService:
     
     def submit_url_to_archive(self, url: str) -> bool:
         """
-        Submit a single URL to archive.org for archiving.
+        Submit a single URL to archive.org for archiving using the Save Page Now API.
         
         :param url: URL to archive
         :return: True if submission was successful
@@ -141,18 +160,36 @@ class ArchiveService:
             return True
             
         try:
-            archive_url = urljoin(self.ARCHIVE_ORG_SAVE_URL, url)
             logger.info(f"Submitting URL to archive.org: {url}")
             
-            response = self.session.get(archive_url, timeout=30)
+            # Use POST request with form data as required by the Save Page Now API
+            data = {
+                'url': url,
+                'capture_all': 'on',  # Capture all page resources
+                'capture_screenshot': 'on'  # Capture screenshot
+            }
             
-            if response.status_code == 200:
-                logger.info(f"Successfully submitted URL to archive.org: {url}")
-                return True
+            response = self.session.post(self.ARCHIVE_ORG_SAVE_URL, data=data, timeout=60)
+            
+            # Archive.org may return various status codes for successful submissions
+            if response.status_code in [200, 302]:
+                # Check if we got a successful response or redirect to archived page
+                if 'web.archive.org/web/' in response.url or 'web.archive.org/web/' in response.text:
+                    logger.info(f"Successfully submitted URL to archive.org: {url}")
+                    return True
+                else:
+                    logger.warning(f"Archive.org submission unclear for URL: {url}, response: {response.status_code}")
+                    return False
+            elif response.status_code == 429:
+                logger.warning(f"Rate limited by archive.org for URL: {url}. Consider adding authentication or increasing delays.")
+                return False
             else:
                 logger.warning(f"Archive.org returned status {response.status_code} for URL: {url}")
                 return False
                 
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout submitting URL to archive.org: {url}")
+            return False
         except requests.exceptions.RequestException as e:
             logger.error(f"Error submitting URL to archive.org: {url}, error: {e}")
             return False
@@ -160,16 +197,24 @@ class ArchiveService:
             logger.error(f"Unexpected error submitting URL to archive.org: {url}, error: {e}")
             return False
     
-    def submit_urls_to_archive(self, urls: Set[str], delay_between_requests: float = 1.0) -> int:
+    def submit_urls_to_archive(self, urls: Set[str], delay_between_requests: float = None) -> int:
         """
         Submit multiple URLs to archive.org for archiving.
         
         :param urls: Set of URLs to archive
         :param delay_between_requests: Delay in seconds between requests to be respectful
+                                     (defaults to 20s for anonymous, 10s for authenticated)
         :return: Number of successfully submitted URLs
         """
         if not urls:
             return 0
+        
+        # Set default delay based on authentication status
+        if delay_between_requests is None:
+            if self.config.access_key and self.config.secret_key:
+                delay_between_requests = 10.0  # Authenticated: 6 requests/minute = 10s delay
+            else:
+                delay_between_requests = 20.0  # Anonymous: 3 requests/minute = 20s delay
         
         # In development mode, log all URLs at once without delays
         if constants.is_development_mode():
@@ -182,7 +227,8 @@ class ArchiveService:
         
         for i, url in enumerate(urls):
             if i > 0:
-                # Add delay between requests to be respectful to archive.org
+                # Add delay between requests to respect rate limits
+                logger.debug(f"Waiting {delay_between_requests}s before next archive request...")
                 time.sleep(delay_between_requests)
                 
             if self.submit_url_to_archive(url):
