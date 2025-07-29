@@ -19,12 +19,12 @@ from .shared import *
 # API Documentation for wordlists endpoints
 WORDLISTS_API_DOCS = {
     "GET /api/lithuanian/wordlists": "List all wordlist corpora",
-    "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora",
+    "GET /api/lithuanian/wordlists/_all": "Get all words from all corpora (includes alternatives)",
     "GET /api/lithuanian/wordlists/levels": "Get all learning levels with their corpus/group references",
-    "GET /api/lithuanian/wordlists/search": "Search for words (params: english, lithuanian, corpus, group)",
-    "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure",
-    "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus",
-    "GET /api/trakaido/lithuanian/wordlists": "Get wordlists with optional corpus and level filtering (CGI params: corpus, level)"
+    "GET /api/lithuanian/wordlists/search": "Search for words including alternatives (params: english, lithuanian, corpus, group)",
+    "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure (includes alternatives)",
+    "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus (includes alternatives)",
+    "GET /api/trakaido/lithuanian/wordlists": "Get wordlists with optional corpus and level filtering (includes alternatives, CGI params: corpus, level)"
 }
 
 # NEW API
@@ -188,17 +188,65 @@ def search_words() -> Union[Response, tuple]:
         if not english_term and not lithuanian_term:
             return jsonify({"error": "At least one search term (english or lithuanian) is required"}), 400
         
-        # Get all words or filtered by corpus/group (basic format for backward compatibility)
+        # Get all words with enhanced format (includes alternatives)
         if corpus:
-            words = get_words_by_corpus(corpus, group)
+            # For corpus filtering, we need to get enhanced format
+            if corpus not in all_words:
+                words = []
+            elif group:
+                if group not in all_words[corpus]:
+                    words = []
+                else:
+                    # Get words for specific group with enhanced format
+                    words = []
+                    for word_pair in all_words[corpus][group]:
+                        enhanced_word = word_pair.copy()
+                        enhanced_word['corpus'] = corpus
+                        enhanced_word['group'] = group
+                        words.append(enhanced_word)
+            else:
+                # Get all words from all groups in this corpus with enhanced format
+                words = []
+                for group_name, group_words in all_words[corpus].items():
+                    for word_pair in group_words:
+                        enhanced_word = word_pair.copy()
+                        enhanced_word['corpus'] = corpus
+                        enhanced_word['group'] = group_name
+                        words.append(enhanced_word)
         else:
-            words = get_all_word_pairs_flat_basic()
+            words = get_all_word_pairs_flat()
         
-        # Filter by search terms
+        # Filter by search terms (including alternatives)
         results = []
         for word in words:
-            english_match = not english_term or english_term in word['english'].lower()
-            lithuanian_match = not lithuanian_term or lithuanian_term in word['lithuanian'].lower()
+            english_match = False
+            lithuanian_match = False
+            
+            if not english_term:
+                english_match = True
+            else:
+                # Check main english word
+                if english_term in word['english'].lower():
+                    english_match = True
+                # Check english alternatives
+                elif 'alternatives' in word and 'english' in word['alternatives']:
+                    for alt in word['alternatives']['english']:
+                        if english_term in alt.lower():
+                            english_match = True
+                            break
+            
+            if not lithuanian_term:
+                lithuanian_match = True
+            else:
+                # Check main lithuanian word
+                if lithuanian_term in word['lithuanian'].lower():
+                    lithuanian_match = True
+                # Check lithuanian alternatives
+                elif 'alternatives' in word and 'lithuanian' in word['alternatives']:
+                    for alt in word['alternatives']['lithuanian']:
+                        if lithuanian_term in alt.lower():
+                            lithuanian_match = True
+                            break
             
             if english_match and lithuanian_match:
                 results.append(word)
@@ -234,15 +282,21 @@ def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
         requested_group = request.args.get('group')
         
         if requested_group:
-            # Return words for the specific group (basic format for backward compatibility)
-            words = get_words_by_corpus(corpus, requested_group)
-            if not words:
+            # Return words for the specific group with enhanced format (including alternatives)
+            if requested_group not in all_words[corpus]:
                 return jsonify({"error": f"Group '{requested_group}' not found in corpus '{corpus}'"}), 404
+            
+            enhanced_words = []
+            for word_pair in all_words[corpus][requested_group]:
+                enhanced_word = word_pair.copy()
+                enhanced_word['corpus'] = corpus
+                enhanced_word['group'] = requested_group
+                enhanced_words.append(enhanced_word)
             
             return jsonify({
                 "corpus": corpus,
                 "group": requested_group,
-                "words": words
+                "words": enhanced_words
             })
         
         # Return all groups in a nested structure (basic format for backward compatibility)
@@ -251,16 +305,15 @@ def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
             "groups": {}
         }
         
-        # Create a nested structure with group names and their words (basic format)
+        # Create a nested structure with group names and their words (enhanced format with alternatives)
         for group_name in groups:
-            basic_words = []
+            enhanced_words = []
             for word_pair in all_words[corpus][group_name]:
-                basic_word = {
-                    'english': word_pair['english'],
-                    'lithuanian': word_pair['lithuanian']
-                }
-                basic_words.append(basic_word)
-            result["groups"][group_name] = basic_words
+                enhanced_word = word_pair.copy()
+                enhanced_word['corpus'] = corpus
+                enhanced_word['group'] = group_name
+                enhanced_words.append(enhanced_word)
+            result["groups"][group_name] = enhanced_words
         
         return jsonify(result)
     except Exception as e:
@@ -270,12 +323,12 @@ def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
 @trakaido_bp.route('/api/lithuanian/wordlists/_all')
 def get_all_words() -> Union[Response, tuple]:
     """
-    Get all words from all corpora and groups with basic format.
+    Get all words from all corpora and groups with enhanced format (including alternatives).
     
-    :return: JSON response with all words in basic format
+    :return: JSON response with all words in enhanced format
     """
     try:
-        words = get_all_word_pairs_flat_basic()
+        words = get_all_word_pairs_flat()
         return jsonify({"words": words})
     except Exception as e:
         logger.error(f"Error getting all words: {str(e)}")
