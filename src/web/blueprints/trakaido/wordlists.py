@@ -24,7 +24,7 @@ WORDLISTS_API_DOCS = {
     "GET /api/lithuanian/wordlists/search": "Search for words including alternatives (params: english, lithuanian, corpus, group)",
     "GET /api/lithuanian/wordlists/{corpus}": "List all groups in a corpus in a nested structure (includes alternatives)",
     "GET /api/lithuanian/wordlists/{corpus}?group={group_name}": "Get words for a specific group in a corpus (includes alternatives)",
-    "GET /api/trakaido/lithuanian/wordlists": "Get wordlists with optional corpus and level filtering (includes alternatives, CGI params: corpus, level)"
+    "GET /api/trakaido/lithuanian/wordlists": "Get wordlists with optional corpus and level filtering (includes alternatives and GUIDs, CGI params: corpus, level)"
 }
 
 # NEW API
@@ -129,7 +129,7 @@ def get_wordlists() -> Union[Response, tuple]:
     
     Default behavior: Returns all words from all corpora and groups.
     
-    :return: JSON response with words in enhanced format
+    :return: JSON response with words in enhanced format including GUIDs
     """
     try:
         corpus = request.args.get('corpus')
