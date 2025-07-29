@@ -100,6 +100,14 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
         CORS(app, origins="*", supports_credentials=True)
         logger.info("CORS disabled for development mode - allowing all origins")
     
+    # Enable GZIP compression for all responses (if available)
+    try:
+        from flask_compress import Compress
+        Compress(app)
+        logger.info("GZIP compression enabled")
+    except ImportError:
+        logger.warning("Flask-Compress not installed - responses will not be compressed. Install with: pip install Flask-Compress")
+    
     # Initialize managers
     init_channel_manager()
     domain_manager = init_domain_manager()

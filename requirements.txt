@@ -1,5 +1,6 @@
 Flask>=2.0.0
 Flask-cors>=6.0.0
+Flask-Compress>=1.13
 SQLAlchemy>=1.4.0
 google-auth>=2.0.0
 waitress>=2.0.0

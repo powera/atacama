@@ -29,6 +29,48 @@ WORDLISTS_API_DOCS = {
 
 # NEW API
 
+# Helper function to optimize word data by removing empty fields
+def optimize_word_data(word: dict) -> dict:
+    """
+    Optimize word data by removing empty alternatives and other unnecessary fields.
+    
+    :param word: Word dictionary to optimize
+    :return: Optimized word dictionary
+    """
+    optimized = word.copy()
+    
+    # Remove empty alternatives
+    if 'alternatives' in optimized:
+        alternatives = optimized['alternatives']
+        if (not alternatives.get('english') and not alternatives.get('lithuanian')):
+            del optimized['alternatives']
+        else:
+            # Keep alternatives but remove empty lists
+            cleaned_alternatives = {}
+            if alternatives.get('english'):
+                cleaned_alternatives['english'] = alternatives['english']
+            if alternatives.get('lithuanian'):
+                cleaned_alternatives['lithuanian'] = alternatives['lithuanian']
+            optimized['alternatives'] = cleaned_alternatives
+    
+    # Remove empty metadata fields
+    if 'metadata' in optimized:
+        metadata = optimized['metadata']
+        if not any(metadata.values()) or metadata == {}:
+            del optimized['metadata']
+        else:
+            # Remove empty metadata subfields
+            cleaned_metadata = {}
+            for key, value in metadata.items():
+                if value or value == 0:  # Keep 0 values but not empty strings/lists
+                    cleaned_metadata[key] = value
+            if cleaned_metadata:
+                optimized['metadata'] = cleaned_metadata
+            else:
+                del optimized['metadata']
+    
+    return optimized
+
 # Helper function to find which level(s) a word belongs to based on corpus and group
 def find_word_levels(corpus: str, group: str) -> list:
     """
@@ -100,15 +142,17 @@ def get_wordlists() -> Union[Response, tuple]:
             if not words:
                 return jsonify({"error": f"Level '{level}' not found"}), 404
             
-            # Add level information to each word (they might belong to multiple levels)
+            # Add level information to each word and optimize
+            optimized_words = []
             for word in words:
                 word_levels = find_word_levels(word['corpus'], word['group'])
                 word['levels'] = word_levels
+                optimized_words.append(optimize_word_data(word))
             
             return jsonify({
                 "level": level,
-                "words": words,
-                "count": len(words)
+                "words": optimized_words,
+                "count": len(optimized_words)
             })
         
         elif corpus:
@@ -125,7 +169,7 @@ def get_wordlists() -> Union[Response, tuple]:
                     enhanced_word['corpus'] = corpus
                     enhanced_word['group'] = group_name
                     enhanced_word['levels'] = word_levels
-                    corpus_words.append(enhanced_word)
+                    corpus_words.append(optimize_word_data(enhanced_word))
             
             return jsonify({
                 "corpus": corpus,
@@ -136,14 +180,16 @@ def get_wordlists() -> Union[Response, tuple]:
         else:
             # Default: return all words with enhanced format including levels
             all_words_flat = get_all_word_pairs_flat()
-            # Add level information to each word
+            # Add level information to each word and optimize
+            optimized_words = []
             for word in all_words_flat:
                 word_levels = find_word_levels(word['corpus'], word['group'])
                 word['levels'] = word_levels
+                optimized_words.append(optimize_word_data(word))
             
             return jsonify({
-                "words": all_words_flat,
-                "count": len(all_words_flat)
+                "words": optimized_words,
+                "count": len(optimized_words)
             })
     
     except Exception as e:
