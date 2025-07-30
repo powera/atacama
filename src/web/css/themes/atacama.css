@@ -32,20 +32,20 @@
     --color-hazel: #d4734f;
 }
 
-/* Atacama colortext color variables - High contrast theme */
-[data-theme="high-contrast"] {
-    /* Color scheme specific for Atacama colortext blocks - maintain high contrast ratios */
-    --color-xantham: #6f3030;
-    --color-red: #770000;
-    --color-orange: #7f4500;
-    --color-quote: #7f7f00;
-    --color-green: #007f00;
-    --color-teal: #155e5e;
-    --color-blue: #00125b;
-    --color-violet: #3f0b48;
-    --color-mogue: #200820;
-    --color-gray: #4f4f4f;
-    --color-hazel: #ffa500;
+/* Atacama colortext color variables - Grayscale theme */
+[data-theme="grayscale"] {
+    /* Color scheme specific for Atacama colortext blocks - optimized for print and grayscale */
+    --color-xantham: #666666;
+    --color-red: #555555;
+    --color-orange: #444444;
+    --color-quote: #333333;
+    --color-green: #222222;
+    --color-teal: #777777;
+    --color-blue: #838383;
+    --color-violet: #888888;
+    --color-mogue: #999999;
+    --color-gray: #666666;
+    --color-hazel: #555555;
 }
 
 /* Base message layout */
@@ -65,13 +65,7 @@
     background-color: var(--color-background);
 }
 
-/* Two-column layout for high contrast mode */
-[data-theme="high-contrast"] .message-body {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 2rem;
-    max-width: 90vw;
-}
+/* Grayscale theme uses same layout as light/dark themes */
 
 .message-header {
     display: flex;
@@ -80,10 +74,7 @@
     margin-bottom: var(--spacing-base);
 }
 
-[data-theme="high-contrast"] .message-header {
-    border-bottom: 1px solid var(--color-text);
-    padding-bottom: var(--spacing-base);
-}
+
 
 .message-actions { /* for replies */
     margin: 1em 0;
@@ -110,31 +101,7 @@
     font-size: var(--base-font-size);
 }
 
-[data-theme="high-contrast"] .message-main {
-    grid-column: 1;
-}
 
-[data-theme="high-contrast"] .message-sidebar {
-    grid-column: 2;
-    background: #f8f8f8;
-    border-left: 2px solid var(--color-text);
-    padding: var(--spacing-base);
-}
-
-/* Mobile responsive adjustments */
-@media screen and (max-width: 768px) {
-    [data-theme="high-contrast"] .message-body {
-        grid-template-columns: 1fr;
-    }
-
-    [data-theme="high-contrast"] .message-sidebar {
-        grid-column: 1;
-        border-left: none;
-        border-top: 2px solid var(--color-text);
-        margin-top: 2rem;
-        position: static;
-    }
-}
 
 .metadata {
     color: var(--color-text-secondary);
@@ -154,10 +121,7 @@
     background-color: var(--color-background);
 }
 
-[data-theme="high-contrast"] [class^="color-"], 
-[data-theme="high-contrast"] .colorblock {
-    font-size: 0.65em;
-}
+/* Grayscale theme keeps normal font size for better readability */
 
 /* Color content container */
 .colortext-content {
@@ -185,15 +149,7 @@
     border-radius: 5px;
     background: var(--color-sigil-background) !important;
 }
-/* High-contrast "main" sigils do not expand */
-[data-theme="high-contrast"] .message-main .sigil {
-    margin: 0 0.2em;
-}
-[data-theme="high-contrast"] .color-block-container .sigil {
-    font-size: 1.6em;
-    display: inline;
-    margin-left: 0.2rem;
-}
+
 @media print {
     .sigil {
         filter: grayscale(100%) contrast(120%); /* Convert to grayscale with enhanced contrast */
@@ -203,32 +159,7 @@
     }
 }
 
-/* Color block settings for high-contrast mode */
-[data-theme="high-contrast"] .color-block-container {
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    border-bottom: 1px solid #000;
-}
 
-[data-theme="high-contrast"] .color-block-container .colortext-content {
-    display: inline;
-    margin-left: 0.5rem;
-}
-
-/* Hide color blocks in main content for high contrast */
-[data-theme="high-contrast"] .message-main .colorblock .colortext-content,
-[data-theme="high-contrast"] .message-main [class^="color-"] .colortext-content {
-    display: none;
-}
-
-[data-theme="high-contrast"] .message-main .colorblock,
-[data-theme="high-contrast"] .message-main [class^="color-"] {
-    border: none;
-    background: none;
-    padding: 0;
-    margin: 0;
-    display: inline;
-}
 
 /* Individual color styles */
 .color-xantham { color: var(--color-xantham); font-style: italic; }
@@ -236,6 +167,93 @@
 .color-orange { color: var(--color-orange) }
 .color-yellow { color: var(--color-quote); background-color: rgba(255, 255, 0, 0.1); }
 .color-quote { color: var(--color-quote); background-color: rgba(255, 255, 0, 0.1); }
+
+/* Grayscale theme: Add visual patterns to distinguish color categories */
+[data-theme="grayscale"] .color-xantham {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.1) 2px,
+        rgba(0, 0, 0, 0.1) 4px
+    );
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+[data-theme="grayscale"] .color-red {
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 2px,
+        rgba(0, 0, 0, 0.15) 4px
+    );
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+[data-theme="grayscale"] .color-orange {
+    background-image: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.1) 3px,
+        rgba(0, 0, 0, 0.1) 6px
+    );
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+[data-theme="grayscale"] .color-quote,
+[data-theme="grayscale"] .color-yellow {
+    background-color: transparent !important;
+    background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+    );
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* Grayscale theme: Override colored backgrounds and effects for all color classes */
+[data-theme="grayscale"] .color-green {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    background-image: none;
+}
+
+[data-theme="grayscale"] .color-teal {
+    border: 1px solid var(--color-teal);
+    background: none;
+}
+
+[data-theme="grayscale"] .color-blue {
+    text-shadow: none !important;
+    background: none;
+}
+
+[data-theme="grayscale"] .color-violet {
+    background: none;
+}
+
+[data-theme="grayscale"] .color-musicnote {
+    background: none;
+}
+
+[data-theme="grayscale"] .color-mogue {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme="grayscale"] .color-gray {
+    background: rgba(0, 0, 0, 0.03) !important;
+}
+
+[data-theme="grayscale"] .color-hazel {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
 .color-green { color: var(--color-green); font-family: monospace; background-color: rgba(0, 255, 0, 0.05); }
 .color-teal { color: var(--color-teal); font-family: monospace; border: 1px solid currentColor; }
 .color-blue { color: var(--color-blue); font-style: italic; text-shadow: 0 0 1px rgba(0, 116, 217, 0.2); }
@@ -260,7 +278,7 @@
     margin: 1rem 0;
 }
 
-[data-theme="high-contrast"] .youtube-embed-container .youtube-player {
+[data-theme="grayscale"] .youtube-embed-container .youtube-player {
     margin: 0.5rem 0;
 }
 
@@ -440,7 +458,7 @@ hr {
     border-top: 1px solid var(--color-border);
     margin: var(--spacing-base) 0;
 }
-[data-theme="high-contrast"] hr {
+[data-theme="grayscale"] hr {
     border: none;
     border-top: 2px solid var(--color-text);
     margin: var(--spacing-large) auto;
@@ -459,7 +477,7 @@ hr {
     border-radius: var(--border-radius);
 }
 
-[data-theme="high-contrast"] .readmore {
+[data-theme="grayscale"] .readmore {
     border: 1px dashed var(--color-text);
     padding: 0.7em;
     font-weight: 500;
@@ -495,7 +513,7 @@ hr {
     right: 0;
 }
 
-[data-theme="high-contrast"] .content-sigil {
+[data-theme="grayscale"] .content-sigil {
     border-top: 1px dashed var(--color-text);
     border-bottom: 1px dashed var(--color-text);
 }

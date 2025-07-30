@@ -77,8 +77,8 @@
     --focus-ring: 0 0 0 2px rgba(74, 158, 255, 0.2);
 }
 
-/* High contrast theme for accessibility */
-[data-theme="high-contrast"] {
+/* Grayscale theme for print-friendly viewing */
+[data-theme="grayscale"] {
     /* Base colors */
     --color-background: #ffffff;
     --color-sigil-background: #d9d9d9;
@@ -347,18 +347,18 @@ button:disabled,
     color: var(--color-text-secondary);
 }
 
-/* High contrast mode adjustments for banner */
-[data-theme="high-contrast"] .site-banner {
+/* Grayscale mode adjustments for banner */
+[data-theme="grayscale"] .site-banner {
     background-color: #000000;
     border-color: #ffffff;
     border-width: 2px;
 }
 
-[data-theme="high-contrast"] .site-banner .site-title {
+[data-theme="grayscale"] .site-banner .site-title {
     color: #ffffff;
 }
 
-[data-theme="high-contrast"] .site-banner .site-description {
+[data-theme="grayscale"] .site-banner .site-description {
     color: #ffffff;
 }
 

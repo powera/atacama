@@ -40,10 +40,6 @@ class AtacamaViewer {
         }
         // Apply theme without triggering observer (since it isn't set up yet)
         document.documentElement.setAttribute('data-theme', this.theme);
-        
-        if (this.theme === 'high-contrast') {
-            this.handleHighContrastLayout();
-        }
     }
 
     setupThemeSwitcher() {
@@ -56,12 +52,20 @@ class AtacamaViewer {
             <div class="theme-menu">
                 <button data-theme-option="light">Light</button>
                 <button data-theme-option="dark">Dark</button>
-                <button data-theme-option="high-contrast">High Contrast</button>
+                <button data-theme-option="grayscale">Grayscale</button>
+                <hr>
+                <button data-expand-action="expand-all">Expand All</button>
+                <button data-expand-action="collapse-all">Collapse All</button>
+                <button data-expand-action="restore-default">Restore Default</button>
             </div>
         `;
 
         switcher.querySelectorAll('[data-theme-option]').forEach(button => {
             button.addEventListener('click', () => this.setTheme(button.dataset.themeOption));
+        });
+
+        switcher.querySelectorAll('[data-expand-action]').forEach(button => {
+            button.addEventListener('click', () => this.handleExpandAction(button.dataset.expandAction));
         });
 
         document.body.appendChild(switcher);
@@ -120,51 +124,6 @@ class AtacamaViewer {
         this.theme = newTheme;
         localStorage.setItem('theme', newTheme);
         
-        if (newTheme === 'high-contrast') {
-            this.handleHighContrastLayout();
-        } else {
-            this.removeHighContrastLayout();
-        }
-    }
-
-    populateSidebar(mainContent, sidebar) {
-        // Clear any existing content in the sidebar
-        sidebar.innerHTML = '';
-
-        // Find all color blocks in the main content
-        const colorBlocks = mainContent.querySelectorAll('.colorblock, [class^="color-"]');
-        const processedBlocks = new Set();
-
-        colorBlocks.forEach(block => {
-            const content = block.querySelector('.colortext-content');
-            if (content && !processedBlocks.has(content)) {
-                processedBlocks.add(content);
-
-                // Create container for this block
-                const container = document.createElement('div');
-                container.className = 'color-block-container';
-                
-                // Add the original color class to maintain styling
-                const colorClass = Array.from(block.classList)
-                    .find(cls => cls.startsWith('color-'));
-                if (colorClass) {
-                    container.classList.add(colorClass);
-                }
-                // Clone sigil and content
-                const sigilClone = block.querySelector('.sigil').cloneNode(true);
-                const contentClone = content.cloneNode(true);
-
-                container.appendChild(sigilClone);
-                container.appendChild(contentClone);
-                sidebar.appendChild(container);
-
-                // Make sidebar content visible
-                contentClone.style.display = 'inline';
-
-                // Hide original content
-                content.style.display = 'none';
-            }
-        });
     }
 
     /**
@@ -225,10 +184,9 @@ class AtacamaViewer {
 
 
     /**
-     * Handles clicks on sigil elements, toggling content visibility in non-high-contrast mode
+     * Handles clicks on sigil elements, toggling content visibility
      */
     handleSigilClick(e) {
-        if (this.theme === 'high-contrast') return;
         
         const colorBlock = e.target.closest('.colorblock, [class^="color-"]');
         if (!colorBlock) return;
@@ -317,63 +275,101 @@ class AtacamaViewer {
         }
     }
 
+    /**
+     * Handles expand/collapse actions from the theme menu
+     */
+    handleExpandAction(action) {
+        switch (action) {
+            case 'expand-all':
+                this.expandAll();
+                break;
+            case 'collapse-all':
+                this.collapseAll();
+                break;
+            case 'restore-default':
+                this.restoreDefault();
+                break;
+        }
+    }
 
     /**
-     * Applies the high-contrast layout to all message containers
+     * Expands all colortext boxes and mlq boxes
      */
-    handleHighContrastLayout() {
-        document.querySelectorAll('.message-body').forEach(container => {
-            const mainContent = container.querySelector('.message-main');
-            const sidebar = container.querySelector('.message-sidebar');
+    expandAll() {
+        // Expand all colortext content (except YouTube players)
+        document.querySelectorAll('.colortext-content').forEach(content => {
+            if (!content.classList.contains('expanded')) {
+                const colorBlock = content.closest('.colorblock, [class^="color-"]');
+                // Skip YouTube embed containers
+                if (colorBlock && colorBlock.classList.contains('youtube-embed-container')) {
+                    return;
+                }
+                content.classList.add('expanded');
+            }
+        });
+
+        // Expand all mlq boxes (remove collapsed class)
+        document.querySelectorAll('.mlq.collapsed').forEach(mlq => {
+            mlq.classList.remove('collapsed');
+            const icon = mlq.querySelector('.mlq-collapse-icon');
+            if (icon && !/\p{Emoji}/u.test(icon.textContent)) {
+                icon.textContent = '−';
+            }
+        });
+    }
+
+    /**
+     * Collapses all colortext boxes and mlq boxes
+     */
+    collapseAll() {
+        // Collapse all colortext content (including YouTube players)
+        document.querySelectorAll('.colortext-content.expanded').forEach(content => {
+            content.classList.remove('expanded');
             
-            if (!sidebar.hasAttribute('data-processed')) {
-                this.populateSidebar(mainContent, sidebar);
-                sidebar.setAttribute('data-processed', 'true');
+            // Handle Youtube players if this is a video container
+            const colorBlock = content.closest('.colorblock, [class^="color-"]');
+            if (colorBlock && colorBlock.classList.contains('youtube-embed-container')) {
+                this.handleYoutubePlayer(content, false);
+            }
+        });
+
+        // Collapse all mlq boxes (add collapsed class)
+        document.querySelectorAll('.mlq').forEach(mlq => {
+            if (!mlq.classList.contains('collapsed')) {
+                mlq.classList.add('collapsed');
+                const icon = mlq.querySelector('.mlq-collapse-icon');
+                if (icon && !/\p{Emoji}/u.test(icon.textContent)) {
+                    icon.textContent = '+';
+                }
             }
         });
     }
 
     /**
-     * Creates sidebar content blocks from main content colored sections
+     * Restores default state: mlq boxes expanded, colortext boxes collapsed
      */
-    moveColorBlocksToSidebar(mainContent, sidebar) {
-        const colorBlocks = mainContent.querySelectorAll('.colorblock, [class^="color-"]');
-        const processedBlocks = new Set();
+    restoreDefault() {
+        // Collapse all colortext content (default state, except YouTube players)
+        document.querySelectorAll('.colortext-content.expanded').forEach(content => {
+            const colorBlock = content.closest('.colorblock, [class^="color-"]');
+            // Skip YouTube embed containers
+            if (colorBlock && colorBlock.classList.contains('youtube-embed-container')) {
+                return;
+            }
+            content.classList.remove('expanded');
+        });
 
-        colorBlocks.forEach(block => {
-            const content = block.querySelector('.colortext-content');
-            if (content && !processedBlocks.has(content)) {
-                processedBlocks.add(content);
-
-                const container = document.createElement('div');
-                container.className = 'color-block-container';
-
-                const sigilClone = block.querySelector('.sigil').cloneNode(true);
-                const contentClone = content.cloneNode(true);
-
-                container.appendChild(sigilClone);
-                container.appendChild(contentClone);
-                sidebar.appendChild(container);
-
-                contentClone.style.display = 'inline';
+        // Expand all mlq boxes (default state - remove collapsed class)
+        document.querySelectorAll('.mlq.collapsed').forEach(mlq => {
+            mlq.classList.remove('collapsed');
+            const icon = mlq.querySelector('.mlq-collapse-icon');
+            if (icon && !/\p{Emoji}/u.test(icon.textContent)) {
+                icon.textContent = '−';
             }
         });
     }
 
-    /**
-     * Removes the high-contrast layout and restores the default view
-     */
-    removeHighContrastLayout() {
-        document.querySelectorAll('.message-body').forEach(container => {
-            container.querySelectorAll('.colortext-content').forEach(content => {
-                content.style.display = '';
-            });
 
-            const sidebar = container.querySelector('.message-sidebar');
-            sidebar.innerHTML = '';
-            sidebar.removeAttribute('data-processed');
-        });
-    }
 }
 
 // Create a single instance when the DOM is ready
