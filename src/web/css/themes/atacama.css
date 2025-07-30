@@ -177,8 +177,6 @@
         rgba(0, 0, 0, 0.1) 2px,
         rgba(0, 0, 0, 0.1) 4px
     );
-    padding: 1px 3px;
-    border-radius: 2px;
 }
 
 [data-theme="grayscale"] .color-red {
@@ -189,8 +187,6 @@
         rgba(0, 0, 0, 0.15) 2px,
         rgba(0, 0, 0, 0.15) 4px
     );
-    padding: 1px 3px;
-    border-radius: 2px;
 }
 
 [data-theme="grayscale"] .color-orange {
@@ -201,8 +197,6 @@
         rgba(0, 0, 0, 0.1) 3px,
         rgba(0, 0, 0, 0.1) 6px
     );
-    padding: 1px 3px;
-    border-radius: 2px;
 }
 
 [data-theme="grayscale"] .color-quote,
@@ -215,8 +209,6 @@
         rgba(0, 0, 0, 0.08) 2px,
         rgba(0, 0, 0, 0.08) 4px
     );
-    padding: 1px 3px;
-    border-radius: 2px;
 }
 
 /* Grayscale theme: Override colored backgrounds and effects for all color classes */

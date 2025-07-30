@@ -68,8 +68,8 @@
     --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* High contrast theme adjustments */
-[data-theme="high-contrast"] {
+/* Grayscale theme adjustments */
+[data-theme="grayscale"] {
     --banner-background: #000000;
     --banner-border: #ffffff;
     --main-background: #ffffff;

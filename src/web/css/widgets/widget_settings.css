@@ -41,8 +41,8 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* High contrast theme adjustments */
-[data-theme="high-contrast"] .w-settings-modal {
+/* Grayscale theme adjustments */
+[data-theme="grayscale"] .w-settings-modal {
     border: 3px solid var(--color-text);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
@@ -186,12 +186,12 @@
 }
 
 /* High contrast theme tab adjustments */
-[data-theme="high-contrast"] .w-settings-tab {
+[data-theme="grayscale"] .w-settings-tab {
     border-bottom-width: 4px;
 }
 
-[data-theme="high-contrast"] .w-settings-tab:hover,
-[data-theme="high-contrast"] .w-settings-tab.active {
+[data-theme="grayscale"] .w-settings-tab:hover,
+[data-theme="grayscale"] .w-settings-tab.active {
     background: var(--color-text);
     color: var(--color-background);
 }
@@ -618,34 +618,34 @@
 /* === THEME-SPECIFIC ADJUSTMENTS === */
 
 /* High contrast mode */
-[data-theme="high-contrast"] .w-settings-close:hover {
+[data-theme="grayscale"] .w-settings-close:hover {
     background: var(--color-text);
     color: var(--color-background);
 }
 
-[data-theme="high-contrast"] .w-setting-input:focus,
-[data-theme="high-contrast"] .w-setting-select:focus {
+[data-theme="grayscale"] .w-setting-input:focus,
+[data-theme="grayscale"] .w-setting-select:focus {
     border-color: var(--color-text);
     box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.3);
 }
 
-[data-theme="high-contrast"] .w-settings-button-secondary {
+[data-theme="grayscale"] .w-settings-button-secondary {
     border: 2px solid var(--color-text);
 }
 
-[data-theme="high-contrast"] .w-settings-button-secondary:hover {
+[data-theme="grayscale"] .w-settings-button-secondary:hover {
     background: var(--color-text);
     color: var(--color-background);
 }
 
-[data-theme="high-contrast"] .w-setting-input[type="range"]::-webkit-slider-thumb,
-[data-theme="high-contrast"] .w-setting-input[type="range"]::-moz-range-thumb {
+[data-theme="grayscale"] .w-setting-input[type="range"]::-webkit-slider-thumb,
+[data-theme="grayscale"] .w-setting-input[type="range"]::-moz-range-thumb {
     border-color: var(--color-background);
     background: var(--color-text);
 }
 
-[data-theme="high-contrast"] .w-setting-input[type="range"]::-webkit-slider-track,
-[data-theme="high-contrast"] .w-setting-input[type="range"]::-moz-range-track {
+[data-theme="grayscale"] .w-setting-input[type="range"]::-webkit-slider-track,
+[data-theme="grayscale"] .w-setting-input[type="range"]::-moz-range-track {
     background: var(--color-text);
 }
 

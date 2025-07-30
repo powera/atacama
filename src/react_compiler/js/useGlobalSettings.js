@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
   // Visual & Animations
   animations: true,
   reducedMotion: false, // Accessibility: honor prefers-reduced-motion
-  theme: 'auto', // 'auto', 'light', 'dark', 'high-contrast'
+  theme: 'auto', // 'auto', 'light', 'dark', 'grayscale'
   fontSize: 'medium', // 'small', 'medium', 'large'
   
   // Timing & Flow
@@ -502,7 +502,7 @@ export const useGlobalSettings = (options = {}) => {
               <option value="auto">Auto (System)</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
-              <option value="high-contrast">High Contrast</option>
+              <option value="grayscale">Grayscale</option>
             </select>
             <p className="w-setting-description">
               Choose your preferred color theme
