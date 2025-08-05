@@ -73,8 +73,17 @@ def get_wordlist_corpora() -> List[str]:
     :return: List of corpus names
     """
     try:
-        corpora = list(all_words.keys())
-        return corpora
+        corpora = []
+        
+        # Add noun corpora using the new naming scheme
+        corpora.extend(['nouns_one', 'nouns_two', 'nouns_three', 'nouns_four', 'nouns_five'])
+        
+        # Add other corpora (verbs, phrases) that don't start with 'level_'
+        for corpus_name in all_words.keys():
+            if not corpus_name.startswith('level_'):
+                corpora.append(corpus_name)
+        
+        return sorted(corpora)
     except Exception as e:
         logger.error(f"Error getting wordlist corpora: {str(e)}")
         return []
