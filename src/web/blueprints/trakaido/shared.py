@@ -38,6 +38,25 @@ def trakaido_index() -> Response:
         return send_file(TRAKAIDO_PATH_PROD)
 
 
+# Serve images from the Trakaido build directory
+@trakaido_bp.route("/images/<path:filename>")
+def trakaido_images(filename: str) -> Response:
+    """Serve images from the Trakaido build directory."""
+    images_dir = "/home/trakaido/trakaido/build/images"
+    image_path = os.path.join(images_dir, filename)
+    
+    # Security check: ensure the path is within the images directory
+    if not os.path.abspath(image_path).startswith(os.path.abspath(images_dir)):
+        logger.warning(f"Attempted path traversal attack: {filename}")
+        return Response("Forbidden", status=403)
+    
+    if os.path.exists(image_path) and os.path.isfile(image_path):
+        return send_file(image_path)
+    else:
+        logger.warning(f"Image not found: {image_path}")
+        return Response("Image not found", status=404)
+
+
 def sanitize_lithuanian_word(word: str) -> str:
     """
     Sanitize a Lithuanian word or phrase for use as a filename.
