@@ -28,9 +28,16 @@ def login():
     # Store the requested URL for post-login redirect
     session['post_login_redirect'] = request.args.get('next', '/')
     
+    # Check if this is a popup login request
+    popup_mode = request.args.get('popup', '').lower() == 'true'
+    session['popup_mode'] = popup_mode
+    
+    template = 'login_popup.html' if popup_mode else 'login.html'
+    
     return render_template(
-        'login.html',
-        client_id=GOOGLE_CLIENT_ID
+        template,
+        client_id=GOOGLE_CLIENT_ID,
+        popup_mode=popup_mode
     )
 
 @auth_bp.route('/logout')
@@ -131,5 +138,15 @@ def callback():
         logger.error(f"Database error in callback: {str(e)}")
         return redirect(url_for('auth.login'))
     
-    # Redirect to saved path or default route
-    return redirect(session.pop('post_login_redirect', '/'))
+    # Check if this was a popup login
+    popup_mode = session.pop('popup_mode', False)
+    
+    if popup_mode:
+        # For popup mode, redirect to success page that will close the popup
+        return render_template(
+            'login_success_popup.html',
+            user=session['user']
+        )
+    else:
+        # Normal redirect behavior
+        return redirect(session.pop('post_login_redirect', '/'))
