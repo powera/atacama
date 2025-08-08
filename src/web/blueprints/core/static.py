@@ -12,16 +12,6 @@ logger = get_logger(__name__)
 
 static_bp = Blueprint('static', __name__)
 
-
-@static_bp.route("/trakaido")
-@static_bp.route("/trakaido/")
-def trakaido_index() -> Response:
-    """Serve the Trakaido single-page application."""
-    TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
-    if os.path.exists(TRAKAIDO_PATH_PROD):
-        # In production, serve the compiled index.html from the Trakaido repo
-        return send_file(TRAKAIDO_PATH_PROD)
-
 @static_bp.route('/js/<path:filename>')
 def serve_js(filename: str) -> Response:
     """
