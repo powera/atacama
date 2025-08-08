@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Optional, Union
 
 # Third-party imports
-from flask import Blueprint
+from flask import Blueprint, Response, send_file
 
 # Local application imports
 import constants
@@ -23,10 +23,19 @@ trakaido_bp = Blueprint('trakaido', __name__)
 LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
 
 # Production path for the Trakaido React app
-TRAKAIDO_PATH_PROD = "/home/atacama/trakaido_react/build/index.html"
+TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
 
 # Shared logger
 logger = get_logger(__name__)
+
+# Serve the Trakaido app from "/"
+@trakaido_bp.route("/")
+def trakaido_index() -> Response:
+    """Serve the Trakaido single-page application."""
+    TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
+    if os.path.exists(TRAKAIDO_PATH_PROD):
+        # In production, serve the compiled index.html from the Trakaido repo
+        return send_file(TRAKAIDO_PATH_PROD)
 
 
 def sanitize_lithuanian_word(word: str) -> str:
