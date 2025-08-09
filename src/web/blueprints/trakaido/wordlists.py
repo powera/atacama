@@ -74,10 +74,10 @@ def optimize_word_data(word: dict) -> dict:
 # Noun corpus to level ranges mapping
 NOUN_CORPUS_LEVEL_RANGES = {
     'nouns_one': range(1, 4),    # levels 1-3
-    'nouns_two': range(4, 7),    # levels 4-6
-    'nouns_three': range(7, 10), # levels 7-9
-    'nouns_four': range(10, 13), # levels 10-12
-    'nouns_five': range(13, 16)  # levels 13-15
+    'nouns_two': range(4, 8),    # levels 4-7
+    'nouns_three': range(8, 12), # levels 8-11
+    'nouns_four': range(12, 17), # levels 12-16
+    'nouns_five': range(17, 21)  # levels 17-20
 }
 
 # Helper function to map noun levels to corpus names
@@ -95,13 +95,13 @@ def get_noun_corpus_name(level_name: str) -> str:
         level_num = int(level_name.split('_')[1])
         if 1 <= level_num <= 3:
             return "nouns_one"
-        elif 4 <= level_num <= 6:
+        elif 4 <= level_num <= 7:
             return "nouns_two"
-        elif 7 <= level_num <= 9:
+        elif 8 <= level_num <= 11:
             return "nouns_three"
-        elif 10 <= level_num <= 12:
+        elif 12 <= level_num <= 16:
             return "nouns_four"
-        elif 13 <= level_num <= 15:
+        elif 17 <= level_num <= 20:
             return "nouns_five"
         else:
             return level_name
@@ -553,8 +553,8 @@ def get_levels() -> Union[Response, tuple]:
         # Start with the existing levels (verbs and phrases)
         enhanced_levels = {}
         
-        # Process each level from 1 to 15
-        for level_num in range(1, 16):
+        # Process each level from 1 to 20
+        for level_num in range(1, 21):
             level_name = f"level_{level_num}"
             level_items = []
             
