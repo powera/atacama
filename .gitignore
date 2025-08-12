@@ -18,8 +18,9 @@ keys/
 logs/
 venv/
 
-# Claude core for uploading
+# Legacy
 claude/staging/
+# End Legacy
 
 # React/NodeJS files
 src/web/react/node_modules
