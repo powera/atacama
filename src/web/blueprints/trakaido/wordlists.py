@@ -71,13 +71,14 @@ def optimize_word_data(word: dict) -> dict:
     
     return optimized
 
-# Noun corpus to level ranges mapping
+# Noun corpus to level ranges mapping (used for backward compatibility and fallback)
 NOUN_CORPUS_LEVEL_RANGES = {
     'nouns_one': range(1, 4),    # levels 1-3
     'nouns_two': range(4, 8),    # levels 4-7
     'nouns_three': range(8, 12), # levels 8-11
     'nouns_four': range(12, 17), # levels 12-16
-    'nouns_five': range(17, 21)  # levels 17-20
+    'nouns_five': range(17, 21),  # levels 17-20
+    'nouns_six': range(21, 25)   # levels 21-24 (also used as fallback for dynamic overflow)
 }
 
 # Helper function to map noun levels to corpus names
@@ -107,6 +108,130 @@ def get_noun_corpus_name(level_name: str) -> str:
             return level_name
     except (ValueError, IndexError):
         return level_name
+
+# Dynamic corpus mapping cache
+_dynamic_corpus_cache = {}
+
+def get_dynamic_corpus_name(level_name: str, group_name: str) -> str:
+    """
+    Get the dynamic corpus name for a group based on its level and previous occurrences.
+    
+    If a group appears in multiple levels, each occurrence gets assigned to a progressively
+    higher corpus level to avoid conflicts. Uses nouns_six as fallback for overflow.
+    
+    :param level_name: The level name (e.g., "level_10")
+    :param group_name: The group name (e.g., "food_drink")
+    :return: Dynamic corpus name (e.g., "nouns_four")
+    """
+    global _dynamic_corpus_cache
+    
+    if not level_name.startswith('level_'):
+        return level_name
+    
+    # Initialize cache if empty
+    if not _dynamic_corpus_cache:
+        _build_dynamic_corpus_cache()
+    
+    # Return cached result
+    cache_key = f"{level_name}:{group_name}"
+    return _dynamic_corpus_cache.get(cache_key, get_noun_corpus_name(level_name))
+
+def _build_dynamic_corpus_cache():
+    """
+    Build the dynamic corpus mapping cache by analyzing all groups across levels.
+    
+    This function scans all levels to find groups that appear multiple times and assigns
+    them to different corpus levels to avoid conflicts.
+    """
+    global _dynamic_corpus_cache
+    _dynamic_corpus_cache = {}
+    
+    # Track group occurrences: group_name -> [(level_num, level_name), ...]
+    group_occurrences = {}
+    
+    # Scan all levels to find group occurrences
+    for level_num in range(1, 25):  # Extended range to handle potential overflow
+        level_name = f"level_{level_num}"
+        if level_name in all_words:
+            for group_name in all_words[level_name].keys():
+                if group_name not in group_occurrences:
+                    group_occurrences[group_name] = []
+                group_occurrences[group_name].append((level_num, level_name))
+    
+    # Corpus names in order of preference
+    corpus_names = ["nouns_one", "nouns_two", "nouns_three", "nouns_four", "nouns_five", "nouns_six"]
+    
+    # Assign corpus names to groups
+    for group_name, occurrences in group_occurrences.items():
+        # Sort occurrences by level number
+        occurrences.sort(key=lambda x: x[0])
+        
+        if len(occurrences) == 1:
+            # Single occurrence - use default mapping
+            level_num, level_name = occurrences[0]
+            default_corpus = get_noun_corpus_name(level_name)
+            _dynamic_corpus_cache[f"{level_name}:{group_name}"] = default_corpus
+        else:
+            # Multiple occurrences - assign to different corpus levels
+            for i, (level_num, level_name) in enumerate(occurrences):
+                # Determine base corpus index from the first occurrence
+                first_level_num = occurrences[0][0]
+                base_corpus = get_noun_corpus_name(f"level_{first_level_num}")
+                
+                # Find base corpus index
+                try:
+                    base_index = corpus_names.index(base_corpus)
+                except ValueError:
+                    base_index = 0  # Default to nouns_one if not found
+                
+                # Assign corpus with offset
+                target_index = base_index + i
+                if target_index >= len(corpus_names):
+                    # Fallback to nouns_six for overflow
+                    assigned_corpus = "nouns_six"
+                else:
+                    assigned_corpus = corpus_names[target_index]
+                
+                _dynamic_corpus_cache[f"{level_name}:{group_name}"] = assigned_corpus
+
+def clear_dynamic_corpus_cache():
+    """Clear the dynamic corpus cache to force rebuilding on next access."""
+    global _dynamic_corpus_cache
+    _dynamic_corpus_cache = {}
+
+def get_words_for_dynamic_corpus(corpus_name: str) -> list:
+    """
+    Get all words that belong to a specific dynamic corpus.
+    
+    :param corpus_name: The corpus name (e.g., "nouns_three")
+    :return: List of enhanced word objects
+    """
+    if not corpus_name.startswith('nouns_'):
+        return []
+    
+    # Initialize cache if needed
+    if not _dynamic_corpus_cache:
+        _build_dynamic_corpus_cache()
+    
+    words = []
+    
+    # Scan all levels to find words assigned to this corpus
+    for level_num in range(1, 25):
+        level_name = f"level_{level_num}"
+        if level_name in all_words:
+            for group_name, group_words in all_words[level_name].items():
+                # Check if this group is assigned to the requested corpus
+                assigned_corpus = get_dynamic_corpus_name(level_name, group_name)
+                if assigned_corpus == corpus_name:
+                    word_levels = find_word_levels(level_name, group_name)
+                    for word_pair in group_words:
+                        enhanced_word = word_pair.copy()
+                        enhanced_word['corpus'] = corpus_name
+                        enhanced_word['group'] = group_name
+                        enhanced_word['levels'] = word_levels
+                        words.append(enhanced_word)
+    
+    return words
 
 # Helper function to find which level(s) a word belongs to based on corpus and group
 def find_word_levels(corpus: str, group: str) -> list:
@@ -189,10 +314,10 @@ def get_wordlists() -> Union[Response, tuple]:
             # Add level information to each word and optimize
             optimized_words = []
             for word in words:
-                # Map noun level corpus names to the new naming scheme
+                # Map noun level corpus names to the new dynamic naming scheme
                 original_corpus = word['corpus']
                 if original_corpus.startswith('level_'):
-                    word['corpus'] = get_noun_corpus_name(original_corpus)
+                    word['corpus'] = get_dynamic_corpus_name(original_corpus, word['group'])
                 
                 word_levels = find_word_levels(original_corpus, word['group'])
                 word['levels'] = word_levels
@@ -210,21 +335,14 @@ def get_wordlists() -> Union[Response, tuple]:
             
             # Handle noun corpus requests (nouns_one, nouns_two, etc.)
             if corpus.startswith('nouns_'):
-                if corpus not in NOUN_CORPUS_LEVEL_RANGES:
-                    return jsonify({"error": f"Corpus '{corpus}' not found"}), 404
+                # Use dynamic corpus system to get words
+                corpus_words_raw = get_words_for_dynamic_corpus(corpus)
+                if not corpus_words_raw:
+                    return jsonify({"error": f"Corpus '{corpus}' not found or has no words"}), 404
                 
-                # Get words from all levels in this corpus range
-                for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                    level_name = f"level_{level_num}"
-                    if level_name in all_words:
-                        for group_name, group_words in all_words[level_name].items():
-                            word_levels = find_word_levels(level_name, group_name)
-                            for word_pair in group_words:
-                                enhanced_word = word_pair.copy()
-                                enhanced_word['corpus'] = corpus  # Use the requested corpus name
-                                enhanced_word['group'] = group_name
-                                enhanced_word['levels'] = word_levels
-                                corpus_words.append(optimize_word_data(enhanced_word))
+                # Optimize the words
+                for word in corpus_words_raw:
+                    corpus_words.append(optimize_word_data(word))
             else:
                 # Handle other corpus types (verbs, phrases)
                 if corpus not in all_words:
@@ -251,10 +369,10 @@ def get_wordlists() -> Union[Response, tuple]:
             # Add level information to each word and optimize
             optimized_words = []
             for word in all_words_flat:
-                # Map noun level corpus names to the new naming scheme
+                # Map noun level corpus names to the new dynamic naming scheme
                 original_corpus = word['corpus']
                 if original_corpus.startswith('level_'):
-                    word['corpus'] = get_noun_corpus_name(original_corpus)
+                    word['corpus'] = get_dynamic_corpus_name(original_corpus, word['group'])
                 
                 word_levels = find_word_levels(original_corpus, word['group'])
                 word['levels'] = word_levels
@@ -313,27 +431,14 @@ def search_words() -> Union[Response, tuple]:
             
             # Handle noun corpus requests (nouns_one, nouns_two, etc.)
             if corpus.startswith('nouns_'):
-                if corpus in NOUN_CORPUS_LEVEL_RANGES:
-                    # Get words from all levels in this corpus range
-                    for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                        level_name = f"level_{level_num}"
-                        if level_name in all_words:
-                            if group:
-                                # Filter by specific group
-                                if group in all_words[level_name]:
-                                    for word_pair in all_words[level_name][group]:
-                                        enhanced_word = word_pair.copy()
-                                        enhanced_word['corpus'] = corpus
-                                        enhanced_word['group'] = group
-                                        words.append(enhanced_word)
-                            else:
-                                # Get all groups from this level
-                                for group_name, group_words in all_words[level_name].items():
-                                    for word_pair in group_words:
-                                        enhanced_word = word_pair.copy()
-                                        enhanced_word['corpus'] = corpus
-                                        enhanced_word['group'] = group_name
-                                        words.append(enhanced_word)
+                # Use dynamic corpus system to get words
+                corpus_words = get_words_for_dynamic_corpus(corpus)
+                if group:
+                    # Filter by specific group
+                    words = [word for word in corpus_words if word['group'] == group]
+                else:
+                    # Get all words from this corpus
+                    words = corpus_words
             else:
                 # Handle other corpus types (verbs, phrases)
                 if corpus in all_words:
@@ -423,28 +528,22 @@ def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
         
         # Handle noun corpus requests (nouns_one, nouns_two, etc.)
         if corpus.startswith('nouns_'):
-            if corpus not in NOUN_CORPUS_LEVEL_RANGES:
-                return jsonify({"error": f"Corpus '{corpus}' not found"}), 404
+            # Use dynamic corpus system to get words
+            corpus_words = get_words_for_dynamic_corpus(corpus)
+            if not corpus_words:
+                return jsonify({"error": f"Corpus '{corpus}' not found or has no words"}), 404
             
             if requested_group:
-                # Return words for the specific group across all levels in this corpus
-                enhanced_words = []
-                for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                    level_name = f"level_{level_num}"
-                    if level_name in all_words and requested_group in all_words[level_name]:
-                        for word_pair in all_words[level_name][requested_group]:
-                            enhanced_word = word_pair.copy()
-                            enhanced_word['corpus'] = corpus
-                            enhanced_word['group'] = requested_group
-                            enhanced_words.append(enhanced_word)
+                # Return words for the specific group
+                group_words = [word for word in corpus_words if word['group'] == requested_group]
                 
-                if not enhanced_words:
+                if not group_words:
                     return jsonify({"error": f"Group '{requested_group}' not found in corpus '{corpus}'"}), 404
                 
                 return jsonify({
                     "corpus": corpus,
                     "group": requested_group,
-                    "words": enhanced_words
+                    "words": group_words
                 })
             
             # Return all groups in a nested structure
@@ -453,25 +552,15 @@ def list_groups_in_corpus(corpus: str) -> Union[Response, tuple]:
                 "groups": {}
             }
             
-            # Collect all unique groups across all levels in this corpus
-            all_groups = set()
-            for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                level_name = f"level_{level_num}"
-                if level_name in all_words:
-                    all_groups.update(all_words[level_name].keys())
+            # Group words by group name
+            groups_dict = {}
+            for word in corpus_words:
+                group_name = word['group']
+                if group_name not in groups_dict:
+                    groups_dict[group_name] = []
+                groups_dict[group_name].append(word)
             
-            # Create a nested structure with group names and their words
-            for group_name in sorted(all_groups):
-                enhanced_words = []
-                for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                    level_name = f"level_{level_num}"
-                    if level_name in all_words and group_name in all_words[level_name]:
-                        for word_pair in all_words[level_name][group_name]:
-                            enhanced_word = word_pair.copy()
-                            enhanced_word['corpus'] = corpus
-                            enhanced_word['group'] = group_name
-                            enhanced_words.append(enhanced_word)
-                result["groups"][group_name] = enhanced_words
+            result["groups"] = groups_dict
             
             return jsonify(result)
         
@@ -530,10 +619,10 @@ def get_all_words() -> Union[Response, tuple]:
     """
     try:
         words = get_all_word_pairs_flat()
-        # Map noun level corpus names to the new naming scheme
+        # Map noun level corpus names to the new dynamic naming scheme
         for word in words:
             if word['corpus'].startswith('level_'):
-                word['corpus'] = get_noun_corpus_name(word['corpus'])
+                word['corpus'] = get_dynamic_corpus_name(word['corpus'], word['group'])
         return jsonify({"words": words})
     except Exception as e:
         logger.error(f"Error getting all words: {str(e)}")
@@ -565,8 +654,8 @@ def get_levels() -> Union[Response, tuple]:
             # Add noun groups from per-level structure if they exist
             if level_name in all_words:
                 for group_name in all_words[level_name].keys():
-                    # Map the level_X corpus to the appropriate nouns_X corpus name
-                    noun_corpus = get_noun_corpus_name(level_name)
+                    # Map the level_X corpus to the appropriate dynamic nouns_X corpus name
+                    noun_corpus = get_dynamic_corpus_name(level_name, group_name)
                     level_items.append({
                         "corpus": noun_corpus,
                         "group": group_name

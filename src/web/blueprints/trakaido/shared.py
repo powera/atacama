@@ -104,7 +104,7 @@ def get_wordlist_corpora() -> List[str]:
         corpora = []
         
         # Add noun corpora using the new naming scheme
-        corpora.extend(['nouns_one', 'nouns_two', 'nouns_three', 'nouns_four', 'nouns_five'])
+        corpora.extend(['nouns_one', 'nouns_two', 'nouns_three', 'nouns_four', 'nouns_five', 'nouns_six'])
         
         # Add other corpora (verbs, phrases) that don't start with 'level_'
         for corpus_name in all_words.keys():
