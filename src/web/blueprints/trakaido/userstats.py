@@ -29,7 +29,8 @@ USERSTATS_API_DOCS = {
     "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word",
     "POST /api/trakaido/journeystats/increment": "Increment stats for a single question with nonce",
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
-    "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)"
+    "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
+    "GET /api/trakaido/journeystats/monthly": "Get monthly stats (past 30 days progress with daily breakdown)"
 }
 
 # Activity Stats related constants
@@ -733,6 +734,189 @@ def calculate_weekly_progress(user_id: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+def get_30_days_ago_day_key() -> str:
+    """Get the day key for exactly 30 days ago based on 0700 GMT cutoff."""
+    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
+    if now.hour < DAILY_CUTOFF_HOUR:
+        now = now - timedelta(days=1)
+    thirty_days_ago = now - timedelta(days=30)
+    return thirty_days_ago.strftime("%Y-%m-%d")
+
+
+def get_30_day_date_range() -> tuple[str, str]:
+    """Get the date range for the past 30 days (30 days ago to today)."""
+    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
+    if now.hour < DAILY_CUTOFF_HOUR:
+        now = now - timedelta(days=1)
+    
+    end_date = now.strftime("%Y-%m-%d")
+    start_date = (now - timedelta(days=29)).strftime("%Y-%m-%d")  # 29 days back + today = 30 days total
+    
+    return start_date, end_date
+
+
+def find_best_monthly_baseline(user_id: str, target_day: str) -> DailyStats:
+    """Find the best available baseline stats for monthly comparison."""
+    try:
+        # Try exact target day first
+        target_daily_stats = DailyStats(user_id, target_day, "current")
+        if DailyStats.exists(user_id, target_day, "current") and not target_daily_stats.is_empty():
+            return target_daily_stats
+        
+        # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
+        # that is less than 30 days old from the target date
+        target_date = datetime.strptime(target_day, "%Y-%m-%d")
+        yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
+        
+        best_daily_stats = None
+        best_date = None
+        
+        # Check up to 30 days forward from target
+        for days_forward in range(1, 31):
+            check_date_str = (target_date + timedelta(days=days_forward)).strftime("%Y-%m-%d")
+            if check_date_str in yesterday_dates:
+                check_daily_stats = DailyStats(user_id, check_date_str, "yesterday")
+                if not check_daily_stats.is_empty():
+                    check_date = datetime.strptime(check_date_str, "%Y-%m-%d")
+                    # We want the oldest (earliest) "yesterday" snapshot, so take the first one we find
+                    if best_date is None or check_date < best_date:
+                        best_daily_stats = check_daily_stats
+                        best_date = check_date
+        
+        if best_daily_stats:
+            return best_daily_stats
+        else:
+            logger.debug(f"No suitable monthly baseline found for user {user_id}, using empty baseline")
+            empty_stats = DailyStats(user_id, target_day, "current")
+            empty_stats.stats = {"stats": {}}
+            return empty_stats
+        
+    except Exception as e:
+        logger.error(f"Error finding monthly baseline for user {user_id}: {str(e)}")
+        empty_stats = DailyStats(user_id, target_day, "current")
+        empty_stats.stats = {"stats": {}}
+        return empty_stats
+
+
+def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
+    """Calculate monthly progress with daily breakdown and summary deltas for the past 30 days."""
+    try:
+        current_day = get_current_day_key()
+        thirty_days_ago_day = get_30_days_ago_day_key()
+        
+        if not ensure_daily_snapshots(user_id):
+            return {"error": "Failed to ensure daily snapshots"}
+        
+        # Get current stats and baseline for summary
+        current_daily_stats = DailyStats(user_id, current_day, "current")
+        thirty_days_ago_daily_stats = find_best_monthly_baseline(user_id, thirty_days_ago_day)
+        
+        # Calculate summary progress (similar to weekly)
+        monthly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
+        monthly_progress["exposed"] = {"new": 0, "total": 0}
+        
+        # Calculate progress for each word
+        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
+            thirty_days_ago_word_stats = thirty_days_ago_daily_stats.get_word_stats(word_key)
+            
+            # Count exposed words
+            if current_word_stats.get("exposed", False):
+                monthly_progress["exposed"]["total"] += 1
+                # Count new exposed words (words that exist in current but not in 30-days-ago baseline)
+                if not thirty_days_ago_word_stats:
+                    monthly_progress["exposed"]["new"] += 1
+            
+            for stat_type in VALID_STAT_TYPES:
+                if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
+                    current_correct = current_word_stats[stat_type].get("correct", 0)
+                    current_incorrect = current_word_stats[stat_type].get("incorrect", 0)
+                    
+                    thirty_days_ago_correct = 0
+                    thirty_days_ago_incorrect = 0
+                    if stat_type in thirty_days_ago_word_stats and isinstance(thirty_days_ago_word_stats[stat_type], dict):
+                        thirty_days_ago_correct = thirty_days_ago_word_stats[stat_type].get("correct", 0)
+                        thirty_days_ago_incorrect = thirty_days_ago_word_stats[stat_type].get("incorrect", 0)
+                    
+                    # Calculate delta
+                    monthly_progress[stat_type]["correct"] += max(0, current_correct - thirty_days_ago_correct)
+                    monthly_progress[stat_type]["incorrect"] += max(0, current_incorrect - thirty_days_ago_incorrect)
+        
+        # Get daily breakdown for the past 30 days
+        start_date_str, end_date_str = get_30_day_date_range()
+        available_dates = DailyStats.get_available_dates(user_id, "current")
+        
+        daily_data = []
+        
+        # Generate all dates in the past 30 days
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        current_date = start_date
+        
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            
+            activities_per_day = 0
+            new_words_per_day = 0
+            
+            if date_str in available_dates:
+                daily_stats = DailyStats(user_id, date_str, "current")
+                if not daily_stats.is_empty():
+                    # Calculate activities per day (sum of all correct + incorrect for all stat types)
+                    for word_key, word_stats in daily_stats.stats["stats"].items():
+                        for stat_type in VALID_STAT_TYPES:
+                            if stat_type in word_stats and isinstance(word_stats[stat_type], dict):
+                                activities_per_day += word_stats[stat_type].get("correct", 0)
+                                activities_per_day += word_stats[stat_type].get("incorrect", 0)
+                    
+                    # Calculate new words per day by comparing with previous day
+                    if current_date > start_date:
+                        prev_date_str = (current_date - timedelta(days=1)).strftime("%Y-%m-%d")
+                        if prev_date_str in available_dates:
+                            prev_daily_stats = DailyStats(user_id, prev_date_str, "current")
+                            if not prev_daily_stats.is_empty():
+                                # Count words that are exposed today but weren't exposed yesterday
+                                for word_key, word_stats in daily_stats.stats["stats"].items():
+                                    if word_stats.get("exposed", False):
+                                        prev_word_stats = prev_daily_stats.get_word_stats(word_key)
+                                        if not prev_word_stats or not prev_word_stats.get("exposed", False):
+                                            new_words_per_day += 1
+                        else:
+                            # If no previous day data, count all exposed words as new
+                            for word_key, word_stats in daily_stats.stats["stats"].items():
+                                if word_stats.get("exposed", False):
+                                    new_words_per_day += 1
+                    else:
+                        # First day of the 30-day period, count all exposed words as new
+                        for word_key, word_stats in daily_stats.stats["stats"].items():
+                            if word_stats.get("exposed", False):
+                                new_words_per_day += 1
+            
+            daily_data.append({
+                "date": date_str,
+                "activitiesPerDay": activities_per_day,
+                "newWordsPerDay": new_words_per_day
+            })
+            
+            current_date += timedelta(days=1)
+        
+        actual_baseline_day = thirty_days_ago_daily_stats.date if not thirty_days_ago_daily_stats.is_empty() else None
+        
+        # Format the period description
+        period_description = f"Past 30 Days ({start_date_str} to {end_date_str})"
+        
+        return {
+            "currentMonth": period_description,
+            "currentDay": current_day,
+            "targetBaselineDay": thirty_days_ago_day,
+            "actualBaselineDay": actual_baseline_day,
+            "progress": monthly_progress,
+            "dailyData": daily_data
+        }
+    except Exception as e:
+        logger.error(f"Error calculating monthly progress for user {user_id}: {str(e)}")
+        return {"error": str(e)}
+
+
 # Journey Stats API Routes
 @trakaido_bp.route('/api/trakaido/journeystats/', methods=['GET'])
 @require_auth
@@ -931,4 +1115,21 @@ def get_weekly_stats():
         return jsonify(weekly_progress)
     except Exception as e:
         logger.error(f"Error getting weekly stats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/journeystats/monthly', methods=['GET'])
+@require_auth
+def get_monthly_stats():
+    """Get monthly stats (past 30 days progress with daily breakdown) for the authenticated user."""
+    try:
+        user_id = str(g.user.id)
+        monthly_progress = calculate_monthly_progress(user_id)
+        
+        if "error" in monthly_progress:
+            return jsonify(monthly_progress), 500
+        
+        return jsonify(monthly_progress)
+    except Exception as e:
+        logger.error(f"Error getting monthly stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
