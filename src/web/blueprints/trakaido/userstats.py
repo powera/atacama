@@ -766,16 +766,13 @@ def get_30_day_date_range() -> tuple[str, str]:
     return start_date, end_date
 
 
-
-
-
 def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
     """
     Calculate monthly stats with daily breakdown and monthly aggregate for the past 30 days.
     
     Returns two main components:
     1. monthlyAggregate - Aggregate stats for the entire 30-day period (similar to weekly stats)
-    2. dailyBreakdown - Per-day stats showing:
+    2. dailyData - Per-day stats showing:
        - questionsAnswered: Number of questions answered on each day
        - exposedWordsCount: Total number of exposed words on each day
        - newlyExposedWords: Number of words newly exposed on each day (compared to most recent previous day with data)
@@ -953,7 +950,7 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
             "targetBaselineDay": thirty_days_ago_day,
             "actualBaselineDay": actual_baseline_day,
             "monthlyAggregate": monthly_aggregate,
-            "dailyBreakdown": daily_data
+            "dailyData": daily_data
         }
     except Exception as e:
         logger.error(f"Error calculating monthly progress for user {user_id}: {str(e)}")
@@ -1169,7 +1166,7 @@ def get_monthly_stats():
     
     Returns:
     - monthlyAggregate: Aggregate stats for the entire 30-day period
-    - dailyBreakdown: Per-day stats showing questions answered, exposed words count, and newly exposed words
+    - dailyData: Per-day stats showing questions answered, exposed words count, and newly exposed words
     """
     try:
         user_id = str(g.user.id)
