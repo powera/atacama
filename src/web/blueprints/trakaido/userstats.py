@@ -30,7 +30,7 @@ USERSTATS_API_DOCS = {
     "POST /api/trakaido/journeystats/increment": "Increment stats for a single question with nonce",
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
     "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
-    "GET /api/trakaido/journeystats/monthly": "Get monthly stats (past 30 days progress with daily breakdown)"
+    "GET /api/trakaido/journeystats/monthly": "Get monthly stats (past 30 days with daily breakdown and monthly aggregate)"
 }
 
 # Activity Stats related constants
@@ -770,7 +770,7 @@ def get_30_day_date_range() -> tuple[str, str]:
 
 
 def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
-    """Calculate monthly progress with daily breakdown and summary deltas for the past 30 days."""
+    """Calculate monthly stats with daily breakdown and monthly aggregate for the past 30 days."""
     try:
         current_day = get_current_day_key()
         thirty_days_ago_day = get_30_days_ago_day_key()
@@ -782,9 +782,9 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
         current_daily_stats = DailyStats(user_id, current_day, "current")
         thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30)
         
-        # Calculate summary progress (similar to weekly)
-        monthly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
-        monthly_progress["exposed"] = {"new": 0, "total": 0}
+        # Calculate monthly aggregate stats (similar to weekly)
+        monthly_aggregate = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
+        monthly_aggregate["exposed"] = {"new": 0, "total": 0}
         
         # Calculate progress for each word
         for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
@@ -792,10 +792,10 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
             
             # Count exposed words
             if current_word_stats.get("exposed", False):
-                monthly_progress["exposed"]["total"] += 1
+                monthly_aggregate["exposed"]["total"] += 1
                 # Count new exposed words (words that exist in current but not in 30-days-ago baseline)
                 if not thirty_days_ago_word_stats:
-                    monthly_progress["exposed"]["new"] += 1
+                    monthly_aggregate["exposed"]["new"] += 1
             
             for stat_type in VALID_STAT_TYPES:
                 if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
@@ -809,8 +809,8 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                         thirty_days_ago_incorrect = thirty_days_ago_word_stats[stat_type].get("incorrect", 0)
                     
                     # Calculate delta
-                    monthly_progress[stat_type]["correct"] += max(0, current_correct - thirty_days_ago_correct)
-                    monthly_progress[stat_type]["incorrect"] += max(0, current_incorrect - thirty_days_ago_incorrect)
+                    monthly_aggregate[stat_type]["correct"] += max(0, current_correct - thirty_days_ago_correct)
+                    monthly_aggregate[stat_type]["incorrect"] += max(0, current_incorrect - thirty_days_ago_incorrect)
         
         # Get daily breakdown for the past 30 days
         start_date_str, end_date_str = get_30_day_date_range()
@@ -826,20 +826,26 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
         while current_date <= end_date:
             date_str = current_date.strftime("%Y-%m-%d")
             
-            activities_per_day = 0
-            new_words_per_day = 0
+            total_questions_on_day = 0
+            total_exposed_words_on_day = 0
+            new_exposed_words_on_day = 0
             
             if date_str in available_dates:
                 daily_stats = DailyStats(user_id, date_str, "current")
                 if not daily_stats.is_empty():
-                    # Calculate activities per day (sum of all correct + incorrect for all stat types)
+                    # Calculate total questions on this day (sum of all correct + incorrect for all stat types)
                     for word_key, word_stats in daily_stats.stats["stats"].items():
                         for stat_type in VALID_STAT_TYPES:
                             if stat_type in word_stats and isinstance(word_stats[stat_type], dict):
-                                activities_per_day += word_stats[stat_type].get("correct", 0)
-                                activities_per_day += word_stats[stat_type].get("incorrect", 0)
+                                total_questions_on_day += word_stats[stat_type].get("correct", 0)
+                                total_questions_on_day += word_stats[stat_type].get("incorrect", 0)
                     
-                    # Calculate new words per day by comparing with previous day
+                    # Count total exposed words on this day
+                    for word_key, word_stats in daily_stats.stats["stats"].items():
+                        if word_stats.get("exposed", False):
+                            total_exposed_words_on_day += 1
+                    
+                    # Calculate new exposed words on this day by comparing with previous day
                     if current_date > start_date:
                         prev_date_str = (current_date - timedelta(days=1)).strftime("%Y-%m-%d")
                         if prev_date_str in available_dates:
@@ -850,22 +856,19 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                                     if word_stats.get("exposed", False):
                                         prev_word_stats = prev_daily_stats.get_word_stats(word_key)
                                         if not prev_word_stats or not prev_word_stats.get("exposed", False):
-                                            new_words_per_day += 1
+                                            new_exposed_words_on_day += 1
                         else:
                             # If no previous day data, count all exposed words as new
-                            for word_key, word_stats in daily_stats.stats["stats"].items():
-                                if word_stats.get("exposed", False):
-                                    new_words_per_day += 1
+                            new_exposed_words_on_day = total_exposed_words_on_day
                     else:
                         # First day of the 30-day period, count all exposed words as new
-                        for word_key, word_stats in daily_stats.stats["stats"].items():
-                            if word_stats.get("exposed", False):
-                                new_words_per_day += 1
+                        new_exposed_words_on_day = total_exposed_words_on_day
             
             daily_data.append({
                 "date": date_str,
-                "activitiesPerDay": activities_per_day,
-                "newWordsPerDay": new_words_per_day
+                "totalQuestionsOnDay": total_questions_on_day,
+                "totalExposedWordsOnDay": total_exposed_words_on_day,
+                "newExposedWordsOnDay": new_exposed_words_on_day
             })
             
             current_date += timedelta(days=1)
@@ -880,8 +883,8 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
             "currentDay": current_day,
             "targetBaselineDay": thirty_days_ago_day,
             "actualBaselineDay": actual_baseline_day,
-            "progress": monthly_progress,
-            "dailyData": daily_data
+            "monthlyAggregate": monthly_aggregate,
+            "dailyBreakdown": daily_data
         }
     except Exception as e:
         logger.error(f"Error calculating monthly progress for user {user_id}: {str(e)}")
@@ -1092,7 +1095,7 @@ def get_weekly_stats():
 @trakaido_bp.route('/api/trakaido/journeystats/monthly', methods=['GET'])
 @require_auth
 def get_monthly_stats():
-    """Get monthly stats (past 30 days progress with daily breakdown) for the authenticated user."""
+    """Get monthly stats (past 30 days with daily breakdown and monthly aggregate) for the authenticated user."""
     try:
         user_id = str(g.user.id)
         monthly_progress = calculate_monthly_progress(user_id)
