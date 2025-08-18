@@ -636,8 +636,17 @@ def get_week_ago_day_key() -> str:
     return week_ago.strftime("%Y-%m-%d")
 
 
-def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
-    """Find the best available baseline stats for weekly comparison."""
+def find_best_baseline(user_id: str, target_day: str, max_days: int) -> DailyStats:
+    """Find the best available baseline stats for comparison over a given period.
+    
+    Args:
+        user_id: The user ID to find baseline stats for
+        target_day: The target day to find baseline stats for (YYYY-MM-DD format)
+        max_days: Maximum number of days to look forward from target day
+    
+    Returns:
+        DailyStats object with the best available baseline stats
+    """
     try:
         # Try exact target day first
         target_daily_stats = DailyStats(user_id, target_day, "current")
@@ -645,15 +654,15 @@ def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
             return target_daily_stats
         
         # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
-        # that is less than 7 days old from the target date
+        # that is less than max_days old from the target date
         target_date = datetime.strptime(target_day, "%Y-%m-%d")
         yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
         
         best_daily_stats = None
         best_date = None
         
-        # Check up to 7 days forward from target
-        for days_forward in range(1, 8):
+        # Check up to max_days forward from target
+        for days_forward in range(1, max_days + 1):
             check_date = target_date + timedelta(days=days_forward)
             check_day_key = check_date.strftime("%Y-%m-%d")
             
@@ -668,13 +677,15 @@ def find_best_weekly_baseline(user_id: str, target_day: str) -> DailyStats:
         if best_daily_stats:
             return best_daily_stats
         else:
-            logger.debug(f"No suitable weekly baseline found for user {user_id}, using empty baseline")
+            period_name = "weekly" if max_days <= 7 else "monthly"
+            logger.debug(f"No suitable {period_name} baseline found for user {user_id}, using empty baseline")
             empty_stats = DailyStats(user_id, target_day, "current")
             empty_stats.stats = {"stats": {}}
             return empty_stats
         
     except Exception as e:
-        logger.error(f"Error finding weekly baseline for user {user_id}: {str(e)}")
+        period_name = "weekly" if max_days <= 7 else "monthly"
+        logger.error(f"Error finding {period_name} baseline for user {user_id}: {str(e)}")
         empty_stats = DailyStats(user_id, target_day, "current")
         empty_stats.stats = {"stats": {}}
         return empty_stats
@@ -690,7 +701,7 @@ def calculate_weekly_progress(user_id: str) -> Dict[str, Any]:
             return {"error": "Failed to ensure daily snapshots"}
         
         current_daily_stats = DailyStats(user_id, current_day, "current")
-        week_ago_daily_stats = find_best_weekly_baseline(user_id, week_ago_day)
+        week_ago_daily_stats = find_best_baseline(user_id, week_ago_day, 7)
         
         weekly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
         weekly_progress["exposed"] = {"new": 0, "total": 0}
@@ -755,47 +766,7 @@ def get_30_day_date_range() -> tuple[str, str]:
     return start_date, end_date
 
 
-def find_best_monthly_baseline(user_id: str, target_day: str) -> DailyStats:
-    """Find the best available baseline stats for monthly comparison."""
-    try:
-        # Try exact target day first
-        target_daily_stats = DailyStats(user_id, target_day, "current")
-        if DailyStats.exists(user_id, target_day, "current") and not target_daily_stats.is_empty():
-            return target_daily_stats
-        
-        # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
-        # that is less than 30 days old from the target date
-        target_date = datetime.strptime(target_day, "%Y-%m-%d")
-        yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
-        
-        best_daily_stats = None
-        best_date = None
-        
-        # Check up to 30 days forward from target
-        for days_forward in range(1, 31):
-            check_date_str = (target_date + timedelta(days=days_forward)).strftime("%Y-%m-%d")
-            if check_date_str in yesterday_dates:
-                check_daily_stats = DailyStats(user_id, check_date_str, "yesterday")
-                if not check_daily_stats.is_empty():
-                    check_date = datetime.strptime(check_date_str, "%Y-%m-%d")
-                    # We want the oldest (earliest) "yesterday" snapshot, so take the first one we find
-                    if best_date is None or check_date < best_date:
-                        best_daily_stats = check_daily_stats
-                        best_date = check_date
-        
-        if best_daily_stats:
-            return best_daily_stats
-        else:
-            logger.debug(f"No suitable monthly baseline found for user {user_id}, using empty baseline")
-            empty_stats = DailyStats(user_id, target_day, "current")
-            empty_stats.stats = {"stats": {}}
-            return empty_stats
-        
-    except Exception as e:
-        logger.error(f"Error finding monthly baseline for user {user_id}: {str(e)}")
-        empty_stats = DailyStats(user_id, target_day, "current")
-        empty_stats.stats = {"stats": {}}
-        return empty_stats
+
 
 
 def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
@@ -809,7 +780,7 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
         
         # Get current stats and baseline for summary
         current_daily_stats = DailyStats(user_id, current_day, "current")
-        thirty_days_ago_daily_stats = find_best_monthly_baseline(user_id, thirty_days_ago_day)
+        thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30)
         
         # Calculate summary progress (similar to weekly)
         monthly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
