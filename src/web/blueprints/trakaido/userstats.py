@@ -30,7 +30,7 @@ USERSTATS_API_DOCS = {
     "POST /api/trakaido/journeystats/increment": "Increment stats for a single question with nonce",
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
     "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
-    "GET /api/trakaido/journeystats/monthly": "Get monthly stats (past 30 days with daily breakdown and monthly aggregate)"
+    "GET /api/trakaido/journeystats/monthly": "Get monthly stats with daily breakdown (questions answered, exposed words count, newly exposed words) and monthly aggregate"
 }
 
 # Activity Stats related constants
@@ -770,7 +770,16 @@ def get_30_day_date_range() -> tuple[str, str]:
 
 
 def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
-    """Calculate monthly stats with daily breakdown and monthly aggregate for the past 30 days."""
+    """
+    Calculate monthly stats with daily breakdown and monthly aggregate for the past 30 days.
+    
+    Returns two main components:
+    1. monthlyAggregate - Aggregate stats for the entire 30-day period (similar to weekly stats)
+    2. dailyBreakdown - Per-day stats showing:
+       - questionsAnswered: Number of questions answered on each day
+       - exposedWordsCount: Total number of exposed words on each day
+       - newlyExposedWords: Number of words newly exposed on each day (compared to most recent previous day with data)
+    """
     try:
         current_day = get_current_day_key()
         thirty_days_ago_day = get_30_days_ago_day_key()
@@ -826,49 +835,62 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
         while current_date <= end_date:
             date_str = current_date.strftime("%Y-%m-%d")
             
-            total_questions_on_day = 0
-            total_exposed_words_on_day = 0
-            new_exposed_words_on_day = 0
+            questions_answered_on_day = 0
+            exposed_words_count_on_day = 0
+            newly_exposed_words_on_day = 0
             
             if date_str in available_dates:
                 daily_stats = DailyStats(user_id, date_str, "current")
                 if not daily_stats.is_empty():
-                    # Calculate total questions on this day (sum of all correct + incorrect for all stat types)
+                    # Calculate questions answered on this day (sum of all correct + incorrect for all stat types)
                     for word_key, word_stats in daily_stats.stats["stats"].items():
                         for stat_type in VALID_STAT_TYPES:
                             if stat_type in word_stats and isinstance(word_stats[stat_type], dict):
-                                total_questions_on_day += word_stats[stat_type].get("correct", 0)
-                                total_questions_on_day += word_stats[stat_type].get("incorrect", 0)
+                                questions_answered_on_day += word_stats[stat_type].get("correct", 0)
+                                questions_answered_on_day += word_stats[stat_type].get("incorrect", 0)
                     
-                    # Count total exposed words on this day
+                    # Count exposed words on this day
                     for word_key, word_stats in daily_stats.stats["stats"].items():
                         if word_stats.get("exposed", False):
-                            total_exposed_words_on_day += 1
+                            exposed_words_count_on_day += 1
                     
-                    # Calculate new exposed words on this day by comparing with previous day
+                    # Calculate new exposed words on this day by finding the most recent previous data
                     if current_date > start_date:
-                        prev_date_str = (current_date - timedelta(days=1)).strftime("%Y-%m-%d")
-                        if prev_date_str in available_dates:
-                            prev_daily_stats = DailyStats(user_id, prev_date_str, "current")
-                            if not prev_daily_stats.is_empty():
-                                # Count words that are exposed today but weren't exposed yesterday
-                                for word_key, word_stats in daily_stats.stats["stats"].items():
-                                    if word_stats.get("exposed", False):
-                                        prev_word_stats = prev_daily_stats.get_word_stats(word_key)
-                                        if not prev_word_stats or not prev_word_stats.get("exposed", False):
-                                            new_exposed_words_on_day += 1
+                        # Find the most recent previous day with data
+                        most_recent_prev_date = None
+                        most_recent_prev_stats = None
+                        
+                        # Start from yesterday and go backwards until we find data
+                        check_date = current_date - timedelta(days=1)
+                        while check_date >= start_date:
+                            check_date_str = check_date.strftime("%Y-%m-%d")
+                            if check_date_str in available_dates:
+                                prev_daily_stats = DailyStats(user_id, check_date_str, "current")
+                                if not prev_daily_stats.is_empty():
+                                    most_recent_prev_date = check_date_str
+                                    most_recent_prev_stats = prev_daily_stats
+                                    break
+                            check_date -= timedelta(days=1)
+                        
+                        if most_recent_prev_stats:
+                            # Count words that are exposed today but weren't exposed in the most recent previous day with data
+                            for word_key, word_stats in daily_stats.stats["stats"].items():
+                                if word_stats.get("exposed", False):
+                                    prev_word_stats = most_recent_prev_stats.get_word_stats(word_key)
+                                    if not prev_word_stats or not prev_word_stats.get("exposed", False):
+                                        newly_exposed_words_on_day += 1
                         else:
-                            # If no previous day data, count all exposed words as new
-                            new_exposed_words_on_day = total_exposed_words_on_day
+                            # If no previous data at all, count all exposed words as new (first day with data)
+                            newly_exposed_words_on_day = exposed_words_count_on_day
                     else:
-                        # First day of the 30-day period, count all exposed words as new
-                        new_exposed_words_on_day = total_exposed_words_on_day
+                        # First day of the 30-day period, set new exposed words to 0 since we can't determine what's new
+                        newly_exposed_words_on_day = 0
             
             daily_data.append({
                 "date": date_str,
-                "totalQuestionsOnDay": total_questions_on_day,
-                "totalExposedWordsOnDay": total_exposed_words_on_day,
-                "newExposedWordsOnDay": new_exposed_words_on_day
+                "questionsAnswered": questions_answered_on_day,
+                "exposedWordsCount": exposed_words_count_on_day,
+                "newlyExposedWords": newly_exposed_words_on_day
             })
             
             current_date += timedelta(days=1)
@@ -1095,7 +1117,13 @@ def get_weekly_stats():
 @trakaido_bp.route('/api/trakaido/journeystats/monthly', methods=['GET'])
 @require_auth
 def get_monthly_stats():
-    """Get monthly stats (past 30 days with daily breakdown and monthly aggregate) for the authenticated user."""
+    """
+    Get monthly stats for the authenticated user.
+    
+    Returns:
+    - monthlyAggregate: Aggregate stats for the entire 30-day period
+    - dailyBreakdown: Per-day stats showing questions answered, exposed words count, and newly exposed words
+    """
     try:
         user_id = str(g.user.id)
         monthly_progress = calculate_monthly_progress(user_id)
