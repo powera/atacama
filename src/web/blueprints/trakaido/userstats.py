@@ -802,9 +802,13 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
             # Count exposed words
             if current_word_stats.get("exposed", False):
                 monthly_aggregate["exposed"]["total"] += 1
-                # Count new exposed words (words that exist in current but not in 30-days-ago baseline)
-                if not thirty_days_ago_word_stats:
-                    monthly_aggregate["exposed"]["new"] += 1
+                
+                # For new exposed words, we need to be more careful
+                # Only count as new if we have a valid baseline to compare with
+                if not thirty_days_ago_daily_stats.is_empty():
+                    # Count new exposed words (words that exist in current but not in 30-days-ago baseline)
+                    if not thirty_days_ago_word_stats:
+                        monthly_aggregate["exposed"]["new"] += 1
             
             for stat_type in VALID_STAT_TYPES:
                 if stat_type in current_word_stats and isinstance(current_word_stats[stat_type], dict):
@@ -880,11 +884,54 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                                     if not prev_word_stats or not prev_word_stats.get("exposed", False):
                                         newly_exposed_words_on_day += 1
                         else:
-                            # If no previous data at all, count all exposed words as new (first day with data)
-                            newly_exposed_words_on_day = exposed_words_count_on_day
+                            # If no previous data within the period, try to find data from before the period
+                            baseline_found = False
+                            all_available_dates = DailyStats.get_available_dates(user_id, "current")
+                            earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
+                            
+                            if earlier_dates:
+                                # Use the most recent date before our period as baseline
+                                baseline_date = max(earlier_dates)
+                                baseline_stats = DailyStats(user_id, baseline_date, "current")
+                                
+                                if not baseline_stats.is_empty():
+                                    baseline_found = True
+                                    # Count words that are exposed on this day but weren't in baseline
+                                    for word_key, word_stats in daily_stats.stats["stats"].items():
+                                        if word_stats.get("exposed", False):
+                                            baseline_word_stats = baseline_stats.get_word_stats(word_key)
+                                            if not baseline_word_stats or not baseline_word_stats.get("exposed", False):
+                                                newly_exposed_words_on_day += 1
+                            
+                            # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
+                            if not baseline_found:
+                                newly_exposed_words_on_day = 0
                     else:
-                        # First day of the 30-day period, set new exposed words to 0 since we can't determine what's new
-                        newly_exposed_words_on_day = 0
+                        # First day of the 30-day period with data
+                        # Try to find a baseline from before the 30-day period to compare with
+                        baseline_found = False
+                        
+                        # Look for snapshots before the start date
+                        all_available_dates = DailyStats.get_available_dates(user_id, "current")
+                        earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
+                        
+                        if earlier_dates:
+                            # Use the most recent date before our period as baseline
+                            baseline_date = max(earlier_dates)
+                            baseline_stats = DailyStats(user_id, baseline_date, "current")
+                            
+                            if not baseline_stats.is_empty():
+                                baseline_found = True
+                                # Count words that are exposed on first day but weren't in baseline
+                                for word_key, word_stats in daily_stats.stats["stats"].items():
+                                    if word_stats.get("exposed", False):
+                                        baseline_word_stats = baseline_stats.get_word_stats(word_key)
+                                        if not baseline_word_stats or not baseline_word_stats.get("exposed", False):
+                                            newly_exposed_words_on_day += 1
+                        
+                        # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
+                        if not baseline_found:
+                            newly_exposed_words_on_day = 0
             
             daily_data.append({
                 "date": date_str,
