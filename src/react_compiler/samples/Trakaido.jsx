@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useGlobalSettings } from './useGlobalSettings';  // This is the correct syntax for now; it is awkward and possibly should be updated.
 import { useFullscreen } from './useFullscreen';
-
-// Use the namespaced lithuanianApi from window
-// These are provided by the script tag in widget.html: <script src="/js/lithuanianApi.js"></script>
-const { 
-  fetchCorpora, 
-  fetchCorpusStructure, 
-  fetchAvailableVoices, 
-  fetchVerbCorpuses, 
-  fetchConjugations, 
-  fetchDeclensions,
-  AudioManager
-} = window.lithuanianApi;
+import { 
+  sampleVocabulary, 
+  sampleVerbs, 
+  samplePhrases, 
+  availableCorpora, 
+  availableVoices, 
+  availableVerbCorpora, 
+  conjugationsData, 
+  declensionsData 
+} from './sampleData.js';
+import SimpleAudioManager from './SimpleAudioManager.js';
 
 // The CSS classes available are primarily in widget_tools.css .
 
@@ -83,7 +82,7 @@ const FlashCardApp = () => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [grammarMode, setGrammarMode] = useState('conjugations');
 
-  const [audioManager] = useState(() => new AudioManager());
+  const [audioManager] = useState(() => new SimpleAudioManager());
   const [hoverTimeout, setHoverTimeout] = useState(null);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(null);
@@ -153,6 +152,35 @@ const FlashCardApp = () => {
     );
   };
 
+  // Local data loading functions to replace API calls
+  const fetchLocalCorpora = async () => {
+    return availableCorpora;
+  };
+
+  const fetchLocalCorpusStructure = async (corpus) => {
+    const allData = { ...sampleVocabulary, ...sampleVerbs, ...samplePhrases };
+    if (allData[corpus]) {
+      return { groups: allData[corpus] };
+    }
+    return { groups: {} };
+  };
+
+  const fetchLocalAvailableVoices = async () => {
+    return availableVoices;
+  };
+
+  const fetchLocalVerbCorpuses = async () => {
+    return availableVerbCorpora;
+  };
+
+  const fetchLocalConjugations = async (corpus = null) => {
+    return conjugationsData;
+  };
+
+  const fetchLocalDeclensions = async () => {
+    return declensionsData;
+  };
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -160,11 +188,11 @@ const FlashCardApp = () => {
       setError(null);
       try {
         const [corpora, voices, verbCorpuses, conjugationData, declensionData] = await Promise.all([
-          fetchCorpora(),
-          fetchAvailableVoices(),
-          fetchVerbCorpuses(),
-          fetchConjugations(),
-          fetchDeclensions()
+          fetchLocalCorpora(),
+          fetchLocalAvailableVoices(),
+          fetchLocalVerbCorpuses(),
+          fetchLocalConjugations(),
+          fetchLocalDeclensions()
         ]);
         setAvailableCorpora(corpora);
         setAvailableVoices(voices);
@@ -183,7 +211,7 @@ const FlashCardApp = () => {
 
         for (const corpus of corpora) {
           try {
-            const structure = await fetchCorpusStructure(corpus);
+            const structure = await fetchLocalCorpusStructure(corpus);
             corporaStructures[corpus] = structure;
 
             // If we're using defaults, set all groups as selected
@@ -289,7 +317,7 @@ const FlashCardApp = () => {
       if (selectedVerbCorpus && !loading) {
         setLoadingConjugations(true);
         try {
-          const conjugationData = await fetchConjugations(selectedVerbCorpus);
+          const conjugationData = await fetchLocalConjugations(selectedVerbCorpus);
           setConjugations(conjugationData.conjugations);
           setAvailableVerbs(conjugationData.verbs);
           // Reset selected verb when corpus changes
