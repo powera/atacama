@@ -11,13 +11,6 @@ from flask import Blueprint, Response, abort, g, jsonify, request, send_file
 
 # Local application imports
 import constants
-from data.trakaido_wordlists.lang_lt.declensions import (
-    CASE_NAMES,
-    NOUN_KEYS,
-    declensions,
-    get_noun_declension,
-    get_nouns_by_case
-)
 from data.trakaido_wordlists.lang_lt.verbs import verbs_new
 from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
 from web.decorators import optional_auth, require_auth
