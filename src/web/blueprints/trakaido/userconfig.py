@@ -122,24 +122,9 @@ def validate_groups_in_corpus(corpus: str, groups: List[str]) -> List[str]:
             logger.warning(f"Corpus '{corpus}' does not exist")
             return []
         
-        # Handle dynamic noun corpora (nouns_one, nouns_two, etc.)
+        # "Dynamic Noun" corpuses shouldn't be validated
         if corpus.startswith('nouns_'):
-            # Import the level ranges mapping from wordlists module
-            from .wordlists import NOUN_CORPUS_LEVEL_RANGES
-            from data.trakaido_wordlists.lang_lt.wordlists import all_words
-            
-            if corpus not in NOUN_CORPUS_LEVEL_RANGES:
-                logger.warning(f"Unknown noun corpus '{corpus}'")
-                return []
-            
-            # Collect all unique groups across all levels in this corpus
-            available_groups = set()
-            for level_num in NOUN_CORPUS_LEVEL_RANGES[corpus]:
-                level_name = f"level_{level_num}"
-                if level_name in all_words:
-                    available_groups.update(all_words[level_name].keys())
-            
-            available_groups = list(available_groups)
+            return groups
         else:
             # Handle static corpora (verbs, phrases)
             available_groups = get_groups(corpus)
