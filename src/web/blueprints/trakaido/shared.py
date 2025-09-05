@@ -11,10 +11,6 @@ from flask import Blueprint, Response, send_file
 # Local application imports
 import constants
 from common.base.logging_config import get_logger
-from data.trakaido_wordlists.lang_lt.wordlists import (
-    all_words, get_all_word_pairs_flat, get_all_word_pairs_flat_basic, 
-    get_words_by_corpus_basic, get_words_by_level_enhanced, levels
-)
 
 # Create the blueprint that will be used by all trakaido modules
 trakaido_bp = Blueprint('trakaido', __name__)
@@ -91,61 +87,3 @@ def ensure_user_data_dir(user_id: str) -> str:
     user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
     os.makedirs(user_data_dir, exist_ok=True)
     return user_data_dir
-
-
-# Wordlist related functions
-def get_wordlist_corpora() -> List[str]:
-    """
-    Get a list of all wordlist corpora.
-    
-    :return: List of corpus names
-    """
-    try:
-        corpora = []
-        
-        # Add noun corpora using the new naming scheme
-        corpora.extend(['nouns_one', 'nouns_two', 'nouns_three', 'nouns_four', 'nouns_five', 'nouns_six'])
-        
-        # Add other corpora (verbs, phrases) that don't start with 'level_'
-        for corpus_name in all_words.keys():
-            if not corpus_name.startswith('level_'):
-                corpora.append(corpus_name)
-        
-        return sorted(corpora)
-    except Exception as e:
-        logger.error(f"Error getting wordlist corpora: {str(e)}")
-        return []
-
-def get_groups(corpus: str) -> List[str]:
-    """
-    Get a list of groups for a given corpus.
-    
-    :param corpus: The corpus name
-    :return: List of group names
-    """
-    try:
-        if corpus not in all_words:
-            logger.error(f"Corpus not found: {corpus}")
-            return []
-        
-        groups = list(all_words[corpus].keys())
-        return groups
-    except Exception as e:
-        logger.error(f"Error getting groups for {corpus}: {str(e)}")
-        return []
-
-def get_words_by_corpus(corpus: str, group: Optional[str] = None) -> List[Dict[str, str]]:
-    """
-    Get words for a specific corpus and optional group with basic fields only.
-    
-    This function provides backward compatibility for existing API endpoints.
-    
-    :param corpus: The corpus name
-    :param group: Optional group name
-    :return: List of word pairs with basic fields only
-    """
-    try:
-        return get_words_by_corpus_basic(corpus, group)
-    except Exception as e:
-        logger.error(f"Error getting words for corpus {corpus}, group {group}: {str(e)}")
-        return []

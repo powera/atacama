@@ -11,23 +11,13 @@ from flask import Blueprint, Response, abort, g, jsonify, request, send_file
 
 # Local application imports
 import constants
-from data.trakaido_wordlists.lang_lt.verbs import verbs_new
-from data.trakaido_wordlists.lang_lt.wordlists import all_words, get_all_word_pairs_flat, levels
 from web.decorators import optional_auth, require_auth
 from .shared import *
 from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
 from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS
-from .wordlists import WORDLISTS_API_DOCS
 from .audio import AUDIO_API_DOCS
 
 ##############################################################################
-
-# API Documentation for endpoints in this file
-CONJUGATIONS_API_DOCS = {
-    "GET /api/lithuanian/conjugations/corpuses": "List all available verb corpuses",
-    "GET /api/lithuanian/conjugations": "Get all verb conjugations grouped by base verb (param: corpus, defaults to 'verbs_present')",
-    "GET /api/lithuanian/conjugations/{verb}": "Get conjugation table for a specific verb (param: corpus, defaults to 'verbs_present')"
-}
 
 USERINFO_API_DOCS = {
     "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
@@ -44,8 +34,6 @@ def lithuanian_api_index() -> Response:
         "name": "Lithuanian Language Learning API",
         "version": "1.0.0",
         "endpoints": {
-            "wordlists": WORDLISTS_API_DOCS,
-            "conjugations": CONJUGATIONS_API_DOCS,
             "audio": AUDIO_API_DOCS,
             "userstats": USERSTATS_API_DOCS,
             "corpuschoices": CORPUSCHOICES_API_DOCS,
@@ -54,54 +42,6 @@ def lithuanian_api_index() -> Response:
     }
     return jsonify(api_info)
 
-
-def extract_verb_conjugations(tense="present_tense") -> Dict[str, List[Dict[str, str]]]:
-    """
-    Extract verb conjugations from the per-verb data tables and group them by base verb.
-    
-    :param tense: The tense to extract ('present_tense', 'past_tense', 'future')
-    :return: Dictionary mapping base verbs to their conjugation lists
-    """
-    try:
-        conjugations = {}
-        
-        # Define the standard order for conjugation forms
-        person_order = ["1s", "2s", "3s-m", "3s-f", "3s-n", "1p", "2p", "3p-m", "3p-f"]
-        
-        # Iterate through all verbs in the new data structure
-        for infinitive, verb_data in verbs_new.items():
-            if tense not in verb_data:
-                continue
-                
-            # Extract the base verb from the English translation
-            english_infinitive = verb_data.get("english", "")
-            base_verb = english_infinitive.replace("to ", "") if english_infinitive.startswith("to ") else infinitive
-            
-            # Create conjugation list for this verb
-            verb_conjugations = []
-            tense_data = verb_data[tense]
-            
-            # Process conjugations in the standard order
-            for person_key in person_order:
-                if person_key in tense_data:
-                    conjugation_entry = {
-                        "english": tense_data[person_key]["english"],
-                        "lithuanian": tense_data[person_key]["lithuanian"],
-                        "infinitive": infinitive,
-                        "tense": tense,
-                        "person": person_key
-                    }
-                    verb_conjugations.append(conjugation_entry)
-            
-            # Store conjugations using the base verb as key
-            conjugations[base_verb] = verb_conjugations
-        
-        logger.debug(f"Extracted {len(conjugations)} verb conjugation sets for tense '{tense}'")
-        return conjugations
-    
-    except Exception as e:
-        logger.error(f"Error extracting verb conjugations: {str(e)}")
-        return {}
 
 @trakaido_bp.route('/api/trakaido/userinfo/')
 @optional_auth
@@ -159,158 +99,3 @@ def get_user_info() -> Response:
             "has_corpus_choice_file": False,
             "error": "Unable to determine authentication status"
         })
-
-
-@trakaido_bp.route('/api/lithuanian/conjugations/corpuses')
-def list_verb_corpuses() -> Union[Response, tuple]:
-    """
-    Get a list of available verb corpuses.
-    
-    :return: JSON response with available verb corpuses
-    """
-    try:
-        all_corpora = get_wordlist_corpora()
-        verb_corpora = [corpus for corpus in all_corpora if corpus.startswith('verbs_')]
-        
-        return jsonify({
-            "verb_corpuses": verb_corpora,
-            "count": len(verb_corpora)
-        })
-    except Exception as e:
-        logger.error(f"Error getting verb corpuses: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@trakaido_bp.route('/api/lithuanian/conjugations')
-def get_verb_conjugations() -> Union[Response, tuple]:
-    """
-    Get all verb conjugations grouped by base verb.
-    Supports optional 'tense' query parameter to specify which tense to use.
-    Also supports legacy 'corpus' parameter for backward compatibility.
-    
-    :return: JSON response with verb conjugations
-    """
-    try:
-        # Support both new 'tense' parameter and legacy 'corpus' parameter
-        tense = request.args.get('tense')
-        corpus = request.args.get('corpus')
-        
-        if tense:
-            selected_tense = tense
-        elif corpus:
-            # Map legacy corpus names to tenses
-            corpus_to_tense = {
-                'verbs_present': 'present_tense',
-                'verbs_past': 'past_tense', 
-                'verbs_future': 'future'
-            }
-            selected_tense = corpus_to_tense.get(corpus, 'present_tense')
-        else:
-            selected_tense = 'present_tense'
-        
-        # Validate tense exists
-        available_tenses = set()
-        for verb_data in verbs_new.values():
-            for key in verb_data.keys():
-                if key != "english":
-                    available_tenses.add(key)
-        
-        if selected_tense not in available_tenses:
-            return jsonify({"error": f"Tense '{selected_tense}' not found. Available: {sorted(list(available_tenses))}"}), 404
-        
-        conjugations = extract_verb_conjugations(selected_tense)
-        return jsonify({
-            "tense": selected_tense,
-            "conjugations": conjugations,
-            "verbs": list(conjugations.keys()),
-            "count": len(conjugations)
-        })
-    except Exception as e:
-        logger.error(f"Error getting verb conjugations: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
-@trakaido_bp.route('/api/lithuanian/conjugations/<verb>')
-def get_specific_verb_conjugation(verb: str) -> Union[Response, tuple]:
-    """
-    Get conjugation for a specific verb.
-    Supports optional 'tense' query parameter to specify which tense to use.
-    Also supports legacy 'corpus' parameter for backward compatibility.
-    
-    :param verb: The base verb (e.g., "walk", "eat") or Lithuanian infinitive (e.g., "valgyti")
-    :return: JSON response with conjugation table
-    """
-    try:
-        # Support both new 'tense' parameter and legacy 'corpus' parameter
-        tense = request.args.get('tense')
-        corpus = request.args.get('corpus')
-        
-        if tense:
-            selected_tense = tense
-        elif corpus:
-            # Map legacy corpus names to tenses
-            corpus_to_tense = {
-                'verbs_present': 'present_tense',
-                'verbs_past': 'past_tense', 
-                'verbs_future': 'future'
-            }
-            selected_tense = corpus_to_tense.get(corpus, 'present_tense')
-        else:
-            selected_tense = 'present_tense'
-        
-        # Validate tense exists
-        available_tenses = set()
-        for verb_data in verbs_new.values():
-            for key in verb_data.keys():
-                if key != "english":
-                    available_tenses.add(key)
-        
-        if selected_tense not in available_tenses:
-            return jsonify({"error": f"Tense '{selected_tense}' not found. Available: {sorted(list(available_tenses))}"}), 404
-        
-        # Try to find the verb by infinitive first, then by base verb
-        verb_conjugation = None
-        matched_infinitive = None
-        
-        # Check if the verb is a Lithuanian infinitive
-        if verb in verbs_new and selected_tense in verbs_new[verb]:
-            matched_infinitive = verb
-            verb_data = verbs_new[verb]
-            verb_conjugation = []
-            
-            person_order = ["1s", "2s", "3s-m", "3s-f", "3s-n", "1p", "2p", "3p-m", "3p-f"]
-            tense_data = verb_data[selected_tense]
-            
-            for person_key in person_order:
-                if person_key in tense_data:
-                    conjugation_entry = {
-                        "english": tense_data[person_key]["english"],
-                        "lithuanian": tense_data[person_key]["lithuanian"],
-                        "infinitive": matched_infinitive,
-                        "tense": selected_tense,
-                        "person": person_key
-                    }
-                    verb_conjugation.append(conjugation_entry)
-        else:
-            # Try to find by base verb (English)
-            conjugations = extract_verb_conjugations(selected_tense)
-            if verb in conjugations:
-                verb_conjugation = conjugations[verb]
-                # Find the infinitive for this base verb
-                for infinitive, verb_data in verbs_new.items():
-                    english_infinitive = verb_data.get("english", "")
-                    base_verb = english_infinitive.replace("to ", "") if english_infinitive.startswith("to ") else infinitive
-                    if base_verb == verb:
-                        matched_infinitive = infinitive
-                        break
-        
-        if not verb_conjugation:
-            return jsonify({"error": f"Verb '{verb}' not found for tense '{selected_tense}'"}), 404
-        
-        return jsonify({
-            "verb": verb,
-            "infinitive": matched_infinitive,
-            "tense": selected_tense,
-            "conjugations": verb_conjugation
-        })
-    except Exception as e:
-        logger.error(f"Error getting conjugation for verb '{verb}': {str(e)}")
-        return jsonify({"error": str(e)}), 500

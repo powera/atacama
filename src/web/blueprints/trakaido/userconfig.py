@@ -12,7 +12,7 @@ from flask import Response, g, jsonify, request
 # Local application imports
 import constants
 from web.decorators import require_auth
-from .shared import trakaido_bp, logger, ensure_user_data_dir, get_wordlist_corpora, get_groups
+from .shared import trakaido_bp, logger, ensure_user_data_dir
 
 ##############################################################################
 
@@ -98,47 +98,18 @@ def save_corpus_choices(user_id: str, choices: Dict[str, Any]) -> bool:
 def validate_corpus_exists(corpus: str) -> bool:
     """
     Validate that a corpus exists in the available wordlist corpora.
-    
-    :param corpus: The corpus name to validate
-    :return: True if corpus exists, False otherwise
+
+    Deprecated - always returns true
     """
-    try:
-        available_corpora = get_wordlist_corpora()
-        return corpus in available_corpora
-    except Exception as e:
-        logger.error(f"Error validating corpus '{corpus}': {str(e)}")
-        return False
+    return True
 
 def validate_groups_in_corpus(corpus: str, groups: List[str]) -> List[str]:
     """
     Validate that groups exist in the specified corpus and return only valid ones.
     
-    :param corpus: The corpus name
-    :param groups: List of group names to validate
-    :return: List of valid group names
+    Deprecated - returns all groups
     """
-    try:
-        if not validate_corpus_exists(corpus):
-            logger.warning(f"Corpus '{corpus}' does not exist")
-            return []
-        
-        # "Dynamic Noun" corpuses shouldn't be validated
-        if corpus.startswith('nouns_'):
-            return groups
-        else:
-            # Handle static corpora (verbs, phrases)
-            available_groups = get_groups(corpus)
-        
-        valid_groups = [group for group in groups if group in available_groups]
-        
-        invalid_groups = [group for group in groups if group not in available_groups]
-        if invalid_groups:
-            logger.warning(f"Invalid groups for corpus '{corpus}': {invalid_groups}")
-        
-        return valid_groups
-    except Exception as e:
-        logger.error(f"Error validating groups for corpus '{corpus}': {str(e)}")
-        return []
+    return groups
 
 
 # Corpus Choices API Routes
