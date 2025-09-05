@@ -51,6 +51,25 @@ def trakaido_images(filename: str) -> Response:
     else:
         logger.warning(f"Image not found: {image_path}")
         return Response("Image not found", status=404)
+    
+
+# Serve JSON from the Trakaido build directory
+@trakaido_bp.route("/<path:filename>.json")
+def trakaido_json(filename: str) -> Response:
+    """Serve JSON files from the Trakaido build directory."""
+    json_dir = "/home/trakaido/trakaido/build"
+    json_path = os.path.join(json_dir, f"{filename}.json")
+    
+    # Security check: ensure the path is within the JSON directory
+    if not os.path.abspath(json_path).startswith(os.path.abspath(json_dir)):
+        logger.warning(f"Attempted path traversal attack: {filename}")
+        return Response("Forbidden", status=403)
+    
+    if os.path.exists(json_path) and os.path.isfile(json_path):
+        return send_file(json_path)
+    else:
+        logger.warning(f"JSON file not found: {json_path}")
+        return Response("File not found", status=404)
 
 
 def sanitize_lithuanian_word(word: str) -> str:
