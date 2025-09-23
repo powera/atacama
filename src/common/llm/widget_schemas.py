@@ -1,55 +1,58 @@
-
 from common.llm.types import Schema, SchemaProperty
 
-# Schema for dual-file widget generation
 DUAL_FILE_WIDGET_SCHEMA = Schema(
     "DualFileWidget",
     "A React widget with separate code and data files",
     {
         "code_file": SchemaProperty(
             "object",
-            "The main React component code file",
-            object_schema=Schema(
-                "CodeFile",
-                "React component code",
-                {
-                    "filename": SchemaProperty("string", "Name of the code file (e.g., 'MathQuiz.jsx')"),
-                    "content": SchemaProperty("string", "Complete React component code"),
-                    "imports": SchemaProperty("array", "External dependencies needed", required=False,
-                                            items={"type": "string"}),
-                    "description": SchemaProperty("string", "Brief description of the component", required=False)
-                }
-            )
+            "The main React component file",
+            properties={
+                "content": SchemaProperty("string", "The React component code"),
+                "imports": SchemaProperty("array", "External dependencies used", required=False, items={"type": "string"})
+            }
         ),
         "data_file": SchemaProperty(
-            "object", 
-            "The data file containing app-specific data",
-            object_schema=Schema(
-                "DataFile",
-                "Data file for the widget",
-                {
-                    "filename": SchemaProperty("string", "Name of the data file (e.g., 'greWords.js', 'lithuanianWords.js')"),
-                    "content": SchemaProperty("string", "Data file content (JavaScript module export)"),
-                    "format": SchemaProperty("string", "Data format type", enum=["json", "javascript", "csv"]),
-                    "description": SchemaProperty("string", "Description of the data structure", required=False)
-                }
-            )
+            "object",
+            "The data file containing datasets, constants, or configuration",
+            properties={
+                "content": SchemaProperty("string", "The data file content (JavaScript export)"),
+                "type": SchemaProperty("string", "Type of data file", enum=["javascript", "json"], default="javascript")
+            }
         ),
-        "widget_title": SchemaProperty("string", "Title for the widget"),
-        "widget_description": SchemaProperty("string", "Description of what the widget does"),
-        "integration_notes": SchemaProperty("string", "Notes on how the code and data files work together", required=False)
+        "description": SchemaProperty("string", "Brief description of what the widget does", required=False),
+        "dependencies": SchemaProperty("array", "External dependencies needed", required=False, items={"type": "string"})
     }
 )
 
-# Schema for single-file widget generation (backward compatibility)
 SINGLE_FILE_WIDGET_SCHEMA = Schema(
-    "SingleFileWidget", 
-    "A React widget with all code in one file",
+    "SingleFileWidget",
+    "A React widget in a single file",
     {
-        "code": SchemaProperty("string", "Complete React component code"),
-        "title": SchemaProperty("string", "Widget title"),
-        "description": SchemaProperty("string", "Widget description"),
-        "dependencies": SchemaProperty("array", "External dependencies needed", required=False,
-                                     items={"type": "string"})
+        "code": SchemaProperty("string", "The complete React component code"),
+        "description": SchemaProperty("string", "Brief description of what the widget does", required=False),
+        "dependencies": SchemaProperty("array", "External dependencies needed", required=False, items={"type": "string"})
+    }
+)
+
+WIDGET_IMPROVEMENT_SCHEMA = Schema(
+    "WidgetImprovement",
+    "Improved widget with potentially multiple files",
+    {
+        "main_code": SchemaProperty("string", "The improved main React component code"),
+        "data_file": SchemaProperty("string", "The improved data file content", required=False),
+        "additional_files": SchemaProperty(
+            "object",
+            "Other files that were modified",
+            required=False,
+            additional_properties=True
+        ),
+        "changes_made": SchemaProperty("string", "Summary of changes made", required=False),
+        "files_modified": SchemaProperty(
+            "array",
+            "List of file types that were modified",
+            required=False,
+            items={"type": "string", "enum": ["main_code", "data_file", "additional"]}
+        )
     }
 )

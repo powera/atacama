@@ -71,6 +71,42 @@
     flex: 1;
 }
 
+/* File Selection */
+.file-selection {
+    padding: 1rem;
+    background: var(--color-background-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+}
+
+.file-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.file-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-background);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-option:hover {
+    background: var(--color-background-highlight, var(--color-background-secondary));
+    border-color: var(--color-primary);
+}
+
+.file-option input[type="checkbox"] {
+    margin: 0;
+}
+
 .model-info strong {
     color: var(--color-text-primary);
     font-weight: 600;

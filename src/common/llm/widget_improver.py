@@ -1,9 +1,11 @@
 import tiktoken
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 from common.base.logging_config import get_logger
 from common.llm.openai_client import generate_chat
 from common.llm.types import Response
+from common.llm.widget_schemas import WIDGET_IMPROVEMENT_SCHEMA
+from common.llm.lib import to_openai_schema
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
@@ -170,7 +172,8 @@ Ensure the widget provides an excellent mobile user experience.'''
         widget_title: str = "Widget",
         use_advanced_model: bool = False,
         data_file: str = None,
-        additional_files: Dict[str, str] = None
+        additional_files: Dict[str, str] = None,
+        target_files: List[str] = None
     ) -> Dict[str, Any]:
         """
         Improve an existing React widget based on a prompt, potentially updating multiple files.
@@ -203,11 +206,12 @@ Ensure the widget provides an excellent mobile user experience.'''
             response = generate_chat(
                 prompt=full_prompt,
                 model=selected_model,
+                json_schema=to_openai_schema(WIDGET_IMPROVEMENT_SCHEMA),
                 brief=False,
                 max_tokens=int(max_tokens),
             )
 
-            if not response.response_text:
+            if not response.structured_data:
                 return {
                     'success': False,
                     'error': 'No response from AI model',
@@ -217,7 +221,11 @@ Ensure the widget provides an excellent mobile user experience.'''
                     'usage_stats': response.usage.to_dict() if response.usage else {}
                 }
 
-            improved_code, improved_data_file, improved_additional_files = self._extract_code_and_data_from_response(response.response_text)
+            # Extract from structured response
+            structured_data = response.structured_data
+            improved_code = structured_data.get('main_code', current_code)
+            improved_data_file = structured_data.get('data_file', data_file)
+            improved_additional_files = structured_data.get('additional_files', additional_files or {})
 
             logger.info(f"Finished improving widget code for '{widget_title}'.")
             return {
@@ -241,7 +249,7 @@ Ensure the widget provides an excellent mobile user experience.'''
                 'usage_stats': {}
             }
 
-    def _build_improvement_prompt(self, current_code: str, improvement_prompt: str, widget_title: str, data_file: Optional[str] = None, additional_files: Optional[Dict[str, str]] = None) -> str:
+    def _build_improvement_prompt(self, current_code: str, improvement_prompt: str, widget_title: str, data_file: Optional[str] = None, additional_files: Optional[Dict[str, str]] = None, target_files: Optional[List[str]] = None) -> str:
         """Build the full prompt for widget improvement, including additional files."""
         prompt_parts = [
             f"""You are an expert React developer helping to improve a React widget. 
@@ -261,15 +269,20 @@ WIDGET CONTEXT:
             for filename, content in additional_files.items():
                 prompt_parts.append(f"CONTENT OF ADDITIONAL FILE ({filename}):\n" + content)
 
+        target_files_instruction = ""
+        if target_files:
+            target_files_instruction = f"\nTARGET FILES TO MODIFY: {', '.join(target_files)}\nOnly modify the specified files unless the improvement requires changes to other files.\n"
+
         prompt_parts.extend([
-            """
+            f"""
+{target_files_instruction}
 INSTRUCTIONS:
 1. Analyze the current widget code and understand its functionality.
 2. Apply the requested improvements while maintaining existing functionality.
 3. Use the provided CSS variables and classes where appropriate.
 4. Ensure the code is clean, well-commented, and follows React best practices.
 5. Make sure the component name matches the widget title (spaces removed).
-6. If multiple files were provided, ensure changes are consistent across them and return all modified files.
+6. If multiple files were provided, ensure changes are consistent across them.
 
 IMPORTANT: 
 - Keep all existing functionality intact.
@@ -277,22 +290,7 @@ IMPORTANT:
 - Ensure the code is production-ready.
 - Test that all imports are available (React, lucide-react icons, etc.).
 
-Please provide the improved React component code and, if applicable, the improved data file content and any other modified files. Structure your response with clear delimiters for each file:
-
-CODE:
-```jsx
-// Improved React component code here
-```
-
-DATA:
-```json
-// Improved data file content here (e.g., JSON)
-```
-
-[FILENAME]:
-```jsx
-// Improved content for FILENAME here
-```
+Provide the improved files in the structured JSON format requested. Always include main_code even if unchanged. Include data_file and additional_files only if they were modified or created.
 """
         ])
         return "\n".join(prompt_parts)

@@ -55,12 +55,33 @@
             </div>
         </div>
 
+        <!-- File Selection -->
+        <div class="file-selection">
+            <h3>Files to Modify</h3>
+            <div class="file-options">
+                <label class="file-option">
+                    <input type="checkbox" name="target_files" value="main_code" checked>
+                    <span>Main Widget Code</span>
+                </label>
+                {% if widget.data_file %}
+                <label class="file-option">
+                    <input type="checkbox" name="target_files" value="data_file">
+                    <span>Data File</span>
+                </label>
+                {% endif %}
+                <label class="file-option">
+                    <input type="checkbox" name="target_files" value="create_data_file">
+                    <span>Create New Data File</span>
+                </label>
+            </div>
+        </div>
+
         <!-- Improvement Options -->
         <div class="improvement-options">
             <h3>Improvement Type</h3>
 
             <!-- Canned Actions -->
-            <div class="canned-actions">
+            <div class="canned-actions"></div>
                 <h4>Quick Improvements</h4>
                 <div class="action-buttons">
                     <button type="button" class="button canned-action" 
@@ -203,9 +224,11 @@
 
 <script>
     let currentImprovedCode = '';
+    let currentImprovedDataFile = null;
     let currentPrompt = '';
     let currentType = '';
     let originalCode = '';
+    let originalDataFile = null;
 
     // Set up canned action buttons
     document.querySelectorAll('.canned-action').forEach(button => {
@@ -284,8 +307,10 @@
                     progressFill.style.width = '70%';
                 }, 1000);
 
-                // Get selected model
+                // Get selected model and target files
                 const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
+                const targetFiles = Array.from(document.querySelectorAll('input[name="target_files"]:checked'))
+                    .map(input => input.value);
 
                 // Make the improvement request
                 return fetch('{{ url_for("widgets.improve_widget", slug=widget.slug) }}', {
@@ -297,7 +322,8 @@
                         base_version: document.getElementById('base-version').value,
                         prompt: prompt,
                         improvement_type: type,
-                        use_advanced_model: selectedModel === 'mini'
+                        use_advanced_model: selectedModel === 'mini',
+                        target_files: targetFiles
                     })
                 });
             })
@@ -373,6 +399,7 @@
 
         if (data.success) {
             currentImprovedCode = data.improved_code;
+            currentImprovedDataFile = data.improved_data_file;
             document.getElementById('improved-code').value = data.improved_code;
             
             // Properly escape HTML content
@@ -449,6 +476,7 @@
             },
             body: JSON.stringify({
                 code: currentImprovedCode,
+                data_file: currentImprovedDataFile,
                 prompt_used: currentPrompt,
                 improvement_type: currentType,
                 dev_comments: devComments,

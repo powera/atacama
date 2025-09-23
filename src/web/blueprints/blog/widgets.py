@@ -326,10 +326,12 @@ def improve_widget(slug):
         prompt = data.get('prompt', '')
         improvement_type = data.get('improvement_type', 'custom')
         use_advanced_model = data.get('use_advanced_model', False)
+        target_files = data.get('target_files', ['main_code'])
 
-        # Get the base code
+        # Get the base code and data file
         if base_version == 'current':
             base_code = widget.code
+            base_data_file = widget.data_file
         else:
             version = session.query(WidgetVersion).filter_by(id=base_version).first()
             if not version or version.widget_id != widget.id:
@@ -338,6 +340,7 @@ def improve_widget(slug):
                     'error': 'Invalid version selected'
                 }), 400
             base_code = version.code
+            base_data_file = version.data_file
 
         # Extract widget data while in session context
         widget_title = widget.title
@@ -365,7 +368,9 @@ def improve_widget(slug):
                     prompt=prompt,
                     improvement_type=improvement_type,
                     widget_title=widget_title,
-                    use_advanced_model=use_advanced_model
+                    use_advanced_model=use_advanced_model,
+                    data_file=base_data_file,
+                    target_files=target_files
                 )
 
                 improvement_jobs[job_id]['status'] = 'completed'
@@ -453,6 +458,7 @@ def save_version(slug):
 
         data = request.get_json()
         code = data.get('code', '')
+        data_file = data.get('data_file', None)
         code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
         prompt_used = data.get('prompt_used', '')
         improvement_type = data.get('improvement_type', 'custom')
@@ -481,6 +487,7 @@ def save_version(slug):
             version_number=version_number,
             code=code,
             code_hash=code_hash,
+            data_file=data_file,
             prompt_used=prompt_used,
             improvement_type=improvement_type,
             dev_comments=dev_comments,
@@ -496,6 +503,7 @@ def save_version(slug):
         if set_active and build_success:
             widget.active_version_id = version.id
             widget.code = code
+            widget.data_file = data_file
             widget.compiled_code = version.compiled_code
             widget.dependencies = version.dependencies
             widget.last_modified_at = datetime.utcnow()
@@ -647,14 +655,16 @@ def initiate_widget():
         try:
             with db.session() as session:
                 # Extract code based on whether it's dual-file or single-file
-                if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
-                    # For dual-file, widget_code is a dict with code_file and data_file
+                widget_code_content = ""
+                data_file_content = None
+
+                if isinstance(result['widget_code'], dict):
+                    # Dual-file response
                     widget_code_content = result['widget_code']['code_file']['content']
-                    data_code_content = result['widget_code']['data_file']['content']
+                    data_file_content = result['widget_code']['data_file']['content']
                 else:
-                    # For single-file, widget_code is a string
+                    # Single-file response
                     widget_code_content = result['widget_code']
-                    data_code_content = ''
 
                 widget = ReactWidget(
                     slug=slug,
@@ -663,12 +673,9 @@ def initiate_widget():
                     description=description,
                     channel=channel,
                     author=g.user,
-                    published=False
+                    published=False,
+                    data_file=data_file_content
                 )
-
-                # Handle dual-file generation if the schema specifies it
-                if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
-                    widget.data_code = data_code_content
 
                 session.add(widget)
                 session.flush()  # To get widget ID
@@ -680,16 +687,11 @@ def initiate_widget():
                     version_number=1,
                     code=widget_code_content,
                     code_hash=code_hash,
+                    data_file=data_file_content,
                     improvement_type='ai_generated',
                     dev_comments='Initial AI-generated widget from description',
-                    ai_model_used='openai' # Update this to reflect actual model used
+                    ai_model_used='openai'
                 )
-
-                # Store data code in version if applicable
-                if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
-                    initial_version.data_code_hash = hashlib.md5(data_code_content.encode('utf-8')).hexdigest()
-                    initial_version.data_code = data_code_content
-                    initial_version.ai_model_used = 'gpt-5-nano' # Example: update to reflect new models
 
                 session.add(initial_version)
                 session.flush()
