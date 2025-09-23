@@ -46,13 +46,7 @@ def create_widget_improvement_schema(include_data_file: bool = True) -> Schema:
         Schema object for widget improvement
     """
     properties = {
-        "main_code": SchemaProperty("string", "The improved main React component code"),
-        "changes_made": SchemaProperty("string", "Summary of changes made"),
-        "files_modified": SchemaProperty(
-            "array",
-            "List of file types that were modified",
-            items={"type": "string", "enum": ["main_code", "data_file", "additional"]}
-        )
+        "main_code": SchemaProperty("string", "The improved main React component code")
     }
     
     # Only add data_file if it's expected
@@ -61,7 +55,7 @@ def create_widget_improvement_schema(include_data_file: bool = True) -> Schema:
     
     return Schema(
         "WidgetImprovement",
-        "Improved widget with potentially multiple files",
+        "Improved widget with main code and optionally data file",
         properties
     )
 

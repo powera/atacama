@@ -237,7 +237,7 @@ Ensure the widget provides an excellent mobile user experience.'''
             structured_data = response.structured_data
             improved_code = structured_data.get('main_code', current_code)
             improved_data_file = structured_data.get('data_file', data_file)
-            improved_additional_files = structured_data.get('additional_files', additional_files or {})
+            improved_additional_files = additional_files or {}  # Keep original additional files
 
             logger.info(f"Finished improving widget code for '{widget_title}'.")
             return {
@@ -302,7 +302,7 @@ IMPORTANT:
 - Ensure the code is production-ready.
 - Test that all imports are available (React, lucide-react icons, etc.).
 
-Provide the improved files in the structured JSON format requested. Always include main_code even if unchanged. Include data_file and additional_files only if they were modified or created.
+Provide the improved files in the structured JSON format requested. Always include main_code even if unchanged. Include data_file only if it was modified or if creating a new data file was requested.
 """
         ])
         return "\n".join(prompt_parts)
