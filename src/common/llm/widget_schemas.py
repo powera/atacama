@@ -35,18 +35,18 @@ SINGLE_FILE_WIDGET_SCHEMA = Schema(
     }
 )
 
-WIDGET_IMPROVEMENT_SCHEMA = Schema(
-    "WidgetImprovement",
-    "Improved widget with potentially multiple files",
-    {
+def create_widget_improvement_schema(include_data_file: bool = True) -> Schema:
+    """
+    Create a dynamic widget improvement schema based on whether data file is expected.
+    
+    Args:
+        include_data_file: Whether to include data_file in the schema
+    
+    Returns:
+        Schema object for widget improvement
+    """
+    properties = {
         "main_code": SchemaProperty("string", "The improved main React component code"),
-        "data_file": SchemaProperty("string", "The improved data file content", required=False),
-        "additional_files": SchemaProperty(
-            "object",
-            "Other files that were modified",
-            required=False,
-            additional_properties=False
-        ),
         "changes_made": SchemaProperty("string", "Summary of changes made", required=False),
         "files_modified": SchemaProperty(
             "array",
@@ -55,4 +55,16 @@ WIDGET_IMPROVEMENT_SCHEMA = Schema(
             items={"type": "string", "enum": ["main_code", "data_file", "additional"]}
         )
     }
-)
+    
+    # Only add data_file if it's expected
+    if include_data_file:
+        properties["data_file"] = SchemaProperty("string", "The improved data file content", required=False)
+    
+    return Schema(
+        "WidgetImprovement",
+        "Improved widget with potentially multiple files",
+        properties
+    )
+
+# Default schema for backward compatibility (includes data_file)
+WIDGET_IMPROVEMENT_SCHEMA = create_widget_improvement_schema(include_data_file=True)

@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional, Tuple, List
 from common.base.logging_config import get_logger
 from common.llm.openai_client import generate_chat
 from common.llm.types import Response
-from common.llm.widget_schemas import WIDGET_IMPROVEMENT_SCHEMA
+from common.llm.widget_schemas import WIDGET_IMPROVEMENT_SCHEMA, create_widget_improvement_schema # Import the dynamic schema creator
 from common.llm.lib import to_openai_schema
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
@@ -189,8 +189,9 @@ Ensure the widget provides an excellent mobile user experience.'''
             selected_model = "gpt-5-mini" if use_advanced_model else "gpt-5-nano"
             logger.info(f"Using model: {selected_model} for widget improvement")
 
+            # Prepare context and prompt for the LLM
             full_prompt = self._build_improvement_prompt(
-                current_code, prompt, widget_title, data_file, additional_files
+                current_code, prompt, widget_title, data_file, additional_files, target_files
             )
             logger.info(f"Improving widget code for '{widget_title}' with prompt: {full_prompt[:100]}...")
 
@@ -203,10 +204,21 @@ Ensure the widget provides an excellent mobile user experience.'''
 
             max_tokens = max(2048, int(input_tokens * 1.25) + 500)
 
+            # Determine if we should include data_file in schema
+            include_data_file = (
+                'data_file' in target_files or
+                'create_data_file' in target_files or
+                bool(data_file)
+            )
+
+            # Use dynamic schema based on target files
+            improvement_schema = create_widget_improvement_schema(include_data_file=include_data_file)
+
+            # Make the API call
             response = generate_chat(
                 prompt=full_prompt,
                 model=selected_model,
-                json_schema=to_openai_schema(WIDGET_IMPROVEMENT_SCHEMA),
+                json_schema=improvement_schema,
                 brief=False,
                 max_tokens=int(max_tokens),
             )
@@ -264,7 +276,7 @@ WIDGET CONTEXT:
         ]
         if data_file:
             prompt_parts.append("CURRENT DATA FILE CONTENT:\n" + data_file)
-        
+
         if additional_files:
             for filename, content in additional_files.items():
                 prompt_parts.append(f"CONTENT OF ADDITIONAL FILE ({filename}):\n" + content)
@@ -314,7 +326,7 @@ Provide the improved files in the structured JSON format requested. Always inclu
         # \n```                 : Code block end
         # re.DOTALL             : Make '.' match newline characters
         # re.MULTILINE          : Make '^' and '$' match start/end of lines
-        
+
         # First, try to extract the main component code
         code_block_pattern = r'CODE:\n*```(?:javascript|jsx|react|js|typescript|ts|tsx)?\n(.*?)\n```'
         code_match = re.search(code_block_pattern, response, re.DOTALL | re.IGNORECASE)
@@ -326,13 +338,13 @@ Provide the improved files in the structured JSON format requested. Always inclu
         data_match = re.search(data_block_pattern, response, re.DOTALL | re.IGNORECASE)
         if data_match:
             data_content = data_match.group(1).strip()
-        
+
         # Extract any other specified files
         # This regex looks for a filename followed by a code block
         # It assumes filenames are provided on their own line before the code block
         other_files_pattern = r'^([\w-]+\.(?:jsx|js|tsx|ts|css|json|md)):\s*\n```(?:javascript|jsx|react|js|typescript|ts|tsx|css|json|md)?\n(.*?)\n```'
         other_files_matches = re.findall(other_files_pattern, response, re.DOTALL | re.MULTILINE)
-        
+
         for filename, content in other_files_matches:
             # Avoid overwriting if the main code or data content was already parsed
             if filename.lower() == 'code' or filename.lower() == 'data':
@@ -351,17 +363,17 @@ Provide the improved files in the structured JSON format requested. Always inclu
                         continue # Skip the ```jsx line itself if it's the start
                     elif not in_code_block and line.strip() == '```':
                         continue # Skip the closing ``` line
-                
+
                 if in_code_block:
                     code_lines.append(line)
                 elif not code_content and ('import React' in line or 'const ' in line or 'function ' in line or 'export default' in line or line.strip().startswith('<')):
                     # If not in a code block, but line looks like React code, start capturing
                     code_content = line + "\n"
                     in_code_block = True # Assume the rest might be code until a ``` is found
-            
+
             if code_lines and not code_content.endswith('\n'.join(code_lines).strip()):
                  code_content += '\n'.join(code_lines).strip()
-            
+
             code_content = code_content.strip()
 
 
