@@ -26,7 +26,7 @@ def to_openai_schema(schema: Schema) -> Dict[str, Any]:
     result = {
         "type": "object",
         "properties": {},
-        "required": schema.all_properties(),
+        "required": schema.required_properties(),
         "additionalProperties": False,
     }
 

@@ -104,6 +104,7 @@ class Schema:
     def required_properties(self) -> List[str]:
         """Get list of required property names."""
         return [name for name, prop in self.properties.items() if prop.required]
+    
     def all_properties(self) -> List[str]:
         """Get list of all property names."""
         return list(self.properties.keys())
