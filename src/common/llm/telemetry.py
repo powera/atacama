@@ -15,6 +15,8 @@ class ModelTier(Enum):
     # OpenAI models
     GPT4_MINI = auto()  # gpt-4o-mini models
     GPT4 = auto()       # gpt-4o models
+    GPT5_NANO = auto()  # gpt-5-nano models
+    GPT5_MINI = auto()  # gpt-5-mini models
     
     # Anthropic models
     CLAUDE_HAIKU = auto()    # claude-3-haiku models

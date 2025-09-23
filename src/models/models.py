@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 class User(Base):
     """User model for tracking post authors."""
     __tablename__ = 'users'
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String)
@@ -50,38 +50,38 @@ class MessageType(enum.Enum):
 class Message(Base):
     """Base class for all message types."""
     __tablename__ = 'messages'
-    
+
     # Core fields
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_modified_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Channel and access
     channel: Mapped[str] = mapped_column(String, default='private', nullable=False)
-    
+
     # Author/owner relationship
     author_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     author: Mapped["User"] = relationship("User", back_populates="messages")
-    
+
     # Common validation
     @validates('channel')
     def validate_channel(self, key, channel):
         """Validate channel value against configuration."""
         if channel is None:
             channel = get_channel_manager().default_channel
-            
+
         channel = channel.lower()
         if channel not in get_channel_manager().get_channel_names():
             raise ValueError(f"Invalid channel: {channel}")
         return channel
-    
+
     def __init__(self, **kwargs):
         """Initialize message with default channel if none provided."""
         if 'channel' not in kwargs:
             kwargs['channel'] = get_channel_manager().default_channel
         super().__init__(**kwargs)
-    
+
     # Common properties
     @property
     def requires_auth(self) -> bool:
@@ -94,7 +94,7 @@ class Message(Base):
         """Whether this message is publicly viewable."""
         config = get_channel_manager().get_channel_config(self.channel)
         return config.is_public if config else False
-    
+
     # Polymorphic discriminator
     __mapper_args__ = {
         'polymorphic_identity': 'message',
@@ -105,7 +105,7 @@ class Message(Base):
 class Quote(Message):
     """Stores tracked quotes and their metadata."""
     __tablename__ = 'quotes'
-    
+
     id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     quote_type: Mapped[str] = mapped_column(String, nullable=False)
@@ -113,7 +113,7 @@ class Quote(Message):
     date: Mapped[Optional[str]] = mapped_column(String)  # Flexible format for historical dates
     source: Mapped[Optional[str]] = mapped_column(Text)
     commentary: Mapped[Optional[str]] = mapped_column(Text)  # For snowclone explanations or personal meanings
-    
+
     # Relationship with emails that reference this quote
     emails: Mapped[List["Email"]] = relationship(
         "Email", 
@@ -121,7 +121,7 @@ class Quote(Message):
         back_populates="quotes",
         lazy="selectin"
     )
-    
+
     __mapper_args__ = {
         'polymorphic_identity': MessageType.QUOTE
     }
@@ -130,7 +130,7 @@ class Quote(Message):
 class Email(Message):
     """Email model storing both original and processed content."""
     __tablename__ = 'emails'
-    
+
     id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
 
     subject: Mapped[Optional[str]] = mapped_column(String)
@@ -146,11 +146,11 @@ class Email(Message):
         backref=backref('parent', remote_side=[id]),
         foreign_keys=[parent_id]
     )
-    
+
     # Annotation storage as JSON
     chinese_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {hanzi: str, pinyin: str, definition: str}}
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)  # {position: {type: str, content: str}}
-    
+
     # Quote relationships
     quotes: Mapped[List["Quote"]] = relationship(
         "Quote", 
@@ -174,29 +174,29 @@ email_quotes = Table('email_quotes', Base.metadata,
 
 class Article(Message):
     __tablename__ = 'articles'
-    
+
     id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
-    
+
     # Article-specific fields
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(Text)
     processed_content: Mapped[str] = mapped_column(Text)
-    
+
     # Publishing (Article-specific)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     published: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
-    
+
     # Annotations (Article-specific)
     llm_annotations: Mapped[Optional[Dict]] = mapped_column(Text)
-        
+
     @validates('slug')
     def validate_slug(self, key, slug):
         """Validate slug format."""
         if not slug or not isinstance(slug, str):
             raise ValueError("Slug must be a non-empty string")
         return slug.lower()
-    
+
     __mapper_args__ = {
         'polymorphic_identity': MessageType.ARTICLE
     }
@@ -205,7 +205,7 @@ class Article(Message):
 class ReactWidget(Message):
     """React widget model for storing interactive components."""
     __tablename__ = 'react_widgets'
-    
+
     id: Mapped[int] = mapped_column(Integer, ForeignKey('messages.id'), primary_key=True)
 
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
@@ -214,32 +214,33 @@ class ReactWidget(Message):
 
     code: Mapped[str] = mapped_column(Text)  # The React component code
     compiled_code: Mapped[Optional[str]] = mapped_column(Text)  # Compiled code for browser use
-    dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list of dependencies
+    dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
+    data_file: Mapped[Optional[str]] = mapped_column(Text)  # The data file for the widget
 
     published: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    
+
     # Widget-specific settings
     props: Mapped[Optional[Dict]] = mapped_column(Text)  # JSON-encoded default props
     dependencies: Mapped[Optional[Dict]] = mapped_column(Text)  # External dependencies needed
     config: Mapped[Optional[Dict]] = mapped_column(Text)  # Widget configuration
-    
+
     # Current active version
     active_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('widget_versions.id'))
-    
+
     # Relationship to versions
     versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", foreign_keys="[WidgetVersion.widget_id]", cascade="all, delete-orphan")
     active_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", foreign_keys=[active_version_id], post_update=True)
-    
+
     def build(self, development_mode: bool = None):
         """Build the widget code into a browser-ready bundle."""        
         builder = WidgetBuilder()
         widget_name = self.title.replace(' ', '')
-        
+
         # Determine development mode from environment if not explicitly provided
         if development_mode is None:
             development_mode = constants.is_development_mode()
-        
+
         # We auto-detect the dependencies
         all_deps = builder.check_react_libraries(self.code)
         deps = all_deps["target_libraries"]
@@ -249,16 +250,17 @@ class ReactWidget(Message):
             self.code, 
             widget_name,
             external_dependencies=deps,
-            development_mode=development_mode
+            development_mode=development_mode,
+            data_file=self.data_file
         )
-        
+
         if success:
             logger.info(f"Widget {self.slug} built successfully.")
             self.compiled_code = built_code
         else:
             logger.warning(f"Widget build failed: {error}")
             self.compiled_code = None
-            
+
         return success
 
     __mapper_args__ = {
@@ -279,53 +281,54 @@ class ReactWidget(Message):
 class WidgetVersion(Base):
     """Stores different versions of widget code, including AI-improved iterations."""
     __tablename__ = 'widget_versions'
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     widget_id: Mapped[int] = mapped_column(Integer, ForeignKey('react_widgets.id'), nullable=False)
-    
+
     # Version metadata
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)  # Auto-incrementing per widget
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    
+
     # Code and compilation
     code: Mapped[str] = mapped_column(Text, nullable=False)
     code_hash: Mapped[Optional[str]] = mapped_column(String(32))  # MD5 hash for de-duplication
     compiled_code: Mapped[Optional[str]] = mapped_column(Text)
     dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
-    
+    data_file: Mapped[Optional[str]] = mapped_column(Text) # The data file for the widget version
+
     # AI improvement tracking
     prompt_used: Mapped[Optional[str]] = mapped_column(Text)  # The prompt that generated this version
     previous_version_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('widget_versions.id'))
     improvement_type: Mapped[Optional[str]] = mapped_column(String)  # 'canned', 'custom', 'manual'
     dev_comments: Mapped[Optional[str]] = mapped_column(Text)  # Developer notes about this version
-    
+
     # AI generation metadata
     ai_model_used: Mapped[Optional[str]] = mapped_column(String)  # Which AI model was used
     ai_usage_stats: Mapped[Optional[Dict]] = mapped_column(Text)  # Token usage, cost, etc.
-    
+
     # Status
     is_working: Mapped[Optional[bool]] = mapped_column(Boolean, default=None)  # Whether this version compiles/works
     build_error: Mapped[Optional[str]] = mapped_column(Text)  # Build error if any
-    
+
     # Relationships
     widget: Mapped["ReactWidget"] = relationship("ReactWidget", back_populates="versions", foreign_keys=[widget_id])
     previous_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", remote_side=[id])
-    
+
     def build(self, development_mode: bool = None):
         """Build this version of the widget code."""
         import hashlib
-        
+
         builder = WidgetBuilder()
         widget_name = sanitize_widget_title_for_component_name(self.widget.title)
-        
+
         # Determine development mode from environment if not explicitly provided
         if development_mode is None:
             development_mode = constants.is_development_mode()
-        
+
         # Set code hash if not already set
         if not self.code_hash:
             self.code_hash = hashlib.md5(self.code.encode('utf-8')).hexdigest()
-        
+
         # Auto-detect dependencies
         all_deps = builder.check_react_libraries(self.code)
         deps = all_deps["target_libraries"]
@@ -335,9 +338,10 @@ class WidgetVersion(Base):
             self.code, 
             widget_name,
             external_dependencies=deps,
-            development_mode=development_mode
+            development_mode=development_mode,
+            data_file=self.data_file
         )
-        
+
         if success:
             logger.info(f"Widget version {self.id} built successfully.")
             self.compiled_code = built_code
@@ -348,6 +352,5 @@ class WidgetVersion(Base):
             self.compiled_code = None
             self.is_working = False
             self.build_error = error
-            
-        return success
 
+        return success

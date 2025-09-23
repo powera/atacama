@@ -1,18 +1,136 @@
-
 """AI-powered widget creation from simple descriptions."""
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
 
 import tiktoken
 
 import constants
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
-from common.base.logging_config import get_logger
+from common.llm.types import Schema, SchemaProperty
+from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA, SINGLE_FILE_WIDGET_SCHEMA
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
+
+def initiate_widget(prompt: str, model: str = "gpt-5-mini", dual_file: bool = True) -> Tuple[bool, Dict, str]:
+    """
+    Generate a React widget based on a natural language prompt.
+
+    :param prompt: Natural language description of the desired widget
+    :param model: LLM model to use for generation
+    :param dual_file: Whether to generate separate code and data files
+    :return: Tuple of (success, widget_data, error_message)
+    """
+    try:
+        # Select the appropriate model
+        selected_model = PROD_MODEL if "mini" in model else DEFAULT_MODEL
+        if "nano" in model:
+            selected_model = constants.GPT_5_NANO
+        elif "mini" in model:
+            selected_model = constants.GPT_5_MINI
+        else:
+            selected_model = model
+        logger.info(f"Using model: {selected_model} for widget initiation")
+
+        # Select schema based on dual_file parameter
+        widget_schema = DUAL_FILE_WIDGET_SCHEMA if dual_file else SINGLE_FILE_WIDGET_SCHEMA
+
+        # Build context for the LLM
+        if dual_file:
+            context = """You are an expert React developer. Create a complete, functional React widget with separate code and data files.
+
+Requirements:
+- Code file: Modern React component with hooks (useState, useEffect, etc.)
+- Data file: Separate JavaScript module exporting data (arrays, objects, etc.)
+- The code file should import data from the data file using: import data from './data.js'
+- Include all necessary imports in the code file
+- Export the component as default from the code file
+- Export data as default from the data file
+- Use inline styles or CSS classes for styling
+- Make the widget interactive and engaging
+- For educational apps (GRE words, Lithuanian, etc.), put all learning data in the data file
+
+Available external libraries (specify in code_file.imports if used):
+- recharts, lodash, d3, axios, date-fns, lucide-react
+
+Data file should export complex datasets like:
+- Word lists with translations, definitions, examples
+- Quiz questions and answers
+- Educational content
+- Any large arrays or objects
+
+Both files should be complete and production-ready."""
+        else:
+            context = """You are an expert React developer. Create a complete, functional React widget based on the user's requirements.
+
+Requirements:
+- Use modern React with hooks (useState, useEffect, etc.)
+- Include all necessary imports
+- Export the component as default
+- Use inline styles or CSS classes for styling
+- Make the widget interactive and engaging
+- Ensure the code is complete and ready to run
+
+Available external libraries (specify in dependencies if used):
+- recharts, lodash, d3, axios, date-fns, lucide-react
+
+The widget should be self-contained and production-ready."""
+
+        full_prompt = f"{context}\n\nUser Prompt: {prompt}"
+
+        # Calculate input tokens using tiktoken
+        try:
+            encoding = tiktoken.get_encoding("cl100k_base")
+            input_tokens = len(encoding.encode(full_prompt))
+        except Exception as e:
+            logger.warning(f"Failed to calculate input tokens with tiktoken: {e}")
+            input_tokens = 0
+
+        max_tokens = max(2048, input_tokens * 1.25 + 500)
+
+        # Generate widget code
+        response = generate_chat(
+            prompt=full_prompt,
+            model=selected_model,
+            schema=widget_schema,
+            brief=False,
+            max_tokens=int(max_tokens),
+        )
+
+        if not response.response_text:
+            return False, {'error': 'No response from AI model'}, ''
+
+        # Parse the response based on the schema
+        widget_data = {}
+        error_message = ""
+        try:
+            parsed_response = response.parsed_response
+            if parsed_response:
+                widget_data = parsed_response
+                if dual_file:
+                    if "code_file" not in widget_data or "data_file" not in widget_data:
+                        error_message = "Model response did not conform to dual-file schema."
+                        return False, {'error': error_message}, response.response_text
+                else:
+                    if "code" not in widget_data:
+                        error_message = "Model response did not conform to single-file schema."
+                        return False, {'error': error_message}, response.response_text
+            else:
+                error_message = "Failed to parse AI response according to schema."
+                return False, {'error': error_message}, response.response_text
+
+        except Exception as e:
+            error_message = f"Error parsing AI response: {str(e)}"
+            return False, {'error': error_message}, response.response_text
+
+        return True, widget_data, error_message
+
+    except Exception as e:
+        logger.error(f"Error initiating widget: {str(e)}")
+        return False, {'error': str(e)}, ''
+
 
 class WidgetInitiator:
     """Handles AI-powered widget creation from simple descriptions."""
@@ -85,7 +203,7 @@ class WidgetInitiator:
         except FileNotFoundError:
             logger.warning("Fullscreen hook file not found")
             return ""
- 
+
     def _load_global_settings_hook(self) -> str:
         """Load global settings hook code for reference."""
         try:
@@ -97,12 +215,13 @@ class WidgetInitiator:
             return ""
 
     def create_widget(
-        self, 
+        self,
         slug: str,
-        description: str, 
+        description: str,
         widget_title: str = None,
         use_advanced_model: bool = False,
-        look_and_feel: Optional[Dict[str, str]] = None
+        look_and_feel: Optional[Dict[str, str]] = None,
+        dual_file: bool = False
     ) -> Dict[str, Any]:
         """
         Create a new widget from a description.
@@ -111,8 +230,9 @@ class WidgetInitiator:
             slug: URL slug for the widget
             description: Simple description of what the widget should do
             widget_title: Title of the widget (defaults to formatted slug)
-            use_advanced_model: If True, use GPT-4.1-mini instead of nano
+            use_advanced_model: If True, use a more advanced model (GPT-5)
             look_and_feel: Dict with keys 'tone', 'complexity', 'interaction', 'visual', 'feedback'
+            dual_file: Whether to generate separate code and data files
 
         Returns:
             Dict containing widget_code, success, error, and usage stats
@@ -120,15 +240,20 @@ class WidgetInitiator:
         try:
             # Select the appropriate model
             selected_model = PROD_MODEL if use_advanced_model else DEFAULT_MODEL
+            if use_advanced_model:
+                selected_model = constants.GPT_5_MINI # Default to mini if advanced is requested
+            else:
+                selected_model = constants.GPT_5_NANO # Default to nano for standard
+
             logger.info(f"Using model: {selected_model} for widget creation")
-            
+
             # Generate widget title from slug if not provided
             if not widget_title:
                 widget_title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
 
             # Build the full prompt with context
             full_prompt = self._build_creation_prompt(
-                slug, description, widget_title, look_and_feel
+                slug, description, widget_title, look_and_feel, dual_file
             )
             logger.info(f"Creating widget '{widget_title}' with slug '{slug}' from description: {description[:100]}...")
 
@@ -142,10 +267,14 @@ class WidgetInitiator:
 
             max_tokens = max(2048, input_tokens * 1.25 + 500)
 
+            # Select schema based on dual_file parameter
+            widget_schema = DUAL_FILE_WIDGET_SCHEMA if dual_file else SINGLE_FILE_WIDGET_SCHEMA
+
             # Generate widget code
             response = generate_chat(
                 prompt=full_prompt,
                 model=selected_model,
+                schema=widget_schema,
                 brief=False,
                 max_tokens=int(max_tokens),
             )
@@ -159,7 +288,15 @@ class WidgetInitiator:
                 }
 
             # Extract code from response
-            widget_code = self._extract_code_from_response(response.response_text)
+            if dual_file:
+                widget_code_content = response.parsed_response.get("code_file", "")
+                data_file_content = response.parsed_response.get("data_file", "")
+                widget_code = {
+                    "code_file": widget_code_content,
+                    "data_file": data_file_content
+                }
+            else:
+                widget_code = response.parsed_response.get("code", "")
 
             logger.info(f"Finished creating widget code for '{widget_title}'.")
             return {
@@ -179,9 +316,9 @@ class WidgetInitiator:
                 'usage_stats': {}
             }
 
-    def _build_creation_prompt(self, slug: str, description: str, widget_title: str, look_and_feel: Optional[Dict[str, str]] = None) -> str:
+    def _build_creation_prompt(self, slug: str, description: str, widget_title: str, look_and_feel: Optional[Dict[str, str]] = None, dual_file: bool = False) -> str:
         """Build the full prompt for widget creation."""
-        
+
         # Build look and feel guidance
         look_and_feel_guidance = ""
         if look_and_feel:
@@ -189,15 +326,56 @@ class WidgetInitiator:
             for category, selected_value in look_and_feel.items():
                 if category in self.LOOK_AND_FEEL_OPTIONS and selected_value in self.LOOK_AND_FEEL_OPTIONS[category]:
                     guidance_parts.append(self.LOOK_AND_FEEL_OPTIONS[category][selected_value])
-            
+
             if guidance_parts:
                 look_and_feel_guidance = f"""
 LOOK AND FEEL REQUIREMENTS:
 {'. '.join(guidance_parts)}.
 
 """
-        
-        return f"""You are an expert React developer creating a new React widget from scratch.
+
+        # Context for generation
+        if dual_file:
+            context = """You are an expert React developer. Create a complete, functional React widget with separate code and data files.
+
+Requirements:
+- Code file: Modern React component with hooks (useState, useEffect, etc.)
+- Data file: Separate JavaScript module exporting data (arrays, objects, etc.)
+- The code file should import data from the data file using: import data from './data.js'
+- Include all necessary imports in the code file
+- Export the component as default from the code file
+- Export data as default from the data file
+- Use inline styles or CSS classes for styling
+- Make the widget interactive and engaging
+- For educational apps (GRE words, Lithuanian, etc.), put all learning data in the data file
+
+Available external libraries (specify in code_file.imports if used):
+- recharts, lodash, d3, axios, date-fns, lucide-react
+
+Data file should export complex datasets like:
+- Word lists with translations, definitions, examples
+- Quiz questions and answers
+- Educational content
+- Any large arrays or objects
+
+Both files should be complete and production-ready."""
+        else:
+            context = """You are an expert React developer. Create a complete, functional React widget based on the user's requirements.
+
+Requirements:
+- Use modern React with hooks (useState, useEffect, etc.)
+- Include all necessary imports
+- Export the component as default
+- Use inline styles or CSS classes for styling
+- Make the widget interactive and engaging
+- Ensure the code is complete and ready to run
+
+Available external libraries (specify in dependencies if used):
+- recharts, lodash, d3, axios, date-fns, lucide-react
+
+The widget should be self-contained and production-ready."""
+
+        return f"""{context}
 
 WIDGET REQUIREMENTS:
 - Widget Title: {widget_title}
@@ -265,7 +443,7 @@ const {sanitize_widget_title_for_component_name(widget_title)} = () => {{
           </button>
         </div>
       </div>
-      
+
       {{/* Main widget content */}}
       <div className="widget-content">
         {{/* Your widget implementation with emoji for visual elements */}}
@@ -273,7 +451,7 @@ const {sanitize_widget_title_for_component_name(widget_title)} = () => {{
         <button>⏸️ Pause</button>
         <div>📊 Score: {{score}}</div>
       </div>
-      
+
       <SettingsModal />
     </div>
   );

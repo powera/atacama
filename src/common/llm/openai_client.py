@@ -19,8 +19,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Model identifiers
-TEST_MODEL = "gpt-4.1-nano-2025-04-14"
-PROD_MODEL = "gpt-4.1-mini-2025-04-14"
+TEST_MODEL = "gpt-5-nano"
+PROD_MODEL = "gpt-5-mini"
 DEFAULT_MODEL = TEST_MODEL
 DEFAULT_TIMEOUT = 240
 API_BASE = "https://api.openai.com/v1"

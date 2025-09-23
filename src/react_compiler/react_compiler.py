@@ -337,7 +337,7 @@ class WidgetBuilder:
             logger.info(f"No existing export found, adding export for {widget_name}")
             return f"{code}\n\n// Export the component\nexport default {widget_name};"
     
-    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None, development_mode: bool = False) -> Tuple[bool, str, str]:
+    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None, development_mode: bool = False, data_file: str = None) -> Tuple[bool, str, str]:
         """
         Build a widget with webpack to create a browser-ready bundle.
         
@@ -346,6 +346,7 @@ class WidgetBuilder:
         :param dependencies: List of dependencies to include (e.g., ['recharts', 'lodash'])
         :param external_dependencies: List of dependencies to treat as external (not bundled)
         :param development_mode: Whether to build in development mode (disables minification)
+        :param data_file: Optional separate data file content
         :return: Tuple of (success, built_code, error_message)
         """
         dependencies = dependencies or []
@@ -463,6 +464,12 @@ module.exports = {{
             
             with open(os.path.join(src_dir, 'widget.js'), 'w') as f:
                 f.write(wrapped_code)
+            
+            # Create data file if provided
+            if data_file:
+                with open(os.path.join(src_dir, 'data.js'), 'w') as f:
+                    f.write(data_file)
+                logger.info(f"Created data file for widget {widget_name}")
             
             # Install dependencies - use --include=dev to ensure dev dependencies are installed
             logger.info(f"Installing dependencies for widget {widget_name}")
