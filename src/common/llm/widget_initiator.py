@@ -7,6 +7,7 @@ from pathlib import Path
 import tiktoken
 
 import constants
+from common.base.logging_config import get_logger
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
 from common.llm.types import Schema, SchemaProperty
 from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA, SINGLE_FILE_WIDGET_SCHEMA
