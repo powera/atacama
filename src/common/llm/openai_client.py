@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Client for interacting with OpenAI API using direct HTTP requests."""
+"""Client for interacting with OpenAI Responses API using direct HTTP requests."""
 
 import json
 import logging
@@ -8,6 +8,7 @@ import time
 from typing import Dict, Optional, Any, Tuple
 
 import requests
+import tiktoken
 
 import constants
 from common.llm.telemetry import LLMUsage
@@ -19,10 +20,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Model identifiers
-TEST_MODEL = "gpt-5-nano"
-PROD_MODEL = "gpt-5-mini"
+TEST_MODEL = "gpt-4o-mini-2024-07-18"
+PROD_MODEL = "gpt-4o-2024-11-20"
 DEFAULT_MODEL = TEST_MODEL
-DEFAULT_TIMEOUT = 240
+DEFAULT_TIMEOUT = 50
 API_BASE = "https://api.openai.com/v1"
 
 def measure_completion(func):
@@ -35,7 +36,7 @@ def measure_completion(func):
     return wrapper
 
 class OpenAIClient:
-    """Client for making direct HTTP requests to OpenAI API."""
+    """Client for making direct HTTP requests to OpenAI Responses API."""
     
     def __init__(self, timeout: int = DEFAULT_TIMEOUT, debug: bool = False):
         """Initialize OpenAI client with API key."""
@@ -48,29 +49,19 @@ class OpenAIClient:
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
-        } if self.api_key else None
+        }
+        self.encoder = tiktoken.get_encoding("cl100k_base")
 
-    def _load_key(self) -> Optional[str]:
+    def _load_key(self) -> str:
         """Load OpenAI API key from file."""
         key_path = os.path.join(constants.KEY_DIR, "openai.key")
-        try:
-            with open(key_path) as f:
-                return f.read().strip()
-        except (FileNotFoundError, IOError) as e:
-            logger.error("Failed to load OpenAI API key from %s: %s", key_path, str(e))
-            return None
-
-    def _check_api_key(self):
-        """Check if API key is available and raise exception if not."""
-        if not self.api_key:
-            raise Exception("OpenAI API key not available. Please ensure the key file exists at the configured path.")
+        with open(key_path) as f:
+            return f.read().strip()
 
     @measure_completion
-    def _create_completion(self, **kwargs) -> Dict:
-        """Make direct HTTP request to OpenAI chat completions endpoint."""
-        self._check_api_key()
-        
-        url = f"{API_BASE}/chat/completions"
+    def _create_response(self, **kwargs) -> Dict:
+        """Make direct HTTP request to OpenAI responses endpoint."""
+        url = f"{API_BASE}/responses"
         
         if self.debug:
             logger.debug("Making request to %s", url)
@@ -92,7 +83,6 @@ class OpenAIClient:
 
     def warm_model(self, model: str) -> bool:
         """Simulate model warmup (not needed for OpenAI but kept for API compatibility)."""
-        self._check_api_key()
         if self.debug:
             logger.debug("Model warmup not required for OpenAI: %s", model)
         return True
@@ -103,11 +93,10 @@ class OpenAIClient:
         model: str = DEFAULT_MODEL,
         brief: bool = False,
         json_schema: Optional[Any] = None,
-        context: Optional[str] = None,
-        max_tokens: Optional[int] = None
+        context: Optional[str] = None
     ) -> Response:
         """
-        Generate chat completion using OpenAI API.
+        Generate chat response using OpenAI Responses API.
         
         Args:
             prompt: The main prompt/question
@@ -127,29 +116,43 @@ class OpenAIClient:
             logger.debug("Brief mode: %s", brief)
             logger.debug("Context: %s", context)
             logger.debug("JSON schema: %s", json_schema)
-        else:
-            logger.info("Generating chat response with model: %s", model)
         
-        messages = []
-        if context:
-            messages.append({"role": "system", "content": context})
-        messages.append({"role": "user", "content": prompt})
+        # Determine which token limit parameter to use based on model
+        # Newer reasoning models (o1, gpt-5, o3) require max_output_tokens
+        reasoning_models = ['o1-', 'gpt-5-', 'o3-']
+        uses_output_tokens = any(model.startswith(prefix) for prefix in reasoning_models)
         
-        # Set max_tokens with proper limits
-        if not max_tokens:
-            if brief:
-                max_tokens = 512
-            else:
-                max_tokens = 2048
-
-        logger.info("Using max_tokens: %d", max_tokens)
+        # gpt-5 models don't support custom temperature (only default value of 1)
+        is_gpt5_model = model.startswith('gpt-5-')
+        is_gpt5_nano_or_mini = model.startswith('gpt-5-nano') or model.startswith('gpt-5-mini')
         
+        token_limit = 512 if brief else 4096
         kwargs = {
             "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": 0.35,
+            "input": prompt,
         }
+        
+        # Add instructions (system message) if context provided
+        if context:
+            kwargs["instructions"] = context
+        
+        # Only set temperature for models that support it
+        if not is_gpt5_model:
+            kwargs["temperature"] = 0.35
+        
+        # Set token limit parameter
+        if uses_output_tokens:
+            kwargs["max_output_tokens"] = token_limit
+        else:
+            # For non-reasoning models, we still use max_output_tokens in Responses API
+            kwargs["max_output_tokens"] = token_limit
+        
+        # Set reasoning and text parameters for gpt-5-nano and gpt-5-mini
+        if is_gpt5_nano_or_mini:
+            kwargs["reasoning"] = {"effort": "minimal"}
+            # Only set text verbosity if not overridden by JSON schema below
+            if not json_schema:
+                kwargs["text"] = {"verbosity": "low"}
         
         # If JSON schema provided, configure for structured response
         if json_schema:
@@ -160,28 +163,51 @@ class OpenAIClient:
             
             clean_schema = to_openai_schema(schema_obj)
             
-            kwargs["temperature"] = 0.15  # Lower temperature for structured output
-            kwargs["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
+            # Lower temperature for structured output (only for models that support it)
+            if not is_gpt5_model:
+                kwargs["temperature"] = 0.15
+            
+            # Use text.format for structured outputs in Responses API
+            text_config = {
+                "format": {
+                    "type": "json_schema",
                     "name": "Details",
                     "description": "N/A",
                     "strict": True,
                     "schema": clean_schema
                 }
             }
+            
+            # For gpt-5-nano and gpt-5-mini, also include verbosity
+            if is_gpt5_nano_or_mini:
+                text_config["verbosity"] = "low"
+            
+            kwargs["text"] = text_config
         
-        completion_data, duration_ms = self._create_completion(**kwargs)
+        response_data, duration_ms = self._create_response(**kwargs)
         
-        response_content = completion_data["choices"][0]["message"]["content"]
+        # Extract response content from Responses API structure
+        response_content = ""
+        if response_data.get("output"):
+            # Look for the message output item (not reasoning)
+            for output_item in response_data["output"]:
+                if output_item.get("type") == "message" and output_item.get("content"):
+                    for content_item in output_item["content"]:
+                        if content_item.get("type") == "output_text":
+                            response_content = content_item.get("text", "")
+                            break
+                    if response_content:
+                        break
+        
         if self.debug:
             logger.debug("Response content: %s", response_content)
 
         # Calculate token usage
+        usage_data = response_data.get("usage", {})
         usage = LLMUsage.from_api_response(
             {
-                "prompt_tokens": completion_data["usage"]["prompt_tokens"],
-                "completion_tokens": completion_data["usage"]["completion_tokens"],
+                "prompt_tokens": usage_data.get("input_tokens", 0),
+                "completion_tokens": usage_data.get("output_tokens", 0),
                 "total_duration": duration_ms
             },
             model=model
@@ -232,12 +258,11 @@ def generate_chat(
     max_tokens: Optional[int] = None
 ) -> Response:
     """
-    Generate a chat response using OpenAI API.
+    Generate a chat response using OpenAI Responses API.
     
     Returns:
         Response containing response_text, structured_data, and usage
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
-    return client.generate_chat(prompt, model, brief, json_schema, context,
-                                max_tokens=max_tokens)
+    return client.generate_chat(prompt, model, brief, json_schema, context)
