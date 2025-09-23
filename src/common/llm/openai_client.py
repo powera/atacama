@@ -20,8 +20,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Model identifiers
-TEST_MODEL = "gpt-4o-mini-2024-07-18"
-PROD_MODEL = "gpt-4o-2024-11-20"
+TEST_MODEL = "gpt-5-nano"
+PROD_MODEL = "gpt-5-mini"
 DEFAULT_MODEL = TEST_MODEL
 DEFAULT_TIMEOUT = 50
 API_BASE = "https://api.openai.com/v1"
@@ -161,7 +161,9 @@ class OpenAIClient:
         model: str = DEFAULT_MODEL,
         brief: bool = False,
         json_schema: Optional[Any] = None,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        reasoning_effort: Optional[str] = None
     ) -> Response:
         """
         Generate chat response using OpenAI Responses API.
@@ -172,6 +174,8 @@ class OpenAIClient:
             brief: Whether to limit response length
             json_schema: Schema for structured response (if provided, returns JSON)
             context: Optional context to include before the prompt
+            max_tokens: Maximum number of tokens to generate (overrides brief setting)
+            reasoning_effort: Reasoning effort level for reasoning models ('minimal', 'low', 'medium', 'high', or None to disable)
         
         Returns:
             Response containing response_text, structured_data, and usage
@@ -194,7 +198,11 @@ class OpenAIClient:
         is_gpt5_model = model.startswith('gpt-5-')
         is_gpt5_nano_or_mini = model.startswith('gpt-5-nano') or model.startswith('gpt-5-mini')
         
-        token_limit = 512 if brief else 4096
+        # Determine token limit: max_tokens takes precedence, then brief flag, then default
+        if max_tokens is not None:
+            token_limit = max_tokens
+        else:
+            token_limit = 512 if brief else 4096
         kwargs = {
             "model": model,
             "input": prompt,
@@ -217,7 +225,15 @@ class OpenAIClient:
         
         # Set reasoning and text parameters for gpt-5-nano and gpt-5-mini
         if is_gpt5_nano_or_mini:
-            kwargs["reasoning"] = {"effort": "minimal"}
+            # Set reasoning effort based on parameter, default to "minimal" if not specified
+            if reasoning_effort is not None:
+                if reasoning_effort.lower() in ['minimal', 'low', 'medium', 'high']:
+                    kwargs["reasoning"] = {"effort": reasoning_effort.lower()}
+                # If reasoning_effort is explicitly set to something else (like "none" or "disable"), don't set reasoning
+            else:
+                # Default behavior: use minimal reasoning
+                kwargs["reasoning"] = {"effort": "minimal"}
+            
             # Only set text verbosity if not overridden by JSON schema below
             if not json_schema:
                 kwargs["text"] = {"verbosity": "low"}
@@ -323,7 +339,8 @@ def generate_chat(
     brief: bool = False,
     json_schema: Optional[Any] = None,
     context: Optional[str] = None,
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = None,
+    reasoning_effort: Optional[str] = None
 ) -> Response:
     """
     Generate a chat response using OpenAI Responses API.
@@ -333,4 +350,4 @@ def generate_chat(
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
-    return client.generate_chat(prompt, model, brief, json_schema, context)
+    return client.generate_chat(prompt, model, brief, json_schema, context, max_tokens, reasoning_effort)
