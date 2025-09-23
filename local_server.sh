@@ -24,9 +24,13 @@ while [[ $# -gt 0 ]]; do
             PORT="$2"
             shift 2
             ;;
+        --http-debug)
+            export ATACAMA_HTTP_DEBUG=1
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--mode web|trakaido] [--port PORT]"
+            echo "Usage: $0 [--mode web|trakaido] [--port PORT] [--http-debug]"
             exit 1
             ;;
     esac
@@ -48,4 +52,7 @@ export ATACAMA_REQUEST_LOG_CONSOLE=1
 # Run the development server using launch.py
 echo "Starting development $MODE server on port $PORT..."
 echo "Request logs will be output to console (STDERR)"
+if [[ -n "$ATACAMA_HTTP_DEBUG" ]]; then
+    echo "HTTP debug logging enabled - LLM API requests/responses will be logged (first 512 bytes)"
+fi
 python3 launch.py --mode="$MODE" --port="$PORT" --log-level=DEBUG

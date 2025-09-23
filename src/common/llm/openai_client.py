@@ -42,9 +42,13 @@ class OpenAIClient:
         """Initialize OpenAI client with API key."""
         self.timeout = timeout
         self.debug = debug
+        # Check for HTTP debug environment variable
+        self.http_debug = os.getenv('ATACAMA_HTTP_DEBUG') == '1'
         if debug:
             logger.setLevel(logging.DEBUG)
             logger.debug("Initialized OpenAIClient in debug mode")
+        if self.http_debug:
+            logger.info("HTTP debug logging enabled for OpenAI API requests")
         self.api_key = self._load_key()
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -58,6 +62,37 @@ class OpenAIClient:
         with open(key_path) as f:
             return f.read().strip()
 
+    def _truncate_for_logging(self, content: str, max_bytes: int = 512) -> str:
+        """Truncate content for logging while preserving UTF-8 encoding."""
+        if not content:
+            return content
+            
+        original_length = len(content)
+        content_bytes = content.encode('utf-8')
+        
+        if len(content_bytes) <= max_bytes:
+            return content
+            
+        # Truncate at byte boundary and decode back to string
+        truncated_bytes = content_bytes[:max_bytes]
+        
+        # Handle potential UTF-8 character boundary issues
+        try:
+            truncated_content = truncated_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            # If we cut in the middle of a UTF-8 character, back up until we find a valid boundary
+            for i in range(1, 5):  # UTF-8 characters are at most 4 bytes
+                try:
+                    truncated_content = truncated_bytes[:-i].decode('utf-8')
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                # Fallback: just use the first max_bytes-4 bytes to be safe
+                truncated_content = truncated_bytes[:-4].decode('utf-8', errors='ignore')
+        
+        return f"{truncated_content}... [truncated from {original_length} chars]"
+
     @measure_completion
     def _create_response(self, **kwargs) -> Dict:
         """Make direct HTTP request to OpenAI responses endpoint."""
@@ -66,6 +101,25 @@ class OpenAIClient:
         if self.debug:
             logger.debug("Making request to %s", url)
             logger.debug("Request data: %s", json.dumps(kwargs, indent=2))
+        
+        # HTTP debug logging
+        if self.http_debug:
+            logger.info("=" * 80)
+            logger.info("HTTP REQUEST TO OPENAI API")
+            logger.info("=" * 80)
+            logger.info("URL: %s", url)
+            logger.info("Method: POST")
+            
+            # Log headers (redact Authorization)
+            debug_headers = self.headers.copy()
+            if 'Authorization' in debug_headers:
+                debug_headers['Authorization'] = '[REDACTED]'
+            logger.info("Headers: %s", json.dumps(debug_headers, indent=2))
+            
+            # Log request body (truncated)
+            request_body = json.dumps(kwargs, indent=2)
+            truncated_request = self._truncate_for_logging(request_body)
+            logger.info("Request Body: %s", truncated_request)
             
         response = requests.post(
             url,
@@ -73,6 +127,20 @@ class OpenAIClient:
             json=kwargs,
             timeout=self.timeout
         )
+        
+        # HTTP debug logging for response
+        if self.http_debug:
+            logger.info("-" * 80)
+            logger.info("HTTP RESPONSE FROM OPENAI API")
+            logger.info("-" * 80)
+            logger.info("Status Code: %d", response.status_code)
+            logger.info("Response Headers: %s", dict(response.headers))
+            
+            # Log response body (truncated)
+            response_text = response.text
+            truncated_response = self._truncate_for_logging(response_text)
+            logger.info("Response Body: %s", truncated_response)
+            logger.info("=" * 80)
         
         if response.status_code != 200:
             error_msg = f"Error {response.status_code}: {response.text}"
