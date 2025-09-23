@@ -45,7 +45,7 @@ WIDGET_IMPROVEMENT_SCHEMA = Schema(
             "object",
             "Other files that were modified",
             required=False,
-            additional_properties=True
+            additional_properties=False
         ),
         "changes_made": SchemaProperty("string", "Summary of changes made", required=False),
         "files_modified": SchemaProperty(
