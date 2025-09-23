@@ -66,28 +66,6 @@
                                 </select>
                             </div>
                             <div class="look-feel-item">
-                                <label for="complexity">Complexity:</label>
-                                <select id="complexity" name="complexity">
-                                    {% for value, description in look_and_feel_options.complexity.items() %}
-                                        <option value="{{ value }}" {% if value == 'balanced' %}selected{% endif %}>
-                                            {{ value.title() }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="look-feel-row">
-                            <div class="look-feel-item">
-                                <label for="interaction">Interaction:</label>
-                                <select id="interaction" name="interaction">
-                                    {% for value, description in look_and_feel_options.interaction.items() %}
-                                        <option value="{{ value }}" {% if value == 'exploratory' %}selected{% endif %}>
-                                            {{ value.title() }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="look-feel-item">
                                 <label for="visual">Visual:</label>
                                 <select id="visual" name="visual">
                                     {% for value, description in look_and_feel_options.visual.items() %}
@@ -452,8 +430,6 @@ document.getElementById('initiate-form').addEventListener('submit', async functi
         use_advanced_model: selectedModel === 'mini',
         look_and_feel: {
             tone: document.getElementById('tone').value,
-            complexity: document.getElementById('complexity').value,
-            interaction: document.getElementById('interaction').value,
             visual: document.getElementById('visual').value,
             feedback: document.getElementById('feedback').value
         }
@@ -525,15 +501,11 @@ const lookAndFeelOptions = {{ look_and_feel_options | tojson }};
 // Function to update the combined description
 function updateCombinedDescription() {
     const tone = document.getElementById('tone').value;
-    const complexity = document.getElementById('complexity').value;
-    const interaction = document.getElementById('interaction').value;
     const visual = document.getElementById('visual').value;
     const feedback = document.getElementById('feedback').value;
     
     const descriptions = [
         lookAndFeelOptions.tone[tone],
-        lookAndFeelOptions.complexity[complexity],
-        lookAndFeelOptions.interaction[interaction],
         lookAndFeelOptions.visual[visual],
         lookAndFeelOptions.feedback[feedback]
     ];
@@ -543,7 +515,7 @@ function updateCombinedDescription() {
 }
 
 // Add event listeners to all look and feel dropdowns
-['tone', 'complexity', 'interaction', 'visual', 'feedback'].forEach(function(id) {
+['tone', 'visual', 'feedback'].forEach(function(id) {
     document.getElementById(id).addEventListener('change', updateCombinedDescription);
 });
 

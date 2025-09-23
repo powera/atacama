@@ -68,8 +68,28 @@
         </div>
 
         <div class="form-group">
-            <label for="code">React Component Code:</label>
-            <textarea id="code" name="code" rows="30">{{ widget.code }}</textarea>
+            <div class="code-tabs">
+                <div class="tab-buttons">
+                    <button type="button" class="tab-button active" onclick="switchTab('code')">React Component Code</button>
+                    <button type="button" class="tab-button" id="data-tab-button" onclick="switchTab('data')" {% if not widget.data_file %}style="display: none;"{% endif %}>Data File</button>
+                    <button type="button" class="add-data-button" id="add-data-button" onclick="addDataFile()" {% if widget.data_file %}style="display: none;"{% endif %}>+ Add Data File</button>
+                </div>
+                
+                <div class="tab-content">
+                    <div id="code-tab" class="tab-pane active">
+                        <textarea id="code" name="code" rows="30">{{ widget.code }}</textarea>
+                    </div>
+                    
+                    <div id="data-tab" class="tab-pane" {% if not widget.data_file %}style="display: none;"{% endif %}>
+                        <div class="data-file-header">
+                            <label for="data_file">Data File Content (JSON, JavaScript, etc.):</label>
+                            <button type="button" class="remove-data-button" onclick="removeDataFile()">Remove Data File</button>
+                        </div>
+                        <textarea id="data_file" name="data_file" rows="30" placeholder="Enter your data file content here...">{{ widget.data_file or '' }}</textarea>
+                        <small class="help-text">This data file can contain JSON data, JavaScript constants, or other data that your widget needs.</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="form-actions">
@@ -125,9 +145,116 @@
         font-size: 0.9rem;
     }
 
-    #code {
+    #code, #data_file {
         font-family: 'Courier New', Courier, monospace;
         font-size: 14px;
+    }
+
+    .code-tabs {
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+
+    .tab-buttons {
+        display: flex;
+        background: var(--color-background-secondary);
+        border-bottom: 1px solid var(--color-border);
+        align-items: center;
+    }
+
+    .tab-button {
+        background: none;
+        border: none;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        color: var(--color-text-secondary);
+        font-size: 0.9rem;
+        border-right: 1px solid var(--color-border);
+        transition: all 0.2s ease;
+    }
+
+    .tab-button:hover {
+        background: var(--color-background);
+        color: var(--color-text);
+    }
+
+    .tab-button.active {
+        background: var(--color-background);
+        color: var(--color-text);
+        font-weight: 500;
+    }
+
+    .add-data-button {
+        background: none;
+        border: none;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        color: var(--color-primary);
+        font-size: 0.85rem;
+        margin-left: auto;
+        margin-right: 0.5rem;
+        border-radius: var(--border-radius);
+        transition: all 0.2s ease;
+    }
+
+    .add-data-button:hover {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .tab-content {
+        position: relative;
+    }
+
+    .tab-pane {
+        padding: 0;
+    }
+
+    .tab-pane textarea {
+        border: none;
+        border-radius: 0;
+        resize: vertical;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .data-file-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background: var(--color-background-secondary);
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-file-header label {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .remove-data-button {
+        background: var(--color-error);
+        color: white;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+
+    .remove-data-button:hover {
+        opacity: 0.8;
+    }
+
+    .help-text {
+        display: block;
+        padding: 0.5rem 1rem;
+        color: var(--color-text-secondary);
+        font-size: 0.85rem;
+        background: var(--color-background-secondary);
+        margin: 0;
     }
 
     .modal {
@@ -206,16 +333,64 @@
 </style>
 
 <script>
-    // Store the original current code
+    // Store the original current code and data file
     const originalCode = document.getElementById('code').value;
+    const originalDataFile = document.getElementById('data_file').value;
     
+    function switchTab(tabName) {
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        
+        // Hide all tab panes
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.style.display = 'none');
+        
+        // Show selected tab pane and activate button
+        if (tabName === 'code') {
+            document.getElementById('code-tab').style.display = 'block';
+            document.querySelector('.tab-button[onclick="switchTab(\'code\')"]').classList.add('active');
+        } else if (tabName === 'data') {
+            document.getElementById('data-tab').style.display = 'block';
+            document.getElementById('data-tab-button').classList.add('active');
+        }
+    }
+
+    function addDataFile() {
+        // Show the data file tab and button
+        document.getElementById('data-tab').style.display = 'block';
+        document.getElementById('data-tab-button').style.display = 'block';
+        document.getElementById('add-data-button').style.display = 'none';
+        
+        // Switch to the data file tab
+        switchTab('data');
+        
+        // Focus on the data file textarea
+        document.getElementById('data_file').focus();
+    }
+
+    function removeDataFile() {
+        if (confirm('Are you sure you want to remove the data file? This action cannot be undone.')) {
+            // Clear the data file content
+            document.getElementById('data_file').value = '';
+            
+            // Hide the data file tab and show the add button
+            document.getElementById('data-tab').style.display = 'none';
+            document.getElementById('data-tab-button').style.display = 'none';
+            document.getElementById('add-data-button').style.display = 'block';
+            
+            // Switch back to code tab
+            switchTab('code');
+        }
+    }
+
     function switchVersion() {
         const versionSelect = document.getElementById('version-select');
         const selectedOption = versionSelect.options[versionSelect.selectedIndex];
         const codeTextarea = document.getElementById('code');
+        const dataFileTextarea = document.getElementById('data_file');
         
         if (selectedOption.value === 'current') {
             codeTextarea.value = originalCode;
+            dataFileTextarea.value = originalDataFile;
         } else {
             const versionId = selectedOption.value;
             
@@ -233,11 +408,26 @@
             .then(data => {
                 if (data.success) {
                     codeTextarea.value = data.code;
+                    dataFileTextarea.value = data.data_file || '';
+                    
+                    // Update data file tab visibility based on whether version has data file
+                    if (data.data_file) {
+                        document.getElementById('data-tab-button').style.display = 'block';
+                        document.getElementById('add-data-button').style.display = 'none';
+                    } else {
+                        document.getElementById('data-tab-button').style.display = 'none';
+                        document.getElementById('add-data-button').style.display = 'block';
+                        // Switch to code tab if currently on data tab
+                        if (document.getElementById('data-tab').style.display !== 'none') {
+                            switchTab('code');
+                        }
+                    }
                 } else {
                     alert('Failed to load version: ' + data.error);
                     // Reset to current
                     versionSelect.value = 'current';
                     codeTextarea.value = originalCode;
+                    dataFileTextarea.value = originalDataFile;
                 }
             })
             .catch(error => {
@@ -245,6 +435,7 @@
                 // Reset to current
                 versionSelect.value = 'current';
                 codeTextarea.value = originalCode;
+                dataFileTextarea.value = originalDataFile;
             });
         }
     }

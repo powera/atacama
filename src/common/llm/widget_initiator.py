@@ -101,7 +101,8 @@ The widget should be self-contained and production-ready."""
             max_tokens=int(max_tokens),
         )
 
-        if not response.response_text:
+        # For JSON schema responses, check structured_data instead of response_text
+        if not response.structured_data:
             return False, {'error': 'No response from AI model'}, ''
 
         # Parse the response based on the schema
@@ -144,16 +145,6 @@ class WidgetInitiator:
             'serious': 'The widget should maintain a professional and focused tone with formal language and clear purpose',
             'educational': 'The widget should take a learning-focused approach with explanations and guided discovery',
             'professional': 'The widget should emphasize business efficiency and reliability with a polished presentation'
-        },
-        'complexity': {
-            'minimal': 'Keep the interface simple and clean with only essential features',
-            'balanced': 'Create a well-rounded interface with core features and some useful enhancements',
-            'feature-rich': 'Build a comprehensive interface with advanced features and extensive customization options'
-        },
-        'interaction': {
-            'guided': 'Design the user experience with step-by-step guidance, clear instructions, and structured flow',
-            'exploratory': 'Encourage user discovery and experimentation with an open-ended, flexible approach',
-            'game-like': 'Make the experience interactive and engaging with challenges, rewards, and game mechanics'
         },
         'visual': {
             'clean': 'Use a minimalist design with plenty of whitespace and subtle, understated styling',
@@ -233,7 +224,7 @@ class WidgetInitiator:
             description: Simple description of what the widget should do
             widget_title: Title of the widget (defaults to formatted slug)
             use_advanced_model: If True, use a more advanced model (GPT-5)
-            look_and_feel: Dict with keys 'tone', 'complexity', 'interaction', 'visual', 'feedback'
+            look_and_feel: Dict with keys 'tone', 'visual', 'feedback'
             dual_file: Whether to generate separate code and data files
 
         Returns:
@@ -281,7 +272,8 @@ class WidgetInitiator:
                 max_tokens=int(max_tokens),
             )
 
-            if not response.response_text:
+            # For JSON schema responses, check structured_data instead of response_text
+            if not response.structured_data:
                 return {
                     'success': False,
                     'error': 'No response from AI model',
@@ -406,7 +398,7 @@ INSTRUCTIONS:
 2. Use modern React patterns (hooks, functional components)
 3. Make the component interactive and engaging
 4. Use the provided CSS variables and classes for styling
-5. Follow the LOOK AND FEEL REQUIREMENTS above - they define the tone, complexity, interaction style, visual design, and feedback approach
+5. Follow the LOOK AND FEEL REQUIREMENTS above - they define the tone, visual design, and feedback approach
 6. Consider adding fullscreen support if it would enhance the widget
 7. Consider adding global settings integration if appropriate (audio, difficulty, user preferences)
 8. PREFER EMOJI over icons - use emoji characters (🎮, 📊, ⚙️, 🔍, etc.) instead of icon libraries

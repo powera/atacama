@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 TEST_MODEL = "gpt-5-nano"
 PROD_MODEL = "gpt-5-mini"
 DEFAULT_MODEL = TEST_MODEL
-DEFAULT_TIMEOUT = 50
+DEFAULT_TIMEOUT = 240
 API_BASE = "https://api.openai.com/v1"
 
 def measure_completion(func):
@@ -273,7 +273,8 @@ class OpenAIClient:
         # Extract response content from Responses API structure
         response_content = ""
         if response_data.get("output"):
-            # Look for the message output item (not reasoning)
+            # Look for the message output item (skip reasoning items)
+            # GPT-5 models with reasoning may have both "reasoning" and "message" output items
             for output_item in response_data["output"]:
                 if output_item.get("type") == "message" and output_item.get("content"):
                     for content_item in output_item["content"]:
@@ -282,6 +283,14 @@ class OpenAIClient:
                             break
                     if response_content:
                         break
+            
+            # If no message content found, log the response structure for debugging
+            if not response_content:
+                logger.warning("No message content found in response. Available output types: %s", 
+                             [item.get("type") for item in response_data.get("output", [])])
+                if self.debug:
+                    logger.debug("Full output structure: %s", 
+                               json.dumps(response_data.get("output", []), indent=2))
         
         if self.debug:
             logger.debug("Response content: %s", response_content)

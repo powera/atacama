@@ -274,7 +274,7 @@ class ReactWidget(Message):
         # Basic slug validation - alphanumeric plus hyphens
         import re
         if not re.match(r'^[a-z0-9]+(?:-[a-z0-9]+)*$', slug.lower()):
-            raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
+            raise ValueError("Slug format is invalid. Must contain only lowercase letters, numbers, and hyphens. Cannot start or end with hyphens, and cannot have consecutive hyphens. Examples: 'my-widget', 'widget123', 'test-app-2'")
         return slug.lower()
 
 

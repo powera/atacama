@@ -85,6 +85,12 @@ def edit_widget(slug):
 
         if request.method == 'POST':
             new_code = request.form.get('code', widget.code)
+            new_data_file = request.form.get('data_file', widget.data_file)
+            
+            # Handle empty data file (convert empty string to None)
+            if new_data_file == '':
+                new_data_file = None
+            
             code_hash = hashlib.md5(new_code.encode('utf-8')).hexdigest()
 
             # Check if this exact code already exists as a version
@@ -105,6 +111,7 @@ def edit_widget(slug):
                     version_number=version_number,
                     code=new_code,
                     code_hash=code_hash,
+                    data_file=new_data_file,
                     improvement_type='manual',
                     dev_comments='Manual edit via form'
                 )
@@ -120,6 +127,7 @@ def edit_widget(slug):
             widget.title = request.form.get('title', widget.title)
             widget.description = request.form.get('description', widget.description)
             widget.code = new_code
+            widget.data_file = new_data_file
             widget.last_modified_at = datetime.utcnow()
 
             session.commit()
@@ -178,6 +186,11 @@ def create_widget():
         code = request.form.get('code', '')
         description = request.form.get('description', '')
         channel = request.form.get('channel', 'private')
+        data_file = request.form.get('data_file', '')
+        
+        # Handle empty data file (convert empty string to None)
+        if data_file == '':
+            data_file = None
 
         # Validate slug uniqueness
         with db.session() as session:
@@ -193,7 +206,8 @@ def create_widget():
                 description=description,
                 channel=channel,
                 author=g.user,
-                published=False
+                published=False,
+                data_file=data_file
             )
 
             session.add(widget)
@@ -207,6 +221,7 @@ def create_widget():
                     version_number=1,
                     code=code,
                     code_hash=code_hash,
+                    data_file=data_file,
                     improvement_type='manual',
                     dev_comments='Initial widget creation'
                 )
@@ -515,6 +530,7 @@ def get_version_code(slug):
 
         if version == 'current':
             code = widget.code
+            data_file = widget.data_file
         else:
             version_obj = session.query(WidgetVersion).filter_by(id=version, widget_id=widget.id).first()
             if not version_obj:
@@ -523,10 +539,12 @@ def get_version_code(slug):
                     'error': 'Version not found'
                 }), 404
             code = version_obj.code
+            data_file = version_obj.data_file
 
         return jsonify({
             'success': True,
-            'code': code
+            'code': code,
+            'data_file': data_file
         })
 
 

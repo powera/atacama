@@ -217,5 +217,12 @@ def run_server(host: str = '0.0.0.0', port: int = 5000, debug: bool = False, blu
         app.config['DEBUG'] = True
         app.run(host=host, port=port, debug=True)
     else:
-        # Use Waitress for production
-        serve(get_app(blueprint_set=blueprint_set), host=host, port=port)
+        # Use Waitress for production with extended timeout for long-running requests
+        serve(
+            get_app(blueprint_set=blueprint_set), 
+            host=host, 
+            port=port,
+            channel_timeout=300,  # 5 minutes for long-running requests like Widget Initiator
+            cleanup_interval=30,
+            connection_limit=100
+        )
