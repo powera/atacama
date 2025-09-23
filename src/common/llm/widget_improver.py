@@ -1,10 +1,12 @@
-import logging
 import tiktoken
 from typing import Dict, Any, Optional, Tuple
 
-from .lib import generate_chat
-from .types import LLMResponse
-from .widget_schemas import sanitize_widget_title_for_component_name
+from common.base.logging_config import get_logger
+from common.llm.openai_client import generate_chat
+from common.llm.types import Response
+from react_compiler.lib import sanitize_widget_title_for_component_name
+
+logger = get_logger(__name__)
 
 DEFAULT_MODEL = "gpt-5-nano"
 

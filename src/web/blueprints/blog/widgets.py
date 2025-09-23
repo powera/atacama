@@ -616,7 +616,7 @@ def initiate_widget():
             widget_title=title,
             use_advanced_model=use_advanced_model,
             look_and_feel=look_and_feel,
-            widget_schema=widget_schema # Pass schema to initiator
+            dual_file=widget_schema == DUAL_FILE_WIDGET_SCHEMA # Convert schema to boolean
         )
 
         if not result['success']:
@@ -628,10 +628,20 @@ def initiate_widget():
         # Create the widget in the database
         try:
             with db.session() as session:
+                # Extract code based on whether it's dual-file or single-file
+                if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
+                    # For dual-file, widget_code is a dict with code_file and data_file
+                    widget_code_content = result['widget_code']['code_file']['content']
+                    data_code_content = result['widget_code']['data_file']['content']
+                else:
+                    # For single-file, widget_code is a string
+                    widget_code_content = result['widget_code']
+                    data_code_content = ''
+
                 widget = ReactWidget(
                     slug=slug,
                     title=title,
-                    code=result['widget_code'],
+                    code=widget_code_content,
                     description=description,
                     channel=channel,
                     author=g.user,
@@ -640,17 +650,17 @@ def initiate_widget():
 
                 # Handle dual-file generation if the schema specifies it
                 if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
-                    widget.data_code = result.get('widget_data_code', '') # Assuming initiator returns data code
+                    widget.data_code = data_code_content
 
                 session.add(widget)
                 session.flush()  # To get widget ID
 
                 # Create initial version
-                code_hash = hashlib.md5(result['widget_code'].encode('utf-8')).hexdigest()
+                code_hash = hashlib.md5(widget_code_content.encode('utf-8')).hexdigest()
                 initial_version = WidgetVersion(
                     widget_id=widget.id,
                     version_number=1,
-                    code=result['widget_code'],
+                    code=widget_code_content,
                     code_hash=code_hash,
                     improvement_type='ai_generated',
                     dev_comments='Initial AI-generated widget from description',
@@ -659,8 +669,8 @@ def initiate_widget():
 
                 # Store data code in version if applicable
                 if widget_schema == DUAL_FILE_WIDGET_SCHEMA:
-                    initial_version.data_code_hash = hashlib.md5(result.get('widget_data_code', '').encode('utf-8')).hexdigest()
-                    initial_version.data_code = result.get('widget_data_code', '')
+                    initial_version.data_code_hash = hashlib.md5(data_code_content.encode('utf-8')).hexdigest()
+                    initial_version.data_code = data_code_content
                     initial_version.ai_model_used = 'gpt-5-nano' # Example: update to reflect new models
 
                 session.add(initial_version)

@@ -8,9 +8,10 @@ import tiktoken
 
 import constants
 from common.base.logging_config import get_logger
-from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL
+from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL, TEST_MODEL
 from common.llm.types import Schema, SchemaProperty
 from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA, SINGLE_FILE_WIDGET_SCHEMA
+from common.llm.lib import to_openai_schema
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
@@ -28,9 +29,9 @@ def initiate_widget(prompt: str, model: str = "gpt-5-mini", dual_file: bool = Tr
         # Select the appropriate model
         selected_model = PROD_MODEL if "mini" in model else DEFAULT_MODEL
         if "nano" in model:
-            selected_model = constants.GPT_5_NANO
+            selected_model = TEST_MODEL
         elif "mini" in model:
-            selected_model = constants.GPT_5_MINI
+            selected_model = PROD_MODEL
         else:
             selected_model = model
         logger.info(f"Using model: {selected_model} for widget initiation")
@@ -95,7 +96,7 @@ The widget should be self-contained and production-ready."""
         response = generate_chat(
             prompt=full_prompt,
             model=selected_model,
-            schema=widget_schema,
+            json_schema=to_openai_schema(widget_schema),
             brief=False,
             max_tokens=int(max_tokens),
         )
@@ -107,7 +108,7 @@ The widget should be self-contained and production-ready."""
         widget_data = {}
         error_message = ""
         try:
-            parsed_response = response.parsed_response
+            parsed_response = response.structured_data
             if parsed_response:
                 widget_data = parsed_response
                 if dual_file:
@@ -242,9 +243,9 @@ class WidgetInitiator:
             # Select the appropriate model
             selected_model = PROD_MODEL if use_advanced_model else DEFAULT_MODEL
             if use_advanced_model:
-                selected_model = constants.GPT_5_MINI # Default to mini if advanced is requested
+                selected_model = PROD_MODEL # Default to mini if advanced is requested
             else:
-                selected_model = constants.GPT_5_NANO # Default to nano for standard
+                selected_model = TEST_MODEL # Default to nano for standard
 
             logger.info(f"Using model: {selected_model} for widget creation")
 
@@ -275,7 +276,7 @@ class WidgetInitiator:
             response = generate_chat(
                 prompt=full_prompt,
                 model=selected_model,
-                schema=widget_schema,
+                json_schema=to_openai_schema(widget_schema),
                 brief=False,
                 max_tokens=int(max_tokens),
             )
@@ -290,14 +291,14 @@ class WidgetInitiator:
 
             # Extract code from response
             if dual_file:
-                widget_code_content = response.parsed_response.get("code_file", "")
-                data_file_content = response.parsed_response.get("data_file", "")
+                widget_code_content = response.structured_data.get("code_file", "")
+                data_file_content = response.structured_data.get("data_file", "")
                 widget_code = {
                     "code_file": widget_code_content,
                     "data_file": data_file_content
                 }
             else:
-                widget_code = response.parsed_response.get("code", "")
+                widget_code = response.structured_data.get("code", "")
 
             logger.info(f"Finished creating widget code for '{widget_title}'.")
             return {
