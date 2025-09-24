@@ -1,0 +1,239 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Jobs Status - Admin{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/admin/admin_users.css">
+<style>
+.jobs-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.jobs-section {
+    margin-bottom: 40px;
+}
+
+.jobs-section h2 {
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.jobs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.jobs-table th,
+.jobs-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.jobs-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.jobs-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-processing {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.job-type {
+    font-weight: 500;
+    color: #495057;
+}
+
+.job-progress {
+    font-style: italic;
+    color: #6c757d;
+}
+
+.job-error {
+    color: #dc3545;
+    font-size: 14px;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.duration {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.no-jobs {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.refresh-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.refresh-button:hover {
+    background-color: #0056b3;
+}
+
+.widget-info {
+    font-size: 14px;
+    color: #495057;
+}
+
+.widget-slug {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jobs-container">
+    <h1>Jobs Status</h1>
+    
+    <button class="refresh-button" onclick="location.reload()">Refresh</button>
+    
+    <!-- Running Jobs Section -->
+    <div class="jobs-section">
+        <h2>Running Jobs ({{ running_jobs|length }})</h2>
+        
+        {% if running_jobs %}
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Widget</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                    <th>Duration</th>
+                    <th>Job ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in running_jobs %}
+                <tr>
+                    <td class="job-type">{{ job.type }}</td>
+                    <td class="widget-info">
+                        <div><strong>{{ job.widget_title }}</strong></div>
+                        <div class="widget-slug">{{ job.widget_slug }}</div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ job.status }}">{{ job.status }}</span>
+                    </td>
+                    <td class="job-progress">{{ job.progress }}</td>
+                    <td class="duration">{{ "%.1f"|format(job.duration) }}s</td>
+                    <td>
+                        <code style="font-size: 12px;">{{ job.id[:8] }}...</code>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-jobs">No jobs currently running</div>
+        {% endif %}
+    </div>
+    
+    <!-- Recently Completed Jobs Section -->
+    <div class="jobs-section">
+        <h2>Recently Completed Jobs (Last 10)</h2>
+        
+        {% if completed_jobs %}
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Widget</th>
+                    <th>Status</th>
+                    <th>Progress/Error</th>
+                    <th>Duration</th>
+                    <th>Started</th>
+                    <th>Job ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in completed_jobs %}
+                <tr>
+                    <td class="job-type">{{ job.type }}</td>
+                    <td class="widget-info">
+                        <div><strong>{{ job.widget_title }}</strong></div>
+                        <div class="widget-slug">{{ job.widget_slug }}</div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ job.status }}">{{ job.status }}</span>
+                    </td>
+                    <td>
+                        {% if job.error %}
+                        <div class="job-error">{{ job.error }}</div>
+                        {% else %}
+                        <div class="job-progress">{{ job.progress }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="duration">{{ "%.1f"|format(job.duration) }}s</td>
+                    <td class="duration">
+                        {{ moment(job.started_at).fromNow() if moment else 
+                           job.started_at.strftime('%H:%M:%S') }}
+                    </td>
+                    <td>
+                        <code style="font-size: 12px;">{{ job.id[:8] }}...</code>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-jobs">No recently completed jobs</div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 5 seconds if there are running jobs
+{% if running_jobs %}
+setTimeout(function() {
+    location.reload();
+}, 5000);
+{% endif %}
+</script>
+{% endblock %}

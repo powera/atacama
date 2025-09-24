@@ -15,27 +15,29 @@
             <h2>Describe Your Widget</h2>
             <p>Tell the AI what kind of widget you want to create. Be specific about the functionality you need.</p>
             
-            <form id="initiate-form">
+            <form id="initiate-form" method="POST">
                 <div class="form-group">
                     <label for="slug">Widget Slug:</label>
                     <input type="text" id="slug" name="slug" required 
                            placeholder="compound-interest-calculator"
                            pattern="[a-z0-9-]+"
-                           title="Use lowercase letters, numbers, and hyphens only">
+                           title="Use lowercase letters, numbers, and hyphens only"
+                           value="{{ form_data.slug if form_data else '' }}">
                     <small>URL-friendly identifier (lowercase, hyphens only). Will be used in the widget URL.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="title">Widget Title (optional):</label>
                     <input type="text" id="title" name="title" 
-                           placeholder="Compound Interest Calculator">
+                           placeholder="Compound Interest Calculator"
+                           value="{{ form_data.title if form_data else '' }}">
                     <small>Human-readable title. If left blank, will be generated from the slug.</small>
                 </div>
 
                 <div class="form-group">
                     <label for="description">Description:</label>
                     <textarea id="description" name="description" rows="4" required
-                              placeholder="Build a widget to calculate compound interest. It should allow users to enter principal amount, interest rate, time period, and compounding frequency. Show the final amount and interest earned with a clear breakdown."></textarea>
+                              placeholder="Build a widget to calculate compound interest. It should allow users to enter principal amount, interest rate, time period, and compounding frequency. Show the final amount and interest earned with a clear breakdown.">{{ form_data.description if form_data else '' }}</textarea>
                     <small>Describe what the widget should do. Include specific features, inputs, outputs, and any special requirements.</small>
                 </div>
 
@@ -43,7 +45,8 @@
                     <label for="channel">Channel:</label>
                     <select id="channel" name="channel">
                         {% for channel_id, channel_config in channel_manager.channels.items() %}
-                            <option value="{{ channel_id }}" {% if channel_id == 'private' %}selected{% endif %}>
+                            <option value="{{ channel_id }}" 
+                                {% if (form_data and form_data.channel == channel_id) or (not form_data and channel_id == 'private') %}selected{% endif %}>
                                 {{ channel_config.name }}
                             </option>
                         {% endfor %}
@@ -59,7 +62,8 @@
                                 <label for="tone">Tone:</label>
                                 <select id="tone" name="tone">
                                     {% for value, description in look_and_feel_options.tone.items() %}
-                                        <option value="{{ value }}" {% if value == 'playful' %}selected{% endif %}>
+                                        <option value="{{ value }}" 
+                                            {% if (form_data and form_data.tone == value) or (not form_data and value == 'playful') %}selected{% endif %}>
                                             {{ value.title() }}
                                         </option>
                                     {% endfor %}
@@ -69,7 +73,8 @@
                                 <label for="visual">Visual:</label>
                                 <select id="visual" name="visual">
                                     {% for value, description in look_and_feel_options.visual.items() %}
-                                        <option value="{{ value }}" {% if value == 'clean' %}selected{% endif %}>
+                                        <option value="{{ value }}" 
+                                            {% if (form_data and form_data.visual == value) or (not form_data and value == 'clean') %}selected{% endif %}>
                                             {{ value.title() }}
                                         </option>
                                     {% endfor %}
@@ -81,7 +86,8 @@
                                 <label for="feedback">Feedback:</label>
                                 <select id="feedback" name="feedback">
                                     {% for value, description in look_and_feel_options.feedback.items() %}
-                                        <option value="{{ value }}" {% if value == 'immediate' %}selected{% endif %}>
+                                        <option value="{{ value }}" 
+                                            {% if (form_data and form_data.feedback == value) or (not form_data and value == 'immediate') %}selected{% endif %}>
                                             {{ value.title() }}
                                         </option>
                                     {% endfor %}
@@ -98,14 +104,16 @@
                     <label>AI Model:</label>
                     <div class="model-options">
                         <label class="model-option">
-                            <input type="radio" name="ai_model" value="nano" checked>
+                            <input type="radio" name="ai_model" value="nano" 
+                                {% if not form_data or form_data.ai_model == 'nano' %}checked{% endif %}>
                             <span class="model-info">
                                 <strong>GPT-5-nano (Fast)</strong>
                                 <small>Quick widget generation, lower cost</small>
                             </span>
                         </label>
                         <label class="model-option">
-                            <input type="radio" name="ai_model" value="mini">
+                            <input type="radio" name="ai_model" value="mini"
+                                {% if form_data and form_data.ai_model == 'mini' %}checked{% endif %}>
                             <span class="model-info">
                                 <strong>GPT-5-mini (Better)</strong>
                                 <small>Higher quality code generation, more detailed</small>
@@ -113,6 +121,11 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- Hidden fields for look and feel options -->
+                <input type="hidden" id="tone-hidden" name="tone" value="{{ form_data.tone if form_data else 'playful' }}">
+                <input type="hidden" id="visual-hidden" name="visual" value="{{ form_data.visual if form_data else 'clean' }}">
+                <input type="hidden" id="feedback-hidden" name="feedback" value="{{ form_data.feedback if form_data else 'immediate' }}">
 
                 <div class="form-actions">
                     <button type="submit" class="button primary" id="create-button">
@@ -413,122 +426,25 @@
 </style>
 
 <script>
-document.getElementById('initiate-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const button = document.getElementById('create-button');
-    const modal = document.getElementById('progress-modal');
-    const progressMessage = document.getElementById('progress-message');
-    
-    // Get form data
-    const selectedModel = document.querySelector('input[name="ai_model"]:checked').value;
-    const formData = {
-        slug: document.getElementById('slug').value,
-        title: document.getElementById('title').value,
-        description: document.getElementById('description').value,
-        channel: document.getElementById('channel').value,
-        use_advanced_model: selectedModel === 'mini',
-        look_and_feel: {
-            tone: document.getElementById('tone').value,
-            visual: document.getElementById('visual').value,
-            feedback: document.getElementById('feedback').value
-        }
-    };
-    
-    // Validate slug format
+// Form validation
+document.getElementById('initiate-form').addEventListener('submit', function(e) {
+    const slug = document.getElementById('slug').value;
     const slugPattern = /^[a-z0-9-]+$/;
-    if (!slugPattern.test(formData.slug)) {
+    
+    if (!slugPattern.test(slug)) {
+        e.preventDefault();
         alert('Slug must contain only lowercase letters, numbers, and hyphens.');
-        return;
+        return false;
     }
     
-    // Show progress modal
+    // Show loading state
+    const button = document.getElementById('create-button');
     button.disabled = true;
-    modal.style.display = 'flex';
-    progressMessage.textContent = 'Generating widget code with AI...';
     
-    try {
-        const response = await fetch('{{ url_for("widgets.initiate_widget") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Failed to start widget generation');
-        }
-        
-        // Start polling for job status
-        pollInitiationStatus(data.job_id);
-        
-    } catch (error) {
-        button.disabled = false;
-        modal.style.display = 'none';
-        alert('Error: ' + error.message);
-    }
-});
-
-async function pollInitiationStatus(jobId) {
-    const modal = document.getElementById('progress-modal');
-    const progressMessage = document.getElementById('progress-message');
-    
-    try {
-        const response = await fetch(`/widget/initiate_status/${jobId}`);
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Job status check failed');
-        }
-        
-        progressMessage.textContent = data.progress;
-        
-        if (data.status === 'processing') {
-            // Continue polling
-            setTimeout(() => pollInitiationStatus(jobId), 2000);
-        } else if (data.status === 'completed') {
-            // Success - redirect to edit widget
-            progressMessage.textContent = 'Widget created successfully! Redirecting...';
-            setTimeout(() => {
-                window.location.href = data.result.redirect_url;
-            }, 1000);
-        } else if (data.status === 'error') {
-            // Error occurred
-            document.getElementById('create-button').disabled = false;
-            modal.style.display = 'none';
-            alert('Error creating widget: ' + (data.error || 'Unknown error'));
-        }
-        
-    } catch (error) {
-        document.getElementById('create-button').disabled = false;
-        modal.style.display = 'none';
-        alert('Error checking job status: ' + error.message);
-    }
-}': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            progressMessage.textContent = 'Widget created successfully! Redirecting...';
-            setTimeout(() => {
-                window.location.href = result.redirect_url;
-            }, 1000);
-        } else {
-            modal.style.display = 'none';
-            button.disabled = false;
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        modal.style.display = 'none';
-        button.disabled = false;
-        alert('Error: ' + error.message);
-    }
+    // Update hidden fields with current dropdown values
+    document.getElementById('tone-hidden').value = document.getElementById('tone').value;
+    document.getElementById('visual-hidden').value = document.getElementById('visual').value;
+    document.getElementById('feedback-hidden').value = document.getElementById('feedback').value;
 });
 
 // Auto-generate title from slug

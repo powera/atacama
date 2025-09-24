@@ -1,0 +1,311 @@
+{% extends "layouts/default.html" %}
+
+{% block title %}Creating Widget - {{ widget_data.title or widget_data.slug }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Creating Your Widget</h1>
+        <a href="{{ url_for('widgets.list_widgets') }}" class="button secondary">Back to Widgets</a>
+    </div>
+
+    <div class="waiting-container">
+        <div class="widget-info-card">
+            <h2>Widget Information</h2>
+            <div class="widget-details">
+                <div class="detail-item">
+                    <label>Slug:</label>
+                    <span class="detail-value">{{ widget_data.slug }}</span>
+                </div>
+                
+                {% if widget_data.title %}
+                <div class="detail-item">
+                    <label>Title:</label>
+                    <span class="detail-value">{{ widget_data.title }}</span>
+                </div>
+                {% endif %}
+                
+                {% if widget_data.description %}
+                <div class="detail-item">
+                    <label>Description:</label>
+                    <span class="detail-value description">{{ widget_data.description }}</span>
+                </div>
+                {% endif %}
+                
+                {% if widget_data.channel %}
+                <div class="detail-item">
+                    <label>Channel:</label>
+                    <span class="detail-value">{{ widget_data.channel }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="progress-card">
+            <h2>Creation Progress</h2>
+            <div class="progress-info">
+                <div class="progress-spinner"></div>
+                <p id="progress-message">{{ progress }}</p>
+                <div class="progress-details">
+                    <small>This process typically takes 30-60 seconds. The AI is generating React code based on your description.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3>Widget Creation Failed</h3>
+            <div class="error-info">
+                <p id="error-message"></p>
+                <div class="error-actions">
+                    <a href="{{ url_for('widgets.initiate_widget') }}" class="button primary">Try Again</a>
+                    <a href="{{ url_for('widgets.list_widgets') }}" class="button secondary">Back to Widgets</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.waiting-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.widget-info-card, .progress-card {
+    background: var(--color-card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+}
+
+.widget-info-card h2, .progress-card h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
+    font-size: 1.25rem;
+}
+
+.widget-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: var(--color-text);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.detail-value.description {
+    background: var(--color-background-secondary, #f8f9fa);
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    font-style: italic;
+}
+
+.progress-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+}
+
+.progress-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--color-border);
+    border-top: 4px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#progress-message {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin: 0;
+}
+
+.progress-details {
+    max-width: 300px;
+}
+
+.progress-details small {
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--color-card-bg);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--color-error, #dc3545);
+}
+
+.error-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.error-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .waiting-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+    }
+}
+
+/* Success state styles */
+.progress-card.success {
+    border-color: var(--color-success, #28a745);
+}
+
+.progress-card.success .progress-spinner {
+    border-color: var(--color-success, #28a745);
+    border-top-color: transparent;
+    animation: none;
+}
+
+.progress-card.success .progress-spinner::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--color-success, #28a745);
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.progress-card.success #progress-message {
+    color: var(--color-success, #28a745);
+}
+</style>
+
+<script>
+const jobId = '{{ job_id }}';
+let pollInterval;
+
+async function pollStatus() {
+    try {
+        const response = await fetch(`/widget/initiate_status/${jobId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Job status check failed');
+        }
+        
+        // Update progress message
+        document.getElementById('progress-message').textContent = data.progress;
+        
+        if (data.status === 'processing') {
+            // Continue polling
+            // No action needed, interval will continue
+        } else if (data.status === 'completed') {
+            // Success - show success state and redirect
+            const progressCard = document.querySelector('.progress-card');
+            progressCard.classList.add('success');
+            
+            document.getElementById('progress-message').textContent = 'Widget created successfully! Redirecting...';
+            
+            // Clear polling interval
+            clearInterval(pollInterval);
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+                window.location.href = data.result.redirect_url;
+            }, 2000);
+            
+        } else if (data.status === 'error') {
+            // Error occurred - show error modal
+            clearInterval(pollInterval);
+            
+            document.getElementById('error-message').textContent = data.error || 'An unknown error occurred during widget creation.';
+            document.getElementById('error-modal').style.display = 'flex';
+        }
+        
+    } catch (error) {
+        console.error('Error checking job status:', error);
+        clearInterval(pollInterval);
+        
+        document.getElementById('error-message').textContent = 'Failed to check widget creation status: ' + error.message;
+        document.getElementById('error-modal').style.display = 'flex';
+    }
+}
+
+// Start polling when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Poll immediately, then every 2 seconds
+    pollStatus();
+    pollInterval = setInterval(pollStatus, 2000);
+});
+
+// Clean up interval when page unloads
+window.addEventListener('beforeunload', function() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+});
+</script>
+{% endblock %}

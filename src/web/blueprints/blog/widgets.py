@@ -390,7 +390,11 @@ def improve_widget(slug):
             'progress': 'Starting AI improvement...',
             'result': None,
             'error': None,
-            'started_at': time.time()
+            'started_at': time.time(),
+            'widget_info': {
+                'slug': slug,
+                'title': widget_title
+            }
         }
 
         # Start background thread for AI improvement
@@ -454,10 +458,14 @@ def improve_status(slug, job_id):
 
         job = improvement_jobs[job_id]
 
-        # Clean up old completed/errored jobs (older than 1 hour)
+        # Clean up old completed/errored jobs (older than 24 hours)
         current_time = time.time()
-        if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 3600:
+        if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 86400:
             del improvement_jobs[job_id]
+            return jsonify({
+                'success': False,
+                'error': 'Job has expired'
+            }), 404
 
         response = {
             'success': True,
@@ -467,12 +475,12 @@ def improve_status(slug, job_id):
 
         if job['status'] == 'completed' and job['result']:
             response['result'] = job['result']
-            # Clean up completed job
-            del improvement_jobs[job_id]
+            # Mark job as accessed but don't delete it yet - let it show in admin jobs page
+            job['accessed_at'] = current_time
         elif job['status'] == 'error':
             response['error'] = job['error']
-            # Clean up errored job
-            del improvement_jobs[job_id]
+            # Mark job as accessed but don't delete it yet - let it show in admin jobs page
+            job['accessed_at'] = current_time
 
         return jsonify(response)
 
@@ -636,43 +644,62 @@ def test_version(slug):
 def initiate_widget():
     """Create a new React widget using AI from a simple description."""
     if request.method == 'POST':
-        data = request.get_json()
-        slug = data.get('slug', '').strip()
-        description = data.get('description', '').strip()
-        title = data.get('title', '').strip()
-        channel = data.get('channel', 'private')
-        use_advanced_model = data.get('use_advanced_model', False)
-        look_and_feel = data.get('look_and_feel', {})
-        widget_schema = data.get('widget_schema', DUAL_FILE_WIDGET_SCHEMA) # Default to dual file schema
+        # Handle form data instead of JSON
+        slug = request.form.get('slug', '').strip()
+        description = request.form.get('description', '').strip()
+        title = request.form.get('title', '').strip()
+        channel = request.form.get('channel', 'private')
+        ai_model = request.form.get('ai_model', 'nano')
+        use_advanced_model = ai_model == 'mini'
+        
+        # Build look_and_feel from form data
+        look_and_feel = {
+            'tone': request.form.get('tone', 'playful'),
+            'visual': request.form.get('visual', 'clean'),
+            'feedback': request.form.get('feedback', 'immediate')
+        }
+        widget_schema = DUAL_FILE_WIDGET_SCHEMA # Default to dual file schema
 
         # Validate inputs - all parameters are required for OpenAI API
         if not slug or not slug.strip():
-            return jsonify({
-                'success': False,
-                'error': 'Slug is required and cannot be empty'
-            }), 400
+            flash('Slug is required and cannot be empty', 'error')
+            return render_template(
+                'widgets/initiate.html',
+                channel_manager=get_channel_manager(),
+                look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS,
+                form_data=request.form
+            )
 
         if not description or not description.strip():
-            return jsonify({
-                'success': False,
-                'error': 'Description is required and cannot be empty'
-            }), 400
+            flash('Description is required and cannot be empty', 'error')
+            return render_template(
+                'widgets/initiate.html',
+                channel_manager=get_channel_manager(),
+                look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS,
+                form_data=request.form
+            )
 
         # Validate widget_schema parameter - must be a valid Schema instance
         if not isinstance(widget_schema, (str, Schema)):
-            return jsonify({
-                'success': False,
-                'error': 'Invalid widget schema provided'
-            }), 400
+            flash('Invalid widget schema provided', 'error')
+            return render_template(
+                'widgets/initiate.html',
+                channel_manager=get_channel_manager(),
+                look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS,
+                form_data=request.form
+            )
 
         # Check if slug already exists
         with db.session() as session:
             existing = session.query(ReactWidget).filter_by(slug=slug).first()
             if existing:
-                return jsonify({
-                    'success': False,
-                    'error': 'A widget with this slug already exists'
-                }), 400
+                flash('A widget with this slug already exists', 'error')
+                return render_template(
+                    'widgets/initiate.html',
+                    channel_manager=get_channel_manager(),
+                    look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS,
+                    form_data=request.form
+                )
 
         # Generate widget title from slug if not provided
         if not title:
@@ -749,44 +776,6 @@ def initiate_widget():
                             published=False,
                             data_file=data_file_content
                         )
-
-
-
-@widgets_bp.route('/widget/initiate_status/<string:job_id>', methods=['GET'])
-@require_admin
-def initiate_status(job_id):
-    """Check the status of a widget initiation job."""
-    if job_id not in improvement_jobs:
-        return jsonify({
-            'success': False,
-            'error': 'Job not found'
-        }), 404
-
-    job = improvement_jobs[job_id]
-
-    # Clean up old completed/errored jobs (older than 1 hour)
-    current_time = time.time()
-    if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 3600:
-        del improvement_jobs[job_id]
-
-    response = {
-        'success': True,
-        'status': job['status'],
-        'progress': job['progress']
-    }
-
-    if job['status'] == 'completed' and job['result']:
-        response['result'] = job['result']
-        # Clean up completed job
-        del improvement_jobs[job_id]
-    elif job['status'] == 'error':
-        response['error'] = job['error']
-        # Clean up errored job
-        del improvement_jobs[job_id]
-
-    return jsonify(response)
-
-
                         session.add(widget)
                         session.flush()  # To get widget ID
 
@@ -820,7 +809,7 @@ def initiate_status(job_id):
                             'widget_title': title,
                             'build_success': build_success,
                             'usage_stats': result['usage_stats'],
-                            'redirect_url': url_for('widgets.edit_widget', slug=slug)
+                            'redirect_url': f'/widget/{slug}/edit'
                         }
                         improvement_jobs[job_id]['progress'] = 'Widget creation completed'
                         logger.info(f"Completed background widget initiation for slug {slug}, job {job_id}")
@@ -841,15 +830,137 @@ def initiate_status(job_id):
         thread.daemon = True
         thread.start()
 
-        return jsonify({
-            'success': True,
-            'job_id': job_id,
-            'message': 'Widget generation started in background'
-        })
+        # Redirect to waiting page instead of returning JSON
+        return redirect(url_for('widgets.widget_waiting', job_id=job_id))
 
     # GET request - show the initiation form
     return render_template(
         'widgets/initiate.html',
         channel_manager=get_channel_manager(),
         look_and_feel_options=widget_initiator.LOOK_AND_FEEL_OPTIONS
+    )
+
+
+@widgets_bp.route('/widget/initiate_status/<string:job_id>', methods=['GET'])
+@require_admin
+def initiate_status(job_id):
+    """Check the status of a widget initiation job."""
+    if job_id not in improvement_jobs:
+        return jsonify({
+            'success': False,
+            'error': 'Job not found'
+        }), 404
+
+    job = improvement_jobs[job_id]
+
+    # Clean up old completed/errored jobs (older than 24 hours)
+    current_time = time.time()
+    if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 86400:
+        del improvement_jobs[job_id]
+        return jsonify({
+            'success': False,
+            'error': 'Job has expired'
+        }), 404
+
+    response = {
+        'success': True,
+        'status': job['status'],
+        'progress': job['progress']
+    }
+
+    if job['status'] == 'completed' and job['result']:
+        response['result'] = job['result']
+        # Mark job as accessed but don't delete it yet - let it show in admin jobs page
+        job['accessed_at'] = current_time
+    elif job['status'] == 'error':
+        response['error'] = job['error']
+        # Mark job as accessed but don't delete it yet - let it show in admin jobs page
+        job['accessed_at'] = current_time
+
+    return jsonify(response)
+
+
+@widgets_bp.route('/widget/waiting/<string:job_id>')
+@require_admin
+def widget_waiting(job_id):
+    """Show waiting page for widget creation with available information."""
+    if job_id not in improvement_jobs:
+        flash("Widget creation job not found or has expired.", 'error')
+        return redirect(url_for('widgets.initiate_widget'))
+
+    job = improvement_jobs[job_id]
+    widget_data = job.get('widget_data', {})
+    
+    return render_template(
+        'widgets/waiting.html',
+        job_id=job_id,
+        widget_data=widget_data,
+        status=job['status'],
+        progress=job['progress']
+    )
+
+
+@widgets_bp.route('/jobs')
+@navigable(name="Jobs Status", category="admin")
+@require_admin
+def list_jobs():
+    """List all jobs currently underway and recently completed."""
+    current_time = time.time()
+    
+    # Clean up very old jobs (older than 24 hours) to prevent memory leaks
+    jobs_to_delete = []
+    for job_id, job_data in improvement_jobs.items():
+        if job_data['status'] in ['completed', 'error'] and current_time - job_data['started_at'] > 86400:
+            jobs_to_delete.append(job_id)
+    
+    for job_id in jobs_to_delete:
+        del improvement_jobs[job_id]
+    
+    # Separate running and completed jobs
+    running_jobs = []
+    completed_jobs = []
+    
+    for job_id, job_data in improvement_jobs.items():
+        job_info = {
+            'id': job_id,
+            'status': job_data['status'],
+            'progress': job_data['progress'],
+            'started_at': datetime.fromtimestamp(job_data['started_at']),
+            'error': job_data.get('error'),
+            'duration': current_time - job_data['started_at']
+        }
+        
+        # Determine job type and add relevant info
+        if 'widget_data' in job_data:
+            # This is a widget initiation job
+            job_info['type'] = 'Widget Creation'
+            job_info['widget_slug'] = job_data['widget_data'].get('slug', 'Unknown')
+            job_info['widget_title'] = job_data['widget_data'].get('title', 'Unknown')
+        elif 'widget_info' in job_data:
+            # This is a widget improvement job with widget info
+            job_info['type'] = 'Widget Improvement'
+            job_info['widget_slug'] = job_data['widget_info'].get('slug', 'Unknown')
+            job_info['widget_title'] = job_data['widget_info'].get('title', 'Unknown')
+        else:
+            # This is a legacy widget improvement job without widget info
+            job_info['type'] = 'Widget Improvement'
+            job_info['widget_slug'] = 'Unknown'
+            job_info['widget_title'] = 'Unknown'
+        
+        if job_data['status'] == 'processing':
+            running_jobs.append(job_info)
+        else:
+            completed_jobs.append(job_info)
+    
+    # Sort completed jobs by start time (most recent first) and limit to 10
+    completed_jobs.sort(key=lambda x: x['started_at'], reverse=True)
+    completed_jobs = completed_jobs[:10]
+    
+    # Sort running jobs by start time (oldest first)
+    running_jobs.sort(key=lambda x: x['started_at'])
+    
+    return render_template(
+        'admin/jobs.html',
+        running_jobs=running_jobs,
+        completed_jobs=completed_jobs
     )
