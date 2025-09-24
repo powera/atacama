@@ -451,7 +451,63 @@ document.getElementById('initiate-form').addEventListener('submit', async functi
         const response = await fetch('{{ url_for("widgets.initiate_widget") }}', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to start widget generation');
+        }
+        
+        // Start polling for job status
+        pollInitiationStatus(data.job_id);
+        
+    } catch (error) {
+        button.disabled = false;
+        modal.style.display = 'none';
+        alert('Error: ' + error.message);
+    }
+});
+
+async function pollInitiationStatus(jobId) {
+    const modal = document.getElementById('progress-modal');
+    const progressMessage = document.getElementById('progress-message');
+    
+    try {
+        const response = await fetch(`/widget/initiate_status/${jobId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Job status check failed');
+        }
+        
+        progressMessage.textContent = data.progress;
+        
+        if (data.status === 'processing') {
+            // Continue polling
+            setTimeout(() => pollInitiationStatus(jobId), 2000);
+        } else if (data.status === 'completed') {
+            // Success - redirect to edit widget
+            progressMessage.textContent = 'Widget created successfully! Redirecting...';
+            setTimeout(() => {
+                window.location.href = data.result.redirect_url;
+            }, 1000);
+        } else if (data.status === 'error') {
+            // Error occurred
+            document.getElementById('create-button').disabled = false;
+            modal.style.display = 'none';
+            alert('Error creating widget: ' + (data.error || 'Unknown error'));
+        }
+        
+    } catch (error) {
+        document.getElementById('create-button').disabled = false;
+        modal.style.display = 'none';
+        alert('Error checking job status: ' + error.message);
+    }
+}': 'application/json',
             },
             body: JSON.stringify(formData)
         });

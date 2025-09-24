@@ -678,92 +678,174 @@ def initiate_widget():
         if not title:
             title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
 
-        # Determine dual_file mode based on schema type
-        # OpenAI requires explicit boolean values, not schema comparisons
-        dual_file = widget_schema == DUAL_FILE_WIDGET_SCHEMA if isinstance(widget_schema, Schema) else widget_schema == 'dual_file'
+        # Generate unique job ID
+        job_id = str(uuid.uuid4())
 
-        # Use AI to generate the widget code
-        result = widget_initiator.create_widget(
-            slug=slug,
-            description=description,
-            widget_title=title,
-            use_advanced_model=use_advanced_model,
-            look_and_feel=look_and_feel,
-            dual_file=dual_file
-        )
+        # Initialize job status
+        improvement_jobs[job_id] = {
+            'status': 'processing',
+            'progress': 'Starting AI widget generation...',
+            'result': None,
+            'error': None,
+            'started_at': time.time(),
+            'widget_data': {
+                'slug': slug,
+                'title': title,
+                'description': description,
+                'channel': channel,
+                'author_id': g.user.id
+            }
+        }
 
-        if not result['success']:
-            return jsonify({
-                'success': False,
-                'error': f"Failed to generate widget: {result['error']}"
-            }), 500
+        # Start background thread for AI generation
+        def initiate_in_background():
+            try:
+                logger.info(f"Starting background widget initiation for slug {slug}, job {job_id}")
+                improvement_jobs[job_id]['progress'] = 'AI is generating widget code...'
 
-        # Create the widget in the database
-        try:
-            with db.session() as session:
-                # Extract code based on whether it's dual-file or single-file
-                widget_code_content = ""
-                data_file_content = None
+                # Determine dual_file mode based on schema type
+                dual_file = widget_schema == DUAL_FILE_WIDGET_SCHEMA if isinstance(widget_schema, Schema) else widget_schema == 'dual_file'
 
-                if isinstance(result['widget_code'], dict):
-                    # Dual-file response
-                    widget_code_content = result['widget_code']['code_file']['content']
-                    data_file_content = result['widget_code']['data_file']['content']
-                else:
-                    # Single-file response
-                    widget_code_content = result['widget_code']
-
-                widget = ReactWidget(
+                # Use AI to generate the widget code
+                result = widget_initiator.create_widget(
                     slug=slug,
-                    title=title,
-                    code=widget_code_content,
                     description=description,
-                    channel=channel,
-                    author=g.user,
-                    published=False,
-                    data_file=data_file_content
+                    widget_title=title,
+                    use_advanced_model=use_advanced_model,
+                    look_and_feel=look_and_feel,
+                    dual_file=dual_file
                 )
 
-                session.add(widget)
-                session.flush()  # To get widget ID
+                if not result['success']:
+                    improvement_jobs[job_id]['status'] = 'error'
+                    improvement_jobs[job_id]['error'] = f"Failed to generate widget: {result['error']}"
+                    improvement_jobs[job_id]['progress'] = 'Error occurred during widget generation'
+                    return
 
-                # Create initial version
-                code_hash = hashlib.md5(widget_code_content.encode('utf-8')).hexdigest()
-                initial_version = WidgetVersion(
-                    widget_id=widget.id,
-                    version_number=1,
-                    code=widget_code_content,
-                    code_hash=code_hash,
-                    data_file=data_file_content,
-                    improvement_type='ai_generated',
-                    dev_comments='Initial AI-generated widget from description',
-                    ai_model_used='openai'
-                )
+                improvement_jobs[job_id]['progress'] = 'Creating widget in database...'
 
-                session.add(initial_version)
-                session.flush()
+                # Create the widget in the database
+                with db.session() as session:
+                    try:
+                        # Extract code based on whether it's dual-file or single-file
+                        widget_code_content = ""
+                        data_file_content = None
 
-                # Build the initial version
-                build_success = initial_version.build()
-                logger.info(f"Created AI-generated widget {slug}, build success: {build_success}")
+                        if isinstance(result['widget_code'], dict):
+                            # Dual-file response
+                            widget_code_content = result['widget_code']['code_file']['content']
+                            data_file_content = result['widget_code']['data_file']['content']
+                        else:
+                            # Single-file response
+                            widget_code_content = result['widget_code']
 
-                session.commit()
+                        widget = ReactWidget(
+                            slug=slug,
+                            title=title,
+                            code=widget_code_content,
+                            description=description,
+                            channel=channel,
+                            author_id=improvement_jobs[job_id]['widget_data']['author_id'],
+                            published=False,
+                            data_file=data_file_content
+                        )
 
-                return jsonify({
-                    'success': True,
-                    'widget_slug': slug,
-                    'widget_title': title,
-                    'build_success': build_success,
-                    'usage_stats': result['usage_stats'],
-                    'redirect_url': url_for('widgets.edit_widget', slug=slug)
-                })
 
-        except Exception as e:
-            logger.error(f"Error creating widget in database: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': f"Failed to create widget: {str(e)}"
-            }), 500
+
+@widgets_bp.route('/widget/initiate_status/<string:job_id>', methods=['GET'])
+@require_admin
+def initiate_status(job_id):
+    """Check the status of a widget initiation job."""
+    if job_id not in improvement_jobs:
+        return jsonify({
+            'success': False,
+            'error': 'Job not found'
+        }), 404
+
+    job = improvement_jobs[job_id]
+
+    # Clean up old completed/errored jobs (older than 1 hour)
+    current_time = time.time()
+    if job['status'] in ['completed', 'error'] and current_time - job['started_at'] > 3600:
+        del improvement_jobs[job_id]
+
+    response = {
+        'success': True,
+        'status': job['status'],
+        'progress': job['progress']
+    }
+
+    if job['status'] == 'completed' and job['result']:
+        response['result'] = job['result']
+        # Clean up completed job
+        del improvement_jobs[job_id]
+    elif job['status'] == 'error':
+        response['error'] = job['error']
+        # Clean up errored job
+        del improvement_jobs[job_id]
+
+    return jsonify(response)
+
+
+                        session.add(widget)
+                        session.flush()  # To get widget ID
+
+                        # Create initial version
+                        code_hash = hashlib.md5(widget_code_content.encode('utf-8')).hexdigest()
+                        initial_version = WidgetVersion(
+                            widget_id=widget.id,
+                            version_number=1,
+                            code=widget_code_content,
+                            code_hash=code_hash,
+                            data_file=data_file_content,
+                            improvement_type='ai_generated',
+                            dev_comments='Initial AI-generated widget from description',
+                            ai_model_used='openai'
+                        )
+
+                        session.add(initial_version)
+                        session.flush()
+
+                        improvement_jobs[job_id]['progress'] = 'Building widget...'
+
+                        # Build the initial version
+                        build_success = initial_version.build()
+                        logger.info(f"Created AI-generated widget {slug}, build success: {build_success}")
+
+                        session.commit()
+
+                        improvement_jobs[job_id]['status'] = 'completed'
+                        improvement_jobs[job_id]['result'] = {
+                            'widget_slug': slug,
+                            'widget_title': title,
+                            'build_success': build_success,
+                            'usage_stats': result['usage_stats'],
+                            'redirect_url': url_for('widgets.edit_widget', slug=slug)
+                        }
+                        improvement_jobs[job_id]['progress'] = 'Widget creation completed'
+                        logger.info(f"Completed background widget initiation for slug {slug}, job {job_id}")
+
+                    except Exception as e:
+                        logger.error(f"Error creating widget in database for job {job_id}: {str(e)}")
+                        improvement_jobs[job_id]['status'] = 'error'
+                        improvement_jobs[job_id]['error'] = f"Failed to create widget: {str(e)}"
+                        improvement_jobs[job_id]['progress'] = 'Error occurred during database creation'
+
+            except Exception as e:
+                logger.error(f"Error in background widget initiation for job {job_id}: {str(e)}")
+                improvement_jobs[job_id]['status'] = 'error'
+                improvement_jobs[job_id]['error'] = str(e)
+                improvement_jobs[job_id]['progress'] = 'Error occurred during widget generation'
+
+        thread = threading.Thread(target=initiate_in_background)
+        thread.daemon = True
+        thread.start()
+
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Widget generation started in background'
+        })
 
     # GET request - show the initiation form
     return render_template(
