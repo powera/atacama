@@ -15,6 +15,7 @@ from common.config.domain_config import get_domain_manager
 from common.llm.widget_improver import widget_improver
 from common.llm.widget_initiator import widget_initiator
 from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA
+from common.llm.types import Schema, SchemaProperty
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 from models.messages import get_user_allowed_channels
@@ -24,6 +25,34 @@ logger = get_logger(__name__)
 
 # Global storage for improvement jobs
 improvement_jobs = {}
+
+# OpenAI API Schema Requirements:
+# - All schema properties must be properly typed using Schema and SchemaProperty from common.llm.types
+# - Missing parameters should be removed from schema definitions (not marked as optional with None defaults)
+# - All parameters in OpenAI schemas should be marked as required=True unless explicitly optional
+# - Use structured_data field from Response object for JSON schema responses
+# - Empty string or None values should be handled explicitly before sending to API
+
+def validate_llm_parameters(params: dict) -> dict:
+    """
+    Validate and clean parameters for OpenAI API calls.
+    Removes None values and empty strings that could cause API issues.
+    
+    Args:
+        params: Dictionary of parameters to validate
+        
+    Returns:
+        Cleaned dictionary with None/empty values removed
+    """
+    cleaned = {}
+    for key, value in params.items():
+        # Remove None values and empty strings
+        if value is not None and value != '':
+            cleaned[key] = value
+        # For boolean values, keep False explicitly
+        elif isinstance(value, bool):
+            cleaned[key] = value
+    return cleaned
 
 @widgets_bp.route('/widget/<string:slug>')
 @optional_auth
@@ -327,6 +356,13 @@ def improve_widget(slug):
         improvement_type = data.get('improvement_type', 'custom')
         use_advanced_model = data.get('use_advanced_model', False)
         target_files = data.get('target_files', ['main_code'])
+        
+        # Validate required parameters for OpenAI API
+        if not prompt.strip():
+            return jsonify({
+                'success': False,
+                'error': 'Improvement prompt is required'
+            }), 400
 
         # Get the base code and data file
         if base_version == 'current':
@@ -609,17 +645,24 @@ def initiate_widget():
         look_and_feel = data.get('look_and_feel', {})
         widget_schema = data.get('widget_schema', DUAL_FILE_WIDGET_SCHEMA) # Default to dual file schema
 
-        # Validate inputs
-        if not slug:
+        # Validate inputs - all parameters are required for OpenAI API
+        if not slug or not slug.strip():
             return jsonify({
                 'success': False,
-                'error': 'Slug is required'
+                'error': 'Slug is required and cannot be empty'
             }), 400
 
-        if not description:
+        if not description or not description.strip():
             return jsonify({
                 'success': False,
-                'error': 'Description is required'
+                'error': 'Description is required and cannot be empty'
+            }), 400
+
+        # Validate widget_schema parameter - must be a valid Schema instance
+        if not isinstance(widget_schema, (str, Schema)):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid widget schema provided'
             }), 400
 
         # Check if slug already exists
@@ -635,6 +678,10 @@ def initiate_widget():
         if not title:
             title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
 
+        # Determine dual_file mode based on schema type
+        # OpenAI requires explicit boolean values, not schema comparisons
+        dual_file = widget_schema == DUAL_FILE_WIDGET_SCHEMA if isinstance(widget_schema, Schema) else widget_schema == 'dual_file'
+
         # Use AI to generate the widget code
         result = widget_initiator.create_widget(
             slug=slug,
@@ -642,7 +689,7 @@ def initiate_widget():
             widget_title=title,
             use_advanced_model=use_advanced_model,
             look_and_feel=look_and_feel,
-            dual_file=widget_schema == DUAL_FILE_WIDGET_SCHEMA # Convert schema to boolean
+            dual_file=dual_file
         )
 
         if not result['success']:
