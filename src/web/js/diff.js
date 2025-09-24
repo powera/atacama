@@ -389,6 +389,128 @@ class DiffUtil {
             modeText.textContent = 'Switch to Unified View';
         }
     }
+
+    /**
+     * Update side-by-side diff view for data files
+     * @param {Array} diff - Diff array
+     */
+    static updateDataSideBySideView(diff) {
+        const sideBySideView = document.getElementById('data-side-by-side-view');
+        
+        // Check if element exists
+        if (!sideBySideView) {
+            console.error('Required data diff view element not found');
+            return;
+        }
+        
+        // Process diff to create aligned rows
+        const alignedDiff = this.createAlignedDiff(diff);
+        
+        // Create table structure for side-by-side view
+        let tableHTML = `
+            <table class="diff-table side-by-side-table">
+                <thead>
+                    <tr>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Original Data File</th>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Improved Data File</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        alignedDiff.forEach(row => {
+            tableHTML += '<tr>';
+            
+            // Original side
+            if (row.original) {
+                const originalClass = row.original.type === 'removed' ? 'line-removed' : '';
+                const lineNum = this.escapeHtml(String(row.original.lineNum || ''));
+                tableHTML += `<td class="line-num ${originalClass}">${lineNum}</td>`;
+                tableHTML += `<td class="code-cell ${originalClass}"><pre>${this.escapeHtml(row.original.content || '')}</pre></td>`;
+            } else {
+                tableHTML += `<td class="line-num line-empty"></td>`;
+                tableHTML += `<td class="code-cell line-empty"></td>`;
+            }
+            
+            // Improved side
+            if (row.improved) {
+                const improvedClass = row.improved.type === 'added' ? 'line-added' : '';
+                const lineNum = this.escapeHtml(String(row.improved.lineNum || ''));
+                tableHTML += `<td class="line-num ${improvedClass}">${lineNum}</td>`;
+                tableHTML += `<td class="code-cell ${improvedClass}"><pre>${this.escapeHtml(row.improved.content || '')}</pre></td>`;
+            } else {
+                tableHTML += `<td class="line-num line-empty"></td>`;
+                tableHTML += `<td class="code-cell line-empty"></td>`;
+            }
+            
+            tableHTML += '</tr>';
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        sideBySideView.innerHTML = tableHTML;
+    }
+
+    /**
+     * Update unified diff view for data files
+     * @param {Array} diff - Diff array
+     */
+    static updateDataUnifiedView(diff) {
+        const unifiedView = document.getElementById('data-unified-view');
+        
+        // Check if element exists
+        if (!unifiedView) {
+            console.error('Required data unified view element not found');
+            return;
+        }
+        
+        // Create table structure for unified view
+        let tableHTML = `
+            <table class="diff-table unified-table">
+                <thead>
+                    <tr>
+                        <th class="line-num-header">Line</th>
+                        <th class="code-header">Unified Data File Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        let lineNum = 1;
+        
+        diff.forEach(item => {
+            if (item.type === 'unchanged') {
+                tableHTML += `<tr>
+                    <td class="line-num">${this.escapeHtml(String(lineNum))}</td>
+                    <td class="code-cell"><pre>${this.escapeHtml(item.original)}</pre></td>
+                </tr>`;
+                lineNum++;
+            } else if (item.type === 'removed') {
+                tableHTML += `<tr>
+                    <td class="line-num line-removed">-</td>
+                    <td class="code-cell line-removed"><pre>- ${this.escapeHtml(item.original)}</pre></td>
+                </tr>`;
+            } else if (item.type === 'added') {
+                tableHTML += `<tr>
+                    <td class="line-num line-added">+</td>
+                    <td class="code-cell line-added"><pre>+ ${this.escapeHtml(item.improved)}</pre></td>
+                </tr>`;
+                lineNum++;
+            }
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        unifiedView.innerHTML = tableHTML;
+    }
 }
 
 // Export for use in other scripts

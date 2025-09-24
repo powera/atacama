@@ -142,10 +142,29 @@
                         🧪 Test Version
                     </button>
                 </div>
-                <div class="code-preview">
-                    <h4>Improved Code:</h4>
-                    <textarea id="improved-code" rows="20" readonly></textarea>
+                
+                <!-- File Tabs -->
+                <div class="file-tabs">
+                    <button type="button" class="tab-button active" onclick="showFileTab('code')">
+                        📄 Main Code
+                    </button>
+                    <button type="button" class="tab-button" id="data-file-tab" onclick="showFileTab('data')" style="display: none;">
+                        📊 Data File
+                    </button>
                 </div>
+                
+                <!-- Code Preview -->
+                <div class="file-content">
+                    <div id="code-tab-content" class="tab-content active">
+                        <h4>Improved Code:</h4>
+                        <textarea id="improved-code" rows="20" readonly></textarea>
+                    </div>
+                    <div id="data-tab-content" class="tab-content" style="display: none;">
+                        <h4>Improved Data File:</h4>
+                        <textarea id="improved-data-file" rows="20" readonly></textarea>
+                    </div>
+                </div>
+                
                 <div class="ai-notes">
                     <h4>AI Notes:</h4>
                     <div id="ai-response"></div>
@@ -162,6 +181,17 @@
             <h2>Code Comparison</h2>
             <span class="close" onclick="closeCompare()">&times;</span>
         </div>
+        
+        <!-- File Selection for Comparison -->
+        <div class="compare-file-tabs">
+            <button type="button" class="compare-tab-button active" onclick="showCompareTab('code')">
+                📄 Main Code Changes
+            </button>
+            <button type="button" class="compare-tab-button" id="compare-data-tab" onclick="showCompareTab('data')" style="display: none;">
+                📊 Data File Changes
+            </button>
+        </div>
+        
         <div class="diff-toolbar">
             <button type="button" class="button secondary" onclick="toggleDiffMode()">
                 <span id="diff-mode-text">Switch to Unified View</span>
@@ -170,30 +200,62 @@
                 <span id="diff-stats-text">Computing changes...</span>
             </div>
         </div>
-        <div class="diff-container">
-            <div id="side-by-side-view" class="diff-view active">
-                <div class="diff-header">
-                    <div class="diff-header-left">
-                        <h3>Original Code</h3>
-                        <span class="line-count" id="original-line-count"></span>
+        
+        <!-- Code Comparison -->
+        <div id="code-compare-content" class="compare-content active">
+            <div class="diff-container">
+                <div id="side-by-side-view" class="diff-view active">
+                    <div class="diff-header">
+                        <div class="diff-header-left">
+                            <h3>Original Code</h3>
+                            <span class="line-count" id="original-line-count"></span>
+                        </div>
+                        <div class="diff-header-right">
+                            <h3>Improved Code</h3>
+                            <span class="line-count" id="improved-line-count"></span>
+                        </div>
                     </div>
-                    <div class="diff-header-right">
-                        <h3>Improved Code</h3>
-                        <span class="line-count" id="improved-line-count"></span>
+                    <!-- Table will be inserted here by JavaScript -->
+                </div>
+                <div id="unified-view" class="diff-view">
+                    <div class="diff-header">
+                        <h3>Unified Diff</h3>
                     </div>
+                    <!-- Table will be inserted here by JavaScript -->
                 </div>
-                <!-- Table will be inserted here by JavaScript -->
-            </div>
-            <div id="unified-view" class="diff-view">
-                <div class="diff-header">
-                    <h3>Unified Diff</h3>
-                </div>
-                <!-- Table will be inserted here by JavaScript -->
             </div>
         </div>
+        
+        <!-- Data File Comparison -->
+        <div id="data-compare-content" class="compare-content" style="display: none;">
+            <div class="diff-container">
+                <div id="data-side-by-side-view" class="diff-view active">
+                    <div class="diff-header">
+                        <div class="diff-header-left">
+                            <h3>Original Data File</h3>
+                            <span class="line-count" id="original-data-line-count"></span>
+                        </div>
+                        <div class="diff-header-right">
+                            <h3>Improved Data File</h3>
+                            <span class="line-count" id="improved-data-line-count"></span>
+                        </div>
+                    </div>
+                    <!-- Table will be inserted here by JavaScript -->
+                </div>
+                <div id="data-unified-view" class="diff-view">
+                    <div class="diff-header">
+                        <h3>Unified Diff</h3>
+                    </div>
+                    <!-- Table will be inserted here by JavaScript -->
+                </div>
+            </div>
+        </div>
+        
         <!-- Fallback textareas for copy functionality -->
         <textarea id="original-code" style="display: none;" readonly></textarea>
         <textarea id="comparison-improved-code" style="display: none;" readonly></textarea>
+        <textarea id="original-data-file" style="display: none;" readonly></textarea>
+        <textarea id="comparison-improved-data-file" style="display: none;" readonly></textarea>
     </div>
 </div>
 
@@ -229,6 +291,7 @@
     let currentType = '';
     let originalCode = '';
     let originalDataFile = null;
+    let hasDataFileChanges = false;
 
     // Set up canned action buttons
     document.querySelectorAll('.canned-action').forEach(button => {
@@ -257,7 +320,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    resolve(data.code);
+                    resolve({
+                        code: data.code,
+                        data_file: data.data_file
+                    });
                 } else {
                     reject(new Error(data.error || 'Failed to get version code'));
                 }
@@ -296,8 +362,9 @@
 
         // Get the selected version code first
         getSelectedVersionCode()
-            .then(code => {
-                originalCode = code;
+            .then(versionData => {
+                originalCode = versionData.code;
+                originalDataFile = versionData.data_file;
 
                 progressText.textContent = 'Sending request to AI...';
                 progressFill.style.width = '30%';
@@ -400,15 +467,52 @@
         if (data.success) {
             currentImprovedCode = data.improved_code;
             currentImprovedDataFile = data.improved_data_file;
+            
+            // Update code display
             document.getElementById('improved-code').value = data.improved_code;
+            
+            // Check if data file was changed
+            hasDataFileChanges = (
+                data.improved_data_file !== null && 
+                data.improved_data_file !== originalDataFile
+            );
+            
+            // Show/hide data file tab based on whether there are changes
+            const dataFileTab = document.getElementById('data-file-tab');
+            if (hasDataFileChanges || data.improved_data_file) {
+                dataFileTab.style.display = 'block';
+                document.getElementById('improved-data-file').value = data.improved_data_file || '';
+                
+                // Update tab text to indicate if it's new or modified
+                if (!originalDataFile && data.improved_data_file) {
+                    dataFileTab.innerHTML = '📊 Data File (New)';
+                } else if (hasDataFileChanges) {
+                    dataFileTab.innerHTML = '📊 Data File (Modified)';
+                } else {
+                    dataFileTab.innerHTML = '📊 Data File';
+                }
+            } else {
+                dataFileTab.style.display = 'none';
+            }
             
             // Properly escape HTML content
             const aiModel = escapeHtml(data.ai_model || 'OpenAI');
             const improvementType = escapeHtml(currentType);
             const fullResponse = data.full_response ? escapeHtml(data.full_response) : '';
             
+            // Build summary of changes
+            let changesSummary = '';
+            if (hasDataFileChanges) {
+                changesSummary = '<p><strong>Files modified:</strong> Main code and data file</p>';
+            } else if (data.improved_data_file && !originalDataFile) {
+                changesSummary = '<p><strong>Files modified:</strong> Main code, new data file created</p>';
+            } else {
+                changesSummary = '<p><strong>Files modified:</strong> Main code only</p>';
+            }
+            
             document.getElementById('ai-response').innerHTML = `
                 <p><strong>Improvement successful!</strong></p>
+                ${changesSummary}
                 <p>AI used: ${aiModel}</p>
                 <p>Type: ${improvementType}</p>
                 ${fullResponse ? `<details><summary>Full AI Response</summary><pre>${fullResponse}</pre></details>` : ''}
@@ -420,7 +524,10 @@
                 <p>The original code has been preserved.</p>
             `;
             currentImprovedCode = originalCode;
+            currentImprovedDataFile = originalDataFile;
             document.getElementById('improved-code').value = originalCode;
+            document.getElementById('data-file-tab').style.display = 'none';
+            hasDataFileChanges = false;
         }
     }
 
@@ -430,7 +537,46 @@
         return div.innerHTML;
     }
 
+    function showFileTab(tabType) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none';
+        });
+
+        if (tabType === 'code') {
+            document.querySelector('.tab-button[onclick="showFileTab(\'code\')"]').classList.add('active');
+            document.getElementById('code-tab-content').classList.add('active');
+            document.getElementById('code-tab-content').style.display = 'block';
+        } else if (tabType === 'data') {
+            document.querySelector('.tab-button[onclick="showFileTab(\'data\')"]').classList.add('active');
+            document.getElementById('data-tab-content').classList.add('active');
+            document.getElementById('data-tab-content').style.display = 'block';
+        }
+    }
+
+    function showCompareTab(tabType) {
+        // Update compare tab buttons
+        document.querySelectorAll('.compare-tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.compare-content').forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none';
+        });
+
+        if (tabType === 'code') {
+            document.querySelector('.compare-tab-button[onclick="showCompareTab(\'code\')"]').classList.add('active');
+            document.getElementById('code-compare-content').classList.add('active');
+            document.getElementById('code-compare-content').style.display = 'block';
+        } else if (tabType === 'data') {
+            document.querySelector('.compare-tab-button[onclick="showCompareTab(\'data\')"]').classList.add('active');
+            document.getElementById('data-compare-content').classList.add('active');
+            document.getElementById('data-compare-content').style.display = 'block';
+        }
+    }
+
     function compareCode() {
+        // Set up code comparison
         document.getElementById('original-code').value = originalCode;
         document.getElementById('comparison-improved-code').value = currentImprovedCode;
         
@@ -446,6 +592,36 @@
         // Update stats
         DiffUtil.updateDiffStats(diff);
         
+        // Handle data file comparison if there are changes
+        const compareDataTab = document.getElementById('compare-data-tab');
+        if (hasDataFileChanges || (currentImprovedDataFile && !originalDataFile)) {
+            compareDataTab.style.display = 'block';
+            
+            // Set up data file comparison
+            const origDataFile = originalDataFile || '';
+            const improvedDataFile = currentImprovedDataFile || '';
+            
+            document.getElementById('original-data-file').value = origDataFile;
+            document.getElementById('comparison-improved-data-file').value = improvedDataFile;
+            
+            // Generate data file diff
+            const dataDiff = DiffUtil.generateDiff(origDataFile, improvedDataFile);
+            
+            // Update data file comparison views
+            DiffUtil.updateDataSideBySideView(dataDiff);
+            DiffUtil.updateDataUnifiedView(dataDiff);
+            
+            // Update tab text
+            if (!originalDataFile && currentImprovedDataFile) {
+                compareDataTab.innerHTML = '📊 Data File Changes (New)';
+            } else {
+                compareDataTab.innerHTML = '📊 Data File Changes';
+            }
+        } else {
+            compareDataTab.style.display = 'none';
+        }
+        
+        // Show the modal
         document.getElementById('compare-modal').style.display = 'block';
     }
 
@@ -515,7 +691,13 @@
         codeInput.name = 'code';
         codeInput.value = currentImprovedCode;
 
+        const dataFileInput = document.createElement('input');
+        dataFileInput.type = 'hidden';
+        dataFileInput.name = 'data_file';
+        dataFileInput.value = currentImprovedDataFile || '';
+
         testForm.appendChild(codeInput);
+        testForm.appendChild(dataFileInput);
         document.body.appendChild(testForm);
         testForm.submit();
         document.body.removeChild(testForm);

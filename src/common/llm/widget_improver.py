@@ -186,6 +186,10 @@ Ensure the widget provides an excellent mobile user experience.'''
         :return: Dict containing success status, improved code, improved data file, error message, and usage stats.
         """
         try:
+            # Default to modifying main_code if no target_files specified (backward compatibility)
+            if not target_files:
+                target_files = ['main_code']
+                
             selected_model = "gpt-5-mini" if use_advanced_model else "gpt-5-nano"
             logger.info(f"Using model: {selected_model} for widget improvement")
 
@@ -203,7 +207,7 @@ Ensure the widget provides an excellent mobile user experience.'''
                 input_tokens = 0
 
             max_tokens = max(2048, int(input_tokens * 1.25) + 500)
-
+            
             # Determine if we should include data_file in schema
             include_data_file = (
                 'data_file' in target_files or
@@ -235,11 +239,22 @@ Ensure the widget provides an excellent mobile user experience.'''
 
             # Extract from structured response
             structured_data = response.structured_data
-            improved_code = structured_data.get('main_code', current_code)
-            improved_data_file = structured_data.get('data_file', data_file)
+            
+            # Only update files that were explicitly targeted for improvement
+            if 'main_code' in target_files:
+                improved_code = structured_data.get('main_code', current_code)
+            else:
+                improved_code = current_code  # Keep original if not targeted
+            
+            # Handle data file based on target files
+            if 'data_file' in target_files or 'create_data_file' in target_files:
+                improved_data_file = structured_data.get('data_file', data_file)
+            else:
+                improved_data_file = data_file  # Keep original if not targeted
+            
             improved_additional_files = additional_files or {}  # Keep original additional files
 
-            logger.info(f"Finished improving widget code for '{widget_title}'.")
+            logger.info(f"Finished improving widget code for '{widget_title}'. Target files: {target_files}")
             return {
                 'success': True,
                 'improved_code': improved_code,
@@ -283,7 +298,7 @@ WIDGET CONTEXT:
 
         target_files_instruction = ""
         if target_files:
-            target_files_instruction = f"\nTARGET FILES TO MODIFY: {', '.join(target_files)}\nOnly modify the specified files unless the improvement requires changes to other files.\n"
+            target_files_instruction = f"\nTARGET FILES TO MODIFY: {', '.join(target_files)}\nIMPORTANT: Only modify the files listed above. Do not change other files unless absolutely necessary for the improvement to work.\n"
 
         prompt_parts.extend([
             f"""
@@ -302,7 +317,10 @@ IMPORTANT:
 - Ensure the code is production-ready.
 - Test that all imports are available (React, lucide-react icons, etc.).
 
-Provide the improved files in the structured JSON format requested. Always include main_code even if unchanged. Include data_file only if it was modified or if creating a new data file was requested.
+Provide the improved files in the structured JSON format requested. 
+- If main_code is in the target files, provide the improved main_code. If not, the original will be preserved.
+- If data_file or create_data_file is in the target files, provide the improved data_file. If not, the original will be preserved.
+- Only return content for files that were actually modified according to the target files list.
 """
         ])
         return "\n".join(prompt_parts)

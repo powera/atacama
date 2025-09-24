@@ -618,12 +618,14 @@ def test_version(slug):
             abort(403)
 
         test_code = request.form.get('code', widget.code)
+        test_data_file = request.form.get('data_file', widget.data_file)
 
         # Create a temporary widget object for testing
         test_widget = type('TestWidget', (), {
             'title': widget.title + ' (Test)',
             'slug': widget.slug + '-test',
             'code': test_code,
+            'data_file': test_data_file,
             'compiled_code': None,
             'channel': widget.channel,
             'description': 'Test version of ' + widget.title,
