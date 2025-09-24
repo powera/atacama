@@ -416,6 +416,7 @@ def improve_widget(slug):
                 improvement_jobs[job_id]['status'] = 'completed'
                 improvement_jobs[job_id]['result'] = result
                 improvement_jobs[job_id]['progress'] = 'Improvement completed'
+                improvement_jobs[job_id]['finished_at'] = time.time()
                 logger.info(f"Completed background improvement for widget {slug}, job {job_id}")
 
             except Exception as e:
@@ -423,6 +424,7 @@ def improve_widget(slug):
                 improvement_jobs[job_id]['status'] = 'error'
                 improvement_jobs[job_id]['error'] = str(e)
                 improvement_jobs[job_id]['progress'] = 'Error occurred during improvement'
+                improvement_jobs[job_id]['finished_at'] = time.time()
 
         thread = threading.Thread(target=improve_in_background)
         thread.daemon = True
@@ -747,6 +749,7 @@ def initiate_widget():
                     improvement_jobs[job_id]['status'] = 'error'
                     improvement_jobs[job_id]['error'] = f"Failed to generate widget: {result['error']}"
                     improvement_jobs[job_id]['progress'] = 'Error occurred during widget generation'
+                    improvement_jobs[job_id]['finished_at'] = time.time()
                     return
 
                 improvement_jobs[job_id]['progress'] = 'Creating widget in database...'
@@ -812,6 +815,7 @@ def initiate_widget():
                             'redirect_url': f'/widget/{slug}/edit'
                         }
                         improvement_jobs[job_id]['progress'] = 'Widget creation completed'
+                        improvement_jobs[job_id]['finished_at'] = time.time()
                         logger.info(f"Completed background widget initiation for slug {slug}, job {job_id}")
 
                     except Exception as e:
@@ -819,12 +823,14 @@ def initiate_widget():
                         improvement_jobs[job_id]['status'] = 'error'
                         improvement_jobs[job_id]['error'] = f"Failed to create widget: {str(e)}"
                         improvement_jobs[job_id]['progress'] = 'Error occurred during database creation'
+                        improvement_jobs[job_id]['finished_at'] = time.time()
 
             except Exception as e:
                 logger.error(f"Error in background widget initiation for job {job_id}: {str(e)}")
                 improvement_jobs[job_id]['status'] = 'error'
                 improvement_jobs[job_id]['error'] = str(e)
                 improvement_jobs[job_id]['progress'] = 'Error occurred during widget generation'
+                improvement_jobs[job_id]['finished_at'] = time.time()
 
         thread = threading.Thread(target=initiate_in_background)
         thread.daemon = True
@@ -921,13 +927,22 @@ def list_jobs():
     completed_jobs = []
     
     for job_id, job_data in improvement_jobs.items():
+        # Calculate duration based on job status
+        if job_data['status'] in ['completed', 'error'] and 'finished_at' in job_data:
+            duration = job_data['finished_at'] - job_data['started_at']
+            finished_at = datetime.fromtimestamp(job_data['finished_at'])
+        else:
+            duration = current_time - job_data['started_at']
+            finished_at = None
+            
         job_info = {
             'id': job_id,
             'status': job_data['status'],
             'progress': job_data['progress'],
             'started_at': datetime.fromtimestamp(job_data['started_at']),
+            'finished_at': finished_at,
             'error': job_data.get('error'),
-            'duration': current_time - job_data['started_at']
+            'duration': duration
         }
         
         # Determine job type and add relevant info
