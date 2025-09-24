@@ -54,6 +54,26 @@ def validate_llm_parameters(params: dict) -> dict:
             cleaned[key] = value
     return cleaned
 
+
+def generate_widget_content_hash(code: str, data_file: str = None) -> str:
+    """
+    Generate a composite hash for widget content including both code and data file.
+    This ensures that changes to either the code or data file create a unique version.
+    
+    Args:
+        code: The main widget code
+        data_file: The data file content (can be None)
+        
+    Returns:
+        MD5 hash of the combined content
+    """
+    # Create a composite string that includes both code and data file
+    composite_content = code
+    if data_file:
+        composite_content += "|||DATA_FILE|||" + data_file
+    
+    return hashlib.md5(composite_content.encode('utf-8')).hexdigest()
+
 @widgets_bp.route('/widget/<string:slug>')
 @optional_auth
 def view_widget(slug):
@@ -120,9 +140,10 @@ def edit_widget(slug):
             if new_data_file == '':
                 new_data_file = None
             
-            code_hash = hashlib.md5(new_code.encode('utf-8')).hexdigest()
+            # Generate composite hash for both code and data file
+            code_hash = generate_widget_content_hash(new_code, new_data_file)
 
-            # Check if this exact code already exists as a version
+            # Check if this exact combination of code and data file already exists as a version
             existing_version = session.query(WidgetVersion).filter_by(
                 widget_id=widget.id,
                 code_hash=code_hash
@@ -244,7 +265,7 @@ def create_widget():
 
             # Create initial version if there's code
             if code.strip():
-                code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
+                code_hash = generate_widget_content_hash(code, data_file)
                 initial_version = WidgetVersion(
                     widget_id=widget.id,
                     version_number=1,
@@ -505,13 +526,13 @@ def save_version(slug):
         data = request.get_json()
         code = data.get('code', '')
         data_file = data.get('data_file', None)
-        code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
+        code_hash = generate_widget_content_hash(code, data_file)
         prompt_used = data.get('prompt_used', '')
         improvement_type = data.get('improvement_type', 'custom')
         dev_comments = data.get('dev_comments', '')
         set_active = data.get('set_active', False)
 
-        # Check for duplicate code
+        # Check for duplicate content (both code and data file combination)
         existing_version = session.query(WidgetVersion).filter_by(
             widget_id=widget.id,
             code_hash=code_hash
@@ -520,7 +541,7 @@ def save_version(slug):
         if existing_version:
             return jsonify({
                 'success': False,
-                'error': f'This code already exists as version {existing_version.version_number}'
+                'error': f'This combination of code and data file already exists as version {existing_version.version_number}'
             })
 
         # Get the next version number
