@@ -1,16 +1,19 @@
 """Authentication blueprint handling Google OAuth login flow."""
 
 import os
+import secrets
 from datetime import datetime
 from typing import Optional, Dict, Any
+from urllib.parse import urlencode
 
-from flask import Blueprint, request, render_template, session, redirect, url_for, g
+from flask import Blueprint, request, render_template, session, redirect, url_for, g, jsonify
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
 from web.decorators import require_auth
 from models.database import db
 from models import get_or_create_user
+from models.models import User
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 
@@ -32,6 +35,15 @@ def login():
     popup_mode = request.args.get('popup', '').lower() == 'true'
     session['popup_mode'] = popup_mode
     
+    # Check if this is a mobile OAuth request
+    mobile_mode = request.args.get('mobile', '').lower() == '1'
+    redirect_uri = request.args.get('redirect', '')
+    
+    if mobile_mode and redirect_uri:
+        session['mobile_mode'] = True
+        session['mobile_redirect'] = redirect_uri
+        logger.info(f"Mobile OAuth flow initiated with redirect: {redirect_uri}")
+    
     template = 'login_popup.html' if popup_mode else 'login.html'
     
     return render_template(
@@ -45,6 +57,42 @@ def logout():
     """Clear user session and redirect to login."""
     session.clear()
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/api/logout', methods=['POST'])
+@require_auth
+def api_logout():
+    """
+    Revoke the current auth token for mobile/API clients.
+    
+    Requires Authorization header with valid token.
+    Returns JSON response indicating success or failure.
+    """
+    try:
+        with db.session() as db_session:
+            # g.user is already populated by @require_auth
+            if g.user and g.user.auth_token:
+                # Re-query the user to get a session-bound instance
+                user = db_session.query(User).filter_by(id=g.user.id).first()
+                if user:
+                    user.auth_token = None
+                    user.auth_token_created_at = None
+                    db_session.commit()
+                    logger.info(f"Revoked auth token for user {user.email}")
+                    return jsonify({'success': True, 'message': 'Token revoked'}), 200
+            
+            return jsonify({'success': False, 'error': 'No token to revoke'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error revoking token: {str(e)}")
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+def generate_auth_token() -> str:
+    """
+    Generate a secure random auth token for mobile/API authentication.
+    
+    :return: A secure random token string
+    """
+    return secrets.token_urlsafe(32)
 
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """
@@ -133,6 +181,23 @@ def callback():
                     channel: channel in channel_manager.default_preferences
                     for channel in channel_manager.get_channel_names()
                 }
+            
+            # Check if this is a mobile OAuth flow
+            mobile_mode = session.pop('mobile_mode', False)
+            mobile_redirect = session.pop('mobile_redirect', None)
+            
+            if mobile_mode and mobile_redirect:
+                # Generate and store auth token for mobile app
+                auth_token = generate_auth_token()
+                db_user.auth_token = auth_token
+                db_user.auth_token_created_at = datetime.utcnow()
+                db_session.commit()
+                
+                logger.info(f"Generated auth token for user {db_user.email} (mobile OAuth)")
+                
+                # Redirect to the mobile app's custom URL scheme with the token
+                redirect_url = f"{mobile_redirect}?token={auth_token}"
+                return redirect(redirect_url)
     
     except Exception as e:
         logger.error(f"Database error in callback: {str(e)}")

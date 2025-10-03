@@ -36,6 +36,10 @@ class User(Base):
     # e.g. {"orinoco": "2025-01-15T14:30:00Z"}
     admin_channel_access: Mapped[Optional[Dict]] = mapped_column(Text, 
         default=lambda: json.dumps({}))
+    
+    # Auth token for mobile/API authentication
+    auth_token: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    auth_token_created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # One-to-many relationship with messages
     messages: Mapped[List["Message"]] = relationship("Message", back_populates="author")
