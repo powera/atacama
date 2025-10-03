@@ -1,6 +1,7 @@
 """Auth tools. The require_auth web decorator."""
 
 import os
+import logging
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import render_template, session, g, request, jsonify
@@ -9,6 +10,8 @@ from models.database import db
 from models import get_or_create_user
 from models.models import User
 from common.config.user_config import get_user_config_manager
+
+logger = logging.getLogger(__name__)
 
 # Token expiration period (120 days)
 TOKEN_EXPIRATION_DAYS = 120
@@ -25,6 +28,8 @@ def _populate_user():
         if auth_token.startswith('Bearer '):
             auth_token = auth_token[7:]
         
+        logger.debug(f"Auth token provided: {auth_token[:8]}... (truncated for security)")
+        
         with db.session() as db_session:
             db_session.expire_on_commit = False
             user = db_session.query(User).filter_by(auth_token=auth_token).first()
@@ -34,13 +39,19 @@ def _populate_user():
                     token_age = datetime.utcnow() - user.auth_token_created_at
                     if token_age > timedelta(days=TOKEN_EXPIRATION_DAYS):
                         # Token expired, clear it
+                        logger.warning(f"Auth token expired for user {user.email}. Token age: {token_age.days} days")
                         user.auth_token = None
                         user.auth_token_created_at = None
                         db_session.commit()
                         g.user = None
                         return
                 
+                logger.debug(f"Auth token valid for user: {user.email}")
                 g.user = user
+                return
+            else:
+                logger.warning(f"Auth token provided but not found in database: {auth_token[:8]}... (truncated)")
+                g.user = None
                 return
     
     # Fall back to session-based authentication
