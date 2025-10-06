@@ -26,8 +26,12 @@ def normalize_word_key(word_key: str) -> str:
     Normalize a word key to lowercase for case-insensitive lookup.
 
     This handles keys like "Aš Galiu-I Can" -> "aš galiu-i can"
+    Also removes trailing parenthetical clarifications like " (maize)"
     """
-    return word_key.lower().strip()
+    normalized = word_key.lower().strip()
+    # Remove parenthetical clarifications at the end
+    normalized = re.sub(r'\s*\([^)]+\)\s*$', '', normalized)
+    return normalized.strip()
 
 
 class ConversionStats:
