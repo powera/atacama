@@ -92,6 +92,17 @@ def merge_word_stats(stats1: Dict[str, Any], stats2: Dict[str, Any]) -> Dict[str
     return merged
 
 
+def is_guid_format(key: str) -> bool:
+    """
+    Check if a key is already in GUID format (e.g., N01_005, V01_017).
+
+    GUID format: starts with letter(s), contains underscore, ends with digits.
+    Examples: N01_005, V01_017, P03_042
+    """
+    import re
+    return bool(re.match(r'^[A-Z]+\d+_\d+$', key))
+
+
 def convert_stats_dict(stats_dict: Dict[str, Any], mapping_table: Dict[str, str],
                        conversion_stats: ConversionStats, dry_run: bool = False) -> Dict[str, Any]:
     """
@@ -113,7 +124,15 @@ def convert_stats_dict(stats_dict: Dict[str, Any], mapping_table: Dict[str, str]
     new_stats = {}
 
     for word_key, word_stats in old_stats.items():
-        if word_key in mapping_table:
+        # If already in GUID format, keep as-is
+        if is_guid_format(word_key):
+            if word_key in new_stats:
+                # Merge with existing stats
+                new_stats[word_key] = merge_word_stats(new_stats[word_key], word_stats)
+            else:
+                new_stats[word_key] = word_stats
+            conversion_stats.add_converted()
+        elif word_key in mapping_table:
             # Convert to GUID
             guid = mapping_table[word_key]
 

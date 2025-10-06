@@ -9,6 +9,7 @@ and GUID format (e.g., N02_001).
 
 import os
 import sys
+import json
 from typing import Dict, List, Tuple
 
 # Add project root to Python path
@@ -18,6 +19,10 @@ sys.path.insert(0, PROJECT_ROOT)
 
 # Dictionary directory location
 DICTIONARY_DIR = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/dictionary")
+
+# Wireword JSON files
+WIREWORD_VERBS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword_verbs.json")
+WIREWORD_NOUNS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword_nouns.json")
 
 # Legacy data files
 PHRASES_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/phrases.py")
@@ -140,6 +145,65 @@ def load_dictionary_file(filepath: str) -> Dict[str, str]:
     return mappings
 
 
+def load_wireword_verbs() -> Dict[str, str]:
+    """
+    Load wireword verbs JSON and create mappings for all grammatical forms.
+
+    Maps conjugated forms like "aš mokau-I teach" to GUID with form suffix (e.g., V01_017_1sg_pres).
+
+    Returns:
+        Dict mapping wordKey -> GUID with form suffix
+    """
+    mappings = {}
+
+    if not os.path.exists(WIREWORD_VERBS_FILE):
+        return mappings
+
+    try:
+        with open(WIREWORD_VERBS_FILE, 'r', encoding='utf-8') as f:
+            verbs_data = json.load(f)
+
+        for verb_entry in verbs_data:
+            base_guid = verb_entry.get('guid')
+            base_lithuanian = verb_entry.get('base_lithuanian', '')
+            base_english = verb_entry.get('base_english', '')
+            grammatical_forms = verb_entry.get('grammatical_forms', {})
+
+            if not base_guid:
+                continue
+
+            # Map the infinitive form (base form)
+            if base_lithuanian and base_english:
+                for variant_key in generate_word_key_variants(base_lithuanian, base_english):
+                    if variant_key not in mappings:
+                        mappings[variant_key] = base_guid
+
+            # Map each grammatical form
+            # formKey follows pattern: {person}{number}_{gender}_{tense}
+            # Examples: 1sg_pres, 3sg_m_past, 2pl_fut
+            for form_key, form_data in grammatical_forms.items():
+                lithuanian = form_data.get('lithuanian', '')
+                english = form_data.get('english', '')
+
+                if not lithuanian or not english:
+                    continue
+
+                # Create GUID with form suffix: V01_017_1sg_pres
+                guid_with_form = f"{base_guid}_{form_key}"
+
+                # Generate word key variants for this conjugated form
+                for variant_key in generate_word_key_variants(lithuanian, english):
+                    if variant_key not in mappings:
+                        mappings[variant_key] = guid_with_form
+
+        print(f"Loaded {len(mappings)} verb form mappings from wireword_verbs.json", file=sys.stderr)
+
+    except Exception as e:
+        print(f"Error loading wireword verbs: {e}", file=sys.stderr)
+
+    return mappings
+
+
 def load_legacy_file(filepath: str) -> Dict[str, str]:
     """
     Load legacy phrases/verbs/nouns files that don't have GUIDs.
@@ -205,7 +269,16 @@ def build_mapping_table() -> Dict[str, str]:
                               f"{mapping_table[word_key]} vs {guid}", file=sys.stderr)
                     mapping_table[word_key] = guid
 
-    # Process legacy files (phrases, verbs)
+    # Process wireword verbs (with grammatical forms)
+    print(f"Processing wireword_verbs.json...", file=sys.stderr)
+    verb_mappings = load_wireword_verbs()
+    for word_key, guid in verb_mappings.items():
+        if word_key in mapping_table and mapping_table[word_key] != guid:
+            print(f"Warning: Conflicting mapping for '{word_key}': "
+                  f"{mapping_table[word_key]} vs {guid}", file=sys.stderr)
+        mapping_table[word_key] = guid
+
+    # Process legacy files (phrases, verbs without GUIDs)
     for legacy_file in [PHRASES_FILE, VERBS_FILE]:
         if os.path.exists(legacy_file):
             filename = os.path.basename(legacy_file)
