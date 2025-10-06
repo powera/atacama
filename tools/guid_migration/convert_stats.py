@@ -9,6 +9,7 @@ translating all wordKey entries to GUID format while preserving all metadata.
 import gzip
 import json
 import os
+import re
 import sys
 from typing import Dict, Any, Tuple
 
@@ -18,6 +19,15 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../.."))
 sys.path.insert(0, PROJECT_ROOT)
 
 from tools.guid_migration.build_guid_mapping import get_mapping_table
+
+
+def normalize_word_key(word_key: str) -> str:
+    """
+    Normalize a word key to lowercase for case-insensitive lookup.
+
+    This handles keys like "Aš Galiu-I Can" -> "aš galiu-i can"
+    """
+    return word_key.lower().strip()
 
 
 class ConversionStats:
@@ -132,23 +142,27 @@ def convert_stats_dict(stats_dict: Dict[str, Any], mapping_table: Dict[str, str]
             else:
                 new_stats[word_key] = word_stats
             conversion_stats.add_converted()
-        elif word_key in mapping_table:
-            # Convert to GUID
-            guid = mapping_table[word_key]
-
-            # Check if we already have stats for this GUID (duplicate)
-            if guid in new_stats:
-                # Merge with existing stats
-                new_stats[guid] = merge_word_stats(new_stats[guid], word_stats)
-            else:
-                new_stats[guid] = word_stats
-
-            conversion_stats.add_converted()
         else:
-            # Unmapped word
-            conversion_stats.add_unmapped(word_key)
-            if dry_run:
-                print(f"  [UNMAPPED] {word_key}")
+            # Normalize for case-insensitive lookup
+            normalized_key = normalize_word_key(word_key)
+
+            if normalized_key in mapping_table:
+                # Convert to GUID
+                guid = mapping_table[normalized_key]
+
+                # Check if we already have stats for this GUID (duplicate)
+                if guid in new_stats:
+                    # Merge with existing stats
+                    new_stats[guid] = merge_word_stats(new_stats[guid], word_stats)
+                else:
+                    new_stats[guid] = word_stats
+
+                conversion_stats.add_converted()
+            else:
+                # Unmapped word
+                conversion_stats.add_unmapped(word_key)
+                if dry_run:
+                    print(f"  [UNMAPPED] {word_key}")
 
     return {"stats": new_stats}
 
