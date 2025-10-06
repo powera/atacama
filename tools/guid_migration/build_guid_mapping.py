@@ -21,8 +21,8 @@ sys.path.insert(0, PROJECT_ROOT)
 DICTIONARY_DIR = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/dictionary")
 
 # Wireword JSON files
-WIREWORD_VERBS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword_verbs.json")
-WIREWORD_NOUNS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword_nouns.json")
+WIREWORD_VERBS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword/wireword_verbs.json")
+WIREWORD_NOUNS_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/generated/wireword/wireword_nouns.json")
 
 # Legacy data files
 PHRASES_FILE = os.path.join(PROJECT_ROOT, "data/trakaido_wordlists/lang_lt/phrases.py")
