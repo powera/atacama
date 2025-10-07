@@ -24,6 +24,13 @@ CORPUSCHOICES_API_DOCS = {
     "GET /api/trakaido/corpuschoices/corpus/{corpus}": "Get choices for a specific corpus"
 }
 
+# API Documentation for level progression endpoints
+LEVELPROGRESSION_API_DOCS = {
+    "GET /api/trakaido/levelprogression": "Get level progression for authenticated user",
+    "PUT /api/trakaido/levelprogression": "Update level progression (replaces entire object)",
+    "PATCH /api/trakaido/levelprogression/level": "Update just the current level"
+}
+
 # Corpus Choices related functions
 def get_corpus_choices_file_path(user_id: str) -> str:
     """
@@ -106,10 +113,168 @@ def validate_corpus_exists(corpus: str) -> bool:
 def validate_groups_in_corpus(corpus: str, groups: List[str]) -> List[str]:
     """
     Validate that groups exist in the specified corpus and return only valid ones.
-    
+
     Deprecated - returns all groups
     """
     return groups
+
+
+# Level Progression related functions
+def get_level_progression_file_path(user_id: str) -> str:
+    """
+    Get the file path for a user's level progression data.
+
+    :param user_id: The user's database ID
+    :return: Path to the user's level progression file
+    """
+    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
+    return os.path.join(user_data_dir, "levelprogression.json")
+
+
+def migrate_corpus_choices_to_level_progression(user_id: str) -> Dict[str, Any]:
+    """
+    Migrate old corpuschoices.json data to levelprogression.json format.
+
+    Converts corpus choices like:
+      {"choices": {"level_1": ["group1", "group2"], "level_3": ["group3"]}}
+
+    To level progression format:
+      {"currentLevel": 3, "levelOverrides": {"level_1": ["group1", "group2"], "level_3": ["group3"]}}
+
+    :param user_id: The user's database ID
+    :return: Dictionary with migrated level progression data
+    """
+    try:
+        corpus_choices = load_corpus_choices(user_id)
+        choices = corpus_choices.get("choices", {})
+
+        if not choices:
+            return {"currentLevel": 1}
+
+        # Find the highest level number
+        max_level = 1
+        level_overrides = {}
+
+        for corpus_key, groups in choices.items():
+            # Extract level number from keys like "level_1", "level_2", etc.
+            if corpus_key.startswith("level_"):
+                try:
+                    level_num = int(corpus_key.split("_")[1])
+                    max_level = max(max_level, level_num)
+                    # Store as override if groups is a list
+                    if isinstance(groups, list) and groups:
+                        level_overrides[corpus_key] = groups
+                except (ValueError, IndexError):
+                    logger.warning(f"Could not parse level number from corpus key: {corpus_key}")
+
+        result = {"currentLevel": max_level}
+        if level_overrides:
+            result["levelOverrides"] = level_overrides
+
+        logger.info(f"Migrated corpus choices to level progression for user {user_id}: currentLevel={max_level}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error migrating corpus choices for user {user_id}: {str(e)}")
+        return {"currentLevel": 1}
+
+
+def load_level_progression(user_id: str, auto_migrate: bool = True) -> Dict[str, Any]:
+    """
+    Load level progression for a user from their JSON file.
+
+    :param user_id: The user's database ID
+    :param auto_migrate: If True, automatically migrate from corpus choices if needed
+    :return: Dictionary containing the user's level progression
+    """
+    try:
+        progression_file = get_level_progression_file_path(user_id)
+
+        # If file exists, load it
+        if os.path.exists(progression_file):
+            with open(progression_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Validate structure
+            if "currentLevel" in data and isinstance(data["currentLevel"], int):
+                result = {"currentLevel": data["currentLevel"]}
+
+                # Validate levelOverrides if present
+                if "levelOverrides" in data and isinstance(data["levelOverrides"], dict):
+                    validated_overrides = {}
+                    for level_key, groups in data["levelOverrides"].items():
+                        if groups is None:
+                            validated_overrides[level_key] = None
+                        elif isinstance(groups, list):
+                            validated_overrides[level_key] = groups
+                        else:
+                            logger.warning(f"Invalid override format for {level_key}, skipping")
+
+                    if validated_overrides:
+                        result["levelOverrides"] = validated_overrides
+
+                return result
+            else:
+                logger.warning(f"Invalid level progression structure for user {user_id}")
+
+        # No progression file found, try migration if enabled
+        if auto_migrate:
+            migrated_data = migrate_corpus_choices_to_level_progression(user_id)
+            # Save the migrated data
+            if save_level_progression(user_id, migrated_data):
+                logger.info(f"Successfully migrated and saved level progression for user {user_id}")
+            return migrated_data
+
+        # Default: level 1
+        return {"currentLevel": 1}
+
+    except Exception as e:
+        logger.error(f"Error loading level progression for user {user_id}: {str(e)}")
+        return {"currentLevel": 1}
+
+
+def save_level_progression(user_id: str, progression: Dict[str, Any]) -> bool:
+    """
+    Save level progression for a user to their JSON file.
+
+    :param user_id: The user's database ID
+    :param progression: Dictionary containing the user's level progression
+    :return: True if successful, False otherwise
+    """
+    try:
+        ensure_user_data_dir(user_id)
+        progression_file = get_level_progression_file_path(user_id)
+
+        # Validate structure
+        if "currentLevel" not in progression or not isinstance(progression["currentLevel"], int):
+            logger.error(f"Invalid progression data for user {user_id}: missing or invalid currentLevel")
+            return False
+
+        validated_data = {"currentLevel": progression["currentLevel"]}
+
+        # Validate levelOverrides if present
+        if "levelOverrides" in progression and isinstance(progression["levelOverrides"], dict):
+            validated_overrides = {}
+            for level_key, groups in progression["levelOverrides"].items():
+                if groups is None:
+                    validated_overrides[level_key] = None
+                elif isinstance(groups, list):
+                    validated_overrides[level_key] = groups
+                else:
+                    logger.warning(f"Invalid override format for {level_key}, skipping")
+
+            if validated_overrides:
+                validated_data["levelOverrides"] = validated_overrides
+
+        with open(progression_file, 'w', encoding='utf-8') as f:
+            json.dump(validated_data, f, indent=2, ensure_ascii=False)
+
+        logger.debug(f"Successfully saved level progression for user {user_id}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error saving level progression for user {user_id}: {str(e)}")
+        return False
 
 
 # Corpus Choices API Routes
@@ -260,23 +425,207 @@ def update_corpus_choices() -> Union[Response, tuple]:
 def get_corpus_choices(corpus: str) -> Union[Response, tuple]:
     """
     Get the selected groups for a specific corpus.
-    
+
     :param corpus: The name of the corpus
     :return: JSON response with corpus choices
     """
     try:
         user_id = str(g.user.id)
         all_choices = load_corpus_choices(user_id)
-        
+
         # Get groups for the specific corpus, or empty array if not found
         groups = all_choices["choices"].get(corpus, [])
-        
+
         return jsonify({
             "corpus": corpus,
             "groups": groups
         })
     except Exception as e:
         logger.error(f"Error getting corpus choices for '{corpus}': {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "code": "STORAGE_ERROR"
+        }), 500
+
+
+# Level Progression API Routes
+@trakaido_bp.route('/api/trakaido/levelprogression', methods=['GET'])
+@require_auth
+def get_level_progression() -> Union[Response, tuple]:
+    """
+    Get level progression for the authenticated user.
+
+    Returns the user's current level and optional level overrides.
+    Automatically migrates from old corpus choices format if needed.
+
+    :return: JSON response with level progression data
+    """
+    try:
+        user_id = str(g.user.id)
+        progression = load_level_progression(user_id, auto_migrate=True)
+        return jsonify(progression)
+    except Exception as e:
+        logger.error(f"Error getting level progression: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/levelprogression', methods=['PUT'])
+@require_auth
+def update_level_progression() -> Union[Response, tuple]:
+    """
+    Update level progression for the authenticated user.
+
+    Replaces the entire progression object. Request body should contain:
+    {
+        "currentLevel": 10,
+        "levelOverrides": {  // optional
+            "level_5": ["group1", "group2"]
+        }
+    }
+
+    :return: JSON response indicating success or error
+    """
+    try:
+        user_id = str(g.user.id)
+        data = request.get_json()
+
+        if not data or "currentLevel" not in data:
+            return jsonify({
+                "success": False,
+                "error": "Invalid request body. Expected 'currentLevel' field.",
+                "code": "INVALID_REQUEST"
+            }), 400
+
+        current_level = data["currentLevel"]
+
+        # Validate currentLevel
+        if not isinstance(current_level, int) or current_level < 1:
+            return jsonify({
+                "success": False,
+                "error": "'currentLevel' must be a positive integer",
+                "code": "INVALID_REQUEST"
+            }), 400
+
+        # Build progression object
+        progression = {"currentLevel": current_level}
+
+        # Handle optional levelOverrides
+        if "levelOverrides" in data:
+            level_overrides = data["levelOverrides"]
+
+            if level_overrides is not None:
+                if not isinstance(level_overrides, dict):
+                    return jsonify({
+                        "success": False,
+                        "error": "'levelOverrides' must be an object or null",
+                        "code": "INVALID_REQUEST"
+                    }), 400
+
+                # Validate each override
+                validated_overrides = {}
+                for level_key, groups in level_overrides.items():
+                    if groups is None:
+                        validated_overrides[level_key] = None
+                    elif isinstance(groups, list):
+                        # Validate all items are strings
+                        if all(isinstance(g, str) for g in groups):
+                            validated_overrides[level_key] = groups
+                        else:
+                            return jsonify({
+                                "success": False,
+                                "error": f"All groups in '{level_key}' must be strings",
+                                "code": "INVALID_REQUEST"
+                            }), 400
+                    else:
+                        return jsonify({
+                            "success": False,
+                            "error": f"Override for '{level_key}' must be an array or null",
+                            "code": "INVALID_REQUEST"
+                        }), 400
+
+                if validated_overrides:
+                    progression["levelOverrides"] = validated_overrides
+
+        # Save progression
+        success = save_level_progression(user_id, progression)
+        if success:
+            return jsonify({
+                "success": True,
+                **progression
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to save level progression",
+                "code": "STORAGE_ERROR"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error updating level progression: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "code": "STORAGE_ERROR"
+        }), 500
+
+
+@trakaido_bp.route('/api/trakaido/levelprogression/level', methods=['PATCH'])
+@require_auth
+def update_current_level() -> Union[Response, tuple]:
+    """
+    Update just the current level without modifying overrides.
+
+    Request body should contain:
+    {
+        "currentLevel": 15
+    }
+
+    :return: JSON response indicating success or error
+    """
+    try:
+        user_id = str(g.user.id)
+        data = request.get_json()
+
+        if not data or "currentLevel" not in data:
+            return jsonify({
+                "success": False,
+                "error": "Invalid request body. Expected 'currentLevel' field.",
+                "code": "INVALID_REQUEST"
+            }), 400
+
+        current_level = data["currentLevel"]
+
+        # Validate currentLevel
+        if not isinstance(current_level, int) or current_level < 1:
+            return jsonify({
+                "success": False,
+                "error": "'currentLevel' must be a positive integer",
+                "code": "INVALID_REQUEST"
+            }), 400
+
+        # Load existing progression
+        existing_progression = load_level_progression(user_id, auto_migrate=True)
+
+        # Update only the currentLevel
+        existing_progression["currentLevel"] = current_level
+
+        # Save back
+        success = save_level_progression(user_id, existing_progression)
+        if success:
+            return jsonify({
+                "success": True,
+                **existing_progression
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to save level progression",
+                "code": "STORAGE_ERROR"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error updating current level: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

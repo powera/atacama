@@ -10,6 +10,7 @@ and GUID format (e.g., N02_001).
 import os
 import sys
 import json
+import re
 from typing import Dict, List, Tuple
 
 # Add project root to Python path
@@ -145,14 +146,55 @@ def load_dictionary_file(filepath: str) -> Dict[str, str]:
     return mappings
 
 
+def convert_wireword_suffix_to_wordstats(suffix: str) -> str:
+    """
+    Convert a wireword format suffix to wordstats format.
+
+    Wireword format: {person}{sg|pl}_{m|f}_{tense}
+    Wordstats format: {person}{s|p}-{m|f}_{tense}
+
+    Examples:
+        1sg_pres -> 1s_pres
+        3sg_m_pres -> 3s-m_pres
+        3pl_f_past -> 3p-f_past
+        2pl_fut -> 2p_fut
+
+    Args:
+        suffix: The wireword format suffix
+
+    Returns:
+        The wordstats format suffix
+    """
+    # Pattern: {person}sg_{gender}_{tense} or {person}pl_{gender}_{tense}
+    # First, handle cases with gender: 3sg_m_pres -> 3s-m_pres
+    pattern_with_gender = r'^(\d)(sg|pl)_([mf])_(.+)$'
+    match = re.match(pattern_with_gender, suffix)
+    if match:
+        person, number, gender, tense = match.groups()
+        short_number = 's' if number == 'sg' else 'p'
+        return f"{person}{short_number}-{gender}_{tense}"
+
+    # Handle cases without gender: 1sg_pres -> 1s_pres
+    pattern_without_gender = r'^(\d)(sg|pl)_(.+)$'
+    match = re.match(pattern_without_gender, suffix)
+    if match:
+        person, number, tense = match.groups()
+        short_number = 's' if number == 'sg' else 'p'
+        return f"{person}{short_number}_{tense}"
+
+    # If no match, return unchanged
+    return suffix
+
+
 def load_wireword_verbs() -> Dict[str, str]:
     """
     Load wireword verbs JSON and create mappings for all grammatical forms.
 
-    Maps conjugated forms like "aš mokau-I teach" to GUID with form suffix (e.g., V01_017_1sg_pres).
+    Maps conjugated forms like "aš mokau-I teach" to GUID with form suffix in wordstats format.
+    Example: V01_017_1s_pres (not V01_017_1sg_pres)
 
     Returns:
-        Dict mapping wordKey -> GUID with form suffix
+        Dict mapping wordKey -> GUID with wordstats format suffix
     """
     mappings = {}
 
@@ -179,8 +221,9 @@ def load_wireword_verbs() -> Dict[str, str]:
                         mappings[variant_key] = base_guid
 
             # Map each grammatical form
-            # formKey follows pattern: {person}{number}_{gender}_{tense}
+            # formKey in JSON follows wireword pattern: {person}{sg|pl}_{gender}_{tense}
             # Examples: 1sg_pres, 3sg_m_past, 2pl_fut
+            # We convert these to wordstats format: 1s_pres, 3s-m_past, 2p_fut
             for form_key, form_data in grammatical_forms.items():
                 lithuanian = form_data.get('lithuanian', '')
                 english = form_data.get('english', '')
@@ -188,8 +231,11 @@ def load_wireword_verbs() -> Dict[str, str]:
                 if not lithuanian or not english:
                     continue
 
-                # Create GUID with form suffix: V01_017_1sg_pres
-                guid_with_form = f"{base_guid}_{form_key}"
+                # Convert wireword suffix to wordstats format
+                wordstats_suffix = convert_wireword_suffix_to_wordstats(form_key)
+
+                # Create GUID with wordstats format suffix: V01_017_1s_pres
+                guid_with_form = f"{base_guid}_{wordstats_suffix}"
 
                 # Generate word key variants for this conjugated form
                 for variant_key in generate_word_key_variants(lithuanian, english):

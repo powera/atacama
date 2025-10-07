@@ -14,7 +14,7 @@ import constants
 from web.decorators import optional_auth, require_auth
 from .shared import *
 from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
-from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS
+from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS, LEVELPROGRESSION_API_DOCS
 from .audio import AUDIO_API_DOCS
 
 ##############################################################################
@@ -37,6 +37,7 @@ def lithuanian_api_index() -> Response:
             "audio": AUDIO_API_DOCS,
             "userstats": USERSTATS_API_DOCS,
             "corpuschoices": CORPUSCHOICES_API_DOCS,
+            "levelprogression": LEVELPROGRESSION_API_DOCS,
             "userinfo": USERINFO_API_DOCS
         }
     }
