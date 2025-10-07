@@ -73,7 +73,8 @@ def get_user_info() -> Response:
             
             response_data["user"] = {
                 "id": user_id,
-                "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None
+                "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None,
+                "email": getattr(g.user, 'email', None) if hasattr(g.user, 'email') else None
             }
             
             # Check if user has existing files

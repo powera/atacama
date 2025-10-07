@@ -28,6 +28,7 @@ USERSTATS_API_DOCS = {
     "POST /api/trakaido/journeystats/word": "Update stats for a specific word",
     "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word",
     "POST /api/trakaido/journeystats/increment": "Increment stats for a single question with nonce",
+    "POST /api/trakaido/journeystats/bulk_increment": "Bulk increment stats for multiple questions with nonces",
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
     "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
     "GET /api/trakaido/journeystats/monthly": "Get monthly stats with daily breakdown (questions answered, exposed words count, newly exposed words) and monthly aggregate"
@@ -1124,6 +1125,178 @@ def increment_word_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@trakaido_bp.route('/api/trakaido/journeystats/bulk_increment', methods=['POST'])
+@require_auth
+def bulk_increment_word_stats():
+    """Bulk increment stats for multiple questions with nonce protection.
+
+    Request body should contain:
+    {
+        "nonce": "unique-batch-nonce",
+        "increments": [
+            {
+                "wordKey": "word1",
+                "statType": "multipleChoice",
+                "correct": true
+            },
+            ...
+        ]
+    }
+
+    Returns:
+    {
+        "success": true,
+        "processed": 10,
+        "failed": 0,
+        "results": [
+            {"index": 0, "status": "success"},
+            {"index": 1, "status": "failed", "reason": "Invalid stat type: foo"},
+            ...
+        ]
+    }
+    """
+    try:
+        user_id = str(g.user.id)
+        data = request.get_json()
+
+        # Validate request body
+        if not data or "increments" not in data or "nonce" not in data:
+            return jsonify({"error": "Invalid request body. Expected 'nonce' and 'increments' fields."}), 400
+
+        nonce = data["nonce"]
+        increments = data["increments"]
+
+        # Validate nonce
+        if not isinstance(nonce, str) or not nonce.strip():
+            return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
+
+        if not isinstance(increments, list):
+            return jsonify({"error": "Field 'increments' must be an array"}), 400
+
+        if len(increments) == 0:
+            return jsonify({"error": "Field 'increments' cannot be empty"}), 400
+
+        if len(increments) > 1000:
+            return jsonify({"error": "Maximum 1000 increments per request"}), 400
+
+        current_day = get_current_day_key()
+
+        # Check if this batch nonce has already been used
+        if check_nonce_duplicates(user_id, nonce):
+            return jsonify({"error": "Batch nonce already used"}), 409
+
+        # Ensure daily snapshots exist
+        if not ensure_daily_snapshots(user_id):
+            return jsonify({"error": "Failed to initialize daily stats"}), 500
+
+        # Load journey stats once
+        journey_stats = JourneyStats(user_id)
+
+        processed_count = 0
+        failed_count = 0
+        results = []
+        current_timestamp = int(datetime.now().timestamp() * 1000)
+
+        # Process each increment
+        for idx, increment in enumerate(increments):
+            try:
+                # Validate individual increment
+                required_fields = ["wordKey", "statType", "correct"]
+                missing_fields = [field for field in required_fields if field not in increment]
+
+                if missing_fields:
+                    failed_count += 1
+                    results.append({
+                        "index": idx,
+                        "status": "failed",
+                        "reason": f"Missing fields: {', '.join(missing_fields)}"
+                    })
+                    continue
+
+                word_key = increment["wordKey"]
+                stat_type = increment["statType"]
+                correct = increment["correct"]
+
+                # Validate stat type
+                if stat_type not in VALID_STAT_TYPES:
+                    failed_count += 1
+                    results.append({
+                        "index": idx,
+                        "status": "failed",
+                        "reason": f"Invalid stat type: {stat_type}"
+                    })
+                    continue
+
+                # Validate correct field
+                if not isinstance(correct, bool):
+                    failed_count += 1
+                    results.append({
+                        "index": idx,
+                        "status": "failed",
+                        "reason": "'correct' must be a boolean"
+                    })
+                    continue
+
+                # Initialize word stats if they don't exist
+                if word_key not in journey_stats.stats["stats"]:
+                    journey_stats.stats["stats"][word_key] = {}
+
+                if stat_type not in journey_stats.stats["stats"][word_key]:
+                    journey_stats.stats["stats"][word_key][stat_type] = {"correct": 0, "incorrect": 0}
+
+                # Increment the appropriate counter
+                if correct:
+                    journey_stats.stats["stats"][word_key][stat_type]["correct"] += 1
+                else:
+                    journey_stats.stats["stats"][word_key][stat_type]["incorrect"] += 1
+
+                # Update timestamps
+                journey_stats.stats["stats"][word_key]["lastSeen"] = current_timestamp
+
+                if correct:
+                    journey_stats.stats["stats"][word_key]["lastCorrectAnswer"] = current_timestamp
+
+                # Mark word as exposed
+                journey_stats.stats["stats"][word_key]["exposed"] = True
+
+                processed_count += 1
+                results.append({
+                    "index": idx,
+                    "status": "success"
+                })
+
+            except Exception as e:
+                failed_count += 1
+                results.append({
+                    "index": idx,
+                    "status": "failed",
+                    "reason": str(e)
+                })
+                logger.error(f"Error processing increment {idx}: {str(e)}")
+
+        # Save updated stats if any were processed
+        if processed_count > 0:
+            if not journey_stats.save_with_daily_update():
+                return jsonify({"error": "Failed to save stats after processing"}), 500
+
+            # Save the batch nonce
+            used_nonces = load_nonces(user_id, current_day)
+            used_nonces.add(nonce)
+            if not save_nonces(user_id, current_day, used_nonces):
+                logger.warning(f"Failed to save nonce for user {user_id} day {current_day}")
+
+        return jsonify({
+            "success": True,
+            "processed": processed_count,
+            "failed": failed_count,
+            "results": results
+        })
+
+    except Exception as e:
+        logger.error(f"Error in bulk increment: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @trakaido_bp.route('/api/trakaido/journeystats/daily', methods=['GET'])
 @require_auth
 def get_daily_stats():
@@ -1131,10 +1304,10 @@ def get_daily_stats():
     try:
         user_id = str(g.user.id)
         daily_progress = calculate_daily_progress(user_id)
-        
+
         if "error" in daily_progress:
             return jsonify(daily_progress), 500
-        
+
         return jsonify(daily_progress)
     except Exception as e:
         logger.error(f"Error getting daily stats: {str(e)}")
