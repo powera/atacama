@@ -1,3 +1,5 @@
 """Spaceship - Web server component for Atacama."""
 
-# This package contains the spaceship web server implementation
+from .server import app
+
+__all__ = ['app']

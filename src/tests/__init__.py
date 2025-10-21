@@ -1,2 +1,3 @@
-# Tests package initialization
-# This file helps with test discovery
+"""Tests - Test suite for Atacama components."""
+
+__all__ = []
