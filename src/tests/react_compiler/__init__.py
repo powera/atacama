@@ -1,1 +1,3 @@
-# React Compiler Tests
+"""Tests for React compiler functionality."""
+
+__all__ = []

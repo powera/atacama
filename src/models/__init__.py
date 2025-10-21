@@ -1,3 +1,5 @@
+"""Models - Database models and data access layer for Atacama."""
+
 from .models import (
     Base,
     Email,
