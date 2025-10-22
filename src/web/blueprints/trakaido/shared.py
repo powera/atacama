@@ -87,8 +87,8 @@ def sanitize_lithuanian_word(word: str) -> str:
     # Replace spaces with underscores for multi-word phrases
     word_with_underscores = word.replace(' ', '_')
     
-    # Allow all Lithuanian letters, basic Latin letters, and safe characters
-    sanitized = re.sub(r'[^a-z' + LITHUANIAN_CHARS + r'\-_]', '', word_with_underscores)
+    # Allow all Lithuanian letters, basic Latin letters, digits, and safe characters
+    sanitized = re.sub(r'[^a-z0-9' + LITHUANIAN_CHARS + r'\-_]', '', word_with_underscores)
     
     if not sanitized or len(sanitized) > 100:
         return ""
