@@ -32,6 +32,9 @@ def trakaido_index() -> Response:
     if os.path.exists(TRAKAIDO_PATH_PROD):
         # In production, serve the compiled index.html from the Trakaido repo
         return send_file(TRAKAIDO_PATH_PROD)
+    else:
+        logger.error(f"Trakaido index.html not found at: {TRAKAIDO_PATH_PROD}")
+        return Response("Trakaido app not found. Please ensure the build directory exists.", status=404)
 
 
 # Serve images from the Trakaido build directory

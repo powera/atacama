@@ -74,7 +74,7 @@ def before_request_handler():
 def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     """
     Create and configure Flask application instance.
-    
+
     :param testing: Whether to configure app for testing
     :param blueprint_set: Which set of blueprints to load ('BLOG' or 'TRAKAIDO')
     :return: Configured Flask app
@@ -88,6 +88,9 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
         raise RuntimeError("System not initialized. In production, launch.py must initialize the system.")
 
     app = Flask(__name__)
+
+    # Store blueprint_set in app config so it's accessible in templates
+    app.config['BLUEPRINT_SET'] = blueprint_set
     
     if not testing:
         app.secret_key = load_or_create_secret_key()

@@ -27,8 +27,8 @@
 
             <div class="error-actions">
                 <a href="/" class="button">Return to Home</a>
-                
-                {% if public_channels %}
+
+                {% if config.get('BLUEPRINT_SET') == 'BLOG' and public_channels %}
                 <div class="public-channels">
                     <h3>Public Channels</h3>
                     <ul class="channel-list">
