@@ -1,0 +1,38 @@
+# Language configuration for Atacama
+# Defines supported languages and their subdomain mappings
+
+[languages]
+  # Lithuanian language configuration
+  [languages.lithuanian]
+    name = "Lithuanian"
+    code = "lt"
+    subdomains = ["lt"]
+    audio_dir_name = "lithuanian"
+    character_set = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
+
+  # Chinese language configuration
+  [languages.chinese]
+    name = "Chinese"
+    code = "zh"
+    subdomains = ["zh", "cn"]
+    audio_dir_name = "chinese"
+    character_set = ""  # Will support all unicode characters for Chinese
+
+  # Korean language configuration
+  [languages.korean]
+    name = "Korean"
+    code = "ko"
+    subdomains = ["ko", "kr"]
+    audio_dir_name = "korean"
+    character_set = ""  # Will support all unicode characters for Korean
+
+  # French language configuration
+  [languages.french]
+    name = "French"
+    code = "fr"
+    subdomains = ["fr"]
+    audio_dir_name = "french"
+    character_set = "aàâäbcçdeéèêëfghiîïjklmnoôöpqrstuùûüvwxyz"
+
+[defaults]
+  default_language = "lithuanian"
