@@ -75,27 +75,31 @@ def trakaido_json(filename: str) -> Response:
         return Response("File not found", status=404)
 
 
-def sanitize_lithuanian_word(word: str) -> str:
+def sanitize_lithuanian_word(word: str, character_set: Optional[str] = None) -> str:
     """
-    Sanitize a Lithuanian word or phrase for use as a filename.
-    
+    Sanitize a word or phrase for use as a filename.
+
     Args:
-        word: The Lithuanian word or phrase to sanitize
-    
+        word: The word or phrase to sanitize
+        character_set: Optional character set to allow, defaults to Lithuanian characters
+
     Returns:
         Sanitized filename-safe version or empty string if invalid
     """
     word = word.strip().lower()
-    
+
     # Replace spaces with underscores for multi-word phrases
     word_with_underscores = word.replace(' ', '_')
-    
-    # Allow all Lithuanian letters, basic Latin letters, digits, and safe characters
-    sanitized = re.sub(r'[^a-z0-9' + LITHUANIAN_CHARS + r'\-_]', '', word_with_underscores)
-    
+
+    # Use provided character set or default to Lithuanian
+    chars = character_set if character_set is not None else LITHUANIAN_CHARS
+
+    # Allow specified letters, basic Latin letters, digits, and safe characters
+    sanitized = re.sub(r'[^a-z0-9' + chars + r'\-_]', '', word_with_underscores)
+
     if not sanitized or len(sanitized) > 100:
         return ""
-        
+
     return sanitized
 
 

@@ -13,6 +13,7 @@ import constants
 from models.database import db
 from common.config.channel_config import init_channel_manager, get_channel_manager
 from common.config.domain_config import init_domain_manager, get_domain_manager
+from common.config.language_config import init_language_manager, get_language_manager
 from common.services.archive import init_archive_service, get_archive_service
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
@@ -49,27 +50,34 @@ def load_or_create_secret_key() -> str:
         raise RuntimeError(f"Could not access secret key directory: {e}")
 
 def before_request_handler():
-    """Handler to process domain and theme information before each request."""
+    """Handler to process domain, theme, and language information before each request."""
     # Get host from request
     host = request.host
-    
+
     # Get domain manager
     domain_manager = get_domain_manager()
-    
+
     # Determine current domain based on host
     domain_key = domain_manager.get_domain_for_host(host)
     domain_config = domain_manager.get_domain_config(domain_key)
-    
+
     # Get theme configuration
     theme_key = domain_config.theme
     theme_config = domain_manager.get_theme_config(theme_key)
-    
+
+    # Get language manager and determine language from subdomain
+    language_manager = get_language_manager()
+    language_key = language_manager.get_language_from_host(host)
+    language_config = language_manager.get_language_config(language_key)
+
     # Store in Flask's g object for access in views and templates
     g.current_domain = domain_key
     g.domain_config = domain_config
     g.theme_config = theme_config
     g.theme_css_files = theme_config.css_files
     g.theme_layout = theme_config.layout
+    g.current_language = language_key
+    g.language_config = language_config
 
 def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     """
@@ -114,7 +122,8 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     # Initialize managers
     init_channel_manager()
     domain_manager = init_domain_manager()
-    
+    init_language_manager()
+
     # Initialize archive service with configuration from domain manager
     archive_config = domain_manager.get_archive_config()
     if archive_config:
@@ -135,7 +144,7 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
             'check_message_access': check_message_access,
         }
 
-    # Add template context processor for domain and theme info
+    # Add template context processor for domain, theme, and language info
     @app.context_processor
     def inject_domain_data():
         return {
@@ -144,8 +153,11 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
             'theme_config': getattr(g, 'theme_config', None),
             'theme_css_files': getattr(g, 'theme_css_files', []),
             'theme_layout': getattr(g, 'theme_layout', 'default'),
+            'current_language': getattr(g, 'current_language', 'lithuanian'),
+            'language_config': getattr(g, 'language_config', None),
             'domain_manager': get_domain_manager(),
-            'channel_manager': get_channel_manager()
+            'channel_manager': get_channel_manager(),
+            'language_manager': get_language_manager()
         }
 
     # Add template context processor for development mode

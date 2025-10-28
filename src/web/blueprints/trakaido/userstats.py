@@ -49,10 +49,10 @@ def filter_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
     return filtered_stats
 
 
-def user_has_activity_stats(user_id: str) -> bool:
+def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
     """Check if a user has any activity stats."""
     try:
-        journey_stats = JourneyStats(user_id)
+        journey_stats = JourneyStats(user_id, language)
         return not journey_stats.is_empty()
     except Exception as e:
         logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
@@ -61,9 +61,10 @@ def user_has_activity_stats(user_id: str) -> bool:
 
 class BaseStats:
     """Base class for stats management with common functionality."""
-    
-    def __init__(self, user_id: str):
+
+    def __init__(self, user_id: str, language: str = "lithuanian"):
         self.user_id = str(user_id)
+        self.language = language
         self._stats = None
         self._loaded = False
     
@@ -146,13 +147,14 @@ class BaseStats:
 
 
 class JourneyStats(BaseStats):
-    """Manages access to a user's main journey stats file (lithuanian.json)."""
-    
+    """Manages access to a user's main journey stats file."""
+
     @property
     def file_path(self) -> str:
         """Get the file path for this user's journey stats file."""
-        user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id)
-        return os.path.join(user_data_dir, "lithuanian.json")
+        user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, self.language)
+        os.makedirs(user_data_dir, exist_ok=True)
+        return os.path.join(user_data_dir, "stats.json")
     
     def load(self) -> bool:
         """Load the stats from the file with filtering."""
@@ -195,19 +197,19 @@ class JourneyStats(BaseStats):
     def save_with_daily_update(self) -> bool:
         """Save journey stats and update daily snapshots."""
         try:
-            if not ensure_daily_snapshots(self.user_id):
-                logger.warning(f"Failed to ensure daily snapshots for user {self.user_id}")
-            
+            if not ensure_daily_snapshots(self.user_id, self.language):
+                logger.warning(f"Failed to ensure daily snapshots for user {self.user_id} language {self.language}")
+
             if not self.save():
                 return False
-            
+
             # Update current daily snapshot
             current_day = get_current_day_key()
-            current_daily_stats = DailyStats(self.user_id, current_day, "current")
+            current_daily_stats = DailyStats(self.user_id, current_day, "current", self.language)
             current_daily_stats.stats = self._stats
             if not current_daily_stats.save():
                 logger.warning(f"Failed to update current daily snapshot for user {self.user_id}")
-            
+
             return True
         except Exception as e:
             logger.error(f"Error saving journey stats with daily update for user {self.user_id}: {str(e)}")
@@ -216,24 +218,24 @@ class JourneyStats(BaseStats):
 
 class DailyStats(BaseStats):
     """Manages access to a single daily stats file for a specific user and date."""
-    
-    def __init__(self, user_id: str, date: str, stats_type: str = "current"):
-        super().__init__(user_id)
+
+    def __init__(self, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian"):
+        super().__init__(user_id, language)
         self.date = date
         self.stats_type = stats_type
         self._loaded_from_gzip = False
-    
+
     @property
     def file_path(self) -> str:
         """Get the file path for this daily stats file."""
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, "daily")
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily")
         os.makedirs(daily_dir, exist_ok=True)
         return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json")
-    
+
     @property
     def gzip_file_path(self) -> str:
         """Get the GZIP file path for this daily stats file."""
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, "daily")
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily")
         os.makedirs(daily_dir, exist_ok=True)
         return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json.gz")
     
@@ -297,36 +299,36 @@ class DailyStats(BaseStats):
         return self._save_to_file(self.file_path, self._stats)
     
     @classmethod
-    def exists(cls, user_id: str, date: str, stats_type: str = "current") -> bool:
+    def exists(cls, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian") -> bool:
         """Check if a daily stats file exists (either regular or GZIP)."""
-        temp_instance = cls(user_id, date, stats_type)
+        temp_instance = cls(user_id, date, stats_type, language)
         return os.path.exists(temp_instance.gzip_file_path) or os.path.exists(temp_instance.file_path)
     
     @staticmethod
-    def get_available_dates(user_id: str, stats_type: str = "current") -> List[str]:
+    def get_available_dates(user_id: str, stats_type: str = "current", language: str = "lithuanian") -> List[str]:
         """Get all available dates for a user's daily stats files (including GZIP)."""
         try:
-            daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+            daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
             if not os.path.exists(daily_dir):
                 return []
-            
+
             dates = set()
             json_suffix = f"_{stats_type}.json"
             gzip_suffix = f"_{stats_type}.json.gz"
-            
+
             for filename in os.listdir(daily_dir):
                 date_part = None
-                
+
                 # Check for regular JSON files
                 if filename.endswith(json_suffix):
                     date_part = filename[:-len(json_suffix)]
                 # Check for GZIP files
                 elif filename.endswith(gzip_suffix):
                     date_part = filename[:-len(gzip_suffix)]
-                
+
                 if date_part and len(date_part) == 10 and date_part.count('-') == 2:
                     dates.add(date_part)
-            
+
             return sorted(list(dates))
         except Exception as e:
             logger.error(f"Error getting available dates for user {user_id}: {str(e)}")
@@ -394,204 +396,205 @@ def get_yesterday_day_key() -> str:
     return now.strftime("%Y-%m-%d")
 
 
-def get_nonce_file_path(user_id: str, day_key: str) -> str:
+def get_nonce_file_path(user_id: str, day_key: str, language: str = "lithuanian") -> str:
     """Get the file path for a user's nonce tracking file."""
-    daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+    daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
     os.makedirs(daily_dir, exist_ok=True)
     return os.path.join(daily_dir, f"{day_key}_nonces.json")
 
 
-def load_nonces(user_id: str, day_key: str) -> set:
+def load_nonces(user_id: str, day_key: str, language: str = "lithuanian") -> set:
     """Load used nonces for a specific day."""
     try:
-        nonce_file = get_nonce_file_path(user_id, day_key)
+        nonce_file = get_nonce_file_path(user_id, day_key, language)
         if not os.path.exists(nonce_file):
             return set()
-        
+
         with open(nonce_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
         return set(data.get("nonces", []))
     except Exception as e:
-        logger.error(f"Error loading nonces for user {user_id} day {day_key}: {str(e)}")
+        logger.error(f"Error loading nonces for user {user_id} day {day_key} language {language}: {str(e)}")
         return set()
 
 
-def save_nonces(user_id: str, day_key: str, nonces: set) -> bool:
+def save_nonces(user_id: str, day_key: str, nonces: set, language: str = "lithuanian") -> bool:
     """Save used nonces for a specific day."""
     try:
-        ensure_user_data_dir(user_id)
-        nonce_file = get_nonce_file_path(user_id, day_key)
-        
+        user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
+        os.makedirs(user_data_dir, exist_ok=True)
+        nonce_file = get_nonce_file_path(user_id, day_key, language)
+
         with open(nonce_file, 'w', encoding='utf-8') as f:
             json.dump({"nonces": list(nonces)}, f, indent=2)
-        
+
         return True
     except Exception as e:
-        logger.error(f"Error saving nonces for user {user_id} day {day_key}: {str(e)}")
+        logger.error(f"Error saving nonces for user {user_id} day {day_key} language {language}: {str(e)}")
         return False
 
 
-def get_all_nonce_files(user_id: str) -> List[str]:
+def get_all_nonce_files(user_id: str, language: str = "lithuanian") -> List[str]:
     """Get all nonce files for a user."""
     try:
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), "daily")
+        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
         if not os.path.exists(daily_dir):
             return []
-        
+
         nonce_files = []
         for filename in os.listdir(daily_dir):
             if filename.endswith("_nonces.json"):
                 date_part = filename[:-12]  # Remove "_nonces.json"
                 if len(date_part) == 10 and date_part.count('-') == 2:
                     nonce_files.append(date_part)
-        
+
         return sorted(nonce_files)
     except Exception as e:
-        logger.error(f"Error getting nonce files for user {user_id}: {str(e)}")
+        logger.error(f"Error getting nonce files for user {user_id} language {language}: {str(e)}")
         return []
 
 
-def cleanup_old_nonce_files(user_id: str) -> bool:
+def cleanup_old_nonce_files(user_id: str, language: str = "lithuanian") -> bool:
     """Remove nonce files older than today and yesterday."""
     try:
         current_day = get_current_day_key()
         yesterday_day = get_yesterday_day_key()
         keep_dates = {current_day, yesterday_day}
-        
-        all_nonce_dates = get_all_nonce_files(user_id)
+
+        all_nonce_dates = get_all_nonce_files(user_id, language)
         removed_count = 0
-        
+
         for date_str in all_nonce_dates:
             if date_str not in keep_dates:
-                nonce_file = get_nonce_file_path(user_id, date_str)
+                nonce_file = get_nonce_file_path(user_id, date_str, language)
                 try:
                     if os.path.exists(nonce_file):
                         os.remove(nonce_file)
                         removed_count += 1
-                        logger.debug(f"Removed old nonce file for user {user_id} date {date_str}")
+                        logger.debug(f"Removed old nonce file for user {user_id} date {date_str} language {language}")
                 except Exception as e:
                     logger.error(f"Error removing nonce file {nonce_file}: {str(e)}")
-        
+
         if removed_count > 0:
-            logger.info(f"Cleaned up {removed_count} old nonce files for user {user_id}")
-        
+            logger.info(f"Cleaned up {removed_count} old nonce files for user {user_id} language {language}")
+
         return True
     except Exception as e:
-        logger.error(f"Error cleaning up old nonce files for user {user_id}: {str(e)}")
+        logger.error(f"Error cleaning up old nonce files for user {user_id} language {language}: {str(e)}")
         return False
 
 
-def check_nonce_duplicates(user_id: str, nonce: str) -> bool:
+def check_nonce_duplicates(user_id: str, nonce: str, language: str = "lithuanian") -> bool:
     """Check if nonce exists in today's or yesterday's nonce lists."""
     try:
         current_day = get_current_day_key()
         yesterday_day = get_yesterday_day_key()
-        
+
         # Check today's nonces
-        today_nonces = load_nonces(user_id, current_day)
+        today_nonces = load_nonces(user_id, current_day, language)
         if nonce in today_nonces:
-            logger.warning(f"Duplicate nonce '{nonce}' found in today's list for user {user_id}")
+            logger.warning(f"Duplicate nonce '{nonce}' found in today's list for user {user_id} language {language}")
             return True
-        
+
         # Check yesterday's nonces
-        yesterday_nonces = load_nonces(user_id, yesterday_day)
+        yesterday_nonces = load_nonces(user_id, yesterday_day, language)
         if nonce in yesterday_nonces:
-            logger.warning(f"Duplicate nonce '{nonce}' found in yesterday's list for user {user_id}")
+            logger.warning(f"Duplicate nonce '{nonce}' found in yesterday's list for user {user_id} language {language}")
             return True
-        
+
         return False
     except Exception as e:
-        logger.error(f"Error checking nonce duplicates for user {user_id}: {str(e)}")
+        logger.error(f"Error checking nonce duplicates for user {user_id} language {language}: {str(e)}")
         return True  # Return True to be safe and reject the nonce
 
 
-def compress_previous_day_files(user_id: str) -> bool:
+def compress_previous_day_files(user_id: str, language: str = "lithuanian") -> bool:
     """Compress previous day files to GZIP during daily rotation."""
     try:
         current_day = get_current_day_key()
         current_date = datetime.strptime(current_day, "%Y-%m-%d")
-        
-        # Get all available dates for this user
-        available_dates = DailyStats.get_available_dates(user_id, "current")
-        available_dates.extend(DailyStats.get_available_dates(user_id, "yesterday"))
+
+        # Get all available dates for this user and language
+        available_dates = DailyStats.get_available_dates(user_id, "current", language)
+        available_dates.extend(DailyStats.get_available_dates(user_id, "yesterday", language))
         available_dates = list(set(available_dates))  # Remove duplicates
-        
+
         compressed_count = 0
-        
+
         for date_str in available_dates:
             try:
                 file_date = datetime.strptime(date_str, "%Y-%m-%d")
-                
+
                 # Only compress files from previous days (not current day)
                 if file_date < current_date:
                     for stats_type in ["current", "yesterday"]:
-                        daily_stats = DailyStats(user_id, date_str, stats_type)
-                        
+                        daily_stats = DailyStats(user_id, date_str, stats_type, language)
+
                         # Only compress if regular file exists and GZIP doesn't
-                        if (os.path.exists(daily_stats.file_path) and 
+                        if (os.path.exists(daily_stats.file_path) and
                             not os.path.exists(daily_stats.gzip_file_path)):
-                            
+
                             if daily_stats.compress_to_gzip():
                                 compressed_count += 1
-                                logger.debug(f"Compressed {date_str}_{stats_type}.json for user {user_id}")
-                            
+                                logger.debug(f"Compressed {date_str}_{stats_type}.json for user {user_id} language {language}")
+
             except ValueError:
                 # Skip invalid date formats
                 continue
-        
+
         if compressed_count > 0:
-            logger.info(f"Compressed {compressed_count} previous day files for user {user_id}")
-        
+            logger.info(f"Compressed {compressed_count} previous day files for user {user_id} language {language}")
+
         return True
     except Exception as e:
-        logger.error(f"Error compressing previous day files for user {user_id}: {str(e)}")
+        logger.error(f"Error compressing previous day files for user {user_id} language {language}: {str(e)}")
         return False
 
 
-def ensure_daily_snapshots(user_id: str) -> bool:
+def ensure_daily_snapshots(user_id: str, language: str = "lithuanian") -> bool:
     """Ensure that daily snapshots are properly set up for the current day."""
     try:
         current_day = get_current_day_key()
-        
+
         # Check if we need to create yesterday's snapshot
-        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday")
-        if not DailyStats.exists(user_id, current_day, "yesterday") or yesterday_daily_stats.is_empty():
-            journey_stats = JourneyStats(user_id)
+        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday", language)
+        if not DailyStats.exists(user_id, current_day, "yesterday", language) or yesterday_daily_stats.is_empty():
+            journey_stats = JourneyStats(user_id, language)
             yesterday_daily_stats.stats = journey_stats.stats
             yesterday_daily_stats.save()
-            logger.debug(f"Created yesterday snapshot for user {user_id} day {current_day}")
-        
+            logger.debug(f"Created yesterday snapshot for user {user_id} day {current_day} language {language}")
+
         # Ensure current snapshot exists
-        current_daily_stats = DailyStats(user_id, current_day, "current")
-        if not DailyStats.exists(user_id, current_day, "current"):
-            journey_stats = JourneyStats(user_id)
+        current_daily_stats = DailyStats(user_id, current_day, "current", language)
+        if not DailyStats.exists(user_id, current_day, "current", language):
+            journey_stats = JourneyStats(user_id, language)
             current_daily_stats.stats = journey_stats.stats
             current_daily_stats.save()
-            logger.debug(f"Created current snapshot for user {user_id} day {current_day}")
-        
+            logger.debug(f"Created current snapshot for user {user_id} day {current_day} language {language}")
+
         # Compress previous day files once current day is set up
-        compress_previous_day_files(user_id)
-        
+        compress_previous_day_files(user_id, language)
+
         # Clean up old nonce files (keep only today and yesterday)
-        cleanup_old_nonce_files(user_id)
-        
+        cleanup_old_nonce_files(user_id, language)
+
         return True
     except Exception as e:
-        logger.error(f"Error ensuring daily snapshots for user {user_id}: {str(e)}")
+        logger.error(f"Error ensuring daily snapshots for user {user_id} language {language}: {str(e)}")
         return False
 
 
-def calculate_daily_progress(user_id: str) -> Dict[str, Any]:
+def calculate_daily_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """Calculate daily progress by comparing current and yesterday snapshots."""
     try:
         current_day = get_current_day_key()
-        
-        if not ensure_daily_snapshots(user_id):
+
+        if not ensure_daily_snapshots(user_id, language):
             return {"error": "Failed to ensure daily snapshots"}
-        
-        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday")
-        current_daily_stats = DailyStats(user_id, current_day, "current")
+
+        yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday", language)
+        current_daily_stats = DailyStats(user_id, current_day, "current", language)
         
         daily_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
         daily_progress["exposed"] = {"new": 0, "total": 0}
@@ -637,7 +640,7 @@ def get_week_ago_day_key() -> str:
     return week_ago.strftime("%Y-%m-%d")
 
 
-def find_best_baseline(user_id: str, target_day: str, max_days: int) -> DailyStats:
+def find_best_baseline(user_id: str, target_day: str, max_days: int, language: str = "lithuanian") -> DailyStats:
     """Find the best available baseline stats for comparison over a given period.
     
     Args:
@@ -650,59 +653,59 @@ def find_best_baseline(user_id: str, target_day: str, max_days: int) -> DailySta
     """
     try:
         # Try exact target day first
-        target_daily_stats = DailyStats(user_id, target_day, "current")
-        if DailyStats.exists(user_id, target_day, "current") and not target_daily_stats.is_empty():
+        target_daily_stats = DailyStats(user_id, target_day, "current", language)
+        if DailyStats.exists(user_id, target_day, "current", language) and not target_daily_stats.is_empty():
             return target_daily_stats
-        
+
         # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
         # that is less than max_days old from the target date
         target_date = datetime.strptime(target_day, "%Y-%m-%d")
-        yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday")
-        
+        yesterday_dates = DailyStats.get_available_dates(user_id, "yesterday", language)
+
         best_daily_stats = None
         best_date = None
-        
+
         # Check up to max_days forward from target
         for days_forward in range(1, max_days + 1):
             check_date = target_date + timedelta(days=days_forward)
             check_day_key = check_date.strftime("%Y-%m-%d")
-            
+
             if check_day_key in yesterday_dates:
-                check_daily_stats = DailyStats(user_id, check_day_key, "yesterday")
+                check_daily_stats = DailyStats(user_id, check_day_key, "yesterday", language)
                 if not check_daily_stats.is_empty():
                     # We want the oldest (earliest) "yesterday" snapshot, so take the first one we find
                     if best_date is None or check_date < best_date:
                         best_daily_stats = check_daily_stats
                         best_date = check_date
-        
+
         if best_daily_stats:
             return best_daily_stats
         else:
             period_name = "weekly" if max_days <= 7 else "monthly"
-            logger.debug(f"No suitable {period_name} baseline found for user {user_id}, using empty baseline")
-            empty_stats = DailyStats(user_id, target_day, "current")
+            logger.debug(f"No suitable {period_name} baseline found for user {user_id} language {language}, using empty baseline")
+            empty_stats = DailyStats(user_id, target_day, "current", language)
             empty_stats.stats = {"stats": {}}
             return empty_stats
-        
+
     except Exception as e:
         period_name = "weekly" if max_days <= 7 else "monthly"
-        logger.error(f"Error finding {period_name} baseline for user {user_id}: {str(e)}")
-        empty_stats = DailyStats(user_id, target_day, "current")
+        logger.error(f"Error finding {period_name} baseline for user {user_id} language {language}: {str(e)}")
+        empty_stats = DailyStats(user_id, target_day, "current", language)
         empty_stats.stats = {"stats": {}}
         return empty_stats
 
 
-def calculate_weekly_progress(user_id: str) -> Dict[str, Any]:
+def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """Calculate weekly progress by comparing current stats with stats from 7 days ago."""
     try:
         current_day = get_current_day_key()
         week_ago_day = get_week_ago_day_key()
-        
-        if not ensure_daily_snapshots(user_id):
+
+        if not ensure_daily_snapshots(user_id, language):
             return {"error": "Failed to ensure daily snapshots"}
-        
-        current_daily_stats = DailyStats(user_id, current_day, "current")
-        week_ago_daily_stats = find_best_baseline(user_id, week_ago_day, 7)
+
+        current_daily_stats = DailyStats(user_id, current_day, "current", language)
+        week_ago_daily_stats = find_best_baseline(user_id, week_ago_day, 7, language)
         
         weekly_progress = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
         weekly_progress["exposed"] = {"new": 0, "total": 0}
@@ -767,10 +770,10 @@ def get_30_day_date_range() -> tuple[str, str]:
     return start_date, end_date
 
 
-def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
+def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """
     Calculate monthly stats with daily breakdown and monthly aggregate for the past 30 days.
-    
+
     Returns two main components:
     1. monthlyAggregate - Aggregate stats for the entire 30-day period (similar to weekly stats)
     2. dailyData - Per-day stats showing:
@@ -781,13 +784,13 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
     try:
         current_day = get_current_day_key()
         thirty_days_ago_day = get_30_days_ago_day_key()
-        
-        if not ensure_daily_snapshots(user_id):
+
+        if not ensure_daily_snapshots(user_id, language):
             return {"error": "Failed to ensure daily snapshots"}
-        
+
         # Get current stats and baseline for summary
-        current_daily_stats = DailyStats(user_id, current_day, "current")
-        thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30)
+        current_daily_stats = DailyStats(user_id, current_day, "current", language)
+        thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30, language)
         
         # Calculate monthly aggregate stats (similar to weekly)
         monthly_aggregate = {stat_type: {"correct": 0, "incorrect": 0} for stat_type in VALID_STAT_TYPES}
@@ -825,7 +828,7 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
         
         # Get daily breakdown for the past 30 days
         start_date_str, end_date_str = get_30_day_date_range()
-        available_dates = DailyStats.get_available_dates(user_id, "current")
+        available_dates = DailyStats.get_available_dates(user_id, "current", language)
         
         daily_data = []
         
@@ -842,7 +845,7 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
             newly_exposed_words_on_day = 0
             
             if date_str in available_dates:
-                daily_stats = DailyStats(user_id, date_str, "current")
+                daily_stats = DailyStats(user_id, date_str, "current", language)
                 if not daily_stats.is_empty():
                     # Calculate questions answered on this day (sum of all correct + incorrect for all stat types)
                     for word_key, word_stats in daily_stats.stats["stats"].items():
@@ -867,7 +870,7 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                         while check_date >= start_date:
                             check_date_str = check_date.strftime("%Y-%m-%d")
                             if check_date_str in available_dates:
-                                prev_daily_stats = DailyStats(user_id, check_date_str, "current")
+                                prev_daily_stats = DailyStats(user_id, check_date_str, "current", language)
                                 if not prev_daily_stats.is_empty():
                                     most_recent_prev_date = check_date_str
                                     most_recent_prev_stats = prev_daily_stats
@@ -884,13 +887,13 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                         else:
                             # If no previous data within the period, try to find data from before the period
                             baseline_found = False
-                            all_available_dates = DailyStats.get_available_dates(user_id, "current")
+                            all_available_dates = DailyStats.get_available_dates(user_id, "current", language)
                             earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
-                            
+
                             if earlier_dates:
                                 # Use the most recent date before our period as baseline
                                 baseline_date = max(earlier_dates)
-                                baseline_stats = DailyStats(user_id, baseline_date, "current")
+                                baseline_stats = DailyStats(user_id, baseline_date, "current", language)
                                 
                                 if not baseline_stats.is_empty():
                                     baseline_found = True
@@ -908,15 +911,15 @@ def calculate_monthly_progress(user_id: str) -> Dict[str, Any]:
                         # First day of the 30-day period with data
                         # Try to find a baseline from before the 30-day period to compare with
                         baseline_found = False
-                        
+
                         # Look for snapshots before the start date
-                        all_available_dates = DailyStats.get_available_dates(user_id, "current")
+                        all_available_dates = DailyStats.get_available_dates(user_id, "current", language)
                         earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
-                        
+
                         if earlier_dates:
                             # Use the most recent date before our period as baseline
                             baseline_date = max(earlier_dates)
-                            baseline_stats = DailyStats(user_id, baseline_date, "current")
+                            baseline_stats = DailyStats(user_id, baseline_date, "current", language)
                             
                             if not baseline_stats.is_empty():
                                 baseline_found = True
@@ -965,7 +968,8 @@ def get_all_journey_stats():
     """Get all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        journey_stats = JourneyStats(user_id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        journey_stats = JourneyStats(user_id, language)
         return jsonify(journey_stats.stats)
     except Exception as e:
         logger.error(f"Error getting all journey stats: {str(e)}")
@@ -978,12 +982,13 @@ def save_all_journey_stats():
     """Save all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
-        
+
         if not data or "stats" not in data:
             return jsonify({"error": "Invalid request body. Expected 'stats' field."}), 400
-        
-        journey_stats = JourneyStats(user_id)
+
+        journey_stats = JourneyStats(user_id, language)
         journey_stats.stats = data
         if journey_stats.save_with_daily_update():
             return jsonify({"success": True})
@@ -1000,15 +1005,16 @@ def update_word_stats():
     """Update stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
-        
+
         if not data or "wordKey" not in data or "wordStats" not in data:
             return jsonify({"error": "Invalid request body. Expected 'wordKey' and 'wordStats' fields."}), 400
-        
+
         word_key = data["wordKey"]
         word_stats = data["wordStats"]
-        
-        journey_stats = JourneyStats(user_id)
+
+        journey_stats = JourneyStats(user_id, language)
         journey_stats.set_word_stats(word_key, word_stats)
         
         if journey_stats.save_with_daily_update():
@@ -1026,7 +1032,8 @@ def get_word_stats(word_key: str):
     """Get stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        journey_stats = JourneyStats(user_id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        journey_stats = JourneyStats(user_id, language)
         word_stats = journey_stats.get_word_stats(word_key)
         return jsonify({"wordStats": word_stats})
     except Exception as e:
@@ -1066,18 +1073,19 @@ def increment_word_stats():
         if not isinstance(nonce, str) or not nonce.strip():
             return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
         
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         current_day = get_current_day_key()
-        
+
         # Check if nonce has already been used (today or yesterday)
-        if check_nonce_duplicates(user_id, nonce):
+        if check_nonce_duplicates(user_id, nonce, language):
             return jsonify({"error": "Nonce already used"}), 409
-        
+
         # Ensure daily snapshots exist
-        if not ensure_daily_snapshots(user_id):
+        if not ensure_daily_snapshots(user_id, language):
             return jsonify({"error": "Failed to initialize daily stats"}), 500
-        
+
         # Load current overall stats
-        journey_stats = JourneyStats(user_id)
+        journey_stats = JourneyStats(user_id, language)
         
         # Initialize word stats if they don't exist
         if word_key not in journey_stats.stats["stats"]:
@@ -1107,10 +1115,10 @@ def increment_word_stats():
             return jsonify({"error": "Failed to save stats"}), 500
         
         # Add nonce to today's used nonces
-        used_nonces = load_nonces(user_id, current_day)
+        used_nonces = load_nonces(user_id, current_day, language)
         used_nonces.add(nonce)
-        if not save_nonces(user_id, current_day, used_nonces):
-            logger.warning(f"Failed to save nonce for user {user_id} day {current_day}")
+        if not save_nonces(user_id, current_day, used_nonces, language):
+            logger.warning(f"Failed to save nonce for user {user_id} day {current_day} language {language}")
                 
         return jsonify({
             "success": True,
@@ -1179,18 +1187,19 @@ def bulk_increment_word_stats():
         if len(increments) > 1000:
             return jsonify({"error": "Maximum 1000 increments per request"}), 400
 
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         current_day = get_current_day_key()
 
         # Check if this batch nonce has already been used
-        if check_nonce_duplicates(user_id, nonce):
+        if check_nonce_duplicates(user_id, nonce, language):
             return jsonify({"error": "Batch nonce already used"}), 409
 
         # Ensure daily snapshots exist
-        if not ensure_daily_snapshots(user_id):
+        if not ensure_daily_snapshots(user_id, language):
             return jsonify({"error": "Failed to initialize daily stats"}), 500
 
         # Load journey stats once
-        journey_stats = JourneyStats(user_id)
+        journey_stats = JourneyStats(user_id, language)
 
         processed_count = 0
         failed_count = 0
@@ -1280,10 +1289,11 @@ def bulk_increment_word_stats():
                 return jsonify({"error": "Failed to save stats after processing"}), 500
 
             # Save the batch nonce
-            used_nonces = load_nonces(user_id, current_day)
+            language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+            used_nonces = load_nonces(user_id, current_day, language)
             used_nonces.add(nonce)
-            if not save_nonces(user_id, current_day, used_nonces):
-                logger.warning(f"Failed to save nonce for user {user_id} day {current_day}")
+            if not save_nonces(user_id, current_day, used_nonces, language):
+                logger.warning(f"Failed to save nonce for user {user_id} day {current_day} language {language}")
 
         return jsonify({
             "success": True,
@@ -1303,7 +1313,8 @@ def get_daily_stats():
     """Get daily stats (today's progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        daily_progress = calculate_daily_progress(user_id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        daily_progress = calculate_daily_progress(user_id, language)
 
         if "error" in daily_progress:
             return jsonify(daily_progress), 500
@@ -1320,11 +1331,12 @@ def get_weekly_stats():
     """Get weekly stats (7-day progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        weekly_progress = calculate_weekly_progress(user_id)
-        
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        weekly_progress = calculate_weekly_progress(user_id, language)
+
         if "error" in weekly_progress:
             return jsonify(weekly_progress), 500
-        
+
         return jsonify(weekly_progress)
     except Exception as e:
         logger.error(f"Error getting weekly stats: {str(e)}")
@@ -1336,18 +1348,19 @@ def get_weekly_stats():
 def get_monthly_stats():
     """
     Get monthly stats for the authenticated user.
-    
+
     Returns:
     - monthlyAggregate: Aggregate stats for the entire 30-day period
     - dailyData: Per-day stats showing questions answered, exposed words count, and newly exposed words
     """
     try:
         user_id = str(g.user.id)
-        monthly_progress = calculate_monthly_progress(user_id)
-        
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        monthly_progress = calculate_monthly_progress(user_id, language)
+
         if "error" in monthly_progress:
             return jsonify(monthly_progress), 500
-        
+
         return jsonify(monthly_progress)
     except Exception as e:
         logger.error(f"Error getting monthly stats: {str(e)}")
