@@ -4,7 +4,7 @@
 import gzip
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 # Third-party imports
@@ -14,12 +14,23 @@ from flask import g, jsonify, request
 import constants
 from web.decorators import require_auth
 from .shared import *
+from .date_utils import (
+    get_current_day_key,
+    get_yesterday_day_key,
+    get_week_ago_day_key,
+    get_30_days_ago_day_key,
+    get_30_day_date_range
+)
+from .nonce_utils import (
+    get_nonce_file_path,
+    load_nonces,
+    save_nonces,
+    get_all_nonce_files,
+    cleanup_old_nonce_files,
+    check_nonce_duplicates
+)
 
 ##############################################################################
-
-# Daily stats constants
-DAILY_CUTOFF_HOUR = 7  # 0700 GMT
-DAILY_CUTOFF_TIMEZONE = timezone.utc
 
 # API Documentation for journey stats endpoints
 USERSTATS_API_DOCS = {
@@ -198,11 +209,6 @@ def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, A
     return normalized
 
 
-def filter_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
-    """Filter word stats to include only valid stat types and migrate if needed."""
-    return validate_and_normalize_word_stats(word_stats)
-
-
 def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
     """Check if a user has any activity stats."""
     try:
@@ -211,6 +217,212 @@ def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
     except Exception as e:
         logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
         return False
+
+
+##############################################################################
+# Delta Calculation Helper Functions
+##############################################################################
+
+def calculate_progress_delta(current_stats: "DailyStats", baseline_stats: "DailyStats") -> Dict[str, Any]:
+    """Calculate the delta between current stats and baseline stats.
+
+    Returns a progress structure with deltas for:
+    - directPractice activities
+    - contextualExposure (sentences)
+    - exposed words (new and total)
+    """
+    progress = {
+        "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
+        "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
+        "exposed": {"new": 0, "total": 0}
+    }
+
+    # Calculate progress for each word
+    for word_key, current_word_stats in current_stats.stats["stats"].items():
+        baseline_word_stats = baseline_stats.get_word_stats(word_key)
+
+        # Count exposed words
+        if current_word_stats.get("exposed", False):
+            progress["exposed"]["total"] += 1
+            # Count new exposed words (words that exist in current but not in baseline)
+            if not baseline_word_stats or not baseline_word_stats.get("exposed", False):
+                progress["exposed"]["new"] += 1
+
+        # Calculate directPractice deltas
+        if "directPractice" in current_word_stats:
+            for activity_type in DIRECT_PRACTICE_TYPES:
+                if activity_type in current_word_stats["directPractice"]:
+                    current_activity = current_word_stats["directPractice"][activity_type]
+                    current_correct = current_activity.get("correct", 0)
+                    current_incorrect = current_activity.get("incorrect", 0)
+
+                    baseline_correct = 0
+                    baseline_incorrect = 0
+                    if (baseline_word_stats and "directPractice" in baseline_word_stats and
+                        activity_type in baseline_word_stats["directPractice"]):
+                        baseline_activity = baseline_word_stats["directPractice"][activity_type]
+                        baseline_correct = baseline_activity.get("correct", 0)
+                        baseline_incorrect = baseline_activity.get("incorrect", 0)
+
+                    # Calculate delta
+                    progress["directPractice"][activity_type]["correct"] += max(0, current_correct - baseline_correct)
+                    progress["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
+
+        # Calculate contextualExposure deltas
+        if "contextualExposure" in current_word_stats and "sentences" in current_word_stats["contextualExposure"]:
+            current_sentences = current_word_stats["contextualExposure"]["sentences"]
+            current_correct = current_sentences.get("correct", 0)
+            current_incorrect = current_sentences.get("incorrect", 0)
+
+            baseline_correct = 0
+            baseline_incorrect = 0
+            if (baseline_word_stats and "contextualExposure" in baseline_word_stats and
+                "sentences" in baseline_word_stats["contextualExposure"]):
+                baseline_sentences = baseline_word_stats["contextualExposure"]["sentences"]
+                baseline_correct = baseline_sentences.get("correct", 0)
+                baseline_incorrect = baseline_sentences.get("incorrect", 0)
+
+            progress["contextualExposure"]["sentences"]["correct"] += max(0, current_correct - baseline_correct)
+            progress["contextualExposure"]["sentences"]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
+
+    return progress
+
+
+##############################################################################
+# Increment Helper Functions
+##############################################################################
+
+def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
+    """Parse stat type and return (category, activity, is_contextual).
+
+    Supports both new format (e.g., "directPractice.multipleChoice_targetToEnglish")
+    and old format (e.g., "multipleChoice").
+
+    Returns:
+        tuple: (category, activity, is_contextual)
+
+    Raises:
+        ValueError: If stat_type is invalid
+    """
+    category = None
+    activity = None
+    is_contextual = False
+
+    if "." in stat_type:
+        # New format with dot notation
+        parts = stat_type.split(".", 1)
+        category = parts[0]
+        activity = parts[1]
+
+        if category == "contextualExposure":
+            is_contextual = True
+            if activity != "sentences":
+                raise ValueError(f"Invalid contextual exposure type: {activity}")
+        elif category == "directPractice":
+            if activity not in DIRECT_PRACTICE_TYPES:
+                raise ValueError(f"Invalid direct practice type: {activity}")
+        else:
+            raise ValueError(f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'")
+    else:
+        # Old format - map to new format
+        if stat_type == "sentences":
+            category = "contextualExposure"
+            activity = "sentences"
+            is_contextual = True
+        elif stat_type == "multipleChoice":
+            category = "directPractice"
+            activity = "multipleChoice_targetToEnglish"  # Default to target->english
+        elif stat_type == "listeningEasy":
+            category = "directPractice"
+            activity = "listening_targetAudioToTarget"
+        elif stat_type == "listeningHard":
+            category = "directPractice"
+            activity = "listening_targetAudioToEnglish"
+        elif stat_type == "typing":
+            category = "directPractice"
+            activity = "typing_targetToEnglish"
+        elif stat_type == "blitz":
+            category = "directPractice"
+            activity = "blitz_targetToEnglish"
+        else:
+            raise ValueError(f"Invalid stat type: {stat_type}")
+
+    return category, activity, is_contextual
+
+
+def increment_word_stat(
+    journey_stats: "JourneyStats",
+    word_key: str,
+    category: str,
+    activity: str,
+    correct: bool,
+    is_contextual: bool,
+    current_timestamp: int
+) -> Dict[str, Any]:
+    """Increment stats for a single word and update timestamps.
+
+    Args:
+        journey_stats: JourneyStats object to update
+        word_key: Key for the word being updated
+        category: Category ("directPractice" or "contextualExposure")
+        activity: Activity type within the category
+        correct: Whether the answer was correct
+        is_contextual: Whether this is contextual exposure (affects timestamp updates)
+        current_timestamp: Current timestamp in milliseconds
+
+    Returns:
+        The updated word stats dictionary
+    """
+    # Initialize word stats if they don't exist (use new schema)
+    if word_key not in journey_stats.stats["stats"]:
+        journey_stats.stats["stats"][word_key] = create_empty_word_stats()
+
+    word_stats = journey_stats.stats["stats"][word_key]
+
+    # Ensure the word stats have the new schema structure
+    if "directPractice" not in word_stats or "contextualExposure" not in word_stats or "practiceHistory" not in word_stats:
+        # Migrate to new schema if needed
+        word_stats = validate_and_normalize_word_stats(word_stats)
+        journey_stats.stats["stats"][word_key] = word_stats
+
+    # Increment the appropriate counter
+    if category not in word_stats:
+        if category == "directPractice":
+            word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES}
+        else:
+            word_stats[category] = {"sentences": {"correct": 0, "incorrect": 0}}
+
+    if activity not in word_stats[category]:
+        word_stats[category][activity] = {"correct": 0, "incorrect": 0}
+
+    if correct:
+        word_stats[category][activity]["correct"] += 1
+    else:
+        word_stats[category][activity]["incorrect"] += 1
+
+    # Update timestamps based on activity type
+    if "practiceHistory" not in word_stats:
+        word_stats["practiceHistory"] = {
+            "lastSeen": None,
+            "lastCorrectAnswer": None,
+            "lastIncorrectAnswer": None
+        }
+
+    # Always update lastSeen
+    word_stats["practiceHistory"]["lastSeen"] = current_timestamp
+
+    # For direct practice: update lastCorrectAnswer or lastIncorrectAnswer
+    # For contextual exposure (sentences): only update lastSeen
+    if not is_contextual:
+        if correct:
+            word_stats["practiceHistory"]["lastCorrectAnswer"] = current_timestamp
+        else:
+            word_stats["practiceHistory"]["lastIncorrectAnswer"] = current_timestamp
+
+    # Mark word as exposed
+    word_stats["exposed"] = True
+
+    return word_stats
 
 
 class BaseStats:
@@ -319,7 +531,7 @@ class JourneyStats(BaseStats):
             filtered_stats = {}
             if "stats" in data:
                 for word_key, word_stats in data["stats"].items():
-                    filtered_stats[word_key] = filter_word_stats(word_stats)
+                    filtered_stats[word_key] = validate_and_normalize_word_stats(word_stats)
             
             self._stats = {"stats": filtered_stats}
             self._loaded = True
@@ -340,13 +552,13 @@ class JourneyStats(BaseStats):
         filtered_data = {"stats": {}}
         if "stats" in self._stats:
             for word_key, word_stats in self._stats["stats"].items():
-                filtered_data["stats"][word_key] = filter_word_stats(word_stats)
+                filtered_data["stats"][word_key] = validate_and_normalize_word_stats(word_stats)
         
         return self._save_to_file(self.file_path, filtered_data)
     
     def set_word_stats(self, word_key: str, word_stats: Dict[str, Any]):
         """Set stats for a specific word (with filtering)."""
-        super().set_word_stats(word_key, filter_word_stats(word_stats))
+        super().set_word_stats(word_key, validate_and_normalize_word_stats(word_stats))
     
     def save_with_daily_update(self) -> bool:
         """Save journey stats and update daily snapshots."""
@@ -556,137 +768,6 @@ class DailyStats(BaseStats):
 
 
 # Daily Stats Functions
-def get_current_day_key() -> str:
-    """Get the current day key based on 0700 GMT cutoff."""
-    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    if now.hour < DAILY_CUTOFF_HOUR:
-        now = now - timedelta(days=1)
-    return now.strftime("%Y-%m-%d")
-
-
-def get_yesterday_day_key() -> str:
-    """Get yesterday's day key based on 0700 GMT cutoff."""
-    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    if now.hour < DAILY_CUTOFF_HOUR:
-        now = now - timedelta(days=2)  # Two days back if before cutoff
-    else:
-        now = now - timedelta(days=1)  # One day back if after cutoff
-    return now.strftime("%Y-%m-%d")
-
-
-def get_nonce_file_path(user_id: str, day_key: str, language: str = "lithuanian") -> str:
-    """Get the file path for a user's nonce tracking file."""
-    daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
-    os.makedirs(daily_dir, exist_ok=True)
-    return os.path.join(daily_dir, f"{day_key}_nonces.json")
-
-
-def load_nonces(user_id: str, day_key: str, language: str = "lithuanian") -> set:
-    """Load used nonces for a specific day."""
-    try:
-        nonce_file = get_nonce_file_path(user_id, day_key, language)
-        if not os.path.exists(nonce_file):
-            return set()
-
-        with open(nonce_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        return set(data.get("nonces", []))
-    except Exception as e:
-        logger.error(f"Error loading nonces for user {user_id} day {day_key} language {language}: {str(e)}")
-        return set()
-
-
-def save_nonces(user_id: str, day_key: str, nonces: set, language: str = "lithuanian") -> bool:
-    """Save used nonces for a specific day."""
-    try:
-        user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
-        os.makedirs(user_data_dir, exist_ok=True)
-        nonce_file = get_nonce_file_path(user_id, day_key, language)
-
-        with open(nonce_file, 'w', encoding='utf-8') as f:
-            json.dump({"nonces": list(nonces)}, f, indent=2)
-
-        return True
-    except Exception as e:
-        logger.error(f"Error saving nonces for user {user_id} day {day_key} language {language}: {str(e)}")
-        return False
-
-
-def get_all_nonce_files(user_id: str, language: str = "lithuanian") -> List[str]:
-    """Get all nonce files for a user."""
-    try:
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
-        if not os.path.exists(daily_dir):
-            return []
-
-        nonce_files = []
-        for filename in os.listdir(daily_dir):
-            if filename.endswith("_nonces.json"):
-                date_part = filename[:-12]  # Remove "_nonces.json"
-                if len(date_part) == 10 and date_part.count('-') == 2:
-                    nonce_files.append(date_part)
-
-        return sorted(nonce_files)
-    except Exception as e:
-        logger.error(f"Error getting nonce files for user {user_id} language {language}: {str(e)}")
-        return []
-
-
-def cleanup_old_nonce_files(user_id: str, language: str = "lithuanian") -> bool:
-    """Remove nonce files older than today and yesterday."""
-    try:
-        current_day = get_current_day_key()
-        yesterday_day = get_yesterday_day_key()
-        keep_dates = {current_day, yesterday_day}
-
-        all_nonce_dates = get_all_nonce_files(user_id, language)
-        removed_count = 0
-
-        for date_str in all_nonce_dates:
-            if date_str not in keep_dates:
-                nonce_file = get_nonce_file_path(user_id, date_str, language)
-                try:
-                    if os.path.exists(nonce_file):
-                        os.remove(nonce_file)
-                        removed_count += 1
-                        logger.debug(f"Removed old nonce file for user {user_id} date {date_str} language {language}")
-                except Exception as e:
-                    logger.error(f"Error removing nonce file {nonce_file}: {str(e)}")
-
-        if removed_count > 0:
-            logger.info(f"Cleaned up {removed_count} old nonce files for user {user_id} language {language}")
-
-        return True
-    except Exception as e:
-        logger.error(f"Error cleaning up old nonce files for user {user_id} language {language}: {str(e)}")
-        return False
-
-
-def check_nonce_duplicates(user_id: str, nonce: str, language: str = "lithuanian") -> bool:
-    """Check if nonce exists in today's or yesterday's nonce lists."""
-    try:
-        current_day = get_current_day_key()
-        yesterday_day = get_yesterday_day_key()
-
-        # Check today's nonces
-        today_nonces = load_nonces(user_id, current_day, language)
-        if nonce in today_nonces:
-            logger.warning(f"Duplicate nonce '{nonce}' found in today's list for user {user_id} language {language}")
-            return True
-
-        # Check yesterday's nonces
-        yesterday_nonces = load_nonces(user_id, yesterday_day, language)
-        if nonce in yesterday_nonces:
-            logger.warning(f"Duplicate nonce '{nonce}' found in yesterday's list for user {user_id} language {language}")
-            return True
-
-        return False
-    except Exception as e:
-        logger.error(f"Error checking nonce duplicates for user {user_id} language {language}: {str(e)}")
-        return True  # Return True to be safe and reject the nonce
-
-
 def compress_previous_day_files(user_id: str, language: str = "lithuanian") -> bool:
     """Compress previous day files to GZIP during daily rotation."""
     try:
@@ -774,74 +855,13 @@ def calculate_daily_progress(user_id: str, language: str = "lithuanian") -> Dict
         yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday", language)
         current_daily_stats = DailyStats(user_id, current_day, "current", language)
 
-        # Initialize progress structure with new nested format
-        daily_progress = {
-            "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
-            "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
-            "exposed": {"new": 0, "total": 0}
-        }
-
-        # Calculate progress for each word
-        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
-            yesterday_word_stats = yesterday_daily_stats.get_word_stats(word_key)
-
-            # Count exposed words
-            if current_word_stats.get("exposed", False):
-                daily_progress["exposed"]["total"] += 1
-                # Count new exposed words (words that exist in current but not in yesterday)
-                if not yesterday_word_stats or not yesterday_word_stats.get("exposed", False):
-                    daily_progress["exposed"]["new"] += 1
-
-            # Calculate directPractice deltas
-            if "directPractice" in current_word_stats:
-                for activity_type in DIRECT_PRACTICE_TYPES:
-                    if activity_type in current_word_stats["directPractice"]:
-                        current_activity = current_word_stats["directPractice"][activity_type]
-                        current_correct = current_activity.get("correct", 0)
-                        current_incorrect = current_activity.get("incorrect", 0)
-
-                        yesterday_correct = 0
-                        yesterday_incorrect = 0
-                        if (yesterday_word_stats and "directPractice" in yesterday_word_stats and
-                            activity_type in yesterday_word_stats["directPractice"]):
-                            yesterday_activity = yesterday_word_stats["directPractice"][activity_type]
-                            yesterday_correct = yesterday_activity.get("correct", 0)
-                            yesterday_incorrect = yesterday_activity.get("incorrect", 0)
-
-                        # Calculate delta
-                        daily_progress["directPractice"][activity_type]["correct"] += max(0, current_correct - yesterday_correct)
-                        daily_progress["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - yesterday_incorrect)
-
-            # Calculate contextualExposure deltas
-            if "contextualExposure" in current_word_stats and "sentences" in current_word_stats["contextualExposure"]:
-                current_sentences = current_word_stats["contextualExposure"]["sentences"]
-                current_correct = current_sentences.get("correct", 0)
-                current_incorrect = current_sentences.get("incorrect", 0)
-
-                yesterday_correct = 0
-                yesterday_incorrect = 0
-                if (yesterday_word_stats and "contextualExposure" in yesterday_word_stats and
-                    "sentences" in yesterday_word_stats["contextualExposure"]):
-                    yesterday_sentences = yesterday_word_stats["contextualExposure"]["sentences"]
-                    yesterday_correct = yesterday_sentences.get("correct", 0)
-                    yesterday_incorrect = yesterday_sentences.get("incorrect", 0)
-
-                daily_progress["contextualExposure"]["sentences"]["correct"] += max(0, current_correct - yesterday_correct)
-                daily_progress["contextualExposure"]["sentences"]["incorrect"] += max(0, current_incorrect - yesterday_incorrect)
+        # Calculate progress delta
+        daily_progress = calculate_progress_delta(current_daily_stats, yesterday_daily_stats)
 
         return {"currentDay": current_day, "progress": daily_progress}
     except Exception as e:
         logger.error(f"Error calculating daily progress for user {user_id}: {str(e)}")
         return {"error": str(e)}
-
-
-def get_week_ago_day_key() -> str:
-    """Get the day key for 7 days ago based on 0700 GMT cutoff."""
-    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    if now.hour < DAILY_CUTOFF_HOUR:
-        now = now - timedelta(days=1)
-    week_ago = now - timedelta(days=7)
-    return week_ago.strftime("%Y-%m-%d")
 
 
 def find_best_baseline(user_id: str, target_day: str, max_days: int, language: str = "lithuanian") -> DailyStats:
@@ -911,60 +931,8 @@ def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dic
         current_daily_stats = DailyStats(user_id, current_day, "current", language)
         week_ago_daily_stats = find_best_baseline(user_id, week_ago_day, 7, language)
 
-        # Initialize progress structure with new nested format
-        weekly_progress = {
-            "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
-            "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
-            "exposed": {"new": 0, "total": 0}
-        }
-
-        # Calculate progress for each word
-        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
-            week_ago_word_stats = week_ago_daily_stats.get_word_stats(word_key)
-
-            # Count exposed words
-            if current_word_stats.get("exposed", False):
-                weekly_progress["exposed"]["total"] += 1
-                # Count new exposed words (words that exist in current but not in week-ago baseline)
-                if not week_ago_word_stats or not week_ago_word_stats.get("exposed", False):
-                    weekly_progress["exposed"]["new"] += 1
-
-            # Calculate directPractice deltas
-            if "directPractice" in current_word_stats:
-                for activity_type in DIRECT_PRACTICE_TYPES:
-                    if activity_type in current_word_stats["directPractice"]:
-                        current_activity = current_word_stats["directPractice"][activity_type]
-                        current_correct = current_activity.get("correct", 0)
-                        current_incorrect = current_activity.get("incorrect", 0)
-
-                        week_ago_correct = 0
-                        week_ago_incorrect = 0
-                        if (week_ago_word_stats and "directPractice" in week_ago_word_stats and
-                            activity_type in week_ago_word_stats["directPractice"]):
-                            week_ago_activity = week_ago_word_stats["directPractice"][activity_type]
-                            week_ago_correct = week_ago_activity.get("correct", 0)
-                            week_ago_incorrect = week_ago_activity.get("incorrect", 0)
-
-                        # Calculate delta
-                        weekly_progress["directPractice"][activity_type]["correct"] += max(0, current_correct - week_ago_correct)
-                        weekly_progress["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - week_ago_incorrect)
-
-            # Calculate contextualExposure deltas
-            if "contextualExposure" in current_word_stats and "sentences" in current_word_stats["contextualExposure"]:
-                current_sentences = current_word_stats["contextualExposure"]["sentences"]
-                current_correct = current_sentences.get("correct", 0)
-                current_incorrect = current_sentences.get("incorrect", 0)
-
-                week_ago_correct = 0
-                week_ago_incorrect = 0
-                if (week_ago_word_stats and "contextualExposure" in week_ago_word_stats and
-                    "sentences" in week_ago_word_stats["contextualExposure"]):
-                    week_ago_sentences = week_ago_word_stats["contextualExposure"]["sentences"]
-                    week_ago_correct = week_ago_sentences.get("correct", 0)
-                    week_ago_incorrect = week_ago_sentences.get("incorrect", 0)
-
-                weekly_progress["contextualExposure"]["sentences"]["correct"] += max(0, current_correct - week_ago_correct)
-                weekly_progress["contextualExposure"]["sentences"]["incorrect"] += max(0, current_incorrect - week_ago_incorrect)
+        # Calculate progress delta
+        weekly_progress = calculate_progress_delta(current_daily_stats, week_ago_daily_stats)
 
         actual_baseline_day = week_ago_daily_stats.date if not week_ago_daily_stats.is_empty() else None
 
@@ -977,27 +945,6 @@ def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dic
     except Exception as e:
         logger.error(f"Error calculating weekly progress for user {user_id}: {str(e)}")
         return {"error": str(e)}
-
-
-def get_30_days_ago_day_key() -> str:
-    """Get the day key for exactly 30 days ago based on 0700 GMT cutoff."""
-    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    if now.hour < DAILY_CUTOFF_HOUR:
-        now = now - timedelta(days=1)
-    thirty_days_ago = now - timedelta(days=30)
-    return thirty_days_ago.strftime("%Y-%m-%d")
-
-
-def get_30_day_date_range() -> tuple[str, str]:
-    """Get the date range for the past 30 days (30 days ago to today)."""
-    now = datetime.now(DAILY_CUTOFF_TIMEZONE)
-    if now.hour < DAILY_CUTOFF_HOUR:
-        now = now - timedelta(days=1)
-    
-    end_date = now.strftime("%Y-%m-%d")
-    start_date = (now - timedelta(days=29)).strftime("%Y-%m-%d")  # 29 days back + today = 30 days total
-    
-    return start_date, end_date
 
 
 def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
@@ -1022,64 +969,8 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
         current_daily_stats = DailyStats(user_id, current_day, "current", language)
         thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30, language)
 
-        # Calculate monthly aggregate stats (similar to weekly) with new nested format
-        monthly_aggregate = {
-            "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
-            "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
-            "exposed": {"new": 0, "total": 0}
-        }
-
-        # Calculate progress for each word
-        for word_key, current_word_stats in current_daily_stats.stats["stats"].items():
-            thirty_days_ago_word_stats = thirty_days_ago_daily_stats.get_word_stats(word_key)
-
-            # Count exposed words
-            if current_word_stats.get("exposed", False):
-                monthly_aggregate["exposed"]["total"] += 1
-
-                # For new exposed words, we need to be more careful
-                # Only count as new if we have a valid baseline to compare with
-                if not thirty_days_ago_daily_stats.is_empty():
-                    # Count new exposed words (words that exist in current but not in 30-days-ago baseline)
-                    if not thirty_days_ago_word_stats or not thirty_days_ago_word_stats.get("exposed", False):
-                        monthly_aggregate["exposed"]["new"] += 1
-
-            # Calculate directPractice deltas
-            if "directPractice" in current_word_stats:
-                for activity_type in DIRECT_PRACTICE_TYPES:
-                    if activity_type in current_word_stats["directPractice"]:
-                        current_activity = current_word_stats["directPractice"][activity_type]
-                        current_correct = current_activity.get("correct", 0)
-                        current_incorrect = current_activity.get("incorrect", 0)
-
-                        thirty_days_ago_correct = 0
-                        thirty_days_ago_incorrect = 0
-                        if (thirty_days_ago_word_stats and "directPractice" in thirty_days_ago_word_stats and
-                            activity_type in thirty_days_ago_word_stats["directPractice"]):
-                            thirty_days_ago_activity = thirty_days_ago_word_stats["directPractice"][activity_type]
-                            thirty_days_ago_correct = thirty_days_ago_activity.get("correct", 0)
-                            thirty_days_ago_incorrect = thirty_days_ago_activity.get("incorrect", 0)
-
-                        # Calculate delta
-                        monthly_aggregate["directPractice"][activity_type]["correct"] += max(0, current_correct - thirty_days_ago_correct)
-                        monthly_aggregate["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - thirty_days_ago_incorrect)
-
-            # Calculate contextualExposure deltas
-            if "contextualExposure" in current_word_stats and "sentences" in current_word_stats["contextualExposure"]:
-                current_sentences = current_word_stats["contextualExposure"]["sentences"]
-                current_correct = current_sentences.get("correct", 0)
-                current_incorrect = current_sentences.get("incorrect", 0)
-
-                thirty_days_ago_correct = 0
-                thirty_days_ago_incorrect = 0
-                if (thirty_days_ago_word_stats and "contextualExposure" in thirty_days_ago_word_stats and
-                    "sentences" in thirty_days_ago_word_stats["contextualExposure"]):
-                    thirty_days_ago_sentences = thirty_days_ago_word_stats["contextualExposure"]["sentences"]
-                    thirty_days_ago_correct = thirty_days_ago_sentences.get("correct", 0)
-                    thirty_days_ago_incorrect = thirty_days_ago_sentences.get("incorrect", 0)
-
-                monthly_aggregate["contextualExposure"]["sentences"]["correct"] += max(0, current_correct - thirty_days_ago_correct)
-                monthly_aggregate["contextualExposure"]["sentences"]["incorrect"] += max(0, current_incorrect - thirty_days_ago_incorrect)
+        # Calculate monthly aggregate stats using delta helper
+        monthly_aggregate = calculate_progress_delta(current_daily_stats, thirty_days_ago_daily_stats)
         
         # Get daily breakdown for the past 30 days
         start_date_str, end_date_str = get_30_day_date_range()
@@ -1334,51 +1225,11 @@ def increment_word_stats():
         if not isinstance(nonce, str) or not nonce.strip():
             return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
 
-        # Parse stat type - support both old and new formats
-        # New format: "directPractice.multipleChoice_targetToEnglish" or "contextualExposure.sentences"
-        # Old format: "multipleChoice", "listeningEasy", etc.
-        category = None
-        activity = None
-        is_contextual = False
-
-        if "." in stat_type:
-            # New format with dot notation
-            parts = stat_type.split(".", 1)
-            category = parts[0]
-            activity = parts[1]
-
-            if category == "contextualExposure":
-                is_contextual = True
-                if activity != "sentences":
-                    return jsonify({"error": f"Invalid contextual exposure type: {activity}"}), 400
-            elif category == "directPractice":
-                if activity not in DIRECT_PRACTICE_TYPES:
-                    return jsonify({"error": f"Invalid direct practice type: {activity}"}), 400
-            else:
-                return jsonify({"error": f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'"}), 400
-        else:
-            # Old format - map to new format
-            if stat_type == "sentences":
-                category = "contextualExposure"
-                activity = "sentences"
-                is_contextual = True
-            elif stat_type == "multipleChoice":
-                category = "directPractice"
-                activity = "multipleChoice_targetToEnglish"  # Default to target->english
-            elif stat_type == "listeningEasy":
-                category = "directPractice"
-                activity = "listening_targetAudioToTarget"
-            elif stat_type == "listeningHard":
-                category = "directPractice"
-                activity = "listening_targetAudioToEnglish"
-            elif stat_type == "typing":
-                category = "directPractice"
-                activity = "typing_targetToEnglish"
-            elif stat_type == "blitz":
-                category = "directPractice"
-                activity = "blitz_targetToEnglish"
-            else:
-                return jsonify({"error": f"Invalid stat type: {stat_type}"}), 400
+        # Parse stat type using helper function
+        try:
+            category, activity, is_contextual = parse_stat_type(stat_type)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
         language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         current_day = get_current_day_key()
@@ -1394,56 +1245,11 @@ def increment_word_stats():
         # Load current overall stats
         journey_stats = JourneyStats(user_id, language)
 
-        # Initialize word stats if they don't exist (use new schema)
-        if word_key not in journey_stats.stats["stats"]:
-            journey_stats.stats["stats"][word_key] = create_empty_word_stats()
-
-        word_stats = journey_stats.stats["stats"][word_key]
-
-        # Ensure the word stats have the new schema structure
-        if "directPractice" not in word_stats or "contextualExposure" not in word_stats or "practiceHistory" not in word_stats:
-            # Migrate to new schema if needed
-            word_stats = validate_and_normalize_word_stats(word_stats)
-            journey_stats.stats["stats"][word_key] = word_stats
-
-        # Increment the appropriate counter
-        if category not in word_stats:
-            if category == "directPractice":
-                word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES}
-            else:
-                word_stats[category] = {"sentences": {"correct": 0, "incorrect": 0}}
-
-        if activity not in word_stats[category]:
-            word_stats[category][activity] = {"correct": 0, "incorrect": 0}
-
-        if correct:
-            word_stats[category][activity]["correct"] += 1
-        else:
-            word_stats[category][activity]["incorrect"] += 1
-
-        # Update timestamps based on activity type
+        # Increment the word stats using helper function
         current_timestamp = int(datetime.now().timestamp() * 1000)
-
-        if "practiceHistory" not in word_stats:
-            word_stats["practiceHistory"] = {
-                "lastSeen": None,
-                "lastCorrectAnswer": None,
-                "lastIncorrectAnswer": None
-            }
-
-        # Always update lastSeen
-        word_stats["practiceHistory"]["lastSeen"] = current_timestamp
-
-        # For direct practice: update lastCorrectAnswer or lastIncorrectAnswer
-        # For contextual exposure (sentences): only update lastSeen
-        if not is_contextual:
-            if correct:
-                word_stats["practiceHistory"]["lastCorrectAnswer"] = current_timestamp
-            else:
-                word_stats["practiceHistory"]["lastIncorrectAnswer"] = current_timestamp
-
-        # Mark word as exposed
-        word_stats["exposed"] = True
+        word_stats = increment_word_stat(
+            journey_stats, word_key, category, activity, correct, is_contextual, current_timestamp
+        )
         
         # Save updated stats
         if not journey_stats.save_with_daily_update():
@@ -1571,121 +1377,22 @@ def bulk_increment_word_stats():
                     })
                     continue
 
-                # Parse stat type - support both old and new formats
-                category = None
-                activity = None
-                is_contextual = False
+                # Parse stat type using helper function
+                try:
+                    category, activity, is_contextual = parse_stat_type(stat_type)
+                except ValueError as e:
+                    failed_count += 1
+                    results.append({
+                        "index": idx,
+                        "status": "failed",
+                        "reason": str(e)
+                    })
+                    continue
 
-                if "." in stat_type:
-                    # New format with dot notation
-                    parts = stat_type.split(".", 1)
-                    category = parts[0]
-                    activity = parts[1]
-
-                    if category == "contextualExposure":
-                        is_contextual = True
-                        if activity != "sentences":
-                            failed_count += 1
-                            results.append({
-                                "index": idx,
-                                "status": "failed",
-                                "reason": f"Invalid contextual exposure type: {activity}"
-                            })
-                            continue
-                    elif category == "directPractice":
-                        if activity not in DIRECT_PRACTICE_TYPES:
-                            failed_count += 1
-                            results.append({
-                                "index": idx,
-                                "status": "failed",
-                                "reason": f"Invalid direct practice type: {activity}"
-                            })
-                            continue
-                    else:
-                        failed_count += 1
-                        results.append({
-                            "index": idx,
-                            "status": "failed",
-                            "reason": f"Invalid category: {category}"
-                        })
-                        continue
-                else:
-                    # Old format - map to new format
-                    if stat_type == "sentences":
-                        category = "contextualExposure"
-                        activity = "sentences"
-                        is_contextual = True
-                    elif stat_type == "multipleChoice":
-                        category = "directPractice"
-                        activity = "multipleChoice_targetToEnglish"
-                    elif stat_type == "listeningEasy":
-                        category = "directPractice"
-                        activity = "listening_targetAudioToTarget"
-                    elif stat_type == "listeningHard":
-                        category = "directPractice"
-                        activity = "listening_targetAudioToEnglish"
-                    elif stat_type == "typing":
-                        category = "directPractice"
-                        activity = "typing_targetToEnglish"
-                    elif stat_type == "blitz":
-                        category = "directPractice"
-                        activity = "blitz_targetToEnglish"
-                    else:
-                        failed_count += 1
-                        results.append({
-                            "index": idx,
-                            "status": "failed",
-                            "reason": f"Invalid stat type: {stat_type}"
-                        })
-                        continue
-
-                # Initialize word stats if they don't exist (use new schema)
-                if word_key not in journey_stats.stats["stats"]:
-                    journey_stats.stats["stats"][word_key] = create_empty_word_stats()
-
-                word_stats = journey_stats.stats["stats"][word_key]
-
-                # Ensure the word stats have the new schema structure
-                if "directPractice" not in word_stats or "contextualExposure" not in word_stats or "practiceHistory" not in word_stats:
-                    word_stats = validate_and_normalize_word_stats(word_stats)
-                    journey_stats.stats["stats"][word_key] = word_stats
-
-                # Increment the appropriate counter
-                if category not in word_stats:
-                    if category == "directPractice":
-                        word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES}
-                    else:
-                        word_stats[category] = {"sentences": {"correct": 0, "incorrect": 0}}
-
-                if activity not in word_stats[category]:
-                    word_stats[category][activity] = {"correct": 0, "incorrect": 0}
-
-                if correct:
-                    word_stats[category][activity]["correct"] += 1
-                else:
-                    word_stats[category][activity]["incorrect"] += 1
-
-                # Update timestamps based on activity type
-                if "practiceHistory" not in word_stats:
-                    word_stats["practiceHistory"] = {
-                        "lastSeen": None,
-                        "lastCorrectAnswer": None,
-                        "lastIncorrectAnswer": None
-                    }
-
-                # Always update lastSeen
-                word_stats["practiceHistory"]["lastSeen"] = current_timestamp
-
-                # For direct practice: update lastCorrectAnswer or lastIncorrectAnswer
-                # For contextual exposure (sentences): only update lastSeen
-                if not is_contextual:
-                    if correct:
-                        word_stats["practiceHistory"]["lastCorrectAnswer"] = current_timestamp
-                    else:
-                        word_stats["practiceHistory"]["lastIncorrectAnswer"] = current_timestamp
-
-                # Mark word as exposed
-                word_stats["exposed"] = True
+                # Increment the word stats using helper function
+                increment_word_stat(
+                    journey_stats, word_key, category, activity, correct, is_contextual, current_timestamp
+                )
 
                 processed_count += 1
                 results.append({
