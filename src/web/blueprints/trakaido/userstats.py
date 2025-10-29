@@ -67,10 +67,6 @@ ALL_STAT_TYPES = DIRECT_PRACTICE_TYPES | CONTEXTUAL_EXPOSURE_TYPES
 # Top-level fields
 TOP_LEVEL_FIELDS = {"exposed", "markedAsKnown", "directPractice", "contextualExposure", "practiceHistory"}
 
-# OLD SCHEMA (for migration)
-OLD_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing", "blitz", "sentences"}
-OLD_META_TYPES = {"exposed", "lastSeen", "lastCorrectAnswer", "lastIncorrectAnswer", "markedAsKnown"}
-
 def create_empty_word_stats() -> Dict[str, Any]:
     """Create an empty word stats object with the new schema structure."""
     return {
@@ -96,70 +92,13 @@ def create_empty_word_stats() -> Dict[str, Any]:
     }
 
 
-def is_old_schema(word_stats: Dict[str, Any]) -> bool:
-    """Check if word stats are in old schema format."""
-    # Check if it has any old stat types at the top level
-    for old_type in OLD_STAT_TYPES:
-        if old_type in word_stats:
-            return True
-    # Check if it has old meta types at the top level (except exposed which exists in both)
-    if "lastSeen" in word_stats or "lastCorrectAnswer" in word_stats or "lastIncorrectAnswer" in word_stats:
-        return True
-    return False
-
-
-def migrate_old_to_new_schema(old_stats: Dict[str, Any]) -> Dict[str, Any]:
-    """Migrate word stats from old schema to new schema.
-
-    Migration strategy: All old stats go to target->english direction.
-    """
-    new_stats = create_empty_word_stats()
-
-    # Migrate top-level flags
-    new_stats["exposed"] = old_stats.get("exposed", False)
-    if "markedAsKnown" in old_stats:
-        new_stats["markedAsKnown"] = old_stats["markedAsKnown"]
-
-    # Migrate stat types to target->english direction
-    if "multipleChoice" in old_stats:
-        new_stats["directPractice"]["multipleChoice_targetToEnglish"] = old_stats["multipleChoice"]
-
-    if "listeningEasy" in old_stats:
-        new_stats["directPractice"]["listening_targetAudioToTarget"] = old_stats["listeningEasy"]
-
-    if "listeningHard" in old_stats:
-        new_stats["directPractice"]["listening_targetAudioToEnglish"] = old_stats["listeningHard"]
-
-    if "typing" in old_stats:
-        new_stats["directPractice"]["typing_targetToEnglish"] = old_stats["typing"]
-
-    if "blitz" in old_stats:
-        new_stats["directPractice"]["blitz_targetToEnglish"] = old_stats["blitz"]
-
-    if "sentences" in old_stats:
-        new_stats["contextualExposure"]["sentences"] = old_stats["sentences"]
-
-    # Migrate timestamps
-    new_stats["practiceHistory"]["lastSeen"] = old_stats.get("lastSeen", None)
-    new_stats["practiceHistory"]["lastCorrectAnswer"] = old_stats.get("lastCorrectAnswer", None)
-    new_stats["practiceHistory"]["lastIncorrectAnswer"] = old_stats.get("lastIncorrectAnswer", None)
-
-    return new_stats
-
-
 def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, Any]:
     """Validate and normalize word stats to ensure they match the new schema.
 
     This function:
-    1. Migrates old schema to new schema if needed
-    2. Ensures all required fields exist
-    3. Filters out invalid fields
+    1. Ensures all required fields exist
+    2. Filters out invalid fields
     """
-    # Check if old schema and migrate
-    if is_old_schema(word_stats):
-        logger.debug("Migrating word stats from old schema to new schema")
-        word_stats = migrate_old_to_new_schema(word_stats)
-
     # Start with empty stats and fill in what we have
     normalized = create_empty_word_stats()
 
@@ -295,8 +234,7 @@ def calculate_progress_delta(current_stats: "DailyStats", baseline_stats: "Daily
 def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
     """Parse stat type and return (category, activity, is_contextual).
 
-    Supports both new format (e.g., "directPractice.multipleChoice_targetToEnglish")
-    and old format (e.g., "multipleChoice").
+    Expects new format (e.g., "directPractice.multipleChoice_targetToEnglish").
 
     Returns:
         tuple: (category, activity, is_contextual)
@@ -304,48 +242,23 @@ def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
     Raises:
         ValueError: If stat_type is invalid
     """
-    category = None
-    activity = None
+    if "." not in stat_type:
+        raise ValueError(f"Invalid stat type format: {stat_type}. Expected format: 'category.activity'")
+
+    parts = stat_type.split(".", 1)
+    category = parts[0]
+    activity = parts[1]
     is_contextual = False
 
-    if "." in stat_type:
-        # New format with dot notation
-        parts = stat_type.split(".", 1)
-        category = parts[0]
-        activity = parts[1]
-
-        if category == "contextualExposure":
-            is_contextual = True
-            if activity != "sentences":
-                raise ValueError(f"Invalid contextual exposure type: {activity}")
-        elif category == "directPractice":
-            if activity not in DIRECT_PRACTICE_TYPES:
-                raise ValueError(f"Invalid direct practice type: {activity}")
-        else:
-            raise ValueError(f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'")
+    if category == "contextualExposure":
+        is_contextual = True
+        if activity != "sentences":
+            raise ValueError(f"Invalid contextual exposure type: {activity}")
+    elif category == "directPractice":
+        if activity not in DIRECT_PRACTICE_TYPES:
+            raise ValueError(f"Invalid direct practice type: {activity}")
     else:
-        # Old format - map to new format
-        if stat_type == "sentences":
-            category = "contextualExposure"
-            activity = "sentences"
-            is_contextual = True
-        elif stat_type == "multipleChoice":
-            category = "directPractice"
-            activity = "multipleChoice_targetToEnglish"  # Default to target->english
-        elif stat_type == "listeningEasy":
-            category = "directPractice"
-            activity = "listening_targetAudioToTarget"
-        elif stat_type == "listeningHard":
-            category = "directPractice"
-            activity = "listening_targetAudioToEnglish"
-        elif stat_type == "typing":
-            category = "directPractice"
-            activity = "typing_targetToEnglish"
-        elif stat_type == "blitz":
-            category = "directPractice"
-            activity = "blitz_targetToEnglish"
-        else:
-            raise ValueError(f"Invalid stat type: {stat_type}")
+        raise ValueError(f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'")
 
     return category, activity, is_contextual
 
