@@ -177,9 +177,7 @@ def scan_language_dir(lang_dir: Path, journey_stats_files: list[Path], daily_sna
 def find_all_stats_files(data_dir: Path) -> tuple[list[Path], list[Path]]:
     """Find all stats files in the data directory.
 
-    Supports two directory structures:
-    1. data/trakaido/{user_id}/{language}/stats.json
-    2. testdata/{language}/stats.json (no user_id level)
+    Uses production structure: data/trakaido/{user_id}/{language}/stats.json
 
     Returns:
         tuple: (list of journey stats files, list of daily snapshot files)
@@ -187,28 +185,20 @@ def find_all_stats_files(data_dir: Path) -> tuple[list[Path], list[Path]]:
     journey_stats_files = []
     daily_snapshot_files = []
 
-    # Check if this looks like a testdata directory (language dirs directly under data_dir)
-    # Typical language names: lithuanian, spanish, etc.
-    potential_lang_dirs = [d for d in data_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
+    # Production structure: {user_id}/{language}/daily/*.json
+    for user_dir in data_dir.iterdir():
+        if not user_dir.is_dir() or user_dir.name.startswith('.'):
+            continue
 
-    # Check if we have a "daily" subdirectory in any of these - indicates testdata structure
-    is_testdata_structure = any((d / "daily").exists() for d in potential_lang_dirs)
+        # Skip test/backup directories - only process numeric user IDs
+        if not user_dir.name.isdigit():
+            print(f"Skipping non-numeric user directory: {user_dir.name}")
+            continue
 
-    if is_testdata_structure:
-        # Testdata structure: {language}/daily/*.json
-        for lang_dir in potential_lang_dirs:
+        # Check each language directory
+        for lang_dir in user_dir.iterdir():
             if lang_dir.is_dir():
                 scan_language_dir(lang_dir, journey_stats_files, daily_snapshot_files)
-    else:
-        # Production structure: {user_id}/{language}/daily/*.json
-        for user_dir in data_dir.iterdir():
-            if not user_dir.is_dir() or user_dir.name.startswith('.'):
-                continue
-
-            # Check each language directory
-            for lang_dir in user_dir.iterdir():
-                if lang_dir.is_dir():
-                    scan_language_dir(lang_dir, journey_stats_files, daily_snapshot_files)
 
     return journey_stats_files, daily_snapshot_files
 
