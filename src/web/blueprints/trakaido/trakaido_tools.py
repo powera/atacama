@@ -81,10 +81,11 @@ def get_user_info() -> Response:
             # Check if user has existing files
             if user_id:
                 try:
-                    journey_stats_path = user_has_activity_stats(str(user_id))
-                    corpus_choices_path = get_corpus_choices_file_path(str(user_id))
-                    
-                    response_data["has_journey_stats_file"] = os.path.exists(journey_stats_path)
+                    language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+                    has_journey_stats = user_has_activity_stats(str(user_id), language)
+                    corpus_choices_path = get_corpus_choices_file_path(str(user_id), language)
+
+                    response_data["has_journey_stats_file"] = has_journey_stats
                     response_data["has_corpus_choice_file"] = os.path.exists(corpus_choices_path)
                 except Exception as file_check_error:
                     logger.warning(f"Error checking user files for user {user_id}: {str(file_check_error)}")

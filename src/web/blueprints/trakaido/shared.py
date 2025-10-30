@@ -103,13 +103,14 @@ def sanitize_lithuanian_word(word: str, character_set: Optional[str] = None) -> 
     return sanitized
 
 
-def ensure_user_data_dir(user_id: str) -> str:
+def ensure_user_data_dir(user_id: str, language: str = "lithuanian") -> str:
     """
     Ensure the user's data directory exists.
-    
+
     :param user_id: The user's database ID
+    :param language: The language for the user data (default: "lithuanian")
     :return: Path to the user's data directory
     """
-    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
+    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
     os.makedirs(user_data_dir, exist_ok=True)
     return user_data_dir

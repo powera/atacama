@@ -32,25 +32,27 @@ LEVELPROGRESSION_API_DOCS = {
 }
 
 # Corpus Choices related functions
-def get_corpus_choices_file_path(user_id: str) -> str:
+def get_corpus_choices_file_path(user_id: str, language: str = "lithuanian") -> str:
     """
     Get the file path for a user's corpus choices.
-    
+
     :param user_id: The user's database ID
+    :param language: The language for the corpus choices (default: "lithuanian")
     :return: Path to the user's corpus choices file
     """
-    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
+    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
     return os.path.join(user_data_dir, "corpuschoices.json")
 
-def load_corpus_choices(user_id: str) -> Dict[str, Any]:
+def load_corpus_choices(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """
     Load corpus choices for a user from their JSON file.
-    
+
     :param user_id: The user's database ID
+    :param language: The language for the corpus choices (default: "lithuanian")
     :return: Dictionary containing the user's corpus choices
     """
     try:
-        choices_file = get_corpus_choices_file_path(user_id)
+        choices_file = get_corpus_choices_file_path(user_id, language)
         if not os.path.exists(choices_file):
             logger.debug(f"No corpus choices file found for user {user_id}, returning empty choices")
             return {"choices": {}}
@@ -72,17 +74,18 @@ def load_corpus_choices(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error loading corpus choices for user {user_id}: {str(e)}")
         return {"choices": {}}
 
-def save_corpus_choices(user_id: str, choices: Dict[str, Any]) -> bool:
+def save_corpus_choices(user_id: str, choices: Dict[str, Any], language: str = "lithuanian") -> bool:
     """
     Save corpus choices for a user to their JSON file.
-    
+
     :param user_id: The user's database ID
     :param choices: Dictionary containing the user's corpus choices
+    :param language: The language for the corpus choices (default: "lithuanian")
     :return: True if successful, False otherwise
     """
     try:
-        ensure_user_data_dir(user_id)
-        choices_file = get_corpus_choices_file_path(user_id)
+        ensure_user_data_dir(user_id, language)
+        choices_file = get_corpus_choices_file_path(user_id, language)
         
         # Validate the structure before saving
         validated_data = {"choices": {}}
@@ -120,18 +123,19 @@ def validate_groups_in_corpus(corpus: str, groups: List[str]) -> List[str]:
 
 
 # Level Progression related functions
-def get_level_progression_file_path(user_id: str) -> str:
+def get_level_progression_file_path(user_id: str, language: str = "lithuanian") -> str:
     """
     Get the file path for a user's level progression data.
 
     :param user_id: The user's database ID
+    :param language: The language for the level progression (default: "lithuanian")
     :return: Path to the user's level progression file
     """
-    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id))
+    user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
     return os.path.join(user_data_dir, "levelprogression.json")
 
 
-def migrate_corpus_choices_to_level_progression(user_id: str) -> Dict[str, Any]:
+def migrate_corpus_choices_to_level_progression(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """
     Migrate old corpuschoices.json data to levelprogression.json format.
 
@@ -142,10 +146,11 @@ def migrate_corpus_choices_to_level_progression(user_id: str) -> Dict[str, Any]:
       {"currentLevel": 3, "levelOverrides": {"level_1": ["group1", "group2"], "level_3": ["group3"]}}
 
     :param user_id: The user's database ID
+    :param language: The language for the corpus choices (default: "lithuanian")
     :return: Dictionary with migrated level progression data
     """
     try:
-        corpus_choices = load_corpus_choices(user_id)
+        corpus_choices = load_corpus_choices(user_id, language)
         choices = corpus_choices.get("choices", {})
 
         if not choices:
@@ -179,16 +184,17 @@ def migrate_corpus_choices_to_level_progression(user_id: str) -> Dict[str, Any]:
         return {"currentLevel": 1}
 
 
-def load_level_progression(user_id: str, auto_migrate: bool = True) -> Dict[str, Any]:
+def load_level_progression(user_id: str, auto_migrate: bool = True, language: str = "lithuanian") -> Dict[str, Any]:
     """
     Load level progression for a user from their JSON file.
 
     :param user_id: The user's database ID
     :param auto_migrate: If True, automatically migrate from corpus choices if needed
+    :param language: The language for the level progression (default: "lithuanian")
     :return: Dictionary containing the user's level progression
     """
     try:
-        progression_file = get_level_progression_file_path(user_id)
+        progression_file = get_level_progression_file_path(user_id, language)
 
         # If file exists, load it
         if os.path.exists(progression_file):
@@ -219,10 +225,10 @@ def load_level_progression(user_id: str, auto_migrate: bool = True) -> Dict[str,
 
         # No progression file found, try migration if enabled
         if auto_migrate:
-            migrated_data = migrate_corpus_choices_to_level_progression(user_id)
+            migrated_data = migrate_corpus_choices_to_level_progression(user_id, language)
             # Save the migrated data
-            if save_level_progression(user_id, migrated_data):
-                logger.info(f"Successfully migrated and saved level progression for user {user_id}")
+            if save_level_progression(user_id, migrated_data, language):
+                logger.info(f"Successfully migrated and saved level progression for user {user_id} language {language}")
             return migrated_data
 
         # Default: level 1
@@ -233,17 +239,18 @@ def load_level_progression(user_id: str, auto_migrate: bool = True) -> Dict[str,
         return {"currentLevel": 1}
 
 
-def save_level_progression(user_id: str, progression: Dict[str, Any]) -> bool:
+def save_level_progression(user_id: str, progression: Dict[str, Any], language: str = "lithuanian") -> bool:
     """
     Save level progression for a user to their JSON file.
 
     :param user_id: The user's database ID
     :param progression: Dictionary containing the user's level progression
+    :param language: The language for the level progression (default: "lithuanian")
     :return: True if successful, False otherwise
     """
     try:
-        ensure_user_data_dir(user_id)
-        progression_file = get_level_progression_file_path(user_id)
+        ensure_user_data_dir(user_id, language)
+        progression_file = get_level_progression_file_path(user_id, language)
 
         # Validate structure
         if "currentLevel" not in progression or not isinstance(progression["currentLevel"], int):
@@ -283,12 +290,13 @@ def save_level_progression(user_id: str, progression: Dict[str, Any]) -> bool:
 def get_all_corpus_choices() -> Union[Response, tuple]:
     """
     Get all corpus choices for the authenticated user.
-    
+
     :return: JSON response with all corpus choices
     """
     try:
         user_id = str(g.user.id)
-        choices = load_corpus_choices(user_id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        choices = load_corpus_choices(user_id, language)
         return jsonify(choices)
     except Exception as e:
         logger.error(f"Error getting all corpus choices: {str(e)}")
@@ -299,35 +307,36 @@ def get_all_corpus_choices() -> Union[Response, tuple]:
 def save_all_corpus_choices() -> Union[Response, tuple]:
     """
     Save all corpus choices for the authenticated user, replacing any existing choices.
-    
+
     :return: JSON response indicating success or error
     """
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
-        
+
         if not data or "choices" not in data:
             return jsonify({
                 "success": False,
                 "error": "Invalid request body. Expected 'choices' field.",
                 "code": "INVALID_REQUEST"
             }), 400
-        
+
         # Validate each corpus and its groups
         validated_choices = {"choices": {}}
         for corpus, groups in data["choices"].items():
             if not isinstance(groups, list):
                 logger.warning(f"Invalid groups format for corpus '{corpus}', skipping")
                 continue
-                
+
             if validate_corpus_exists(corpus):
                 valid_groups = validate_groups_in_corpus(corpus, groups)
                 if valid_groups:  # Only store if there are valid groups
                     validated_choices["choices"][corpus] = valid_groups
             else:
                 logger.warning(f"Corpus '{corpus}' does not exist, skipping")
-        
-        success = save_corpus_choices(user_id, validated_choices)
+
+        success = save_corpus_choices(user_id, validated_choices, language)
         if success:
             return jsonify({
                 "success": True,
@@ -352,30 +361,31 @@ def save_all_corpus_choices() -> Union[Response, tuple]:
 def update_corpus_choices() -> Union[Response, tuple]:
     """
     Update the selected groups for a specific corpus.
-    
+
     :return: JSON response indicating success or error
     """
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
-        
+
         if not data or "corpus" not in data or "groups" not in data:
             return jsonify({
                 "success": False,
                 "error": "Invalid request body. Expected 'corpus' and 'groups' fields.",
                 "code": "INVALID_REQUEST"
             }), 400
-        
+
         corpus = data["corpus"]
         groups = data["groups"]
-        
+
         if not isinstance(groups, list):
             return jsonify({
                 "success": False,
                 "error": "Groups must be an array of strings",
                 "code": "INVALID_REQUEST"
             }), 400
-        
+
         # Validate corpus exists
         if not validate_corpus_exists(corpus):
             return jsonify({
@@ -383,22 +393,22 @@ def update_corpus_choices() -> Union[Response, tuple]:
                 "error": f"Corpus '{corpus}' not found",
                 "code": "CORPUS_NOT_FOUND"
             }), 400
-        
+
         # Validate groups exist in corpus
         valid_groups = validate_groups_in_corpus(corpus, groups)
-        
+
         # Load existing choices
-        all_choices = load_corpus_choices(user_id)
-        
+        all_choices = load_corpus_choices(user_id, language)
+
         # Update the specific corpus choices
         if valid_groups:
             all_choices["choices"][corpus] = valid_groups
         elif corpus in all_choices["choices"]:
             # Remove corpus if no valid groups remain
             del all_choices["choices"][corpus]
-        
+
         # Save back to file
-        success = save_corpus_choices(user_id, all_choices)
+        success = save_corpus_choices(user_id, all_choices, language)
         if success:
             return jsonify({
                 "success": True,
@@ -431,7 +441,8 @@ def get_corpus_choices(corpus: str) -> Union[Response, tuple]:
     """
     try:
         user_id = str(g.user.id)
-        all_choices = load_corpus_choices(user_id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        all_choices = load_corpus_choices(user_id, language)
 
         # Get groups for the specific corpus, or empty array if not found
         groups = all_choices["choices"].get(corpus, [])
@@ -463,7 +474,8 @@ def get_level_progression() -> Union[Response, tuple]:
     """
     try:
         user_id = str(g.user.id)
-        progression = load_level_progression(user_id, auto_migrate=True)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        progression = load_level_progression(user_id, auto_migrate=True, language=language)
         return jsonify(progression)
     except Exception as e:
         logger.error(f"Error getting level progression: {str(e)}")
@@ -488,6 +500,7 @@ def update_level_progression() -> Union[Response, tuple]:
     """
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
 
         if not data or "currentLevel" not in data:
@@ -548,7 +561,7 @@ def update_level_progression() -> Union[Response, tuple]:
                     progression["levelOverrides"] = validated_overrides
 
         # Save progression
-        success = save_level_progression(user_id, progression)
+        success = save_level_progression(user_id, progression, language)
         if success:
             return jsonify({
                 "success": True,
@@ -585,6 +598,7 @@ def update_current_level() -> Union[Response, tuple]:
     """
     try:
         user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         data = request.get_json()
 
         if not data or "currentLevel" not in data:
@@ -605,13 +619,13 @@ def update_current_level() -> Union[Response, tuple]:
             }), 400
 
         # Load existing progression
-        existing_progression = load_level_progression(user_id, auto_migrate=True)
+        existing_progression = load_level_progression(user_id, auto_migrate=True, language=language)
 
         # Update only the currentLevel
         existing_progression["currentLevel"] = current_level
 
         # Save back
-        success = save_level_progression(user_id, existing_progression)
+        success = save_level_progression(user_id, existing_progression, language)
         if success:
             return jsonify({
                 "success": True,
