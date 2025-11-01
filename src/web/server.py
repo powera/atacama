@@ -97,6 +97,17 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
 
     app = Flask(__name__)
 
+    # Configure ProxyFix to trust X-Forwarded-* headers from nginx
+    # This ensures Flask generates correct URLs (especially HTTPS) when behind a reverse proxy
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=1,  # Trust X-Forwarded-For
+        x_proto=1,  # Trust X-Forwarded-Proto (HTTPS detection)
+        x_host=1,  # Trust X-Forwarded-Host
+        x_prefix=0  # Don't use X-Forwarded-Prefix
+    )
+
     # Store blueprint_set in app config so it's accessible in templates
     app.config['BLUEPRINT_SET'] = blueprint_set
     
