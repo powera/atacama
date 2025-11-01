@@ -69,7 +69,7 @@ def trakaido_json(filename: str) -> Response:
         return Response("Forbidden", status=403)
     
     if os.path.exists(json_path) and os.path.isfile(json_path):
-        return send_file(json_path)
+        return send_file(json_path, mimetype='application/json; charset=utf-8')
     else:
         logger.warning(f"JSON file not found: {json_path}")
         return Response("File not found", status=404)
