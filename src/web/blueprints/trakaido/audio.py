@@ -68,7 +68,8 @@ def sanitize_word_for_audio(word: str, character_set: Optional[str] = None) -> s
         return sanitize_lithuanian_word(word, character_set)
     else:
         # For languages without character sets (Chinese, Korean), just remove slashes and nulls
-        return word.replace('/', '').replace('\0', '').lower()
+        # Don't lowercase - these languages use GUID-style filenames with capital letters
+        return word.replace('/', '').replace('\0', '')
 
 
 def get_audio_file_path(word: str, voice: Optional[str] = None, audio_dir: Optional[str] = None, character_set: Optional[str] = None) -> Optional[str]:
