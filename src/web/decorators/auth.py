@@ -27,9 +27,7 @@ def _populate_user():
         # Support both "Bearer <token>" and just "<token>" formats
         if auth_token.startswith('Bearer '):
             auth_token = auth_token[7:]
-        
-        logger.debug(f"Auth token provided: {auth_token[:8]}... (truncated for security)")
-        
+
         with db.session() as db_session:
             db_session.expire_on_commit = False
             user = db_session.query(User).filter_by(auth_token=auth_token).first()
@@ -45,8 +43,7 @@ def _populate_user():
                         db_session.commit()
                         g.user = None
                         return
-                
-                logger.debug(f"Auth token valid for user: {user.email}")
+
                 g.user = user
                 return
             else:
