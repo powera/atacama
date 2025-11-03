@@ -34,15 +34,33 @@ class User(Base):
     )
     # Maps channel names to timestamps when access was granted
     # e.g. {"orinoco": "2025-01-15T14:30:00Z"}
-    admin_channel_access: Mapped[Optional[Dict]] = mapped_column(Text, 
+    admin_channel_access: Mapped[Optional[Dict]] = mapped_column(Text,
         default=lambda: json.dumps({}))
-    
-    # Auth token for mobile/API authentication
+
+    # DEPRECATED: Old single-token authentication columns (can be removed after migration)
+    # Use UserToken model instead for multi-device support
     auth_token: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
     auth_token_created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # One-to-many relationship with messages
     messages: Mapped[List["Message"]] = relationship("Message", back_populates="author")
+
+    # One-to-many relationship with auth tokens (for multi-device support)
+    auth_tokens: Mapped[List["UserToken"]] = relationship("UserToken", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserToken(Base):
+    """Auth tokens for multi-device mobile/API authentication."""
+    __tablename__ = 'user_tokens'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    device_info: Mapped[Optional[str]] = mapped_column(String)  # e.g., "iPhone 13", "Android Pixel"
+
+    # Relationship back to user
+    user: Mapped["User"] = relationship("User", back_populates="auth_tokens")
 
 
 class MessageType(enum.Enum):

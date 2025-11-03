@@ -13,7 +13,7 @@ from google.auth.transport import requests
 from web.decorators import require_auth
 from models.database import db
 from models import get_or_create_user
-from models.models import User
+from models.models import User, UserToken
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 
@@ -63,25 +63,32 @@ def logout():
 def api_logout():
     """
     Revoke the current auth token for mobile/API clients.
-    
+
     Requires Authorization header with valid token.
     Returns JSON response indicating success or failure.
     """
     try:
+        # Get the token from the Authorization header
+        auth_token = request.headers.get('Authorization')
+        if not auth_token:
+            return jsonify({'success': False, 'error': 'No token provided'}), 400
+
+        # Support both "Bearer <token>" and just "<token>" formats
+        if auth_token.startswith('Bearer '):
+            auth_token = auth_token[7:]
+
         with db.session() as db_session:
-            # g.user is already populated by @require_auth
-            if g.user and g.user.auth_token:
-                # Re-query the user to get a session-bound instance
-                user = db_session.query(User).filter_by(id=g.user.id).first()
-                if user:
-                    user.auth_token = None
-                    user.auth_token_created_at = None
-                    db_session.commit()
-                    logger.info(f"Revoked auth token for user {user.email}")
-                    return jsonify({'success': True, 'message': 'Token revoked'}), 200
-            
-            return jsonify({'success': False, 'error': 'No token to revoke'}), 400
-            
+            # Find and delete the specific token
+            token_obj = db_session.query(UserToken).filter_by(token=auth_token).first()
+            if token_obj:
+                user_email = token_obj.user.email
+                db_session.delete(token_obj)
+                db_session.commit()
+                logger.info(f"Revoked auth token for user {user_email}")
+                return jsonify({'success': True, 'message': 'Token revoked'}), 200
+
+            return jsonify({'success': False, 'error': 'Token not found'}), 400
+
     except Exception as e:
         logger.error(f"Error revoking token: {str(e)}")
         return jsonify({'success': False, 'error': 'Internal server error'}), 500
@@ -187,14 +194,23 @@ def callback():
             mobile_redirect = session.pop('mobile_redirect', None)
             
             if mobile_mode and mobile_redirect:
-                # Generate and store auth token for mobile app
+                # Generate and store auth token for mobile app in new UserToken table
                 auth_token = generate_auth_token()
-                db_user.auth_token = auth_token
-                db_user.auth_token_created_at = datetime.utcnow()
+
+                # Extract device info from user agent if available
+                device_info = request.headers.get('User-Agent', 'Unknown device')
+
+                # Create new token entry
+                new_token = UserToken(
+                    user_id=db_user.id,
+                    token=auth_token,
+                    device_info=device_info
+                )
+                db_session.add(new_token)
                 db_session.commit()
-                
-                logger.info(f"Generated auth token for user {db_user.email} (mobile OAuth)")
-                
+
+                logger.info(f"Generated auth token for user {db_user.email} (mobile OAuth, device: {device_info})")
+
                 # Redirect to the mobile app's custom URL scheme with the token
                 redirect_url = f"{mobile_redirect}?token={auth_token}"
                 return redirect(redirect_url)

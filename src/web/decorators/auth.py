@@ -8,7 +8,7 @@ from flask import render_template, session, g, request, jsonify
 
 from models.database import db
 from models import get_or_create_user
-from models.models import User
+from models.models import User, UserToken
 from common.config.user_config import get_user_config_manager
 
 logger = logging.getLogger(__name__)
@@ -30,21 +30,20 @@ def _populate_user():
 
         with db.session() as db_session:
             db_session.expire_on_commit = False
-            user = db_session.query(User).filter_by(auth_token=auth_token).first()
-            if user:
+            # Query the new UserToken table
+            token_obj = db_session.query(UserToken).filter_by(token=auth_token).first()
+            if token_obj:
                 # Check if token has expired
-                if user.auth_token_created_at:
-                    token_age = datetime.utcnow() - user.auth_token_created_at
-                    if token_age > timedelta(days=TOKEN_EXPIRATION_DAYS):
-                        # Token expired, clear it
-                        logger.warning(f"Auth token expired for user {user.email}. Token age: {token_age.days} days")
-                        user.auth_token = None
-                        user.auth_token_created_at = None
-                        db_session.commit()
-                        g.user = None
-                        return
+                token_age = datetime.utcnow() - token_obj.created_at
+                if token_age > timedelta(days=TOKEN_EXPIRATION_DAYS):
+                    # Token expired, delete it
+                    logger.warning(f"Auth token expired for user {token_obj.user.email}. Token age: {token_age.days} days")
+                    db_session.delete(token_obj)
+                    db_session.commit()
+                    g.user = None
+                    return
 
-                g.user = user
+                g.user = token_obj.user
                 return
             else:
                 logger.warning(f"Auth token provided but not found in database: {auth_token[:8]}... (truncated)")
