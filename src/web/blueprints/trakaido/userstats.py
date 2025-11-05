@@ -59,7 +59,7 @@ DIRECT_PRACTICE_TYPES = {
 }
 
 # Contextual exposure activities (don't count toward proficiency)
-CONTEXTUAL_EXPOSURE_TYPES = {"sentences"}
+CONTEXTUAL_EXPOSURE_TYPES = {"sentences", "flashcards"}
 
 # All valid stat types
 ALL_STAT_TYPES = DIRECT_PRACTICE_TYPES | CONTEXTUAL_EXPOSURE_TYPES
@@ -72,17 +72,12 @@ def create_empty_word_stats() -> Dict[str, Any]:
     return {
         "exposed": False,
         "directPractice": {
-            "multipleChoice_englishToTarget": {"correct": 0, "incorrect": 0},
-            "multipleChoice_targetToEnglish": {"correct": 0, "incorrect": 0},
-            "listening_targetAudioToTarget": {"correct": 0, "incorrect": 0},
-            "listening_targetAudioToEnglish": {"correct": 0, "incorrect": 0},
-            "typing_englishToTarget": {"correct": 0, "incorrect": 0},
-            "typing_targetToEnglish": {"correct": 0, "incorrect": 0},
-            "blitz_englishToTarget": {"correct": 0, "incorrect": 0},
-            "blitz_targetToEnglish": {"correct": 0, "incorrect": 0}
+            activity: {"correct": 0, "incorrect": 0}
+            for activity in DIRECT_PRACTICE_TYPES
         },
         "contextualExposure": {
-            "sentences": {"correct": 0, "incorrect": 0}
+            activity: {"correct": 0, "incorrect": 0}
+            for activity in CONTEXTUAL_EXPOSURE_TYPES
         },
         "practiceHistory": {
             "lastSeen": None,
@@ -126,16 +121,17 @@ def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, A
 
     # Copy contextualExposure stats
     if "contextualExposure" in word_stats and isinstance(word_stats["contextualExposure"], dict):
-        if "sentences" in word_stats["contextualExposure"]:
-            sentences_stats = word_stats["contextualExposure"]["sentences"]
-            if isinstance(sentences_stats, dict):
-                correct = sentences_stats.get("correct", 0)
-                incorrect = sentences_stats.get("incorrect", 0)
-                if isinstance(correct, int) and isinstance(incorrect, int) and correct >= 0 and incorrect >= 0:
-                    normalized["contextualExposure"]["sentences"] = {
-                        "correct": correct,
-                        "incorrect": incorrect
-                    }
+        for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
+            if activity_type in word_stats["contextualExposure"]:
+                activity_stats = word_stats["contextualExposure"][activity_type]
+                if isinstance(activity_stats, dict):
+                    correct = activity_stats.get("correct", 0)
+                    incorrect = activity_stats.get("incorrect", 0)
+                    if isinstance(correct, int) and isinstance(incorrect, int) and correct >= 0 and incorrect >= 0:
+                        normalized["contextualExposure"][activity_type] = {
+                            "correct": correct,
+                            "incorrect": incorrect
+                        }
 
     # Copy practiceHistory timestamps
     if "practiceHistory" in word_stats and isinstance(word_stats["practiceHistory"], dict):
@@ -172,7 +168,7 @@ def calculate_progress_delta(current_stats: "DailyStats", baseline_stats: "Daily
     """
     progress = {
         "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
-        "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
+        "contextualExposure": {activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES},
         "exposed": {"new": 0, "total": 0}
     }
 
@@ -208,21 +204,23 @@ def calculate_progress_delta(current_stats: "DailyStats", baseline_stats: "Daily
                     progress["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
 
         # Calculate contextualExposure deltas
-        if "contextualExposure" in current_word_stats and "sentences" in current_word_stats["contextualExposure"]:
-            current_sentences = current_word_stats["contextualExposure"]["sentences"]
-            current_correct = current_sentences.get("correct", 0)
-            current_incorrect = current_sentences.get("incorrect", 0)
+        if "contextualExposure" in current_word_stats:
+            for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
+                if activity_type in current_word_stats["contextualExposure"]:
+                    current_activity = current_word_stats["contextualExposure"][activity_type]
+                    current_correct = current_activity.get("correct", 0)
+                    current_incorrect = current_activity.get("incorrect", 0)
 
-            baseline_correct = 0
-            baseline_incorrect = 0
-            if (baseline_word_stats and "contextualExposure" in baseline_word_stats and
-                "sentences" in baseline_word_stats["contextualExposure"]):
-                baseline_sentences = baseline_word_stats["contextualExposure"]["sentences"]
-                baseline_correct = baseline_sentences.get("correct", 0)
-                baseline_incorrect = baseline_sentences.get("incorrect", 0)
+                    baseline_correct = 0
+                    baseline_incorrect = 0
+                    if (baseline_word_stats and "contextualExposure" in baseline_word_stats and
+                        activity_type in baseline_word_stats["contextualExposure"]):
+                        baseline_activity = baseline_word_stats["contextualExposure"][activity_type]
+                        baseline_correct = baseline_activity.get("correct", 0)
+                        baseline_incorrect = baseline_activity.get("incorrect", 0)
 
-            progress["contextualExposure"]["sentences"]["correct"] += max(0, current_correct - baseline_correct)
-            progress["contextualExposure"]["sentences"]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
+                    progress["contextualExposure"][activity_type]["correct"] += max(0, current_correct - baseline_correct)
+                    progress["contextualExposure"][activity_type]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
 
     return progress
 
@@ -252,7 +250,7 @@ def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
 
     if category == "contextualExposure":
         is_contextual = True
-        if activity != "sentences":
+        if activity not in CONTEXTUAL_EXPOSURE_TYPES:
             raise ValueError(f"Invalid contextual exposure type: {activity}")
     elif category == "directPractice":
         if activity not in DIRECT_PRACTICE_TYPES:
@@ -303,7 +301,7 @@ def increment_word_stat(
         if category == "directPractice":
             word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES}
         else:
-            word_stats[category] = {"sentences": {"correct": 0, "incorrect": 0}}
+            word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in CONTEXTUAL_EXPOSURE_TYPES}
 
     if activity not in word_stats[category]:
         word_stats[category][activity] = {"correct": 0, "incorrect": 0}
@@ -648,7 +646,9 @@ class DailyStats(BaseStats):
             totals[key] = self.get_stat_type_total(key)
 
         # Get totals for contextual exposure
-        totals["contextualExposure.sentences"] = self.get_stat_type_total("contextualExposure.sentences")
+        for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
+            key = f"contextualExposure.{activity_type}"
+            totals[key] = self.get_stat_type_total(key)
 
         return totals
     
@@ -917,11 +917,13 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                                         questions_answered_on_day += activity_stats.get("correct", 0)
                                         questions_answered_on_day += activity_stats.get("incorrect", 0)
                         # Count contextualExposure activities
-                        if "contextualExposure" in word_stats and "sentences" in word_stats["contextualExposure"]:
-                            sentences_stats = word_stats["contextualExposure"]["sentences"]
-                            if isinstance(sentences_stats, dict):
-                                questions_answered_on_day += sentences_stats.get("correct", 0)
-                                questions_answered_on_day += sentences_stats.get("incorrect", 0)
+                        if "contextualExposure" in word_stats:
+                            for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
+                                if activity_type in word_stats["contextualExposure"]:
+                                    activity_stats = word_stats["contextualExposure"][activity_type]
+                                    if isinstance(activity_stats, dict):
+                                        questions_answered_on_day += activity_stats.get("correct", 0)
+                                        questions_answered_on_day += activity_stats.get("incorrect", 0)
                     
                     # Count exposed words on this day
                     for word_key, word_stats in daily_stats.stats["stats"].items():
