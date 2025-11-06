@@ -110,12 +110,22 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
 
     # Store blueprint_set in app config so it's accessible in templates
     app.config['BLUEPRINT_SET'] = blueprint_set
-    
+
     if not testing:
         app.secret_key = load_or_create_secret_key()
     else:
         app.secret_key = 'test-key'
-    
+
+    # Configure session cookies for Trakaido to work across subdomains
+    # This allows login credentials to be shared across lt.trakaido.com, zh.trakaido.com, etc.
+    if blueprint_set == 'TRAKAIDO':
+        app.config['SESSION_COOKIE_DOMAIN'] = '.trakaido.com'
+        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['SESSION_COOKIE_HTTPONLY'] = True
+        app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+        app.config['SESSION_COOKIE_PATH'] = '/'
+        logger.info("Session cookies configured for cross-subdomain sharing on .trakaido.com")
+
     # Configure CORS for development mode
     if constants.is_development_mode():
         from flask_cors import CORS
