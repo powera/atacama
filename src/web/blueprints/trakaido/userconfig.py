@@ -97,7 +97,7 @@ def save_corpus_choices(user_id: str, choices: Dict[str, Any], language: str = "
                     logger.warning(f"Invalid groups format for corpus '{corpus}', skipping")
         
         with open(choices_file, 'w', encoding='utf-8') as f:
-            json.dump(validated_data, f, indent=2, ensure_ascii=False)
+            json.dump(validated_data, f, ensure_ascii=False)
         
         logger.debug(f"Successfully saved corpus choices for user {user_id}")
         return True
@@ -274,7 +274,7 @@ def save_level_progression(user_id: str, progression: Dict[str, Any], language: 
                 validated_data["levelOverrides"] = validated_overrides
 
         with open(progression_file, 'w', encoding='utf-8') as f:
-            json.dump(validated_data, f, indent=2, ensure_ascii=False)
+            json.dump(validated_data, f, ensure_ascii=False)
 
         logger.debug(f"Successfully saved level progression for user {user_id}")
         return True

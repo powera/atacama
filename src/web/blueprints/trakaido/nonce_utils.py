@@ -39,7 +39,7 @@ def save_nonces(user_id: str, day_key: str, nonces: set, language: str = "lithua
         nonce_file = get_nonce_file_path(user_id, day_key, language)
 
         with open(nonce_file, 'w', encoding='utf-8') as f:
-            json.dump({"nonces": list(nonces)}, f, indent=2)
+            json.dump({"nonces": list(nonces)}, f)
 
         return True
     except Exception as e:

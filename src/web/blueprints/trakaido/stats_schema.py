@@ -162,8 +162,31 @@ class BaseStats:
         try:
             ensure_user_data_dir(self.user_id)
 
+            # Check for suspicious large size reductions (>90% smaller)
+            if os.path.exists(file_path):
+                try:
+                    old_size = os.path.getsize(file_path)
+                    # Calculate new size by serializing to JSON
+                    new_data_str = json.dumps(stats, ensure_ascii=False)
+                    new_size = len(new_data_str.encode('utf-8'))
+
+                    # If new size is more than 90% smaller, reject the update
+                    if old_size > 10000 and new_size < (old_size * 0.1):
+                        logger.error(
+                            f"REJECTED: Suspicious stats update for user {self.user_id} "
+                            f"at {file_path}. Size dropped from {old_size} bytes to {new_size} bytes "
+                            f"(reduction: {((old_size - new_size) / old_size * 100):.1f}%). "
+                            f"This looks like a data loss bug. Update blocked."
+                        )
+                        # Return True to send fake "success" to client
+                        return True
+                except Exception as e:
+                    logger.warning(f"Error checking file size for {file_path}: {str(e)}")
+                    # Continue with save if size check fails
+
+            # Save without indent to reduce file size
             with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(stats, f, indent=2, ensure_ascii=False)
+                json.dump(stats, f, ensure_ascii=False)
 
             return True
         except Exception as e:
@@ -270,7 +293,7 @@ class JourneyStats(BaseStats):
     def save_with_daily_update(self) -> bool:
         """Save journey stats and update daily snapshots."""
         # Import here to avoid circular dependency
-        from .daily_snapshots import ensure_daily_snapshots
+        from .stats_snapshots import ensure_daily_snapshots
         from .date_utils import get_current_day_key
 
         try:
