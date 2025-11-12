@@ -129,6 +129,44 @@ def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
 
 
 ##############################################################################
+# JSON Formatting Helper
+##############################################################################
+
+def format_stats_json(stats: Dict[str, Any]) -> str:
+    """Format stats JSON with each word entry on one line.
+
+    Creates a more compact format where:
+    - Top level structure has line breaks
+    - Each word key's entire value is on one line
+
+    Example:
+    {
+      "stats": {
+        "N08_011": {"exposed": true, "directPractice": {...}, ...},
+        "N08_012": {"exposed": true, "directPractice": {...}, ...}
+      }
+    }
+    """
+    if not stats or "stats" not in stats:
+        return json.dumps(stats, ensure_ascii=False)
+
+    lines = ['{']
+    lines.append('  "stats": {')
+
+    word_items = list(stats["stats"].items())
+    for i, (word_key, word_stats) in enumerate(word_items):
+        # Serialize the entire word stats dict on one line
+        word_json = json.dumps(word_stats, ensure_ascii=False, separators=(',', ': '))
+        comma = ',' if i < len(word_items) - 1 else ''
+        lines.append(f'    "{word_key}": {word_json}{comma}')
+
+    lines.append('  }')
+    lines.append('}')
+
+    return '\n'.join(lines)
+
+
+##############################################################################
 # Base Storage Classes
 ##############################################################################
 
@@ -162,13 +200,14 @@ class BaseStats:
         try:
             ensure_user_data_dir(self.user_id)
 
+            # Format the JSON once for both size check and saving
+            formatted_json = format_stats_json(stats)
+
             # Check for suspicious large size reductions (>90% smaller)
             if os.path.exists(file_path):
                 try:
                     old_size = os.path.getsize(file_path)
-                    # Calculate new size by serializing to JSON
-                    new_data_str = json.dumps(stats, ensure_ascii=False)
-                    new_size = len(new_data_str.encode('utf-8'))
+                    new_size = len(formatted_json.encode('utf-8'))
 
                     # If new size is more than 90% smaller, reject the update
                     if old_size > 10000 and new_size < (old_size * 0.1):
@@ -184,9 +223,9 @@ class BaseStats:
                     logger.warning(f"Error checking file size for {file_path}: {str(e)}")
                     # Continue with save if size check fails
 
-            # Save without indent to reduce file size
+            # Save with custom formatting (each word entry on one line)
             with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(stats, f, ensure_ascii=False)
+                f.write(formatted_json)
 
             return True
         except Exception as e:
