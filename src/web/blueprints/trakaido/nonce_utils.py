@@ -1,10 +1,13 @@
 """Nonce management utilities for Trakaido stats."""
 
+# Standard library imports
 import json
 import os
 from typing import List
-from .shared import logger
+
+# Local application imports
 import constants
+from .shared import logger
 from .date_utils import get_current_day_key, get_yesterday_day_key
 
 
@@ -39,7 +42,7 @@ def save_nonces(user_id: str, day_key: str, nonces: set, language: str = "lithua
         nonce_file = get_nonce_file_path(user_id, day_key, language)
 
         with open(nonce_file, 'w', encoding='utf-8') as f:
-            json.dump({"nonces": list(nonces)}, f, indent=2)
+            json.dump({"nonces": list(nonces)}, f)
 
         return True
     except Exception as e:
