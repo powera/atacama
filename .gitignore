@@ -33,3 +33,8 @@ src/tests/web/js/node_modules
 
 # Development DB
 emails.db
+
+# Coverage reports
+.coverage
+*.cover
+htmlcov/
