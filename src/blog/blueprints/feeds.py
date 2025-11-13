@@ -19,7 +19,7 @@ from common.config.channel_config import AccessLevel, get_channel_manager
 from common.config.domain_config import get_domain_manager
 from models.database import db
 from models.models import Email
-from web.blueprints.core.errors import handle_error
+from atacama.blueprints.errors import handle_error
 from .shared import feeds_bp
 
 logger = get_logger(__name__)

@@ -15,7 +15,7 @@ from flask import Blueprint, render_template, jsonify, current_app, session, req
 from sqlalchemy import text, engine
 
 # Local imports
-from web.decorators import require_auth, navigable
+from atacama.decorators import require_auth, navigable
 from models.database import db
 from common.config.channel_config import get_channel_manager
 from models.messages import check_channel_access

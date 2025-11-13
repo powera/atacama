@@ -7,11 +7,11 @@ import shutil
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone, timedelta
 
-from web.blueprints.trakaido.userstats import (
+from trakaido.blueprints.userstats import (
     parse_stat_type,
     increment_word_stat,
 )
-from web.blueprints.trakaido.stats_schema import (
+from trakaido.blueprints.stats_schema import (
     create_empty_word_stats,
     validate_and_normalize_word_stats,
     format_stats_json,
@@ -20,7 +20,7 @@ from web.blueprints.trakaido.stats_schema import (
     DIRECT_PRACTICE_TYPES,
     CONTEXTUAL_EXPOSURE_TYPES,
 )
-from web.blueprints.trakaido.stats_snapshots import (
+from trakaido.blueprints.stats_snapshots import (
     ensure_daily_snapshots,
     calculate_progress_delta,
     calculate_daily_progress,
@@ -29,7 +29,7 @@ from web.blueprints.trakaido.stats_snapshots import (
     find_best_baseline,
     compress_previous_day_files,
 )
-from web.blueprints.trakaido.date_utils import get_current_day_key
+from trakaido.blueprints.date_utils import get_current_day_key
 
 
 class SaveWithDailyUpdateTests(unittest.TestCase):
@@ -689,7 +689,7 @@ class FindBestBaselineTests(unittest.TestCase):
         target_day = "2025-01-15"
 
         # Mock DailyStats to simulate existing data
-        with patch('web.blueprints.trakaido.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
             mock_instance = MagicMock()
             mock_instance.is_empty.return_value = False
             mock_instance.date = target_day
@@ -707,7 +707,7 @@ class FindBestBaselineTests(unittest.TestCase):
         target_day = "2025-01-15"
         fallback_day = "2025-01-16"  # One day after target
 
-        with patch('web.blueprints.trakaido.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
             # Target date doesn't exist
             def exists_side_effect(user_id, date, stats_type, language):
                 if date == target_day and stats_type == "current":
@@ -734,7 +734,7 @@ class FindBestBaselineTests(unittest.TestCase):
         """Test find_best_baseline returns empty stats when no baseline found."""
         target_day = "2025-01-15"
 
-        with patch('web.blueprints.trakaido.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
             MockDailyStats.exists.return_value = False
             MockDailyStats.get_available_dates.return_value = []
 

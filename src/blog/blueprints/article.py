@@ -7,7 +7,7 @@ from sqlalchemy import select
 from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
 from models.models import Article
-from web.decorators import require_auth, optional_auth
+from atacama.decorators import require_auth, optional_auth
 from models.database import db
 from models.messages import check_channel_access
 

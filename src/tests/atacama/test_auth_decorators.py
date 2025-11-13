@@ -5,7 +5,7 @@ import os
 from unittest.mock import patch, MagicMock
 from flask import Flask, g, session, request, render_template
 
-from web.decorators.auth import _populate_user, require_auth, optional_auth, require_admin
+from atacama.decorators.auth import _populate_user, require_auth, optional_auth, require_admin
 from models.models import User
 
 class AuthDecoratorsTests(unittest.TestCase):

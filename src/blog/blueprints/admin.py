@@ -15,7 +15,7 @@ from models.users import (
     get_all_users
 )
 from models.messages import get_message_by_id
-from web.decorators import require_auth, navigable
+from atacama.decorators import require_auth, navigable
 
 logger = get_logger(__name__)
 

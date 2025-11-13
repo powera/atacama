@@ -15,8 +15,8 @@ from common.services.archive import get_archive_service
 from models import get_or_create_user
 from models.database import db
 from models.models import Email
-from web.blueprints.core.errors import handle_error
-from web.decorators import navigable, require_auth
+from atacama.blueprints.errors import handle_error
+from atacama.decorators import navigable, require_auth
 from .shared import content_bp
 
 logger = get_logger(__name__)

@@ -8,7 +8,7 @@ import uuid
 from models.database import db
 from models.models import ReactWidget, User, WidgetVersion
 from models.messages import check_channel_access
-from web.decorators import navigable, optional_auth, require_auth, require_admin
+from atacama.decorators import navigable, optional_auth, require_auth, require_admin
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
