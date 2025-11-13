@@ -7,7 +7,7 @@ import shutil
 import json
 from unittest.mock import patch, MagicMock
 
-from web.blueprints.trakaido.nonce_utils import (
+from trakaido.blueprints.nonce_utils import (
     get_nonce_file_path,
     load_nonces,
     save_nonces,
@@ -36,7 +36,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_get_nonce_file_path(self):
         """Test get_nonce_file_path generates correct path."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             file_path = get_nonce_file_path(self.test_user_id, self.test_day_key, self.test_language)
@@ -53,7 +53,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_get_nonce_file_path_creates_directory(self):
         """Test get_nonce_file_path creates directory if it doesn't exist."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             file_path = get_nonce_file_path(self.test_user_id, self.test_day_key, self.test_language)
@@ -71,7 +71,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_save_and_load_nonces(self):
         """Test saving and loading nonces."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create a set of nonces
@@ -89,7 +89,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_load_nonces_nonexistent_file(self):
         """Test load_nonces returns empty set for nonexistent file."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             loaded_nonces = load_nonces(self.test_user_id, self.test_day_key, self.test_language)
@@ -98,7 +98,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_save_nonces_creates_json_structure(self):
         """Test save_nonces creates proper JSON structure."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             nonces = {"nonce1", "nonce2"}
@@ -115,7 +115,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_get_all_nonce_files(self):
         """Test get_all_nonce_files returns all nonce file dates."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create multiple nonce files
@@ -131,7 +131,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_get_all_nonce_files_filters_invalid_filenames(self):
         """Test get_all_nonce_files filters out invalid filenames."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create valid and invalid files
@@ -169,7 +169,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_get_all_nonce_files_empty_directory(self):
         """Test get_all_nonce_files with nonexistent directory."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             result = get_all_nonce_files(self.test_user_id, self.test_language)
@@ -178,9 +178,9 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_cleanup_old_nonce_files(self):
         """Test cleanup_old_nonce_files removes old files."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants, \
-             patch('web.blueprints.trakaido.nonce_utils.get_current_day_key') as mock_current, \
-             patch('web.blueprints.trakaido.nonce_utils.get_yesterday_day_key') as mock_yesterday:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants, \
+             patch('trakaido.blueprints.nonce_utils.get_current_day_key') as mock_current, \
+             patch('trakaido.blueprints.nonce_utils.get_yesterday_day_key') as mock_yesterday:
 
             mock_constants.DATA_DIR = self.test_data_dir
             mock_current.return_value = "2025-10-28"
@@ -203,9 +203,9 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_check_nonce_duplicates_in_today(self):
         """Test check_nonce_duplicates finds duplicate in today's nonces."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants, \
-             patch('web.blueprints.trakaido.nonce_utils.get_current_day_key') as mock_current, \
-             patch('web.blueprints.trakaido.nonce_utils.get_yesterday_day_key') as mock_yesterday:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants, \
+             patch('trakaido.blueprints.nonce_utils.get_current_day_key') as mock_current, \
+             patch('trakaido.blueprints.nonce_utils.get_yesterday_day_key') as mock_yesterday:
 
             mock_constants.DATA_DIR = self.test_data_dir
             mock_current.return_value = "2025-10-28"
@@ -222,9 +222,9 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_check_nonce_duplicates_in_yesterday(self):
         """Test check_nonce_duplicates finds duplicate in yesterday's nonces."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants, \
-             patch('web.blueprints.trakaido.nonce_utils.get_current_day_key') as mock_current, \
-             patch('web.blueprints.trakaido.nonce_utils.get_yesterday_day_key') as mock_yesterday:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants, \
+             patch('trakaido.blueprints.nonce_utils.get_current_day_key') as mock_current, \
+             patch('trakaido.blueprints.nonce_utils.get_yesterday_day_key') as mock_yesterday:
 
             mock_constants.DATA_DIR = self.test_data_dir
             mock_current.return_value = "2025-10-28"
@@ -241,9 +241,9 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_check_nonce_duplicates_not_found(self):
         """Test check_nonce_duplicates returns False when nonce not found."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants, \
-             patch('web.blueprints.trakaido.nonce_utils.get_current_day_key') as mock_current, \
-             patch('web.blueprints.trakaido.nonce_utils.get_yesterday_day_key') as mock_yesterday:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants, \
+             patch('trakaido.blueprints.nonce_utils.get_current_day_key') as mock_current, \
+             patch('trakaido.blueprints.nonce_utils.get_yesterday_day_key') as mock_yesterday:
 
             mock_constants.DATA_DIR = self.test_data_dir
             mock_current.return_value = "2025-10-28"
@@ -260,9 +260,9 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_check_nonce_duplicates_with_no_files(self):
         """Test check_nonce_duplicates returns False when no nonce files exist."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants, \
-             patch('web.blueprints.trakaido.nonce_utils.get_current_day_key') as mock_current, \
-             patch('web.blueprints.trakaido.nonce_utils.get_yesterday_day_key') as mock_yesterday:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants, \
+             patch('trakaido.blueprints.nonce_utils.get_current_day_key') as mock_current, \
+             patch('trakaido.blueprints.nonce_utils.get_yesterday_day_key') as mock_yesterday:
 
             mock_constants.DATA_DIR = self.test_data_dir
             mock_current.return_value = "2025-10-28"
@@ -275,7 +275,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_load_nonces_with_corrupted_file(self):
         """Test load_nonces handles corrupted JSON gracefully."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create a corrupted nonce file
@@ -292,7 +292,7 @@ class NonceUtilsTests(unittest.TestCase):
 
     def test_save_nonces_with_empty_set(self):
         """Test save_nonces handles empty nonce set."""
-        with patch('web.blueprints.trakaido.nonce_utils.constants') as mock_constants:
+        with patch('trakaido.blueprints.nonce_utils.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Save empty nonce set

@@ -57,9 +57,21 @@ atacama/
 │   │   ├── common/             # Common module tests
 │   │   ├── web/                # Web server tests
 │   │   ├── aml_parser/         # Parser tests
-│   │   └── react_compiler/     # React compiler tests
+│   │   ├── react_compiler/     # React compiler tests
+│   │   └── trakaido/           # Trakaido API tests
+│   ├── trakaido/               # Trakaido Lithuanian language learning API
+│   │   └── blueprints/         # Trakaido Flask blueprints
+│   │   │   ├── userstats.py    # User statistics tracking
+│   │   │   ├── userconfig.py   # User configuration
+│   │   │   ├── audio.py        # Audio file serving
+│   │   │   ├── stats_schema.py # Stats data schema
+│   │   │   ├── stats_snapshots.py # Historical snapshots
+│   │   │   ├── nonce_utils.py  # Nonce authentication utilities
+│   │   │   ├── date_utils.py   # Date handling utilities
+│   │   │   ├── shared.py       # Shared utilities and blueprint
+│   │   │   └── trakaido_tools.py # Utility functions
 │   ├── util/                   # Utility scripts
-│   ├── web/                    # Flask web application
+│   ├── web/                    # Flask web application (Blog/CMS)
 │   │   ├── blueprints/         # Flask blueprints (modular routes)
 │   │   │   ├── core/           # Core functionality (auth, errors, nav)
 │   │   │   │   ├── auth.py     # OAuth and authentication
@@ -75,13 +87,6 @@ atacama/
 │   │   │   │   ├── feeds.py    # RSS/Atom feeds
 │   │   │   │   ├── quotes.py   # Quote collection
 │   │   │   │   └── statistics.py # Content statistics
-│   │   │   ├── trakaido/       # Trakaido stats API
-│   │   │   │   ├── userstats.py # User statistics tracking
-│   │   │   │   ├── userconfig.py # User configuration
-│   │   │   │   ├── audio.py    # Audio file serving
-│   │   │   │   ├── stats_schema.py # Stats data schema
-│   │   │   │   ├── stats_snapshots.py # Historical snapshots
-│   │   │   │   └── trakaido_tools.py # Utility functions
 │   │   │   └── admin.py        # Admin interface
 │   │   ├── templates/          # Jinja2 templates
 │   │   │   └── layouts/        # Base templates
@@ -178,7 +183,7 @@ Location: `config/domains.toml`
 
 ### 5. Trakaido Stats API
 
-Location: `src/web/blueprints/trakaido/`
+Location: `src/trakaido/blueprints/`
 
 A comprehensive API for tracking language learning progress:
 
@@ -447,10 +452,10 @@ Currently using manual schema updates. Consider implementing Alembic for future 
 ### Adding API Endpoints
 
 **For Trakaido:**
-1. Add endpoint in `src/web/blueprints/trakaido/`
+1. Add endpoint in `src/trakaido/blueprints/`
 2. Use appropriate authentication (nonce-based)
 3. Follow existing patterns for response format
-4. Add tests
+4. Add tests in `src/tests/trakaido/`
 
 **For Blog:**
 1. Add endpoint in appropriate `src/web/blueprints/blog/` file

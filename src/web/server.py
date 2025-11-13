@@ -219,7 +219,7 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
         
     elif blueprint_set == 'TRAKAIDO':
         # Trakaido blueprints
-        from web.blueprints.trakaido import trakaido_bp
+        from trakaido.blueprints import trakaido_bp
         app.register_blueprint(trakaido_bp)
 
     # Core blueprints (shared between both)

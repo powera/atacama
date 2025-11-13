@@ -8,7 +8,7 @@ import json
 from unittest.mock import patch, MagicMock, Mock
 from datetime import datetime, timezone
 
-from web.blueprints.trakaido.userstats import (
+from trakaido.blueprints.userstats import (
     create_empty_word_stats,
     is_old_schema,
     migrate_old_to_new_schema,
@@ -273,7 +273,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_creates_new_word(self):
         """Test increment_word_stat creates new word stats if they don't exist."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -302,7 +302,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_increments_correct(self):
         """Test increment_word_stat increments correct counter."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -337,7 +337,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_increments_incorrect(self):
         """Test increment_word_stat increments incorrect counter."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -364,7 +364,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_contextual_exposure(self):
         """Test increment_word_stat handles contextual exposure correctly."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -392,7 +392,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_updates_timestamps(self):
         """Test increment_word_stat updates timestamps correctly."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -446,7 +446,7 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_file_path(self):
         """Test JourneyStats generates correct file path."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -462,7 +462,7 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_save_and_load(self):
         """Test JourneyStats can save and load data."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create and save journey stats
@@ -486,7 +486,7 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_is_empty(self):
         """Test JourneyStats.is_empty returns correct value."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -503,7 +503,7 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_filters_invalid_on_load(self):
         """Test JourneyStats filters invalid data on load."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create a file with invalid data
@@ -557,7 +557,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_file_path(self):
         """Test DailyStats generates correct file path."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
@@ -574,7 +574,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_save_and_load(self):
         """Test DailyStats can save and load data."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create and save daily stats
@@ -595,7 +595,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_exists(self):
         """Test DailyStats.exists class method."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Should not exist initially
@@ -611,7 +611,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_get_available_dates(self):
         """Test DailyStats.get_available_dates returns correct dates."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create multiple daily stats
@@ -629,7 +629,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_compress_to_gzip(self):
         """Test DailyStats can compress to gzip."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create and save daily stats
@@ -648,7 +648,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_load_from_gzip(self):
         """Test DailyStats can load from gzip."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create, save, and compress daily stats
@@ -671,7 +671,7 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_cannot_save_gzip_loaded(self):
         """Test DailyStats cannot save if loaded from gzip."""
-        with patch('web.blueprints.trakaido.userstats.constants') as mock_constants:
+        with patch('trakaido.blueprints.userstats.constants') as mock_constants:
             mock_constants.DATA_DIR = self.test_data_dir
 
             # Create, save, and compress
