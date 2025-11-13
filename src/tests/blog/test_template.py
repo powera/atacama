@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 from models.database import db
 from models.models import Email, User, Base
-from web.server import create_app
+from atacama.server import create_app
 
 class TemplateTests(unittest.TestCase):
     def setUp(self):

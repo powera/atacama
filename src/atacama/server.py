@@ -209,33 +209,33 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     # Register blueprints based on blueprint_set
     if blueprint_set == 'BLOG':
         # Blog blueprints
-        from web.blueprints.blog import BLOG_BLUEPRINTS
+        from blog.blueprints import BLOG_BLUEPRINTS
         for blueprint in BLOG_BLUEPRINTS:
             app.register_blueprint(blueprint)
-        
+
         # Admin blueprint (blog-specific functionality)
-        from web.blueprints.admin import admin_bp
+        from blog.blueprints.admin import admin_bp
         app.register_blueprint(admin_bp)
-        
+
     elif blueprint_set == 'TRAKAIDO':
         # Trakaido blueprints
         from trakaido.blueprints import trakaido_bp
         app.register_blueprint(trakaido_bp)
 
     # Core blueprints (shared between both)
-    from web.blueprints.core.static import static_bp
+    from atacama.blueprints.static import static_bp
     app.register_blueprint(static_bp)
 
-    from web.blueprints.core.auth import auth_bp
+    from atacama.blueprints.auth import auth_bp
     app.register_blueprint(auth_bp)
 
-    from web.blueprints.core.nav import nav_bp
+    from atacama.blueprints.nav import nav_bp
     app.register_blueprint(nav_bp)
 
-    from web.blueprints.core.debug import debug_bp
+    from atacama.blueprints.debug import debug_bp
     app.register_blueprint(debug_bp)
 
-    from web.blueprints.core.errors import errors_bp
+    from atacama.blueprints.errors import errors_bp
     app.register_blueprint(errors_bp)
 
     return app

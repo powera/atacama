@@ -3,7 +3,7 @@ from sqlalchemy import select
 from typing import Dict, Any
 from common.base.logging_config import get_logger
 
-from web.decorators import require_auth, optional_auth, navigable
+from atacama.decorators import require_auth, optional_auth, navigable
 from models.database import db
 from models.models import Quote
 from models.quotes import (

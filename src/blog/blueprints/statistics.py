@@ -9,7 +9,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from sqlalchemy import func, select, desc
 
 import constants
-from web.decorators import optional_auth, navigable
+from atacama.decorators import optional_auth, navigable
 from common.config.channel_config import AccessLevel, get_channel_manager
 from models.database import db
 from common.base.logging_config import get_logger

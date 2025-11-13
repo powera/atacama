@@ -53,41 +53,17 @@ atacama/
 │   ├── spaceship/              # XPlanet image server
 │   │   ├── server.py           # Spaceship daemon
 │   │   └── nginx.conf          # Nginx configuration for spaceship
-│   ├── tests/                  # Test suite
-│   │   ├── common/             # Common module tests
-│   │   ├── web/                # Web server tests
-│   │   ├── aml_parser/         # Parser tests
-│   │   ├── react_compiler/     # React compiler tests
-│   │   └── trakaido/           # Trakaido API tests
-│   ├── trakaido/               # Trakaido Lithuanian language learning API
-│   │   └── blueprints/         # Trakaido Flask blueprints
-│   │   │   ├── userstats.py    # User statistics tracking
-│   │   │   ├── userconfig.py   # User configuration
-│   │   │   ├── audio.py        # Audio file serving
-│   │   │   ├── stats_schema.py # Stats data schema
-│   │   │   ├── stats_snapshots.py # Historical snapshots
-│   │   │   ├── nonce_utils.py  # Nonce authentication utilities
-│   │   │   ├── date_utils.py   # Date handling utilities
-│   │   │   ├── shared.py       # Shared utilities and blueprint
-│   │   │   └── trakaido_tools.py # Utility functions
-│   ├── util/                   # Utility scripts
-│   ├── web/                    # Flask web application (Blog/CMS)
-│   │   ├── blueprints/         # Flask blueprints (modular routes)
-│   │   │   ├── core/           # Core functionality (auth, errors, nav)
-│   │   │   │   ├── auth.py     # OAuth and authentication
-│   │   │   │   ├── errors.py   # Error handlers
-│   │   │   │   ├── debug.py    # Debug utilities
-│   │   │   │   ├── nav.py      # Navigation
-│   │   │   │   └── static.py   # Static file serving
-│   │   │   ├── blog/           # Blog/CMS functionality
-│   │   │   │   ├── content.py  # Content viewing
-│   │   │   │   ├── article.py  # Article rendering
-│   │   │   │   ├── submit.py   # Content submission
-│   │   │   │   ├── widgets.py  # Widget management and compilation
-│   │   │   │   ├── feeds.py    # RSS/Atom feeds
-│   │   │   │   ├── quotes.py   # Quote collection
-│   │   │   │   └── statistics.py # Content statistics
-│   │   │   └── admin.py        # Admin interface
+│   ├── atacama/                # Core Atacama web server
+│   │   ├── server.py           # Main Flask application
+│   │   ├── blueprints/         # Core Flask blueprints
+│   │   │   ├── auth.py         # OAuth and authentication
+│   │   │   ├── errors.py       # Error handlers
+│   │   │   ├── debug.py        # Debug utilities
+│   │   │   ├── nav.py          # Navigation
+│   │   │   └── static.py       # Static file serving
+│   │   ├── decorators/         # Flask route decorators
+│   │   │   ├── auth.py         # Authentication decorators
+│   │   │   └── navigation.py   # Navigation decorators
 │   │   ├── templates/          # Jinja2 templates
 │   │   │   └── layouts/        # Base templates
 │   │   ├── css/                # Stylesheets
@@ -96,8 +72,37 @@ atacama/
 │   │   │   ├── lithuanianApi.js # Trakaido API client
 │   │   │   └── third_party/    # Third-party libraries (React, etc.)
 │   │   ├── static/             # Static assets
-│   │   ├── decorators/         # Flask route decorators
-│   │   └── server.py           # Main Flask application
+│   │   └── nginx.conf          # Nginx configuration
+│   ├── blog/                   # Blog/CMS module
+│   │   └── blueprints/         # Blog Flask blueprints
+│   │       ├── content.py      # Content viewing
+│   │       ├── article.py      # Article rendering
+│   │       ├── submit.py       # Content submission
+│   │       ├── widgets.py      # Widget management and compilation
+│   │       ├── feeds.py        # RSS/Atom feeds
+│   │       ├── quotes.py       # Quote collection
+│   │       ├── statistics.py   # Content statistics
+│   │       ├── admin.py        # Admin interface
+│   │       └── shared.py       # Shared blog utilities
+│   ├── tests/                  # Test suite
+│   │   ├── common/             # Common module tests
+│   │   ├── atacama/            # Atacama server tests
+│   │   ├── blog/               # Blog module tests
+│   │   ├── aml_parser/         # Parser tests
+│   │   ├── react_compiler/     # React compiler tests
+│   │   └── trakaido/           # Trakaido API tests
+│   ├── trakaido/               # Trakaido Lithuanian language learning API
+│   │   └── blueprints/         # Trakaido Flask blueprints
+│   │       ├── userstats.py    # User statistics tracking
+│   │       ├── userconfig.py   # User configuration
+│   │       ├── audio.py        # Audio file serving
+│   │       ├── stats_schema.py # Stats data schema
+│   │       ├── stats_snapshots.py # Historical snapshots
+│   │       ├── nonce_utils.py  # Nonce authentication utilities
+│   │       ├── date_utils.py   # Date handling utilities
+│   │       ├── shared.py       # Shared utilities and blueprint
+│   │       └── trakaido_tools.py # Utility functions
+│   ├── util/                   # Utility scripts
 │   └── constants.py            # Application-wide constants
 ├── launch.py                   # Main entry point (multi-mode launcher)
 ├── local_server.sh             # Local development server script
@@ -141,7 +146,7 @@ Additional features:
 
 ### 2. React Widget System
 
-Location: `src/react_compiler/`, `src/web/blueprints/blog/widgets.py`
+Location: `src/react_compiler/`, `src/blog/blueprints/widgets.py`
 
 A complete React widget development and compilation system:
 
@@ -434,11 +439,11 @@ Currently using manual schema updates. Consider implementing Alembic for future 
 
 ### Adding a New Blueprint
 
-1. Create new Python file in `src/web/blueprints/`
+1. Create new Python file in `src/atacama/blueprints/` or `src/blog/blueprints/` as appropriate
 2. Define blueprint with `Blueprint('name', __name__)`
 3. Register routes using decorators
-4. Register blueprint in `src/web/server.py`
-5. Add tests in `src/tests/web/blueprints/`
+4. Register blueprint in `src/atacama/server.py`
+5. Add tests in `src/tests/atacama/` or `src/tests/blog/` as appropriate
 
 ### Modifying the Parser
 
@@ -458,9 +463,10 @@ Currently using manual schema updates. Consider implementing Alembic for future 
 4. Add tests in `src/tests/trakaido/`
 
 **For Blog:**
-1. Add endpoint in appropriate `src/web/blueprints/blog/` file
-2. Use authentication decorators as needed
+1. Add endpoint in appropriate `src/blog/blueprints/` file
+2. Use authentication decorators from `atacama.decorators`
 3. Return HTML or JSON as appropriate
+4. Add tests in `src/tests/blog/`
 
 ## Important Notes for AI Assistants
 
@@ -506,7 +512,7 @@ Currently using manual schema updates. Consider implementing Alembic for future 
 ### Debugging
 
 - Logs written to `logs/` directory (one file per PID)
-- Use `src/web/blueprints/core/debug.py` for debug utilities
+- Use `src/atacama/blueprints/debug.py` for debug utilities
 - Test database separate from production database
 - Can run Flask in debug mode for development
 
@@ -545,10 +551,10 @@ Key points:
 - Configuration: `config/*.toml`
 - Models: `src/models/*.py`
 - Parser: `src/aml_parser/`
-- Blueprints: `src/web/blueprints/`
+- Blueprints: `src/atacama/blueprints/`, `src/blog/blueprints/`, `src/trakaido/blueprints/`
 - Tests: `src/tests/`
-- Templates: `src/web/templates/`
-- Static files: `src/web/static/`, `src/web/css/`, `src/web/js/`
+- Templates: `src/atacama/templates/`
+- Static files: `src/atacama/static/`, `src/atacama/css/`, `src/atacama/js/`
 
 ### Key Commands
 

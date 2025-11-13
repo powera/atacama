@@ -156,14 +156,14 @@ def main():
         
         # Launch requested components
         if args.web:
-            from web.server import run_server
+            from atacama.server import run_server
             port = args.port or 5000
             if not args.quiet:
                 print(f"Starting web server (blog) on http://{args.host}:{port}")
             logger.info(f"Starting web server (blog) on {args.host}:{port}")
             run_server(host=args.host, port=port, debug=args.debug or args.dev, blueprint_set='BLOG')
         elif args.trakaido:
-            from web.server import run_server
+            from atacama.server import run_server
             port = args.port or 5001
             if not args.quiet:
                 print(f"Starting trakaido API server on http://{args.host}:{port}")

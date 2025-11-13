@@ -39,8 +39,8 @@ from models.messages import (
 
 from models.models import Message, Article, ReactWidget, Quote, Email
 from models.users import is_user_admin
-from web.blueprints.core.errors import handle_error
-from web.decorators import navigable, navigable_per_channel, optional_auth, require_auth
+from atacama.blueprints.errors import handle_error
+from atacama.decorators import navigable, navigable_per_channel, optional_auth, require_auth
 from .shared import content_bp
 
 logger = get_logger(__name__)

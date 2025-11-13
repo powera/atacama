@@ -10,7 +10,7 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
-from web.decorators import require_auth
+from atacama.decorators import require_auth
 from models.database import db
 from models import get_or_create_user
 from models.models import User, UserToken
