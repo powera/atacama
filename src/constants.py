@@ -21,7 +21,7 @@ SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SRC_DIR)
 
 # Define common paths relative to project root
-WEB_DIR = os.path.join(SRC_DIR, "web")
+WEB_DIR = os.path.join(SRC_DIR, "atacama")
 STATIC_DIR = os.path.join(WEB_DIR, "static")
 
 KEY_DIR = os.path.join(PROJECT_ROOT, "keys")
@@ -52,10 +52,6 @@ REACT_COMPILER_JS_DIR = os.path.join(SRC_DIR, 'react_compiler', "js")
 _PROD_TRAKAIDO_AUDIO_BASE_DIR = '/home/atacama/trakaido/'
 _DEV_TRAKAIDO_AUDIO_BASE_DIR = '/Users/powera/repo/trakaido/audio/'
 
-# Legacy paths for backward compatibility
-_PROD_LITHUANIAN_AUDIO_DIR = '/home/atacama/trakaido/lithuanian/'
-_DEV_LITHUANIAN_AUDIO_DIR = '/Users/powera/repo/trakaido/audio/lithuanian-audio-cache'
-
 def get_trakaido_audio_base_dir() -> str:
     """
     Get the base Trakaido audio directory for all languages.
@@ -65,29 +61,6 @@ def get_trakaido_audio_base_dir() -> str:
     if is_development_mode():
         return _DEV_TRAKAIDO_AUDIO_BASE_DIR
     return _PROD_TRAKAIDO_AUDIO_BASE_DIR
-
-def get_lithuanian_audio_dir() -> str:
-    """
-    Get the Lithuanian audio directory based on the current environment.
-
-    :return: Path to the Lithuanian audio directory
-    """
-    if is_development_mode():
-        return _DEV_LITHUANIAN_AUDIO_DIR
-    return _PROD_LITHUANIAN_AUDIO_DIR
-
-def get_language_audio_dir(language_audio_dir_name: str) -> str:
-    """
-    Get the audio directory for a specific language.
-
-    :param language_audio_dir_name: The language's audio directory name
-    :return: Path to the language's audio directory
-    """
-    base_dir = get_trakaido_audio_base_dir()
-    return os.path.join(base_dir, language_audio_dir_name)
-
-# Dynamic audio directory based on environment
-LITHUANIAN_AUDIO_DIR = get_lithuanian_audio_dir()
 
 # Database path - will be updated when testing mode is set
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")

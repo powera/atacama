@@ -39,7 +39,8 @@ def get_available_voices(audio_dir: Optional[str] = None) -> List[str]:
             if hasattr(g, 'language_config'):
                 audio_dir = g.language_config.get_audio_dir()
             else:
-                audio_dir = constants.LITHUANIAN_AUDIO_DIR
+                logger.error("No language_config found in request context and no audio_dir provided")
+                return []
 
         if not os.path.exists(audio_dir):
             logger.error(f"Audio directory not found: {audio_dir}")
@@ -89,8 +90,8 @@ def get_audio_file_path(word: str, voice: Optional[str] = None, audio_dir: Optio
                 audio_dir = g.language_config.get_audio_dir()
                 character_set = g.language_config.character_set if character_set is None else character_set
             else:
-                audio_dir = constants.LITHUANIAN_AUDIO_DIR
-                character_set = LITHUANIAN_CHARS if character_set is None else character_set
+                logger.error("No language_config found in request context and no audio_dir provided")
+                return None
 
         voices = get_available_voices(audio_dir)
         if not voices:
