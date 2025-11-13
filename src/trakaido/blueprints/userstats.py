@@ -8,7 +8,7 @@ from typing import Any, Dict
 from flask import g, jsonify, request
 
 # Local application imports
-from web.decorators import require_auth
+from atacama.decorators.auth import require_auth
 from .shared import *
 from .date_utils import (
     get_current_day_key,

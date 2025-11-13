@@ -11,7 +11,7 @@ from flask import Blueprint, Response, abort, g, jsonify, request, send_file
 
 # Local application imports
 import constants
-from web.decorators import optional_auth, require_auth
+from atacama.decorators.auth import optional_auth, require_auth
 from .shared import *
 from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
 from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS, LEVELPROGRESSION_API_DOCS

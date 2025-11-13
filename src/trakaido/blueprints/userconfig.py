@@ -11,7 +11,7 @@ from flask import Response, g, jsonify, request
 
 # Local application imports
 import constants
-from web.decorators import require_auth
+from atacama.decorators.auth import require_auth
 from .shared import trakaido_bp, logger, ensure_user_data_dir
 
 ##############################################################################
