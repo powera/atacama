@@ -335,12 +335,19 @@ class OpenAIClient:
             usage=usage
         )
 
-# Create default client instance
-client = OpenAIClient(debug=False)  # Set to True to enable debug logging
+# Lazy client initialization to avoid errors at import time
+_client = None
+
+def _get_client() -> OpenAIClient:
+    """Get or create the default client instance (lazy initialization)."""
+    global _client
+    if _client is None:
+        _client = OpenAIClient(debug=False)  # Set to True to enable debug logging
+    return _client
 
 # Expose key functions at module level for API compatibility
 def warm_model(model: str) -> bool:
-    return client.warm_model(model)
+    return _get_client().warm_model(model)
 
 def generate_chat(
     prompt: str,
@@ -353,10 +360,10 @@ def generate_chat(
 ) -> Response:
     """
     Generate a chat response using OpenAI Responses API.
-    
+
     Returns:
         Response containing response_text, structured_data, and usage
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
-    return client.generate_chat(prompt, model, brief, json_schema, context, max_tokens, reasoning_effort)
+    return _get_client().generate_chat(prompt, model, brief, json_schema, context, max_tokens, reasoning_effort)

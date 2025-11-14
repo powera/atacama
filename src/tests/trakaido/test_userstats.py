@@ -9,17 +9,16 @@ from unittest.mock import patch, MagicMock, Mock
 from datetime import datetime, timezone
 
 from trakaido.blueprints.userstats import (
-    create_empty_word_stats,
-    is_old_schema,
-    migrate_old_to_new_schema,
-    validate_and_normalize_word_stats,
     parse_stat_type,
     increment_word_stat,
+)
+from trakaido.blueprints.stats_schema import (
+    create_empty_word_stats,
+    validate_and_normalize_word_stats,
     JourneyStats,
     DailyStats,
     DIRECT_PRACTICE_TYPES,
     CONTEXTUAL_EXPOSURE_TYPES,
-    OLD_STAT_TYPES
 )
 
 
@@ -53,96 +52,28 @@ class UserStatsSchemaTests(unittest.TestCase):
         self.assertIsNone(stats["practiceHistory"]["lastCorrectAnswer"])
         self.assertIsNone(stats["practiceHistory"]["lastIncorrectAnswer"])
 
+    # TODO: These tests are disabled because the old schema migration functions
+    # (is_old_schema, migrate_old_to_new_schema) have been removed
+    # Re-enable if migration functionality is needed again
+    @unittest.skip("Old schema migration functions removed")
     def test_is_old_schema_detects_old_format(self):
         """Test is_old_schema correctly identifies old schema."""
-        # Old schema with old stat types
-        old_stats = {
-            "multipleChoice": {"correct": 5, "incorrect": 2},
-            "exposed": True
-        }
-        self.assertTrue(is_old_schema(old_stats))
+        pass
 
-        # Old schema with old meta types
-        old_stats_meta = {
-            "lastSeen": 1234567890,
-            "exposed": True
-        }
-        self.assertTrue(is_old_schema(old_stats_meta))
-
+    @unittest.skip("Old schema migration functions removed")
     def test_is_old_schema_recognizes_new_format(self):
         """Test is_old_schema correctly identifies new schema."""
-        new_stats = create_empty_word_stats()
-        self.assertFalse(is_old_schema(new_stats))
+        pass
 
+    @unittest.skip("Old schema migration functions removed")
     def test_migrate_old_to_new_schema(self):
         """Test migrate_old_to_new_schema converts correctly."""
-        old_stats = {
-            "exposed": True,
-            "multipleChoice": {"correct": 5, "incorrect": 2},
-            "listeningEasy": {"correct": 3, "incorrect": 1},
-            "listeningHard": {"correct": 2, "incorrect": 0},
-            "typing": {"correct": 4, "incorrect": 3},
-            "blitz": {"correct": 10, "incorrect": 5},
-            "sentences": {"correct": 7, "incorrect": 2},
-            "lastSeen": 1234567890,
-            "lastCorrectAnswer": 1234567891,
-            "lastIncorrectAnswer": 1234567892,
-            "markedAsKnown": True
-        }
+        pass
 
-        new_stats = migrate_old_to_new_schema(old_stats)
-
-        # Check structure
-        self.assertTrue(new_stats["exposed"])
-        self.assertTrue(new_stats["markedAsKnown"])
-
-        # Check migrations to target->english direction
-        self.assertEqual(
-            new_stats["directPractice"]["multipleChoice_targetToEnglish"],
-            {"correct": 5, "incorrect": 2}
-        )
-        self.assertEqual(
-            new_stats["directPractice"]["listening_targetAudioToTarget"],
-            {"correct": 3, "incorrect": 1}
-        )
-        self.assertEqual(
-            new_stats["directPractice"]["listening_targetAudioToEnglish"],
-            {"correct": 2, "incorrect": 0}
-        )
-        self.assertEqual(
-            new_stats["directPractice"]["typing_targetToEnglish"],
-            {"correct": 4, "incorrect": 3}
-        )
-        self.assertEqual(
-            new_stats["directPractice"]["blitz_targetToEnglish"],
-            {"correct": 10, "incorrect": 5}
-        )
-        self.assertEqual(
-            new_stats["contextualExposure"]["sentences"],
-            {"correct": 7, "incorrect": 2}
-        )
-
-        # Check timestamps
-        self.assertEqual(new_stats["practiceHistory"]["lastSeen"], 1234567890)
-        self.assertEqual(new_stats["practiceHistory"]["lastCorrectAnswer"], 1234567891)
-        self.assertEqual(new_stats["practiceHistory"]["lastIncorrectAnswer"], 1234567892)
-
+    @unittest.skip("Old schema migration functions removed")
     def test_validate_and_normalize_word_stats_with_old_schema(self):
         """Test validate_and_normalize_word_stats migrates old schema."""
-        old_stats = {
-            "exposed": True,
-            "multipleChoice": {"correct": 5, "incorrect": 2}
-        }
-
-        normalized = validate_and_normalize_word_stats(old_stats)
-
-        # Should be migrated to new schema
-        self.assertFalse(is_old_schema(normalized))
-        self.assertIn("directPractice", normalized)
-        self.assertEqual(
-            normalized["directPractice"]["multipleChoice_targetToEnglish"],
-            {"correct": 5, "incorrect": 2}
-        )
+        pass
 
     def test_validate_and_normalize_word_stats_filters_invalid_data(self):
         """Test validate_and_normalize_word_stats filters out invalid values."""
