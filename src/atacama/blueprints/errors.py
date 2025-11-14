@@ -49,7 +49,8 @@ def handle_error(error_code: str, error_title: str, error_message: str, details=
             error_title=error_title,
             error_message=error_message,
             technical_details=details if current_app.debug else None,
-            public_channels=public_channels
+            public_channels=public_channels,
+            channel_manager=channel_manager
         ), status_code
     
     response = {
