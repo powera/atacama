@@ -1,5 +1,6 @@
 """Admin functionality for managing user access to restricted channels."""
 
+import os
 from typing import Dict, List
 
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
@@ -19,7 +20,12 @@ from atacama.decorators import require_auth, navigable
 
 logger = get_logger(__name__)
 
-admin_bp = Blueprint('admin', __name__)
+# Get the blog module directory (parent of blueprints/)
+blog_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+admin_bp = Blueprint('admin', __name__,
+                    template_folder=os.path.join(blog_dir, 'templates'),
+                    static_folder=os.path.join(blog_dir, 'static'))
 
 def is_admin() -> bool:
     """Check if current user has admin access."""
