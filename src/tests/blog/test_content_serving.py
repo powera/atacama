@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 
 from atacama.server import create_app
 from models.database import db
-from models.models import User, Message, Article
+from models.models import User, Email, Article
 
 
 class ContentServingTests(unittest.TestCase):
@@ -35,16 +35,16 @@ class ContentServingTests(unittest.TestCase):
                 db_session.commit()
                 return user.id
 
-    def create_test_message(self, user_id, channel='general', subject='Test', content='Test content'):
+    def create_test_message(self, author_id, channel='misc', subject='Test', content='Test content'):
         """Helper to create a test message."""
         with self.app.app_context():
             with db.session() as db_session:
-                message = Message(
-                    user_id=user_id,
+                message = Email(
+                    author_id=author_id,
                     channel=channel,
                     subject=subject,
                     content=content,
-                    timestamp=datetime.now(timezone.utc)
+                    processed_content=content
                 )
                 db_session.add(message)
                 db_session.commit()
@@ -53,9 +53,9 @@ class ContentServingTests(unittest.TestCase):
     def test_message_stream_public_channel(self):
         """Test accessing public channel message stream without auth."""
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='general', subject='Public Message')
+        self.create_test_message(user_id, channel='misc', subject='Public Message')
 
-        response = self.client.get('/stream/channel/general')
+        response = self.client.get('/stream/channel/misc')
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Public Message', response.data)
@@ -63,10 +63,10 @@ class ContentServingTests(unittest.TestCase):
     def test_message_stream_private_channel_requires_auth(self):
         """Test that private channels require authentication."""
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='private_channel', subject='Private Message')
+        self.create_test_message(user_id, channel='private', subject='Private Message')
 
         # Try to access without authentication
-        response = self.client.get('/stream/channel/private_channel')
+        response = self.client.get('/stream/channel/private')
 
         # Should redirect to login or show error
         self.assertIn(response.status_code, [302, 401, 403])
@@ -81,11 +81,11 @@ class ContentServingTests(unittest.TestCase):
         msg3_id = self.create_test_message(user_id, subject='Message 3')
 
         # Get first page
-        response = self.client.get('/stream/channel/general')
+        response = self.client.get('/stream/channel/misc')
         self.assertEqual(response.status_code, 200)
 
         # Get older messages
-        response = self.client.get(f'/stream/channel/general/older/{msg3_id}')
+        response = self.client.get(f'/stream/channel/misc/older/{msg3_id}')
         self.assertEqual(response.status_code, 200)
 
     def test_get_message_by_id(self):
@@ -112,7 +112,7 @@ class ContentServingTests(unittest.TestCase):
         user_id = self.create_test_user()
 
         # Create messages in different channels
-        self.create_test_message(user_id, channel='general', subject='General Message')
+        self.create_test_message(user_id, channel='misc', subject='General Message')
         self.create_test_message(user_id, channel='technology', subject='Tech Message')
 
         # Get general channel
@@ -165,12 +165,12 @@ class ContentServingTests(unittest.TestCase):
         with self.app.app_context():
             with db.session() as db_session:
                 # Create message with article
-                message = Message(
-                    user_id=user_id,
-                    channel='general',
+                message = Email(
+                    author_id=user_id,
+                    channel='misc',
                     subject='Article Message',
                     content='Summary',
-                    timestamp=datetime.now(timezone.utc)
+                    processed_content='Summary'
                 )
                 db_session.add(message)
                 db_session.flush()
@@ -209,7 +209,7 @@ class ContentServingTests(unittest.TestCase):
         """Test that channels are filtered based on domain configuration."""
         # This test verifies domain-based channel filtering
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='general')
+        self.create_test_message(user_id, channel='misc')
 
         response = self.client.get('/stream/channel/general')
         self.assertEqual(response.status_code, 200)
