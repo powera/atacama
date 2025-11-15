@@ -45,32 +45,35 @@ def cleanup_test_environment(db_path: str, original_dir: str):
 def discover_test_modules() -> dict:
     """
     Find all test modules organized by category.
-    
+
     Returns:
         Dict mapping category names to lists of test module paths
     """
     categories = {
         'common': [],
-        'web': [],
-        'parser': [],
+        'blog': [],
+        'atacama': [],
+        'trakaido': [],
+        'models': [],
+        'aml_parser': [],
         'react_compiler': []
     }
-    
+
     # Since we've changed the working directory to src, the tests are now in ./tests
     test_dir = os.path.join(os.getcwd(), 'tests')
-    
+
     # Scan test directories
     for category in categories:
         category_dir = os.path.join(test_dir, category)
         if not os.path.exists(category_dir):
             continue
-            
+
         for file in os.listdir(category_dir):
             if file.startswith('test_') and file.endswith('.py'):
                 categories[category].append(
                     os.path.join(category_dir, file)
                 )
-    
+
     return categories
 
 def run_test_suite(categories: Optional[List[str]] = None,
@@ -81,13 +84,15 @@ def run_test_suite(categories: Optional[List[str]] = None,
                    quiet: bool = False) -> bool:
     """
     Run test suite with optional filtering.
-    
+
     Args:
-        categories: List of categories to test (common, web, parser)
+        categories: List of categories to test (common, blog, atacama, trakaido, models, aml_parser, react_compiler)
         pattern: Optional test name pattern to filter by
         verbose: Enable verbose output
         with_coverage: Enable coverage reporting
-    
+        fail_fast: Stop on first test failure
+        quiet: Suppress non-essential output
+
     Returns:
         bool: True if all tests passed
     """
@@ -175,7 +180,7 @@ if __name__ == '__main__':
     
     parser.add_argument(
         '--category',
-        choices=['common', 'web', 'parser', 'react_compiler'],
+        choices=['common', 'blog', 'atacama', 'trakaido', 'models', 'aml_parser', 'react_compiler'],
         action='append',
         help='Test categories to run (can specify multiple)'
     )
@@ -220,7 +225,7 @@ if __name__ == '__main__':
 Examples:
   %(prog)s                         # Run all tests
   %(prog)s --category common       # Run only common tests
-  %(prog)s --category web --category parser  # Run web and parser tests
+  %(prog)s --category blog --category atacama  # Run blog and atacama tests
   %(prog)s --pattern "*auth*"      # Run tests with 'auth' in the name
   %(prog)s --coverage             # Run tests with coverage reporting
   %(prog)s --verbose --fail-fast  # Verbose output, stop on first failure
@@ -228,8 +233,11 @@ Examples:
 
 Test categories:
   common         - Core utilities and configuration tests
-  web            - Web server and API tests
-  parser         - Markup parser tests
+  blog           - Blog/CMS functionality tests
+  atacama        - Atacama infrastructure tests (auth, navigation, etc.)
+  trakaido       - Trakaido API tests
+  models         - Database model tests
+  aml_parser     - Markup parser tests
   react_compiler - React Compiler tests (expensive, requires Node.js/npm)
     """ % {'prog': parser.prog}
     
@@ -237,15 +245,20 @@ Test categories:
     
     try:
         if args.list_tests:
-            # List available tests
-            all_tests = discover_test_modules()
-            print("Available test categories and modules:")
-            for category, modules in all_tests.items():
-                if modules:
-                    print(f"\n{category}:")
-                    for module in modules:
-                        module_name = os.path.basename(module).replace('.py', '')
-                        print(f"  {module_name}")
+            # Set up environment (needed for correct paths)
+            db_path, original_dir = setup_test_environment()
+            try:
+                # List available tests
+                all_tests = discover_test_modules()
+                print("Available test categories and modules:")
+                for category, modules in all_tests.items():
+                    if modules:
+                        print(f"\n{category}:")
+                        for module in modules:
+                            module_name = os.path.basename(module).replace('.py', '')
+                            print(f"  {module_name}")
+            finally:
+                cleanup_test_environment(db_path, original_dir)
             sys.exit(0)
         
         success = run_test_suite(

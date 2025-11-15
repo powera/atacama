@@ -7,8 +7,6 @@ from typing import Optional, Dict, Any
 from urllib.parse import urlencode
 
 from flask import Blueprint, request, render_template, session, redirect, url_for, g, jsonify
-from google.oauth2 import id_token
-from google.auth.transport import requests
 
 from atacama.decorators import require_auth
 from models.database import db
@@ -24,6 +22,13 @@ auth_bp = Blueprint('auth', __name__)
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+
+# Lazy import for Google OAuth libraries to avoid requiring them at import time
+def _get_google_oauth():
+    """Lazy import of Google OAuth libraries."""
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+    return id_token, google_requests
 
 @auth_bp.route('/login')
 def login():
@@ -104,15 +109,18 @@ def generate_auth_token() -> str:
 def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """
     Verify Google ID token and extract user info.
-    
+
     :param token: Google ID token to verify
     :return: User info dict if valid, None if invalid
     :raises: Various exceptions if token verification fails
     """
     try:
-        idinfo = id_token.verify_oauth2_token(
+        # Lazy import Google OAuth libraries
+        id_token_module, google_requests = _get_google_oauth()
+
+        idinfo = id_token_module.verify_oauth2_token(
             token,
-            requests.Request(),
+            google_requests.Request(),
             GOOGLE_CLIENT_ID
         )
         
