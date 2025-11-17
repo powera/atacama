@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 @trakaido_bp.route("/")
 def trakaido_index() -> Response:
     """Serve the Trakaido single-page application."""
-    TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/react/index.html"
+    TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
     if os.path.exists(TRAKAIDO_PATH_PROD):
         # In production, serve the compiled index.html from the Trakaido repo
         return send_file(TRAKAIDO_PATH_PROD)
