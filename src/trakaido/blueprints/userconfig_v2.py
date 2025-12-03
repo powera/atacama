@@ -153,21 +153,40 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
     try:
         # Check for unknown top-level sections
         for section in updates:
-            if section not in ["learning", "audio", "display"]:
+            if section not in ["learning", "audio", "display", "metadata"]:
                 unknown_fields.append(section)
 
-        # Check for metadata updates (read-only)
+        # Validate metadata section (limited write access)
         if "metadata" in updates:
-            return False, {
-                "success": False,
-                "error": {
-                    "code": "READ_ONLY_FIELD",
-                    "message": "Metadata fields are read-only and cannot be directly modified",
-                    "details": {
-                        "field": "metadata"
-                    }
-                }
-            }, []
+            metadata = updates["metadata"]
+            if not isinstance(metadata, dict):
+                return False, _validation_error("metadata", metadata, "Must be an object"), []
+
+            # Check for unknown or read-only metadata fields
+            for field in metadata:
+                if field == "hasCompletedOnboarding":
+                    # This field is writable
+                    if not isinstance(metadata[field], bool):
+                        return False, _validation_error(
+                            "metadata.hasCompletedOnboarding",
+                            metadata[field],
+                            "Must be a boolean"
+                        ), []
+                elif field == "lastModified":
+                    # This field is read-only
+                    return False, {
+                        "success": False,
+                        "error": {
+                            "code": "READ_ONLY_FIELD",
+                            "message": "The lastModified field is read-only and cannot be directly modified",
+                            "details": {
+                                "field": "metadata.lastModified"
+                            }
+                        }
+                    }, []
+                else:
+                    # Unknown metadata field
+                    unknown_fields.append(f"metadata.{field}")
 
         # Validate learning section
         if "learning" in updates:
@@ -326,11 +345,12 @@ def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> D
     known_fields = {
         "learning": ["currentLevel", "userProficiency", "journeyAutoAdvance", "showMotivationalBreaks"],
         "audio": ["enabled", "selectedVoice", "downloadOnWiFiOnly"],
-        "display": ["colorScheme", "showGrammarInterstitials"]
+        "display": ["colorScheme", "showGrammarInterstitials"],
+        "metadata": ["hasCompletedOnboarding"]  # Only writable metadata fields
     }
 
     # Apply updates to each section, filtering unknown fields
-    for section in ["learning", "audio", "display"]:
+    for section in ["learning", "audio", "display", "metadata"]:
         if section in updates and isinstance(updates[section], dict):
             if section not in updated_config:
                 updated_config[section] = {}

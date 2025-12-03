@@ -248,8 +248,8 @@ class UserconfigV2ValidationTests(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertIsNone(error)
 
-    def test_validate_rejects_metadata_updates(self):
-        """Test validation rejects direct metadata updates."""
+    def test_validate_accepts_has_completed_onboarding_update(self):
+        """Test validation accepts hasCompletedOnboarding updates."""
         updates = {
             "metadata": {
                 "hasCompletedOnboarding": True
@@ -257,8 +257,46 @@ class UserconfigV2ValidationTests(unittest.TestCase):
         }
 
         is_valid, error, unknown = validate_config_update(updates)
+        self.assertTrue(is_valid)
+        self.assertIsNone(error)
+
+    def test_validate_rejects_last_modified_update(self):
+        """Test validation rejects lastModified updates (read-only)."""
+        updates = {
+            "metadata": {
+                "lastModified": "2025-01-01T00:00:00Z"
+            }
+        }
+
+        is_valid, error, unknown = validate_config_update(updates)
         self.assertFalse(is_valid)
         self.assertEqual(error["error"]["code"], "READ_ONLY_FIELD")
+        self.assertIn("lastModified", error["error"]["details"]["field"])
+
+    def test_validate_rejects_invalid_has_completed_onboarding_type(self):
+        """Test validation rejects non-boolean hasCompletedOnboarding."""
+        updates = {
+            "metadata": {
+                "hasCompletedOnboarding": "yes"
+            }
+        }
+
+        is_valid, error, unknown = validate_config_update(updates)
+        self.assertFalse(is_valid)
+        self.assertEqual(error["error"]["code"], "VALIDATION_ERROR")
+
+    def test_validate_ignores_unknown_metadata_fields(self):
+        """Test validation ignores unknown metadata fields."""
+        updates = {
+            "metadata": {
+                "hasCompletedOnboarding": True,
+                "customField": "value"
+            }
+        }
+
+        is_valid, error, unknown = validate_config_update(updates)
+        self.assertTrue(is_valid)
+        self.assertIn("metadata.customField", unknown)
 
     def test_validate_invalid_boolean_type(self):
         """Test validation rejects non-boolean for boolean fields."""
@@ -325,6 +363,32 @@ class UserconfigV2UpdateTests(unittest.TestCase):
         self.assertEqual(current["learning"]["currentLevel"], original_level)
         # Result updated
         self.assertEqual(result["learning"]["currentLevel"], 15)
+
+    def test_apply_updates_metadata_has_completed_onboarding(self):
+        """Test applying hasCompletedOnboarding update."""
+        current = _deep_copy_config(DEFAULT_CONFIG)
+        updates = {"metadata": {"hasCompletedOnboarding": True}}
+
+        result = _apply_updates(current, updates)
+
+        self.assertTrue(result["metadata"]["hasCompletedOnboarding"])
+        # lastModified should remain unchanged by _apply_updates
+        self.assertIsNone(result["metadata"]["lastModified"])
+
+    def test_apply_updates_filters_unknown_metadata_fields(self):
+        """Test that unknown metadata fields are filtered out."""
+        current = _deep_copy_config(DEFAULT_CONFIG)
+        updates = {
+            "metadata": {
+                "hasCompletedOnboarding": True,
+                "unknownField": "value"
+            }
+        }
+
+        result = _apply_updates(current, updates)
+
+        self.assertTrue(result["metadata"]["hasCompletedOnboarding"])
+        self.assertNotIn("unknownField", result["metadata"])
 
 
 class UserconfigV2APIEndpointsTests(unittest.TestCase):
@@ -613,6 +677,63 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
 
         # Should NOT have warning for valid fields
         self.assertNotIn("warning", data)
+
+    def test_patch_user_config_allows_onboarding_completion(self):
+        """Test PATCH endpoint allows marking onboarding as completed."""
+        with self.client.session_transaction() as sess:
+            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+
+        # Initially should be False
+        response = self.client.get('/api/trakaido/userconfig/')
+        data = json.loads(response.data)
+        self.assertFalse(data["metadata"]["hasCompletedOnboarding"])
+
+        # Mark onboarding as completed
+        updates = {
+            "metadata": {
+                "hasCompletedOnboarding": True
+            }
+        }
+
+        response = self.client.patch(
+            '/api/trakaido/userconfig/',
+            data=json.dumps(updates),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+
+        self.assertTrue(data["success"])
+        self.assertTrue(data["config"]["metadata"]["hasCompletedOnboarding"])
+
+        # Verify persistence
+        response = self.client.get('/api/trakaido/userconfig/')
+        data = json.loads(response.data)
+        self.assertTrue(data["metadata"]["hasCompletedOnboarding"])
+
+    def test_patch_user_config_rejects_last_modified_update(self):
+        """Test PATCH endpoint rejects attempts to set lastModified."""
+        with self.client.session_transaction() as sess:
+            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+
+        updates = {
+            "metadata": {
+                "lastModified": "2025-01-01T00:00:00Z"
+            }
+        }
+
+        response = self.client.patch(
+            '/api/trakaido/userconfig/',
+            data=json.dumps(updates),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 422)
+        data = json.loads(response.data)
+
+        self.assertFalse(data["success"])
+        self.assertEqual(data["error"]["code"], "READ_ONLY_FIELD")
 
 
 if __name__ == '__main__':
