@@ -32,23 +32,23 @@ LEVELPROGRESSION_API_DOCS = {
 }
 
 # Corpus Choices related functions
-def get_corpus_choices_file_path(user_id: str, language: str = "lithuanian") -> str:
+def get_corpus_choices_file_path(user_id: str, language: str) -> str:
     """
     Get the file path for a user's corpus choices.
 
     :param user_id: The user's database ID
-    :param language: The language for the corpus choices (default: "lithuanian")
+    :param language: The language for the corpus choices
     :return: Path to the user's corpus choices file
     """
     user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
     return os.path.join(user_data_dir, "corpuschoices.json")
 
-def load_corpus_choices(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
+def load_corpus_choices(user_id: str, language) -> Dict[str, Any]:
     """
     Load corpus choices for a user from their JSON file.
 
     :param user_id: The user's database ID
-    :param language: The language for the corpus choices (default: "lithuanian")
+    :param language: The language for the corpus choices
     :return: Dictionary containing the user's corpus choices
     """
     try:
@@ -74,13 +74,13 @@ def load_corpus_choices(user_id: str, language: str = "lithuanian") -> Dict[str,
         logger.error(f"Error loading corpus choices for user {user_id}: {str(e)}")
         return {"choices": {}}
 
-def save_corpus_choices(user_id: str, choices: Dict[str, Any], language: str = "lithuanian") -> bool:
+def save_corpus_choices(user_id: str, choices: Dict[str, Any], language: str) -> bool:
     """
     Save corpus choices for a user to their JSON file.
 
     :param user_id: The user's database ID
     :param choices: Dictionary containing the user's corpus choices
-    :param language: The language for the corpus choices (default: "lithuanian")
+    :param language: The language for the corpus choices
     :return: True if successful, False otherwise
     """
     try:
@@ -123,19 +123,19 @@ def validate_groups_in_corpus(corpus: str, groups: List[str]) -> List[str]:
 
 
 # Level Progression related functions
-def get_level_progression_file_path(user_id: str, language: str = "lithuanian") -> str:
+def get_level_progression_file_path(user_id: str, language: str) -> str:
     """
     Get the file path for a user's level progression data.
 
     :param user_id: The user's database ID
-    :param language: The language for the level progression (default: "lithuanian")
+    :param language: The language for the level progression
     :return: Path to the user's level progression file
     """
     user_data_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language)
     return os.path.join(user_data_dir, "levelprogression.json")
 
 
-def migrate_corpus_choices_to_level_progression(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
+def migrate_corpus_choices_to_level_progression(user_id: str, language: str) -> Dict[str, Any]:
     """
     Migrate old corpuschoices.json data to levelprogression.json format.
 
@@ -146,7 +146,7 @@ def migrate_corpus_choices_to_level_progression(user_id: str, language: str = "l
       {"currentLevel": 3, "levelOverrides": {"level_1": ["group1", "group2"], "level_3": ["group3"]}}
 
     :param user_id: The user's database ID
-    :param language: The language for the corpus choices (default: "lithuanian")
+    :param language: The language for the corpus choices
     :return: Dictionary with migrated level progression data
     """
     try:
@@ -184,13 +184,13 @@ def migrate_corpus_choices_to_level_progression(user_id: str, language: str = "l
         return {"currentLevel": 1}
 
 
-def load_level_progression(user_id: str, auto_migrate: bool = True, language: str = "lithuanian") -> Dict[str, Any]:
+def load_level_progression(user_id: str, language: str, auto_migrate: bool = True) -> Dict[str, Any]:
     """
     Load level progression for a user from their JSON file.
 
     :param user_id: The user's database ID
+    :param language: The language for the level progression
     :param auto_migrate: If True, automatically migrate from corpus choices if needed
-    :param language: The language for the level progression (default: "lithuanian")
     :return: Dictionary containing the user's level progression
     """
     try:
@@ -239,13 +239,13 @@ def load_level_progression(user_id: str, auto_migrate: bool = True, language: st
         return {"currentLevel": 1}
 
 
-def save_level_progression(user_id: str, progression: Dict[str, Any], language: str = "lithuanian") -> bool:
+def save_level_progression(user_id: str, progression: Dict[str, Any], language: str) -> bool:
     """
     Save level progression for a user to their JSON file.
 
     :param user_id: The user's database ID
     :param progression: Dictionary containing the user's level progression
-    :param language: The language for the level progression (default: "lithuanian")
+    :param language: The language for the level progression
     :return: True if successful, False otherwise
     """
     try:
@@ -475,7 +475,7 @@ def get_level_progression() -> Union[Response, tuple]:
     try:
         user_id = str(g.user.id)
         language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
-        progression = load_level_progression(user_id, auto_migrate=True, language=language)
+        progression = load_level_progression(user_id, language=language, auto_migrate=True)
         return jsonify(progression)
     except Exception as e:
         logger.error(f"Error getting level progression: {str(e)}")
@@ -619,7 +619,7 @@ def update_current_level() -> Union[Response, tuple]:
             }), 400
 
         # Load existing progression
-        existing_progression = load_level_progression(user_id, auto_migrate=True, language=language)
+        existing_progression = load_level_progression(user_id, language=language, auto_migrate=True)
 
         # Update only the currentLevel
         existing_progression["currentLevel"] = current_level
