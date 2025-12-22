@@ -57,13 +57,13 @@ DEFAULT_CONFIG = {
 # File I/O Functions
 ##############################################################################
 
-def get_userconfig_file_path(user_id: str, language: str = "lithuanian") -> str:
+def get_userconfig_file_path(user_id: str, language: str) -> str:
     """Get the file path for a user's configuration file."""
     user_dir = ensure_user_data_dir(user_id, language)
     return os.path.join(user_dir, "userconfig.json")
 
 
-def load_user_config(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
+def load_user_config(user_id: str, language: str) -> Dict[str, Any]:
     """Load user configuration from file, returns default config if not found."""
     try:
         config_file = get_userconfig_file_path(user_id, language)
@@ -86,7 +86,7 @@ def load_user_config(user_id: str, language: str = "lithuanian") -> Dict[str, An
         return _deep_copy_config(DEFAULT_CONFIG)
 
 
-def save_user_config(user_id: str, config: Dict[str, Any], language: str = "lithuanian") -> bool:
+def save_user_config(user_id: str, config: Dict[str, Any], language: str) -> bool:
     """Save user configuration to file."""
     try:
         config_file = get_userconfig_file_path(user_id, language)
@@ -377,7 +377,7 @@ def get_user_config():
     """
     try:
         user = g.user
-        language = request.args.get("language", "lithuanian")
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
 
         config = load_user_config(str(user.id), language)
 
@@ -405,7 +405,7 @@ def update_user_config():
     """
     try:
         user = g.user
-        language = request.args.get("language", "lithuanian")
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
 
         # Get request data
         if not request.is_json:
