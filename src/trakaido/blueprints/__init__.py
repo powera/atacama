@@ -5,7 +5,6 @@ from . import shared  # Shared utils imported first
 
 from . import audio
 from . import trakaido_tools
-from . import userconfig
 from . import userconfig_v2
 from . import userstats
 

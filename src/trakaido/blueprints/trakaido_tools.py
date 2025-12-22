@@ -14,7 +14,7 @@ import constants
 from atacama.decorators.auth import optional_auth, require_auth
 from .shared import *
 from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
-from .userconfig import get_corpus_choices_file_path, CORPUSCHOICES_API_DOCS, LEVELPROGRESSION_API_DOCS
+from .userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
 from .audio import AUDIO_API_DOCS
 
 ##############################################################################
@@ -27,7 +27,7 @@ USERINFO_API_DOCS = {
 def lithuanian_api_index() -> Response:
     """
     Provide an overview of the Lithuanian API endpoints.
-    
+
     :return: JSON response with API information
     """
     api_info = {
@@ -36,8 +36,7 @@ def lithuanian_api_index() -> Response:
         "endpoints": {
             "audio": AUDIO_API_DOCS,
             "userstats": USERSTATS_API_DOCS,
-            "corpuschoices": CORPUSCHOICES_API_DOCS,
-            "levelprogression": LEVELPROGRESSION_API_DOCS,
+            "userconfig": USERCONFIG_API_DOCS,
             "userinfo": USERINFO_API_DOCS
         }
     }
@@ -71,22 +70,22 @@ def get_user_info() -> Response:
         # If user is authenticated, add basic user info and check for existing files
         if is_authenticated:
             user_id = getattr(g.user, 'id', None) if hasattr(g.user, 'id') else None
-            
+
             response_data["user"] = {
                 "id": user_id,
                 "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None,
                 "email": getattr(g.user, 'email', None) if hasattr(g.user, 'email') else None
             }
-            
+
             # Check if user has existing files
             if user_id:
                 try:
                     language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
                     has_journey_stats = user_has_activity_stats(str(user_id), language)
-                    corpus_choices_path = get_corpus_choices_file_path(str(user_id), language)
+                    userconfig_path = get_userconfig_file_path(str(user_id), language)
 
                     response_data["has_journey_stats_file"] = has_journey_stats
-                    response_data["has_corpus_choice_file"] = os.path.exists(corpus_choices_path)
+                    response_data["has_corpus_choice_file"] = os.path.exists(userconfig_path)
                 except Exception as file_check_error:
                     logger.warning(f"Error checking user files for user {user_id}: {str(file_check_error)}")
                     # Keep defaults (False) if file check fails

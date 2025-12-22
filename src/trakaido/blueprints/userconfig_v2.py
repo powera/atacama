@@ -23,6 +23,15 @@ from trakaido.blueprints.shared import trakaido_bp, ensure_user_data_dir
 logger = get_logger(__name__)
 
 ##############################################################################
+# API Documentation
+##############################################################################
+
+USERCONFIG_API_DOCS = {
+    "GET /api/trakaido/userconfig/": "Get complete user configuration including learning, audio, display preferences",
+    "PATCH /api/trakaido/userconfig/": "Update user configuration (partial updates supported)"
+}
+
+##############################################################################
 # Configuration Schema and Defaults
 ##############################################################################
 

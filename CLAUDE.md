@@ -94,7 +94,7 @@ atacama/
 │   ├── trakaido/               # Trakaido Lithuanian language learning API
 │   │   └── blueprints/         # Trakaido Flask blueprints
 │   │       ├── userstats.py    # User statistics tracking
-│   │       ├── userconfig.py   # User configuration
+│   │       ├── userconfig_v2.py # User configuration (consolidated API)
 │   │       ├── audio.py        # Audio file serving
 │   │       ├── stats_schema.py # Stats data schema
 │   │       ├── stats_snapshots.py # Historical snapshots
