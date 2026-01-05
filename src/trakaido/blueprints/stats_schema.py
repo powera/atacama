@@ -24,7 +24,8 @@ DIRECT_PRACTICE_TYPES = {
     "typing_englishToTarget",
     "typing_targetToEnglish",
     "blitz_englishToTarget",
-    "blitz_targetToEnglish"
+    "blitz_targetToEnglish",
+    "sentenceCompletion_targetCloze",
 }
 
 # Contextual exposure activities (don't count toward proficiency)
