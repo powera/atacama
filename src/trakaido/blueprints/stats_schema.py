@@ -29,7 +29,7 @@ DIRECT_PRACTICE_TYPES = {
 }
 
 # Contextual exposure activities (don't count toward proficiency)
-CONTEXTUAL_EXPOSURE_TYPES = {"sentences", "flashcards"}
+CONTEXTUAL_EXPOSURE_TYPES = {"sentences", "flashcards", "categoryChoice"}
 
 # All valid stat types
 ALL_STAT_TYPES = DIRECT_PRACTICE_TYPES | CONTEXTUAL_EXPOSURE_TYPES

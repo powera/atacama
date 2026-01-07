@@ -499,6 +499,23 @@ class GetStatTypeTotalTests(unittest.TestCase):
             self.assertEqual(totals["correct"], 7)
             self.assertEqual(totals["incorrect"], 1)
 
+    def test_get_stat_type_total_category_choice(self):
+        """Test get_stat_type_total with categoryChoice contextual exposure."""
+        with patch('constants.DATA_DIR', self.test_data_dir):
+            daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
+            daily_stats.load()
+
+            word = create_empty_word_stats()
+            word["exposed"] = True
+            word["contextualExposure"]["categoryChoice"]["correct"] = 3
+            word["contextualExposure"]["categoryChoice"]["incorrect"] = 2
+            daily_stats.set_word_stats("word1", word)
+
+            totals = daily_stats.get_stat_type_total("contextualExposure.categoryChoice")
+
+            self.assertEqual(totals["correct"], 3)
+            self.assertEqual(totals["incorrect"], 2)
+
     def test_get_all_stat_totals(self):
         """Test get_all_stat_totals returns all activity types."""
         with patch('constants.DATA_DIR', self.test_data_dir):
@@ -510,6 +527,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
             word["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
             word["directPractice"]["typing_targetToEnglish"]["correct"] = 3
             word["contextualExposure"]["sentences"]["correct"] = 2
+            word["contextualExposure"]["categoryChoice"]["correct"] = 4
             daily_stats.set_word_stats("word1", word)
 
             all_totals = daily_stats.get_all_stat_totals()
@@ -518,11 +536,13 @@ class GetStatTypeTotalTests(unittest.TestCase):
             self.assertIn("directPractice.multipleChoice_englishToTarget", all_totals)
             self.assertIn("directPractice.typing_targetToEnglish", all_totals)
             self.assertIn("contextualExposure.sentences", all_totals)
+            self.assertIn("contextualExposure.categoryChoice", all_totals)
 
             # Check specific values
             self.assertEqual(all_totals["directPractice.multipleChoice_englishToTarget"]["correct"], 5)
             self.assertEqual(all_totals["directPractice.typing_targetToEnglish"]["correct"], 3)
             self.assertEqual(all_totals["contextualExposure.sentences"]["correct"], 2)
+            self.assertEqual(all_totals["contextualExposure.categoryChoice"]["correct"], 4)
 
 
 class CalculateWeeklyProgressTests(unittest.TestCase):
