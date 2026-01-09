@@ -23,6 +23,7 @@ DIRECT_PRACTICE_TYPES = {
     "listening_targetAudioToEnglish",
     "typing_englishToTarget",
     "typing_targetToEnglish",
+    "spelling_englishToTarget",
     "blitz_englishToTarget",
     "blitz_targetToEnglish",
     "sentenceCompletion_targetCloze",

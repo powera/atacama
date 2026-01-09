@@ -526,6 +526,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
             word["exposed"] = True
             word["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
             word["directPractice"]["typing_targetToEnglish"]["correct"] = 3
+            word["directPractice"]["spelling_englishToTarget"]["correct"] = 6
             word["contextualExposure"]["sentences"]["correct"] = 2
             word["contextualExposure"]["categoryChoice"]["correct"] = 4
             daily_stats.set_word_stats("word1", word)
@@ -535,12 +536,14 @@ class GetStatTypeTotalTests(unittest.TestCase):
             # Check that all activity types are present
             self.assertIn("directPractice.multipleChoice_englishToTarget", all_totals)
             self.assertIn("directPractice.typing_targetToEnglish", all_totals)
+            self.assertIn("directPractice.spelling_englishToTarget", all_totals)
             self.assertIn("contextualExposure.sentences", all_totals)
             self.assertIn("contextualExposure.categoryChoice", all_totals)
 
             # Check specific values
             self.assertEqual(all_totals["directPractice.multipleChoice_englishToTarget"]["correct"], 5)
             self.assertEqual(all_totals["directPractice.typing_targetToEnglish"]["correct"], 3)
+            self.assertEqual(all_totals["directPractice.spelling_englishToTarget"]["correct"], 6)
             self.assertEqual(all_totals["contextualExposure.sentences"]["correct"], 2)
             self.assertEqual(all_totals["contextualExposure.categoryChoice"]["correct"], 4)
 
