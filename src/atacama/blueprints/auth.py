@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 from urllib.parse import urlencode
 
 from flask import Blueprint, request, render_template, session, redirect, url_for, g, jsonify
+from flask.typing import ResponseReturnValue
 
 from atacama.decorators import require_auth
 from models.database import db
@@ -31,7 +32,7 @@ def _get_google_oauth():
     return id_token, google_requests
 
 @auth_bp.route('/login')
-def login():
+def login() -> ResponseReturnValue:
     """Render login page with Google sign-in."""
     # Store the requested URL for post-login redirect
     session['post_login_redirect'] = request.args.get('next', '/')
@@ -58,14 +59,14 @@ def login():
     )
 
 @auth_bp.route('/logout')
-def logout():
+def logout() -> ResponseReturnValue:
     """Clear user session and redirect to login."""
     session.clear()
     return redirect(url_for('auth.login'))
 
 @auth_bp.route('/api/logout', methods=['POST'])
 @require_auth
-def api_logout():
+def api_logout() -> ResponseReturnValue:
     """
     Revoke the current auth token for mobile/API clients.
 
@@ -153,7 +154,7 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 @auth_bp.route('/oauth2callback')
-def callback():
+def callback() -> ResponseReturnValue:
     """
     Handle OAuth 2.0 callback from Google.
     

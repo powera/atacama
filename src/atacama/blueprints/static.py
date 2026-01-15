@@ -3,7 +3,8 @@
 import os
 from typing import Any
 
-from flask import Blueprint, send_from_directory, send_file, Response
+from flask import Blueprint, send_from_directory
+from flask.typing import ResponseReturnValue
 
 import constants
 from common.base.logging_config import get_logger
@@ -13,7 +14,7 @@ logger = get_logger(__name__)
 static_bp = Blueprint('static', __name__)
 
 @static_bp.route('/js/<path:filename>')
-def serve_js(filename: str) -> Response:
+def serve_js(filename: str) -> ResponseReturnValue:
     """
     Serve JavaScript files from the js directory.
     
@@ -33,7 +34,7 @@ def serve_js(filename: str) -> Response:
         raise
 
 @static_bp.route('/css/<path:filename>')
-def serve_css(filename: str) -> Response:
+def serve_css(filename: str) -> ResponseReturnValue:
     """
     Serve CSS files from the css directory.
     
@@ -53,7 +54,7 @@ def serve_css(filename: str) -> Response:
         raise
 
 @static_bp.route('/favicon.ico')
-def serve_favicon() -> Response:
+def serve_favicon() -> ResponseReturnValue:
     """
     Serve the favicon.ico file from the static directory.
     
@@ -72,7 +73,7 @@ def serve_favicon() -> Response:
 
 @static_bp.route('/apple-touch-icon.png')
 @static_bp.route('/apple-touch-icon-precomposed.png')
-def serve_touch_icon() -> Response:
+def serve_touch_icon() -> ResponseReturnValue:
     """
     Serve the apple-touch-icon.png file from the static directory.
     
@@ -90,7 +91,7 @@ def serve_touch_icon() -> Response:
         raise
 
 @static_bp.route('/robots.txt')
-def serve_robots_txt() -> Response:
+def serve_robots_txt() -> ResponseReturnValue:
     """
     Serve the robots.txt file from the static directory.
     

@@ -12,6 +12,7 @@ from datetime import datetime
 # Third-party imports
 import psutil
 from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, url_for, g
+from flask.typing import ResponseReturnValue
 from sqlalchemy import text, engine
 
 # Local imports
@@ -233,7 +234,7 @@ def get_content_stats():
 @debug_bp.route('/debug')
 @require_auth
 @navigable(name="Debug Information", category="admin")
-def debug_info():
+def debug_info() -> ResponseReturnValue:
     """Display debug information dashboard."""
     uptime = time.time() - SERVER_START_TIME
     uptime_formatted = str(datetime.utcfromtimestamp(uptime).strftime('%H:%M:%S'))
@@ -273,10 +274,10 @@ def debug_info():
 
 @debug_bp.route('/debug/api')
 @require_auth
-def debug_api():
+def debug_api() -> ResponseReturnValue:
     """
     JSON endpoint for debug information.
-    
+
     :return: JSON response containing system metrics
     """
     uptime = time.time() - SERVER_START_TIME
@@ -292,15 +293,15 @@ def debug_api():
     })
 
 @debug_bp.route('/debug/login', methods=['GET'])
-def debug_login():
+def debug_login() -> ResponseReturnValue:
     """
     Development-only route to set a user as logged in with specified credentials.
     Only works if FLASK_ENV is set to 'development'.
-    
+
     Query parameters:
         name: Display name for the debug user
         email: Email address for the debug user
-        
+
     :return: Redirect to home page
     """
     if os.getenv('FLASK_ENV') != 'development':
@@ -322,10 +323,10 @@ def debug_login():
     return redirect('/')
 
 @debug_bp.route('/debug/logout')
-def debug_logout():
+def debug_logout() -> ResponseReturnValue:
     """
     Clear the debug user session.
-    
+
     :return: Redirect to home page
     """
     if os.getenv('FLASK_ENV') != 'development':

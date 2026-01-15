@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from flask import Blueprint, render_template, abort, g, request, redirect, url_for
+from flask.typing import ResponseReturnValue
 from sqlalchemy import select
 
 from common.config.channel_config import get_channel_manager
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 
 @content_bp.route('/p/<slug>')
 @optional_auth
-def view_article(slug: str):
+def view_article(slug: str) -> ResponseReturnValue:
     """View a single article by its slug."""
     with db.session() as session:
         article = session.query(Article).filter_by(slug=slug).first()
@@ -42,7 +43,7 @@ def view_article(slug: str):
 
 @content_bp.route('/articles/channel/<channel>')
 @optional_auth
-def article_stream(channel: str):
+def article_stream(channel: str) -> ResponseReturnValue:
     """View stream of articles in a channel."""
     # Check channel exists and user has access
     if not check_channel_access(channel, g.user):
@@ -66,7 +67,7 @@ def article_stream(channel: str):
 
 @content_bp.route('/drafts')
 @require_auth
-def list_drafts():
+def list_drafts() -> ResponseReturnValue:
     """List unpublished articles for the current user."""
     with db.session() as session:
         drafts = session.query(Article)\
@@ -78,7 +79,7 @@ def list_drafts():
 
 @content_bp.route('/p/<slug>/edit', methods=['GET', 'POST'])
 @require_auth
-def edit_article(slug: str):
+def edit_article(slug: str) -> ResponseReturnValue:
     """Edit an existing article."""
     with db.session() as session:
         article = session.query(Article).filter_by(slug=slug).first()
@@ -131,7 +132,7 @@ def edit_article(slug: str):
 
 @content_bp.route('/submit/article', methods=['GET', 'POST'])
 @require_auth
-def submit_article():
+def submit_article() -> ResponseReturnValue:
     """Submit a new article."""
     if request.method == 'POST':
         # Get user input

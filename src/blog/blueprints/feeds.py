@@ -10,9 +10,9 @@ from flask import (
     g,
     make_response,
     render_template_string,
-    request,
-    Response
+    request
 )
+from flask.typing import ResponseReturnValue
 
 from common.base.logging_config import get_logger
 from common.config.channel_config import AccessLevel, get_channel_manager
@@ -26,10 +26,10 @@ logger = get_logger(__name__)
 
 
 @feeds_bp.route('/sitemap.xml')
-def sitemap() -> Response:
+def sitemap() -> ResponseReturnValue:
     """
     Generate sitemap.xml containing all public URLs for the current domain.
-    
+
     :return: XML response containing sitemap
     """
     channel_manager = get_channel_manager()
@@ -85,10 +85,10 @@ def sitemap() -> Response:
 @feeds_bp.route('/channel/<path:channel>/feed.xml')
 @feeds_bp.route('/<path:channel>.xml')
 @feeds_bp.route('/feed-<path:channel>.xml')
-def rss_feed(channel: Optional[str] = None) -> Response:
+def rss_feed(channel: Optional[str] = None) -> ResponseReturnValue:
     """
     Generate RSS feed for public messages, optionally filtered by channel.
-    
+
     :param channel: Optional channel name to filter by
     :return: XML response containing RSS feed
     """

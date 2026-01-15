@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple
 # Third-party imports
 from flask import (
     Blueprint,
-    Response,
     flash,
     g,
     jsonify,
@@ -18,6 +17,7 @@ from flask import (
     session,
     url_for
 )
+from flask.typing import ResponseReturnValue
 from sqlalchemy import select, text
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -51,10 +51,10 @@ logger = get_logger(__name__)
 @navigable(name="Channel Preferences",
            description="Change which channels are in the stream view",
            category="user")
-def channel_preferences():
+def channel_preferences() -> ResponseReturnValue:
     """
     Show and update channel preferences for the logged-in user.
-    
+
     :return: Rendered template response
     """
     channel_manager = get_channel_manager()
@@ -97,10 +97,10 @@ def channel_preferences():
 
 @content_bp.route('/messages/<int:message_id>', methods=['GET'])
 @optional_auth
-def get_message(message_id: int) -> Response:
+def get_message(message_id: int) -> ResponseReturnValue:
     """
     Retrieve and display a single message.
-    
+
     :param message_id: ID of the message to display
     :return: Response containing message data or error
     """
@@ -164,10 +164,10 @@ def get_message(message_id: int) -> Response:
 
 @content_bp.route('/messages/<int:message_id>/chain', methods=['GET'])
 @optional_auth
-def view_chain(message_id: int) -> Response:
+def view_chain(message_id: int) -> ResponseReturnValue:
     """
     Display the full chain of messages related to a given message ID.
-    
+
     :param message_id: ID of the target message
     :return: Response containing chain data or error
     """
@@ -237,10 +237,10 @@ def view_chain(message_id: int) -> Response:
                       order=100)
 def message_stream(older_than_id: Optional[int] = None,
                   channel: Optional[str] = None,
-                  tsdate: Optional[str] = None, tstime: Optional[str] = None) -> str:
+                  tsdate: Optional[str] = None, tstime: Optional[str] = None) -> ResponseReturnValue:
     """
     Show a stream of messages with optional filtering.
-    
+
     :param older_than_id: Optional ID to paginate from
     :param channel: Optional channel name to filter by
     :return: Rendered template response
@@ -332,7 +332,7 @@ def message_stream(older_than_id: Optional[int] = None,
 @content_bp.route('/details')
 @optional_auth
 @navigable(name="Detailed Message List", category="admin")
-def landing_page():
+def landing_page() -> ResponseReturnValue:
     """Serve the landing page with basic service information and message list."""
     channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
@@ -399,7 +399,7 @@ def landing_page():
 @navigable(name="All Messages", 
           description="View all types of messages (emails, articles, widgets, quotes)",
           category="main")
-def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
+def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None) -> ResponseReturnValue:
     """
     Display a unified stream of all message types with metadata and links.
     Uses datetime-based pagination like the stream view.
@@ -540,10 +540,10 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None):
 @navigable_per_channel(name="Message List",
                       description="List messages for a channel",
                       order=100)
-def channel_list(channel: str) -> Response:
+def channel_list(channel: str) -> ResponseReturnValue:
     """
     Display a paginated list of all messages (titles and dates) in a specific channel.
-    
+
     :param channel: Name of the channel to list messages from
     :return: Rendered template response with message list
     """

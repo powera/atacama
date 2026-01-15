@@ -4,6 +4,7 @@ import os
 from typing import Dict, List
 
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask.typing import ResponseReturnValue
 
 import constants
 from common.base.logging_config import get_logger
@@ -36,7 +37,7 @@ def is_admin() -> bool:
 @admin_bp.route('/admin/users')
 @require_auth
 @navigable(name="List Users", category="admin")
-def list_users():
+def list_users() -> ResponseReturnValue:
     """Show list of users and their channel access."""
     if not is_admin():
         flash('Admin access required')
@@ -70,7 +71,7 @@ def list_users():
 
 @admin_bp.route('/admin/users/<int:user_id>/grant', methods=['POST'])
 @require_auth
-def grant_access(user_id: int):
+def grant_access(user_id: int) -> ResponseReturnValue:
     """Grant channel access to a user."""
     if not is_admin():
         flash('Admin access required')
@@ -101,9 +102,9 @@ def grant_access(user_id: int):
         
     return redirect(url_for('admin.list_users'))
 
-@admin_bp.route('/admin/users/<int:user_id>/revoke', methods=['POST']) 
+@admin_bp.route('/admin/users/<int:user_id>/revoke', methods=['POST'])
 @require_auth
-def revoke_access(user_id: int):
+def revoke_access(user_id: int) -> ResponseReturnValue:
     """Revoke channel access from a user."""
     if not is_admin():
         flash('Admin access required')
@@ -136,7 +137,7 @@ def revoke_access(user_id: int):
 
 @admin_bp.route('/admin/messages/<int:message_id>/rechannel', methods=['POST'])
 @require_auth
-def rechannel_message(message_id: int):
+def rechannel_message(message_id: int) -> ResponseReturnValue:
     """Change the channel of a message."""
     if not is_admin():
         flash('Admin access required')

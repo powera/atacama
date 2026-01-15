@@ -2,6 +2,7 @@
 
 import json
 from flask import Blueprint, render_template, url_for, g
+from flask.typing import ResponseReturnValue
 from sqlalchemy.orm import joinedload
 
 from atacama.decorators import require_auth, get_navigation_items
@@ -14,10 +15,10 @@ nav_bp = Blueprint('nav', __name__)
 
 @nav_bp.route('/nav')
 @require_auth
-def navigation() -> str:
+def navigation() -> ResponseReturnValue:
     """
     Show site navigation/sitemap page.
-    
+
     :return: Rendered template response
     """
     channel_manager = get_channel_manager()

@@ -1,6 +1,7 @@
 """Blueprint for message submission and preview functionality."""
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for, g
+from flask.typing import ResponseReturnValue
 from sqlalchemy.orm import joinedload
 
 import aml_parser
@@ -23,13 +24,13 @@ logger = get_logger(__name__)
 
 @content_bp.route('/api/preview', methods=['POST'])
 @require_auth
-def preview_message():
+def preview_message() -> ResponseReturnValue:
     """
     Preview handler for message submission.
-    
+
     Processes the content with color tags without storing to database.
     Expects JSON input with 'content' field.
-    
+
     :return: JSON response with rendered HTML
     :raises: HTTP 400 if request is not JSON or missing content
     :raises: HTTP 500 if processing fails
@@ -57,10 +58,10 @@ def preview_message():
 @content_bp.route('/submit', methods=['GET'])
 @require_auth
 @navigable(name="Submit new message", category="main")
-def show_submit_form():
+def show_submit_form() -> ResponseReturnValue:
     """
     Display the message submission form.
-    
+
     :return: Rendered submit form template
     """
     channel_manager = get_channel_manager()
@@ -81,10 +82,10 @@ def show_submit_form():
 
 @content_bp.route('/submit', methods=['POST'])
 @require_auth
-def handle_submit():
+def handle_submit() -> ResponseReturnValue:
     """
     Process message submission from form.
-    
+
     :return: Redirect to new message or error page
     :raises: HTTP 422 if required fields are missing
     """

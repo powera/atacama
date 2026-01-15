@@ -3,10 +3,11 @@
 # Standard library imports
 import os
 import random
-from typing import List, Optional, Union
+from typing import List, Optional
 
 # Third-party imports
 from flask import Response, abort, g, jsonify, request, send_file
+from flask.typing import ResponseReturnValue
 
 # Local application imports
 import constants
@@ -121,7 +122,7 @@ def get_audio_file_path(word: str, voice: Optional[str] = None, audio_dir: Optio
 
 # Generic audio endpoints (use current language from subdomain)
 @trakaido_bp.route('/api/audio/voices')
-def list_voices_current() -> Union[Response, tuple]:
+def list_voices_current() -> ResponseReturnValue:
     """
     List all available voices for the current language (determined by subdomain).
 
@@ -137,7 +138,7 @@ def list_voices_current() -> Union[Response, tuple]:
 
 
 @trakaido_bp.route('/api/audio/<word>')
-def serve_audio_current(word: str) -> Union[Response, tuple]:
+def serve_audio_current(word: str) -> ResponseReturnValue:
     """
     Serve an audio file for the given word in the current language (determined by subdomain).
 
@@ -163,7 +164,7 @@ def serve_audio_current(word: str) -> Union[Response, tuple]:
 
 # Language-specific audio endpoints
 @trakaido_bp.route('/api/<language>/audio/voices')
-def list_voices_language(language: str) -> Union[Response, tuple]:
+def list_voices_language(language: str) -> ResponseReturnValue:
     """
     List all available voices for a specific language.
 
@@ -183,7 +184,7 @@ def list_voices_language(language: str) -> Union[Response, tuple]:
 
 
 @trakaido_bp.route('/api/<language>/audio/<word>')
-def serve_audio_language(language: str, word: str) -> Union[Response, tuple]:
+def serve_audio_language(language: str, word: str) -> ResponseReturnValue:
     """
     Serve an audio file for the given word in a specific language.
 
