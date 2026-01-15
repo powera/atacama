@@ -130,6 +130,77 @@ def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
         return False
 
 
+def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge two word stats dictionaries by taking max counters and timestamps.
+
+    This is used when a mobile client (previously in demo mode) first connects
+    to an account and needs to merge local stats with server stats.
+
+    Merge logic:
+    - Counters (correct/incorrect): Take MAXIMUM to prevent double-counting
+    - Timestamps: Take MAXIMUM (most recent activity wins)
+    - Boolean flags (exposed, markedAsKnown): Logical OR (true if true in either)
+
+    Args:
+        server_stats: Existing stats from the server (may be empty dict)
+        local_stats: Stats from the local client (may be empty dict)
+
+    Returns:
+        Merged word stats dictionary (normalized to current schema)
+    """
+    # Normalize both inputs to ensure consistent structure
+    server_normalized = validate_and_normalize_word_stats(server_stats) if server_stats else create_empty_word_stats()
+    local_normalized = validate_and_normalize_word_stats(local_stats) if local_stats else create_empty_word_stats()
+
+    # Start with server stats as base
+    merged = create_empty_word_stats()
+
+    # Merge boolean flags with OR
+    merged["exposed"] = server_normalized.get("exposed", False) or local_normalized.get("exposed", False)
+    if server_normalized.get("markedAsKnown", False) or local_normalized.get("markedAsKnown", False):
+        merged["markedAsKnown"] = True
+
+    # Merge directPractice counters by taking max
+    for activity in DIRECT_PRACTICE_TYPES:
+        server_activity = server_normalized.get("directPractice", {}).get(activity, {})
+        local_activity = local_normalized.get("directPractice", {}).get(activity, {})
+
+        merged["directPractice"][activity] = {
+            "correct": max(server_activity.get("correct", 0), local_activity.get("correct", 0)),
+            "incorrect": max(server_activity.get("incorrect", 0), local_activity.get("incorrect", 0))
+        }
+
+    # Merge contextualExposure counters by taking max
+    for activity in CONTEXTUAL_EXPOSURE_TYPES:
+        server_activity = server_normalized.get("contextualExposure", {}).get(activity, {})
+        local_activity = local_normalized.get("contextualExposure", {}).get(activity, {})
+
+        merged["contextualExposure"][activity] = {
+            "correct": max(server_activity.get("correct", 0), local_activity.get("correct", 0)),
+            "incorrect": max(server_activity.get("incorrect", 0), local_activity.get("incorrect", 0))
+        }
+
+    # Merge timestamps by taking max (most recent)
+    server_history = server_normalized.get("practiceHistory", {})
+    local_history = local_normalized.get("practiceHistory", {})
+
+    for ts_field in ["lastSeen", "lastCorrectAnswer", "lastIncorrectAnswer"]:
+        server_ts = server_history.get(ts_field)
+        local_ts = local_history.get(ts_field)
+
+        # Handle None values - take non-None if one is None, else max
+        if server_ts is None and local_ts is None:
+            merged["practiceHistory"][ts_field] = None
+        elif server_ts is None:
+            merged["practiceHistory"][ts_field] = local_ts
+        elif local_ts is None:
+            merged["practiceHistory"][ts_field] = server_ts
+        else:
+            merged["practiceHistory"][ts_field] = max(server_ts, local_ts)
+
+    return merged
+
+
 ##############################################################################
 # JSON Formatting Helper
 ##############################################################################
