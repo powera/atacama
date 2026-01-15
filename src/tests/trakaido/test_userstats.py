@@ -15,6 +15,7 @@ from trakaido.blueprints.userstats import (
 from trakaido.blueprints.stats_schema import (
     create_empty_word_stats,
     validate_and_normalize_word_stats,
+    merge_word_stats,
     JourneyStats,
     DailyStats,
     DIRECT_PRACTICE_TYPES,
@@ -606,6 +607,150 @@ class DailyStatsTests(unittest.TestCase):
             # Try to save (should fail)
             result = daily_stats2.save()
             self.assertFalse(result)
+
+
+class MergeWordStatsTests(unittest.TestCase):
+    """Test cases for merge_word_stats function."""
+
+    def test_merge_empty_stats(self):
+        """Test merging two empty stats returns empty stats."""
+        result = merge_word_stats({}, {})
+
+        self.assertFalse(result["exposed"])
+        self.assertEqual(result["directPractice"]["multipleChoice_englishToTarget"]["correct"], 0)
+        self.assertIsNone(result["practiceHistory"]["lastSeen"])
+
+    def test_merge_local_only(self):
+        """Test merging when only local has data."""
+        local_stats = create_empty_word_stats()
+        local_stats["exposed"] = True
+        local_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
+        local_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"] = 2
+        local_stats["practiceHistory"]["lastSeen"] = 1000000
+
+        result = merge_word_stats({}, local_stats)
+
+        self.assertTrue(result["exposed"])
+        self.assertEqual(result["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+        self.assertEqual(result["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 2)
+        self.assertEqual(result["practiceHistory"]["lastSeen"], 1000000)
+
+    def test_merge_server_only(self):
+        """Test merging when only server has data."""
+        server_stats = create_empty_word_stats()
+        server_stats["exposed"] = True
+        server_stats["directPractice"]["typing_englishToTarget"]["correct"] = 3
+        server_stats["practiceHistory"]["lastCorrectAnswer"] = 2000000
+
+        result = merge_word_stats(server_stats, {})
+
+        self.assertTrue(result["exposed"])
+        self.assertEqual(result["directPractice"]["typing_englishToTarget"]["correct"], 3)
+        self.assertEqual(result["practiceHistory"]["lastCorrectAnswer"], 2000000)
+
+    def test_merge_takes_max_counters(self):
+        """Test that merge takes maximum of counters."""
+        server_stats = create_empty_word_stats()
+        server_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 10
+        server_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"] = 2
+
+        local_stats = create_empty_word_stats()
+        local_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
+        local_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"] = 8
+
+        result = merge_word_stats(server_stats, local_stats)
+
+        # Should take max of each counter independently
+        self.assertEqual(result["directPractice"]["multipleChoice_englishToTarget"]["correct"], 10)
+        self.assertEqual(result["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 8)
+
+    def test_merge_takes_max_timestamps(self):
+        """Test that merge takes maximum of timestamps."""
+        server_stats = create_empty_word_stats()
+        server_stats["practiceHistory"]["lastSeen"] = 1000000
+        server_stats["practiceHistory"]["lastCorrectAnswer"] = 800000
+        server_stats["practiceHistory"]["lastIncorrectAnswer"] = None
+
+        local_stats = create_empty_word_stats()
+        local_stats["practiceHistory"]["lastSeen"] = 500000
+        local_stats["practiceHistory"]["lastCorrectAnswer"] = 900000
+        local_stats["practiceHistory"]["lastIncorrectAnswer"] = 700000
+
+        result = merge_word_stats(server_stats, local_stats)
+
+        # Should take max of each timestamp
+        self.assertEqual(result["practiceHistory"]["lastSeen"], 1000000)
+        self.assertEqual(result["practiceHistory"]["lastCorrectAnswer"], 900000)
+        self.assertEqual(result["practiceHistory"]["lastIncorrectAnswer"], 700000)
+
+    def test_merge_boolean_or(self):
+        """Test that merge uses OR for boolean flags."""
+        server_stats = create_empty_word_stats()
+        server_stats["exposed"] = False
+        server_stats["markedAsKnown"] = True
+
+        local_stats = create_empty_word_stats()
+        local_stats["exposed"] = True
+        # markedAsKnown not set in local
+
+        result = merge_word_stats(server_stats, local_stats)
+
+        # exposed: False OR True = True
+        self.assertTrue(result["exposed"])
+        # markedAsKnown: True OR False = True
+        self.assertTrue(result.get("markedAsKnown", False))
+
+    def test_merge_contextual_exposure(self):
+        """Test that merge handles contextual exposure stats."""
+        server_stats = create_empty_word_stats()
+        server_stats["contextualExposure"]["sentences"]["correct"] = 3
+
+        local_stats = create_empty_word_stats()
+        local_stats["contextualExposure"]["sentences"]["correct"] = 7
+        local_stats["contextualExposure"]["flashcards"]["correct"] = 2
+
+        result = merge_word_stats(server_stats, local_stats)
+
+        self.assertEqual(result["contextualExposure"]["sentences"]["correct"], 7)
+        self.assertEqual(result["contextualExposure"]["flashcards"]["correct"], 2)
+
+    def test_merge_all_direct_practice_types(self):
+        """Test that all direct practice types are preserved in merge."""
+        server_stats = create_empty_word_stats()
+        local_stats = create_empty_word_stats()
+
+        # Set different values for different activities
+        server_stats["directPractice"]["listening_targetAudioToTarget"]["correct"] = 5
+        local_stats["directPractice"]["typing_targetToEnglish"]["incorrect"] = 3
+        local_stats["directPractice"]["blitz_englishToTarget"]["correct"] = 10
+
+        result = merge_word_stats(server_stats, local_stats)
+
+        # All activities should be present
+        for activity in DIRECT_PRACTICE_TYPES:
+            self.assertIn(activity, result["directPractice"])
+            self.assertIn("correct", result["directPractice"][activity])
+            self.assertIn("incorrect", result["directPractice"][activity])
+
+        # Specific values should be preserved
+        self.assertEqual(result["directPractice"]["listening_targetAudioToTarget"]["correct"], 5)
+        self.assertEqual(result["directPractice"]["typing_targetToEnglish"]["incorrect"], 3)
+        self.assertEqual(result["directPractice"]["blitz_englishToTarget"]["correct"], 10)
+
+    def test_merge_is_idempotent(self):
+        """Test that merging the same data twice produces the same result."""
+        server_stats = create_empty_word_stats()
+        server_stats["exposed"] = True
+        server_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
+
+        local_stats = create_empty_word_stats()
+        local_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 3
+
+        result1 = merge_word_stats(server_stats, local_stats)
+        result2 = merge_word_stats(result1, local_stats)
+
+        # Second merge should produce same result as first
+        self.assertEqual(result1, result2)
 
 
 if __name__ == '__main__':

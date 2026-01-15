@@ -28,7 +28,8 @@ from .stats_schema import (
     validate_and_normalize_word_stats,
     user_has_activity_stats,
     JourneyStats,
-    DailyStats
+    DailyStats,
+    merge_word_stats
 )
 from .stats_snapshots import (
     ensure_daily_snapshots,
@@ -49,7 +50,8 @@ USERSTATS_API_DOCS = {
     "POST /api/trakaido/journeystats/bulk_increment": "Bulk increment stats for multiple questions with nonces",
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
     "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
-    "GET /api/trakaido/journeystats/monthly": "Get monthly stats with daily breakdown (questions answered, exposed words count, newly exposed words) and monthly aggregate"
+    "GET /api/trakaido/journeystats/monthly": "Get monthly stats with daily breakdown (questions answered, exposed words count, newly exposed words) and monthly aggregate",
+    "POST /api/trakaido/journeystats/merge": "Merge local (demo mode) stats with server stats - for mobile clients syncing after first login"
 }
 
 ##############################################################################
@@ -538,4 +540,149 @@ def get_monthly_stats() -> ResponseReturnValue:
         return jsonify(monthly_progress)
     except Exception as e:
         logger.error(f"Error getting monthly stats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/journeystats/merge', methods=['POST'])
+@require_auth
+def merge_local_stats() -> ResponseReturnValue:
+    """Merge local (demo mode) stats with server stats.
+
+    This endpoint is called when a mobile client that was previously in demo mode
+    (with locally stored stats) first connects to an account. It bulk-accepts
+    all local stats, merges them with existing server stats, and returns the
+    merged result for the client to download.
+
+    Merge logic:
+    - Counters (correct/incorrect): Take MAXIMUM to prevent double-counting
+    - Timestamps: Take MAXIMUM (most recent activity)
+    - Boolean flags (exposed, markedAsKnown): Logical OR
+
+    Request body:
+    {
+        "nonce": "unique-merge-operation-id",
+        "localStats": {
+            "stats": {
+                "wordKey1": { <word stats object> },
+                ...
+            }
+        }
+    }
+
+    Returns:
+    {
+        "success": true,
+        "merged": {
+            "stats": { <merged stats> }
+        },
+        "summary": {
+            "localWordCount": 45,
+            "serverWordCount": 32,
+            "mergedWordCount": 58,
+            "newWordsFromLocal": 26,
+            "updatedWords": 19
+        }
+    }
+    """
+    try:
+        user_id = str(g.user.id)
+        data = request.get_json()
+
+        # Validate request body
+        if not data:
+            return jsonify({"error": "Invalid request body"}), 400
+
+        if "nonce" not in data:
+            return jsonify({"error": "Missing required field: nonce"}), 400
+
+        if "localStats" not in data:
+            return jsonify({"error": "Missing required field: localStats"}), 400
+
+        nonce = data["nonce"]
+        local_stats_data = data["localStats"]
+
+        if not isinstance(nonce, str) or not nonce.strip():
+            return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
+
+        if not isinstance(local_stats_data, dict) or "stats" not in local_stats_data:
+            return jsonify({"error": "Field 'localStats' must contain a 'stats' object"}), 400
+
+        local_word_stats = local_stats_data.get("stats", {})
+        if not isinstance(local_word_stats, dict):
+            return jsonify({"error": "Field 'localStats.stats' must be an object"}), 400
+
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        current_day = get_current_day_key()
+
+        # Check if this merge nonce has already been used
+        if check_nonce_duplicates(user_id, nonce, language):
+            return jsonify({"error": "Merge nonce already used"}), 409
+
+        # Ensure daily snapshots exist
+        if not ensure_daily_snapshots(user_id, language):
+            return jsonify({"error": "Failed to initialize daily stats"}), 500
+
+        # Load current server stats
+        journey_stats = JourneyStats(user_id, language)
+        server_word_stats = journey_stats.stats.get("stats", {})
+
+        # Track merge statistics
+        local_word_count = len(local_word_stats)
+        server_word_count = len(server_word_stats)
+        new_words_from_local = 0
+        updated_words = 0
+
+        # Merge each word from local stats
+        all_word_keys = set(server_word_stats.keys()) | set(local_word_stats.keys())
+        merged_stats = {"stats": {}}
+
+        for word_key in all_word_keys:
+            server_word = server_word_stats.get(word_key, {})
+            local_word = local_word_stats.get(word_key, {})
+
+            # Merge the word stats
+            merged_word = merge_word_stats(server_word, local_word)
+            merged_stats["stats"][word_key] = merged_word
+
+            # Track statistics
+            if word_key not in server_word_stats:
+                new_words_from_local += 1
+            elif word_key in local_word_stats:
+                # Word existed on server and was also in local - check if updated
+                if server_word != merged_word:
+                    updated_words += 1
+
+        merged_word_count = len(merged_stats["stats"])
+
+        # Save merged stats
+        journey_stats.stats = merged_stats
+        if not journey_stats.save_with_daily_update():
+            return jsonify({"error": "Failed to save merged stats"}), 500
+
+        # Save the merge nonce to prevent duplicate merges
+        used_nonces = load_nonces(user_id, current_day, language)
+        used_nonces.add(nonce)
+        if not save_nonces(user_id, current_day, used_nonces, language):
+            logger.warning(f"Failed to save merge nonce for user {user_id} day {current_day} language {language}")
+
+        logger.info(
+            f"Stats merge completed for user {user_id} language {language}: "
+            f"local={local_word_count}, server={server_word_count}, merged={merged_word_count}, "
+            f"new={new_words_from_local}, updated={updated_words}"
+        )
+
+        return jsonify({
+            "success": True,
+            "merged": merged_stats,
+            "summary": {
+                "localWordCount": local_word_count,
+                "serverWordCount": server_word_count,
+                "mergedWordCount": merged_word_count,
+                "newWordsFromLocal": new_words_from_local,
+                "updatedWords": updated_words
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error merging local stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
