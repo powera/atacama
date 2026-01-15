@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 # Third-party imports
 from flask import g, jsonify, request
+from flask.typing import ResponseReturnValue
 
 # Local application imports
 from atacama.decorators.auth import require_auth
@@ -167,7 +168,7 @@ def increment_word_stat(
 ##############################################################################
 @trakaido_bp.route('/api/trakaido/journeystats/', methods=['GET'])
 @require_auth
-def get_all_journey_stats():
+def get_all_journey_stats() -> ResponseReturnValue:
     """Get all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -181,7 +182,7 @@ def get_all_journey_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/', methods=['PUT'])
 @require_auth
-def save_all_journey_stats():
+def save_all_journey_stats() -> ResponseReturnValue:
     """Save all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -204,7 +205,7 @@ def save_all_journey_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/word', methods=['POST'])
 @require_auth
-def update_word_stats():
+def update_word_stats() -> ResponseReturnValue:
     """Update stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -231,7 +232,7 @@ def update_word_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/word/<word_key>', methods=['GET'])
 @require_auth
-def get_word_stats(word_key: str):
+def get_word_stats(word_key: str) -> ResponseReturnValue:
     """Get stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -246,7 +247,7 @@ def get_word_stats(word_key: str):
 
 @trakaido_bp.route('/api/trakaido/journeystats/increment', methods=['POST'])
 @require_auth
-def increment_word_stats():
+def increment_word_stats() -> ResponseReturnValue:
     """Increment stats for a single question with nonce protection."""
     try:
         user_id = str(g.user.id)
@@ -323,7 +324,7 @@ def increment_word_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/bulk_increment', methods=['POST'])
 @require_auth
-def bulk_increment_word_stats():
+def bulk_increment_word_stats() -> ResponseReturnValue:
     """Bulk increment stats for multiple questions with nonce protection.
 
     Request body should contain:
@@ -482,7 +483,7 @@ def bulk_increment_word_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/daily', methods=['GET'])
 @require_auth
-def get_daily_stats():
+def get_daily_stats() -> ResponseReturnValue:
     """Get daily stats (today's progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -500,7 +501,7 @@ def get_daily_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/weekly', methods=['GET'])
 @require_auth
-def get_weekly_stats():
+def get_weekly_stats() -> ResponseReturnValue:
     """Get weekly stats (7-day progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
@@ -518,7 +519,7 @@ def get_weekly_stats():
 
 @trakaido_bp.route('/api/trakaido/journeystats/monthly', methods=['GET'])
 @require_auth
-def get_monthly_stats():
+def get_monthly_stats() -> ResponseReturnValue:
     """
     Get monthly stats for the authenticated user.
 

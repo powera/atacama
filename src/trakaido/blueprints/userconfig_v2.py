@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 # Third-party imports
 from flask import g, jsonify, request
+from flask.typing import ResponseReturnValue
 
 # Local application imports
 import constants
@@ -378,7 +379,7 @@ def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> D
 
 @trakaido_bp.route("/api/trakaido/userconfig/", methods=["GET"])
 @require_auth
-def get_user_config():
+def get_user_config() -> ResponseReturnValue:
     """Get user configuration.
 
     Returns the complete user configuration including learning preferences,
@@ -405,7 +406,7 @@ def get_user_config():
 
 @trakaido_bp.route("/api/trakaido/userconfig/", methods=["PATCH"])
 @require_auth
-def update_user_config():
+def update_user_config() -> ResponseReturnValue:
     """Update user configuration.
 
     Accepts partial updates - only the fields provided will be updated.

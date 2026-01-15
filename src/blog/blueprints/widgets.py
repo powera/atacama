@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request, jsonify
+from flask.typing import ResponseReturnValue
 from sqlalchemy import select
 from datetime import datetime
 import hashlib
@@ -76,7 +77,7 @@ def generate_widget_content_hash(code: str, data_file: str = None) -> str:
 
 @widgets_bp.route('/widget/<string:slug>')
 @optional_auth
-def view_widget(slug):
+def view_widget(slug: str) -> ResponseReturnValue:
     """Display a React widget by slug."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -118,7 +119,7 @@ def view_widget(slug):
 
 @widgets_bp.route('/widget/<string:slug>/edit', methods=['GET', 'POST'])
 @require_admin
-def edit_widget(slug):
+def edit_widget(slug: str) -> ResponseReturnValue:
     """Edit a React widget."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -207,7 +208,7 @@ def edit_widget(slug):
 @widgets_bp.route('/widgets')
 @navigable("React Widgets", description="View and manage React widgets", category="main")
 @optional_auth
-def list_widgets():
+def list_widgets() -> ResponseReturnValue:
     """List all accessible React widgets."""
     allowed_channels = get_user_allowed_channels(user=g.user, ignore_preferences=True)
 
@@ -228,7 +229,7 @@ def list_widgets():
 
 @widgets_bp.route('/widget/new', methods=['GET', 'POST'])
 @require_admin
-def create_widget():
+def create_widget() -> ResponseReturnValue:
     """Create a new React widget."""
     if request.method == 'POST':
         slug = request.form.get('slug')
@@ -292,7 +293,7 @@ def create_widget():
 
 @widgets_bp.route('/widget/<string:slug>/build', methods=['POST'])
 @require_admin
-def build_widget(slug):
+def build_widget(slug: str) -> ResponseReturnValue:
     """Build a React widget."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -325,7 +326,7 @@ def build_widget(slug):
 
 @widgets_bp.route('/widget/<string:slug>/publish', methods=['POST'])
 @require_admin
-def publish_widget(slug):
+def publish_widget(slug: str) -> ResponseReturnValue:
     """Publish a React widget."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -350,7 +351,7 @@ def publish_widget(slug):
 
 @widgets_bp.route('/widget/<string:slug>/improve', methods=['GET', 'POST'])
 @require_admin
-def improve_widget(slug):
+def improve_widget(slug: str) -> ResponseReturnValue:
     """Improve a React widget using AI."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -460,7 +461,7 @@ def improve_widget(slug):
 
 @widgets_bp.route('/widget/<string:slug>/improve_status/<string:job_id>', methods=['GET'])
 @require_admin
-def improve_status(slug, job_id):
+def improve_status(slug: str, job_id: str) -> ResponseReturnValue:
     """Check the status of an improvement job."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -510,7 +511,7 @@ def improve_status(slug, job_id):
 
 @widgets_bp.route('/widget/<string:slug>/save_version', methods=['POST'])
 @require_admin
-def save_version(slug):
+def save_version(slug: str) -> ResponseReturnValue:
     """Save a new version of the widget."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -587,7 +588,7 @@ def save_version(slug):
 
 @widgets_bp.route('/widget/<string:slug>/get_version_code', methods=['POST'])
 @require_admin
-def get_version_code(slug):
+def get_version_code(slug: str) -> ResponseReturnValue:
     """Get code for a specific version of the widget."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -625,7 +626,7 @@ def get_version_code(slug):
 
 @widgets_bp.route('/widget/<string:slug>/test_version', methods=['POST'])
 @require_admin
-def test_version(slug):
+def test_version(slug: str) -> ResponseReturnValue:
     """Test a version of widget code without saving."""
     with db.session() as session:
         widget = session.query(ReactWidget).filter_by(slug=slug).first()
@@ -666,7 +667,7 @@ def test_version(slug):
 
 @widgets_bp.route('/widget/initiate', methods=['GET', 'POST'])
 @require_admin
-def initiate_widget():
+def initiate_widget() -> ResponseReturnValue:
     """Create a new React widget using AI from a simple description."""
     if request.method == 'POST':
         # Handle form data instead of JSON
@@ -872,7 +873,7 @@ def initiate_widget():
 
 @widgets_bp.route('/widget/initiate_status/<string:job_id>', methods=['GET'])
 @require_admin
-def initiate_status(job_id):
+def initiate_status(job_id: str) -> ResponseReturnValue:
     """Check the status of a widget initiation job."""
     if job_id not in improvement_jobs:
         return jsonify({
@@ -911,7 +912,7 @@ def initiate_status(job_id):
 
 @widgets_bp.route('/widget/waiting/<string:job_id>')
 @require_admin
-def widget_waiting(job_id):
+def widget_waiting(job_id: str) -> ResponseReturnValue:
     """Show waiting page for widget creation with available information."""
     if job_id not in improvement_jobs:
         flash("Widget creation job not found or has expired.", 'error')
@@ -932,7 +933,7 @@ def widget_waiting(job_id):
 @widgets_bp.route('/jobs')
 @navigable(name="Jobs Status", category="admin")
 @require_admin
-def list_jobs():
+def list_jobs() -> ResponseReturnValue:
     """List all jobs currently underway and recently completed."""
     current_time = time.time()
     

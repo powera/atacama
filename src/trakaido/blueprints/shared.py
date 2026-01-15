@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Union
 
 # Third-party imports
 from flask import Blueprint, Response, send_file
+from flask.typing import ResponseReturnValue
 
 # Local application imports
 import constants
@@ -30,7 +31,7 @@ logger = get_logger(__name__)
 
 # Serve the Trakaido app from "/"
 @trakaido_bp.route("/")
-def trakaido_index() -> Response:
+def trakaido_index() -> ResponseReturnValue:
     """Serve the Trakaido single-page application."""
     TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
     if os.path.exists(TRAKAIDO_PATH_PROD):
@@ -43,7 +44,7 @@ def trakaido_index() -> Response:
 
 # Serve images from the Trakaido build directory
 @trakaido_bp.route("/images/<path:filename>")
-def trakaido_images(filename: str) -> Response:
+def trakaido_images(filename: str) -> ResponseReturnValue:
     """Serve images from the Trakaido build directory."""
     images_dir = "/home/trakaido/trakaido/build/images"
     image_path = os.path.join(images_dir, filename)
@@ -62,7 +63,7 @@ def trakaido_images(filename: str) -> Response:
 
 # Serve JSON from the Trakaido build directory
 @trakaido_bp.route("/<path:filename>.json")
-def trakaido_json(filename: str) -> Response:
+def trakaido_json(filename: str) -> ResponseReturnValue:
     """Serve JSON files from the Trakaido build directory."""
     json_dir = "/home/trakaido/trakaido/build"
     json_path = os.path.join(json_dir, f"{filename}.json")

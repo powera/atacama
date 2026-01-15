@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select, desc
 
 import constants
@@ -22,7 +23,7 @@ logger = get_logger(__name__)
 @statistics_bp.route('/stats')
 @optional_auth
 @navigable(name="Channel Statistics", category="admin")
-def channel_statistics():
+def channel_statistics() -> ResponseReturnValue:
     """Show statistics for all channels the user has access to."""
     allowed_channels = get_user_allowed_channels(g.user)
     

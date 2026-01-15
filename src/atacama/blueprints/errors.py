@@ -1,6 +1,7 @@
 """Error handling blueprint and utilities for Atacama."""
 
 from flask import Blueprint, render_template, request, jsonify, current_app, g, session
+from flask.typing import ResponseReturnValue
 from sqlalchemy.exc import SQLAlchemyError
 
 from common.config.channel_config import get_channel_manager
@@ -12,10 +13,10 @@ logger = get_logger(__name__)
 
 errors_bp = Blueprint('errors', __name__)
 
-def handle_error(error_code: str, error_title: str, error_message: str, details=None):
+def handle_error(error_code: str, error_title: str, error_message: str, details: str | None = None) -> ResponseReturnValue:
     """
     Unified error handler that returns HTML or JSON based on Accept header.
-    
+
     :param error_code: HTTP status code as string
     :param error_title: Title for the error page
     :param error_message: User-friendly error description
@@ -63,7 +64,7 @@ def handle_error(error_code: str, error_title: str, error_message: str, details=
     return jsonify(response), status_code
 
 @errors_bp.app_errorhandler(400)
-def bad_request(e):
+def bad_request(e: Exception) -> ResponseReturnValue:
     """Handle 400 Bad Request errors."""
     logger.warning(f"Bad request: {str(e)}")
     return handle_error(
@@ -74,7 +75,7 @@ def bad_request(e):
     )
 
 @errors_bp.app_errorhandler(401)
-def unauthorized(e):
+def unauthorized(e: Exception) -> ResponseReturnValue:
     """Handle 401 Unauthorized errors."""
     logger.info(f"Unauthorized access attempt: {str(e)}")
     return handle_error(
@@ -85,7 +86,7 @@ def unauthorized(e):
     )
 
 @errors_bp.app_errorhandler(403)
-def forbidden(e):
+def forbidden(e: Exception) -> ResponseReturnValue:
     """Handle 403 Forbidden errors."""
     logger.warning(f"Forbidden access attempt: {str(e)}")
     return handle_error(
@@ -96,7 +97,7 @@ def forbidden(e):
     )
 
 @errors_bp.app_errorhandler(404)
-def page_not_found(e):
+def page_not_found(e: Exception) -> ResponseReturnValue:
     """Handle 404 Not Found errors."""
     logger.info(f"Page not found: {request.path}")
     return handle_error(
@@ -107,7 +108,7 @@ def page_not_found(e):
     )
 
 @errors_bp.app_errorhandler(405)
-def method_not_allowed(e):
+def method_not_allowed(e: Exception) -> ResponseReturnValue:
     """Handle 405 Method Not Allowed errors."""
     logger.warning(f"Method not allowed: {request.method} {request.path}")
     return handle_error(
@@ -118,7 +119,7 @@ def method_not_allowed(e):
     )
 
 @errors_bp.app_errorhandler(500)
-def internal_server_error(e):
+def internal_server_error(e: Exception) -> ResponseReturnValue:
     """Handle 500 Internal Server errors."""
     logger.error(f"Internal server error: {str(e)}", exc_info=True)
     return handle_error(
@@ -129,7 +130,7 @@ def internal_server_error(e):
     )
 
 @errors_bp.app_errorhandler(SQLAlchemyError)
-def handle_database_error(e):
+def handle_database_error(e: SQLAlchemyError) -> ResponseReturnValue:
     """Handle SQLAlchemy database errors."""
     logger.error(f"Database error: {str(e)}", exc_info=True)
     return handle_error(

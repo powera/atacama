@@ -1,4 +1,5 @@
 from flask import Blueprint, request, render_template, url_for, redirect
+from flask.typing import ResponseReturnValue
 from sqlalchemy import select
 from typing import Dict, Any
 from common.base.logging_config import get_logger
@@ -21,7 +22,7 @@ logger = get_logger(__name__)
 @quotes_bp.route('/quotes')
 @require_auth
 @navigable(name="Quotes", description="View and manage tracked quotes", category="main")
-def list_quotes():
+def list_quotes() -> ResponseReturnValue:
     """Display all tracked quotes with their metadata."""
     with db.session() as db_session:
         quote_type = request.args.get('type')
@@ -43,7 +44,7 @@ def list_quotes():
 
 @quotes_bp.route('/quotes/<int:quote_id>/edit', methods=['GET', 'POST'])
 @require_auth
-def edit_quote(quote_id: int):
+def edit_quote(quote_id: int) -> ResponseReturnValue:
     """Edit a specific quote's metadata."""
     with db.session() as db_session:
         quote = db_session.get(Quote, quote_id)
@@ -83,7 +84,7 @@ def edit_quote(quote_id: int):
 
 @quotes_bp.route('/quotes/<int:quote_id>/delete', methods=['POST'])
 @require_auth
-def delete_quote(quote_id: int):
+def delete_quote_route(quote_id: int) -> ResponseReturnValue:
     """Delete a quote."""
     with db.session() as db_session:
         if delete_quote(db_session, quote_id):
@@ -93,7 +94,7 @@ def delete_quote(quote_id: int):
 
 @quotes_bp.route('/quotes/<int:quote_id>')
 @optional_auth
-def view_quote(quote_id: int):
+def view_quote(quote_id: int) -> ResponseReturnValue:
     """View a specific quote."""
     with db.session() as db_session:
         quote = db_session.get(Quote, quote_id)
@@ -108,7 +109,7 @@ def view_quote(quote_id: int):
 
 @quotes_bp.route('/quotes/search')
 @require_auth
-def search():
+def search() -> ResponseReturnValue:
     """Search quotes endpoint."""
     search_term = request.args.get('q', '').strip()
     quote_type = request.args.get('type')
