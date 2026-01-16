@@ -41,8 +41,10 @@
             <select name="parent_id" id="parent_id">
                 <option value="">No parent message</option>
                 {% for message in recent_messages %}
-                    <option value="{{ message.id }}">
-                        {{ message.subject or '(No Subject)' }} 
+                    <option value="{{ message.id }}"
+                            data-channel="{{ message.channel or '' }}"
+                            data-subject="{{ message.subject or '' }}">
+                        {{ message.subject or '(No Subject)' }}
                         {% if message.author %} by {{ message.author.name }}{% endif %}
                         - ID: {{ message.id }}
                     </option>
@@ -95,6 +97,79 @@
 
 {% block scripts %}
 <script>
+    // Handle parent message selection - update channel and subject
+    document.getElementById('parent_id')?.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (!selectedOption.value) {
+            // "No parent message" selected - don't change anything
+            return;
+        }
+
+        const parentChannel = selectedOption.dataset.channel;
+        const parentSubject = selectedOption.dataset.subject;
+
+        // Update channel dropdown
+        if (parentChannel) {
+            const channelSelect = document.getElementById('channel');
+            if (channelSelect) {
+                // Find and select the matching channel option
+                for (let i = 0; i < channelSelect.options.length; i++) {
+                    if (channelSelect.options[i].value === parentChannel) {
+                        channelSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Update subject with incremented part number
+        if (parentSubject) {
+            const subjectInput = document.getElementById('subject');
+            if (subjectInput) {
+                subjectInput.value = incrementPartNumber(parentSubject);
+            }
+        }
+    });
+
+    /**
+     * Increment the part/sequence number in a subject string.
+     * Handles patterns like:
+     *   - (Part ##) or (part ##) - case insensitive
+     *   - , part ##
+     *   - (##/##) - format like (1/5), (2/5), etc.
+     * If no pattern found, adds "(part 2)" at the end.
+     */
+    function incrementPartNumber(subject) {
+        // Pattern 1: (Part ##) or (part ##) - case insensitive
+        const partPattern = /\(([pP]art)\s+(\d+)\)/;
+        let match = subject.match(partPattern);
+        if (match) {
+            const partWord = match[1];
+            const num = parseInt(match[2], 10) + 1;
+            return subject.replace(partPattern, `(${partWord} ${num})`);
+        }
+
+        // Pattern 2: , part ## (with comma prefix)
+        const commaPartPattern = /,\s*part\s+(\d+)/i;
+        match = subject.match(commaPartPattern);
+        if (match) {
+            const num = parseInt(match[1], 10) + 1;
+            return subject.replace(commaPartPattern, `, part ${num}`);
+        }
+
+        // Pattern 3: (##/##) - sequence format like (1/5)
+        const sequencePattern = /\((\d+)\/(\d+)\)/;
+        match = subject.match(sequencePattern);
+        if (match) {
+            const currentNum = parseInt(match[1], 10) + 1;
+            const totalNum = match[2];
+            return subject.replace(sequencePattern, `(${currentNum}/${totalNum})`);
+        }
+
+        // No pattern found - add "(part 2)" at the end
+        return subject.trim() + ' (part 2)';
+    }
+
     document.getElementById('previewButton')?.addEventListener('click', async function() {
         const content = document.getElementById('content').value;
         const previewArea = document.getElementById('previewArea');
