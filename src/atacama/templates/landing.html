@@ -1,106 +1,133 @@
 {% extends "layouts/" + theme_layout + ".html" %}
 
-{% block title %}Atacama Message Processor{% endblock %}
+{% block title %}Atacama{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/css/pages/landing.css">
 {% endblock %}
 
+{% block page_title %}
+<h1 class="site-title">Atacama</h1>
+<p class="site-description">A semantic web publishing platform</p>
+{% endblock %}
+
 {% block content %}
-    <div class="container">
-        <header>
-            <h1>Atacama Message Processor</h1>
-            
-            {% if available_channels %}
-            <nav class="channel-nav" aria-label="Channel navigation">
+    <div class="landing-container">
+        {# Hero section with featured channels #}
+        <section class="hero-section">
+            <div class="hero-content">
+                <h2 class="hero-title">Explore Ideas in Color</h2>
+                <p class="hero-subtitle">Rich conversations with semantic markup, interactive widgets, and thoughtful discourse.</p>
+
+                {% if not user %}
+                <div class="hero-actions">
+                    <a href="{{ url_for('auth.login') }}" class="button hero-button">Sign In to Contribute</a>
+                </div>
+                {% else %}
+                <div class="hero-actions">
+                    <a href="{{ url_for('content.show_submit_form') }}" class="button hero-button">Write Something</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {# Channel navigation grid #}
+        {% if available_channels %}
+        <section class="channels-section">
+            <h2 class="section-title">Channels</h2>
+            <nav class="channel-grid" aria-label="Channel navigation">
                 {% for channel in available_channels %}
                     {% set config = channel_configs[channel] %}
-                    <a href="{{ url_for('content.message_stream', channel=channel) }}" 
-                       class="channel-link"
-                       data-access="{{ config.access_level.value }}"
-                       title="{{ config.description }}">
-                        {{ channel_manager.get_display_name(channel) }}
+                    <a href="{{ url_for('content.message_stream', channel=channel) }}"
+                       class="channel-card"
+                       data-access="{{ config.access_level.value }}">
+                        <span class="channel-name">{{ channel_manager.get_display_name(channel) }}</span>
+                        {% if config.description %}
+                        <span class="channel-description">{{ config.description }}</span>
+                        {% endif %}
                     </a>
                 {% endfor %}
             </nav>
-            {% endif %}
-        </header>
-
-        <section class="messages" aria-label="Recent messages">
-            <h2>Recent Messages</h2>
-            {% if messages %}
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th scope="col">ID</th>
-                            <th scope="col">Subject</th>
-                            <th scope="col">Preview</th>
-                            <th scope="col" class="channel-column">Channel</th>
-                            <th scope="col">Received</th>
-                            {% if is_admin %}
-                            <th scope="col">Re-Channel</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for message in messages %}
-                        <tr>
-                            <td data-label="ID">{{ message.id }}</td>
-                            <td data-label="Subject">
-                                <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="message-link">
-                                    {{ message.subject or '(No Subject)' }}
-                                </a>
-                            </td>
-                            <td data-label="Preview" class="message-preview">
-                                {{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}
-                            </td>
-                            <td data-label="Channel" class="channel-column">
-                                <a href="{{ url_for('content.message_stream', channel=message.channel) }}" class="channel-link">
-                                    {{ channel_manager.get_display_name(message.channel) }}
-                                </a>
-                            </td>
-                            <td data-label="Received" class="timestamp">
-                                {{ message.created_at_formatted }}
-                            </td>
-                            {% if is_admin %}
-                            <td data-label="Admin">
-                                <form action="{{ url_for('admin.rechannel_message', message_id=message.id) }}" method="POST" class="rechannel-form">
-                                    <select name="new_channel" id="new_channel_{{ message.id }}" required>
-                                        {% for channel_name, config in channel_configs.items() %}
-                                            <option value="{{ channel_name }}" {% if channel_name == message.channel %}selected{% endif %}>
-                                                {{ channel_manager.get_display_name(channel_name) }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                    <button type="submit" class="rechannel-button">Change</button>
-                                </form>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="no-messages" role="status">
-                <p>No messages processed yet</p>
-            </div>
-            {% endif %}
-        </section>
-
-        {% if not user %}
-        <section class="login-prompt">
-            <p>Please <a href="{{ url_for('auth.login') }}">log in</a> to access additional features and submit messages.</p>
         </section>
         {% endif %}
 
+        {# Recent posts as cards #}
+        <section class="posts-section" aria-label="Recent posts">
+            <div class="section-header">
+                <h2 class="section-title">Latest Posts</h2>
+                <a href="{{ url_for('content.message_stream') }}" class="view-all-link">View All</a>
+            </div>
+
+            {% if messages %}
+            <div class="posts-grid">
+                {% for message in messages[:12] %}
+                <article class="post-card">
+                    <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="post-link">
+                        <header class="post-header">
+                            <h3 class="post-title">{{ message.subject or '(No Subject)' }}</h3>
+                            <span class="post-channel" data-access="{{ channel_configs[message.channel].access_level.value if message.channel in channel_configs else 'public' }}">
+                                {{ channel_manager.get_display_name(message.channel) }}
+                            </span>
+                        </header>
+                        <div class="post-preview">
+                            {{ (message.preview_content if message.preview_content else message.processed_content) | safe }}
+                        </div>
+                        <footer class="post-footer">
+                            <time class="post-timestamp">{{ message.created_at_formatted }}</time>
+                        </footer>
+                    </a>
+                    {% if is_admin %}
+                    <div class="post-admin">
+                        <form action="{{ url_for('admin.rechannel_message', message_id=message.id) }}" method="POST" class="rechannel-form">
+                            <select name="new_channel" id="new_channel_{{ message.id }}" required>
+                                {% for channel_name, config in channel_configs.items() %}
+                                    <option value="{{ channel_name }}" {% if channel_name == message.channel %}selected{% endif %}>
+                                        {{ channel_manager.get_display_name(channel_name) }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="rechannel-button">Move</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+
+            {% if messages|length > 12 %}
+            <div class="posts-more">
+                <a href="{{ url_for('content.message_stream') }}" class="button button-secondary">Load More Posts</a>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="empty-state" role="status">
+                <p class="empty-message">No posts yet. Be the first to contribute!</p>
+                {% if user %}
+                <a href="{{ url_for('content.show_submit_form') }}" class="button">Create First Post</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </section>
+
+        {# Quick links for authenticated users #}
         {% if user %}
-        <nav class="user-navigation">
-            <a href="{{ url_for('content.show_submit_form') }}" class="button">Submit Message</a>
-            <a href="{{ url_for('quotes.list_quotes') }}" class="button">View Quotes</a>
-            <a href="{{ url_for('nav.navigation') }}" class="button">Additional Navigation</a>
-        </nav>
+        <section class="quick-links-section">
+            <h2 class="section-title">Quick Actions</h2>
+            <nav class="quick-links">
+                <a href="{{ url_for('content.show_submit_form') }}" class="quick-link">
+                    <span class="quick-link-icon">+</span>
+                    <span class="quick-link-text">New Post</span>
+                </a>
+                <a href="{{ url_for('quotes.list_quotes') }}" class="quick-link">
+                    <span class="quick-link-icon">"</span>
+                    <span class="quick-link-text">Quotes</span>
+                </a>
+                <a href="{{ url_for('nav.navigation') }}" class="quick-link">
+                    <span class="quick-link-icon">...</span>
+                    <span class="quick-link-text">More</span>
+                </a>
+            </nav>
+        </section>
         {% endif %}
     </div>
 {% endblock %}
