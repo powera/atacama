@@ -32,6 +32,38 @@
       {% block page_title %}
       <h1 class="site-title">Atacama</h1>
       {% endblock %}
+
+      {% if channel_manager is defined and channel_manager.get_channel_groups is defined %}
+      <nav class="channel-dropdown" aria-label="Channel navigation">
+        {% for group, channels in channel_manager.get_channel_groups().items() %}
+          {% set visible_channels = [] %}
+          {% for channel in channels %}
+            {% if (domain_manager is not defined or domain_manager.is_channel_allowed(current_domain, channel)) and (available_channels is not defined or channel in available_channels) %}
+              {% set _ = visible_channels.append(channel) %}
+            {% endif %}
+          {% endfor %}
+          {% if visible_channels %}
+          <div class="dropdown-group">
+            <button class="dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+              {{ group }}
+              <span class="dropdown-arrow">&#9662;</span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+              {% for channel in visible_channels %}
+              <li role="none">
+                <a href="{{ url_for('content.message_stream', channel=channel) }}"
+                   class="dropdown-item"
+                   role="menuitem">
+                  {{ channel_manager.get_display_name(channel) }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </nav>
+      {% endif %}
     </div>
   </header>
   
