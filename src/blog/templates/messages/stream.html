@@ -2,6 +2,10 @@
 
 {% block title %}{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/css/blog/stream.css">
+{% endblock %}
+
 {% block page_title %}
 <h1 class="site-title">{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
 {% endblock %}
@@ -31,16 +35,20 @@
                     <button class="dropdown-toggle">Select Channel</button>
                     <div class="dropdown-menu">
                         {% for group, channels in channel_manager.get_channel_groups().items() %}
-                            {% if channels %}
+                            {% set visible_channels = [] %}
+                            {% for channel in channels %}
+                                {% if channel in available_channels %}
+                                    {% set _ = visible_channels.append(channel) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if visible_channels %}
                                 <div class="dropdown-group">
                                     <div class="dropdown-group-heading">{{ group }}</div>
-                                    {% for channel in channels %}
-                                        {% if channel in available_channels %}
-                                            <a href="{{ url_for('content.message_stream', channel=channel) }}" 
-                                               class="dropdown-item {% if current_channel == channel %}active{% endif %}">
-                                                {{ channel_manager.get_display_name(channel) }}
-                                            </a>
-                                        {% endif %}
+                                    {% for channel in visible_channels %}
+                                        <a href="{{ url_for('content.message_stream', channel=channel) }}"
+                                           class="dropdown-item {% if current_channel == channel %}active{% endif %}">
+                                            {{ channel_manager.get_display_name(channel) }}
+                                        </a>
                                     {% endfor %}
                                 </div>
                             {% endif %}

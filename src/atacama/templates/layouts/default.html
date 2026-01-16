@@ -38,7 +38,9 @@
         {% for group, channels in channel_manager.get_channel_groups().items() %}
           {% set visible_channels = [] %}
           {% for channel in channels %}
-            {% if (domain_manager is not defined or domain_manager.is_channel_allowed(current_domain, channel)) and (available_channels is not defined or channel in available_channels) %}
+            {% set domain_ok = domain_manager is not defined or domain_manager.is_channel_allowed(current_domain, channel) %}
+            {% set access_ok = available_channels is not defined or channel in available_channels %}
+            {% if domain_ok and access_ok %}
               {% set _ = visible_channels.append(channel) %}
             {% endif %}
           {% endfor %}
