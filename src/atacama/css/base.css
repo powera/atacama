@@ -1,0 +1,378 @@
+/* ==========================================================================
+   BASE CSS - Core variables, reset, and typography
+   This file should be loaded first and provides the foundation for all styling.
+   ========================================================================== */
+
+/* ==========================================================================
+   CSS Custom Properties (Variables)
+   ========================================================================== */
+
+:root {
+    /* Spacing Scale */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-base: clamp(0.5rem, 2vw, 1rem);
+    --spacing-lg: calc(var(--spacing-base) * 2);
+    --spacing-xl: calc(var(--spacing-base) * 3);
+
+    /* Backward-compatible aliases (deprecated - use the above) */
+    --spacing-small: var(--spacing-sm);
+    --spacing-large: var(--spacing-lg);
+
+    /* Typography */
+    --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-mono: 'Courier New', Courier, monospace;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: clamp(16px, 1rem + 0.5vw, 18px);
+    --font-size-lg: 1.25rem;
+    --font-size-xl: clamp(1.5rem, 4vw, 2.5rem);
+
+    /* Backward-compatible alias (deprecated - use --font-size-sm) */
+    --font-size-small: var(--font-size-sm);
+
+    --line-height-tight: 1.25;
+    --line-height-base: 1.6;
+    --line-height-relaxed: 1.75;
+
+    /* Layout */
+    --max-width-content: 1200px;
+    --max-width-narrow: 800px;
+    --border-radius-sm: 2px;
+    --border-radius-base: 4px;
+    --border-radius-lg: 8px;
+    --border-radius-full: 9999px;
+
+    /* Backward-compatible alias (deprecated - use --border-radius-base) */
+    --border-radius: var(--border-radius-base);
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    /* Z-index Scale */
+    --z-dropdown: 100;
+    --z-sticky: 500;
+    --z-fixed: 1000;
+    --z-modal: 1100;
+}
+
+/* ==========================================================================
+   Light Theme (Default)
+   ========================================================================== */
+
+:root {
+    /* Core Colors */
+    --color-background: #f9f9f9;
+    --color-surface: #ffffff;
+    --color-text: #333333;
+    --color-text-secondary: #666666;
+    --color-text-muted: #888888;
+    --color-border: #dddddd;
+
+    /* Brand/Primary */
+    --color-primary: #0074D9;
+    --color-primary-hover: #0085f3;
+    --color-primary-dark: #0056a4;
+    --color-primary-rgb: 0, 116, 217;
+
+    /* Semantic Colors */
+    --color-success: #4CAF50;
+    --color-success-bg: rgba(76, 175, 80, 0.1);
+    --color-error: #ff0000;
+    --color-error-bg: rgba(255, 0, 0, 0.1);
+    --color-warning: #ff9800;
+    --color-warning-bg: rgba(255, 152, 0, 0.1);
+    --color-info: #2196F3;
+    --color-info-bg: rgba(33, 150, 243, 0.1);
+
+    /* Component Colors */
+    --color-header-bg: #f8f9fa;
+    --color-card-bg: #ffffff;
+    --color-input-bg: #ffffff;
+    --color-input-border: #cccccc;
+    --color-annotation-bg: rgba(0, 0, 0, 0.05);
+    --color-sigil-bg: #e5e5e5;
+
+    /* Effects */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    /* Backward-compatible alias (deprecated - use --shadow-base) */
+    --box-shadow: var(--shadow-base);
+    --focus-ring: 0 0 0 2px rgba(0, 116, 217, 0.2);
+}
+
+/* ==========================================================================
+   Dark Theme
+   ========================================================================== */
+
+[data-theme="dark"] {
+    /* Core Colors */
+    --color-background: #1a1a1a;
+    --color-surface: #2d2d2d;
+    --color-text: #e0e0e0;
+    --color-text-secondary: #a0a0a0;
+    --color-text-muted: #848484;
+    --color-border: #404040;
+
+    /* Brand/Primary */
+    --color-primary: #4a9eff;
+    --color-primary-hover: #6cb0ff;
+    --color-primary-dark: #3a7cd9;
+    --color-primary-rgb: 74, 158, 255;
+
+    /* Semantic Colors */
+    --color-success-bg: rgba(76, 175, 80, 0.15);
+    --color-error-bg: rgba(255, 0, 0, 0.15);
+    --color-warning-bg: rgba(255, 152, 0, 0.15);
+    --color-info-bg: rgba(33, 150, 243, 0.15);
+
+    /* Component Colors */
+    --color-header-bg: #2d2d2d;
+    --color-card-bg: #2d2d2d;
+    --color-input-bg: #333333;
+    --color-input-border: #505050;
+    --color-annotation-bg: rgba(255, 255, 255, 0.1);
+    --color-sigil-bg: #cccccc;
+
+    /* Effects */
+    --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --focus-ring: 0 0 0 2px rgba(74, 158, 255, 0.2);
+}
+
+/* ==========================================================================
+   Grayscale Theme (Print-Optimized)
+   ========================================================================== */
+
+[data-theme="grayscale"] {
+    /* Core Colors */
+    --color-background: #ffffff;
+    --color-surface: #ffffff;
+    --color-text: #000000;
+    --color-text-secondary: #000000;
+    --color-text-muted: #333333;
+    --color-border: #000000;
+
+    /* Brand/Primary - Darker for print */
+    --color-primary: #333303;
+    --color-primary-hover: #555505;
+    --color-primary-dark: #222202;
+    --color-primary-rgb: 51, 51, 3;
+
+    /* Component Colors */
+    --color-header-bg: #000000;
+    --color-card-bg: #ffffff;
+    --color-annotation-bg: rgba(0, 0, 0, 0.15);
+    --color-sigil-bg: #d9d9d9;
+
+    /* Smaller sizing for print */
+    --font-size-base: clamp(10px, 1rem + 0.5vw, 16px);
+    --font-size-sm: 0.85rem;
+    --font-size-lg: 1.3rem;
+    --line-height-base: 1.4;
+}
+
+/* ==========================================================================
+   CSS Reset / Normalize
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    -moz-tab-size: 4;
+    tab-size: 4;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--color-text);
+    background-color: var(--color-background);
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-base);
+    font-weight: 600;
+    line-height: var(--line-height-tight);
+    color: var(--color-text);
+}
+
+h1 {
+    font-size: var(--font-size-xl);
+}
+
+h2 {
+    font-size: var(--font-size-lg);
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: var(--spacing-base);
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    word-break: break-word;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Emphasis */
+em {
+    font-style: italic;
+    font-weight: 500;
+    background-color: var(--color-annotation-bg);
+    border-bottom: 1px dotted var(--color-text-secondary);
+    padding: 0 0.2em;
+}
+
+strong {
+    font-weight: 700;
+}
+
+/* Code and Preformatted */
+code, kbd, samp, pre {
+    font-family: var(--font-family-mono);
+    font-size: 0.9em;
+}
+
+code {
+    background-color: var(--color-annotation-bg);
+    padding: 0.1em 0.3em;
+    border-radius: var(--border-radius-sm);
+}
+
+pre {
+    overflow-x: auto;
+    padding: var(--spacing-base);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Lists */
+ul, ol {
+    margin: var(--spacing-base) 0;
+    padding-left: var(--spacing-lg);
+}
+
+li {
+    margin-bottom: var(--spacing-xs);
+}
+
+/* Horizontal Rule */
+hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: var(--spacing-lg) 0;
+}
+
+[data-theme="grayscale"] hr {
+    border-top: 2px solid var(--color-text);
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ==========================================================================
+   Layout Utilities
+   ========================================================================== */
+
+.container {
+    width: min(90vw, var(--max-width-content));
+    margin: 0 auto;
+    padding: 0 var(--spacing-base);
+}
+
+.container--narrow {
+    max-width: var(--max-width-narrow);
+}
+
+/* Page Layout */
+.page-container {
+    max-width: var(--max-width-content);
+    margin: 0 auto;
+    padding: 0 var(--spacing-base);
+}
+
+.main-content {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ==========================================================================
+   Responsive Utilities
+   ========================================================================== */
+
+/* Hide visually but keep accessible */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    :root {
+        --spacing-base: 0.25rem;
+        --spacing-lg: 0.5rem;
+        --font-size-base: 10pt;
+        --font-size-sm: 9pt;
+        --font-size-lg: 12pt;
+        --line-height-base: 1.35;
+    }
+
+    body {
+        background: white;
+        color: black;
+    }
+
+    a {
+        color: black;
+        text-decoration: underline;
+    }
+
+    /* Avoid page breaks inside elements */
+    h1, h2, h3, h4, h5, h6,
+    img, table, figure {
+        break-inside: avoid;
+    }
+
+    /* Keep headings with following content */
+    h1, h2, h3, h4, h5, h6 {
+        break-after: avoid;
+    }
+}

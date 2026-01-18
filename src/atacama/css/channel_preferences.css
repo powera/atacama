@@ -1,4 +1,7 @@
-/* Channel preferences styling */
+/* ==========================================================================
+   CHANNEL PREFERENCES - Channel subscription form
+   ========================================================================== */
+
 .preferences-form {
     max-width: 600px;
     margin: 0 auto;
@@ -10,7 +13,7 @@
     margin: var(--spacing-base) 0;
     padding: var(--spacing-base);
     border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-base);
     background: var(--color-background);
 }
 
@@ -32,53 +35,25 @@
 
 .channel-info {
     margin-top: 0.5em;
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
 }
 
 .channel-restricted {
     color: var(--color-text-secondary);
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-sm);
     margin-left: var(--spacing-base);
 }
 
 .channel-tag {
     display: inline-block;
     padding: 2px 6px;
-    border-radius: 3px;
+    border-radius: var(--border-radius-sm);
     font-size: 0.8em;
     margin-left: 0.5em;
 }
 
-.tag-public {
-    background: #e7f5e7;
-    color: #2c662d;
-}
-
-.tag-private {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.tag-restricted {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-[data-theme="dark"] .tag-public {
-    background: #1e3a1e;
-    color: #7cc47d;
-}
-
-[data-theme="dark"] .tag-private {
-    background: #3d3524;
-    color: #ffd866;
-}
-
-[data-theme="dark"] .tag-restricted {
-    background: #3d2427;
-    color: #ea868f;
-}
+/* Note: .tag-public, .tag-private, .tag-restricted are defined in components.css */
 
 .unsaved-warning {
     display: none;
@@ -87,7 +62,7 @@
     padding: var(--spacing-base);
     margin: var(--spacing-base) 0;
     border: 1px solid #ffeeba;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-base);
 }
 
 [data-theme="dark"] .unsaved-warning {
@@ -96,18 +71,7 @@
     border-color: #453e1c;
 }
 
-.form-actions {
-    margin-top: var(--spacing-large);
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-base);
-}
-
-.button-secondary {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-}
+/* Note: .form-actions and .button-secondary are defined in components.css */
 
 /* Media queries for responsive design */
 @media screen and (max-width: 768px) {

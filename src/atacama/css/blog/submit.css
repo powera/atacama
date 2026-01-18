@@ -1,0 +1,3 @@
+/* Redirect: This file exists for backward compatibility.
+   The actual styles are now in pages/submit.css */
+@import url('../pages/submit.css');

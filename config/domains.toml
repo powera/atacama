@@ -37,13 +37,22 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     auto_archive_enabled = true
     
 # Theme configurations
+# CSS files are loaded in order:
+# 1. base.css - Variables, reset, typography
+# 2. components.css - Reusable UI components (buttons, forms, dropdowns)
+# 3. flash.css - Toast notifications
+# 4. themes/atacama.css - Colortext system and message styling
+# 5. pages/stream.css - Stream/listing page styles
+# 6. pages/chess.css - Chess board rendering
+# Additional theme files loaded after for overrides
+
 [themes]
   [themes.default]
     name = "Default"
-    css_files = ["common.css", "flash.css", "themes/atacama.css", "blog/stream.css", "chess.css"]
-    
+    css_files = ["base.css", "components.css", "flash.css", "themes/atacama.css", "pages/stream.css", "pages/chess.css"]
+
   [themes.shragafeivel]
     name = "Shragafeivel"
-    css_files = ["common.css", "flash.css", "themes/atacama.css", "blog/stream.css", "themes/shragafeivel.css", "chess.css"]
+    css_files = ["base.css", "components.css", "flash.css", "themes/atacama.css", "pages/stream.css", "themes/shragafeivel.css", "pages/chess.css"]
     layout = "shragafeivel"
     banner = true
