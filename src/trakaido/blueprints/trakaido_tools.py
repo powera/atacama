@@ -15,7 +15,6 @@ from atacama.decorators.auth import optional_auth, require_auth
 from .shared import *
 from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
 from .userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
-from .audio import AUDIO_API_DOCS
 
 ##############################################################################
 
@@ -34,7 +33,6 @@ def lithuanian_api_index() -> Response:
         "name": "Lithuanian Language Learning API",
         "version": "1.0.0",
         "endpoints": {
-            "audio": AUDIO_API_DOCS,
             "userstats": USERSTATS_API_DOCS,
             "userconfig": USERCONFIG_API_DOCS,
             "userinfo": USERINFO_API_DOCS
