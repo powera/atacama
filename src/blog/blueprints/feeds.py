@@ -6,7 +6,6 @@ import re
 from typing import Optional
 
 from flask import (
-    Blueprint,
     g,
     make_response,
     render_template_string,
@@ -20,10 +19,102 @@ from common.config.domain_config import get_domain_manager
 from models.database import db
 from models.models import Email
 from atacama.blueprints.errors import handle_error
-from .shared import feeds_bp
+from blog.blueprints.shared import feeds_bp
 
 logger = get_logger(__name__)
 
+
+##############################################################################
+# Helper Functions
+##############################################################################
+
+def clean_html_for_rss(html_content: str) -> str:
+    """
+    Clean HTML content for RSS feeds by handling color tags and other formatting.
+
+    :param html_content: Original HTML content from processed message
+    :return: Cleaned HTML suitable for RSS feeds
+    """
+    # Create a copy of the content to work with
+    cleaned = html_content
+
+    # Replace color blocks with their content or appropriate representation
+    def expand_color_block(match):
+        # Extract the content within the colorblock
+        full_match = match.group(0)
+        content_match = re.search(r'<span class="colortext-content">(.*?)</span>', full_match, re.DOTALL)
+        sigil_match = re.search(r'<span class="sigil">(.*?)</span>', full_match, re.DOTALL)
+
+        if content_match:
+            # Find the sigil for this color (emoji)
+            sigil = ""
+            if sigil_match:
+                sigil = sigil_match.group(1)
+
+            # Extract the content
+            content = content_match.group(1)
+
+            # Format with sigil
+            return f"{sigil} {content}"
+        return full_match
+
+    # Replace colorblocks with their content
+    cleaned = re.sub(r'<span class="colorblock.*?">.*?<span class="colortext-content">.*?</span>\s*</span>',
+                     expand_color_block, cleaned, flags=re.DOTALL)
+
+    # Handle YouTube embeds
+    def handle_youtube_embed(match):
+        video_id_match = re.search(r'data-video-id="(.*?)"', match.group(0))
+        if video_id_match:
+            video_id = video_id_match.group(1)
+            return f'<p><a href="https://www.youtube.com/watch?v={video_id}">YouTube Video: {video_id}</a></p>'
+        return ''
+
+    cleaned = re.sub(r'<span class="youtube-player".*?</span>', handle_youtube_embed, cleaned)
+
+    # Handle Chinese annotations
+    def handle_chinese_annotation(match):
+        # Extract Chinese characters and any annotations
+        chinese = match.group(0)
+        pinyin_match = re.search(r'data-pinyin="(.*?)"', chinese)
+        definition_match = re.search(r'data-definition="(.*?)"', chinese)
+
+        # Extract the Chinese text
+        text_match = re.search(r'>([^<]+)</span>', chinese)
+
+        if text_match:
+            text = text_match.group(1)
+            annotations = []
+
+            if pinyin_match:
+                annotations.append(f"pinyin: {pinyin_match.group(1)}")
+            if definition_match:
+                annotations.append(f"def: {definition_match.group(1)}")
+
+            if annotations:
+                return f"{text} ({', '.join(annotations)})"
+            return text
+        return match.group(0)
+
+    cleaned = re.sub(r'<span class="annotated-chinese".*?</span>', handle_chinese_annotation, cleaned)
+
+    # Multi-line quotations
+    def handle_mlq(match):
+        # Extract the content from the MLQ
+        content_match = re.search(r'<div class="mlq-content">(.*?)</div>', match.group(0), re.DOTALL)
+        if content_match:
+            return f'<blockquote>{content_match.group(1)}</blockquote>'
+        return ''
+
+    cleaned = re.sub(r'<div class="mlq">.*?<div class="mlq-content">.*?</div>\s*</div>',
+                     handle_mlq, cleaned, flags=re.DOTALL)
+
+    return cleaned
+
+
+##############################################################################
+# Route Handlers
+##############################################################################
 
 @feeds_bp.route('/sitemap.xml')
 def sitemap() -> ResponseReturnValue:
@@ -194,87 +285,3 @@ def rss_feed(channel: Optional[str] = None) -> ResponseReturnValue:
         response = make_response(rss_xml)
         response.headers['Content-Type'] = 'application/rss+xml'
         return response
-
-
-def clean_html_for_rss(html_content: str) -> str:
-    """
-    Clean HTML content for RSS feeds by handling color tags and other formatting.
-    
-    :param html_content: Original HTML content from processed message
-    :return: Cleaned HTML suitable for RSS feeds
-    """
-    # Create a copy of the content to work with
-    cleaned = html_content
-    
-    # Replace color blocks with their content or appropriate representation
-    def expand_color_block(match):
-        # Extract the content within the colorblock
-        full_match = match.group(0)
-        content_match = re.search(r'<span class="colortext-content">(.*?)</span>', full_match, re.DOTALL)
-        sigil_match = re.search(r'<span class="sigil">(.*?)</span>', full_match, re.DOTALL)
-        
-        if content_match:
-            # Find the sigil for this color (emoji)
-            sigil = ""
-            if sigil_match:
-                sigil = sigil_match.group(1)
-            
-            # Extract the content
-            content = content_match.group(1)
-            
-            # Format with sigil
-            return f"{sigil} {content}"
-        return full_match
-    
-    # Replace colorblocks with their content
-    cleaned = re.sub(r'<span class="colorblock.*?">.*?<span class="colortext-content">.*?</span>\s*</span>', 
-                     expand_color_block, cleaned, flags=re.DOTALL)
-    
-    # Handle YouTube embeds
-    def handle_youtube_embed(match):
-        video_id_match = re.search(r'data-video-id="(.*?)"', match.group(0))
-        if video_id_match:
-            video_id = video_id_match.group(1)
-            return f'<p><a href="https://www.youtube.com/watch?v={video_id}">YouTube Video: {video_id}</a></p>'
-        return ''
-    
-    cleaned = re.sub(r'<span class="youtube-player".*?</span>', handle_youtube_embed, cleaned)
-    
-    # Handle Chinese annotations
-    def handle_chinese_annotation(match):
-        # Extract Chinese characters and any annotations
-        chinese = match.group(0)
-        pinyin_match = re.search(r'data-pinyin="(.*?)"', chinese)
-        definition_match = re.search(r'data-definition="(.*?)"', chinese)
-        
-        # Extract the Chinese text
-        text_match = re.search(r'>([^<]+)</span>', chinese)
-        
-        if text_match:
-            text = text_match.group(1)
-            annotations = []
-            
-            if pinyin_match:
-                annotations.append(f"pinyin: {pinyin_match.group(1)}")
-            if definition_match:
-                annotations.append(f"def: {definition_match.group(1)}")
-                
-            if annotations:
-                return f"{text} ({', '.join(annotations)})"
-            return text
-        return match.group(0)
-    
-    cleaned = re.sub(r'<span class="annotated-chinese".*?</span>', handle_chinese_annotation, cleaned)
-    
-    # Multi-line quotations
-    def handle_mlq(match):
-        # Extract the content from the MLQ
-        content_match = re.search(r'<div class="mlq-content">(.*?)</div>', match.group(0), re.DOTALL)
-        if content_match:
-            return f'<blockquote>{content_match.group(1)}</blockquote>'
-        return ''
-    
-    cleaned = re.sub(r'<div class="mlq">.*?<div class="mlq-content">.*?</div>\s*</div>', 
-                     handle_mlq, cleaned, flags=re.DOTALL)
-    
-    return cleaned

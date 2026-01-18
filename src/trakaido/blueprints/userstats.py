@@ -1,7 +1,7 @@
 """Activity stats management for Lithuanian language learning."""
 
 # Standard library imports
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict
 
 # Third-party imports
@@ -10,28 +10,22 @@ from flask.typing import ResponseReturnValue
 
 # Local application imports
 from atacama.decorators.auth import require_auth
-from .shared import *
-from .date_utils import (
-    get_current_day_key,
-)
-from .nonce_utils import (
+from trakaido.blueprints.shared import trakaido_bp, logger
+from trakaido.blueprints.date_utils import get_current_day_key
+from trakaido.blueprints.nonce_utils import (
     load_nonces,
     save_nonces,
     check_nonce_duplicates
 )
-from .stats_schema import (
+from trakaido.blueprints.stats_schema import (
     DIRECT_PRACTICE_TYPES,
     CONTEXTUAL_EXPOSURE_TYPES,
-    ALL_STAT_TYPES,
-    TOP_LEVEL_FIELDS,
     create_empty_word_stats,
     validate_and_normalize_word_stats,
-    user_has_activity_stats,
     JourneyStats,
-    DailyStats,
     merge_word_stats
 )
-from .stats_snapshots import (
+from trakaido.blueprints.stats_snapshots import (
     ensure_daily_snapshots,
     calculate_daily_progress,
     calculate_weekly_progress,

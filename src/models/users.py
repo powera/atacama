@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from models.database import db
 from models.models import User
 from common.base.logging_config import get_logger
-from common.config.channel_config import get_channel_manager, AccessLevel
+from common.config.channel_config import get_channel_manager
 from common.config.user_config import get_user_config_manager
 
 logger = get_logger(__name__)

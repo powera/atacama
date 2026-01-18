@@ -4,15 +4,14 @@ import os
 import secrets
 from datetime import datetime
 from typing import Optional, Dict, Any
-from urllib.parse import urlencode
 
-from flask import Blueprint, request, render_template, session, redirect, url_for, g, jsonify
+from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify
 from flask.typing import ResponseReturnValue
 
 from atacama.decorators import require_auth
 from models.database import db
 from models import get_or_create_user
-from models.models import User, UserToken
+from models.models import UserToken
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 

@@ -1,6 +1,5 @@
 """Domain configuration management for Atacama."""
 
-import os
 from pathlib import Path
 import tomli
 from dataclasses import dataclass

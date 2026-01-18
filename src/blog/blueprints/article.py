@@ -1,9 +1,8 @@
 """Articles blueprint for permanent content."""
 
 from datetime import datetime
-from flask import Blueprint, render_template, abort, g, request, redirect, url_for
+from flask import render_template, abort, g, request, redirect, url_for
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
 
 from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
@@ -15,7 +14,7 @@ from models.messages import check_channel_access
 from aml_parser.parser import parse
 from aml_parser.lexer import tokenize
 from aml_parser.html_generator import generate_html
-from .shared import content_bp
+from blog.blueprints.shared import content_bp
 
 logger = get_logger(__name__)
 

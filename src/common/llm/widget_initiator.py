@@ -2,14 +2,12 @@
 
 import os
 from typing import Optional, Dict, Any, Tuple
-from pathlib import Path
 
 import tiktoken
 
 import constants
 from common.base.logging_config import get_logger
 from common.llm.openai_client import generate_chat, DEFAULT_MODEL, PROD_MODEL, TEST_MODEL
-from common.llm.types import Schema, SchemaProperty
 from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA, SINGLE_FILE_WIDGET_SCHEMA
 from common.llm.lib import to_openai_schema
 from react_compiler.lib import sanitize_widget_title_for_component_name

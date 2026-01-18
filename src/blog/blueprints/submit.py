@@ -1,11 +1,10 @@
 """Blueprint for message submission and preview functionality."""
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for, g
+from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask.typing import ResponseReturnValue
 from sqlalchemy.orm import joinedload
 
 import aml_parser
-import aml_parser.colorblocks
 from aml_parser.lexer import tokenize, TokenType
 from aml_parser.parser import parse
 from aml_parser.html_generator import generate_html
@@ -18,7 +17,7 @@ from models.database import db
 from models.models import Email
 from atacama.blueprints.errors import handle_error
 from atacama.decorators import navigable, require_auth
-from .shared import content_bp
+from blog.blueprints.shared import content_bp
 
 logger = get_logger(__name__)
 

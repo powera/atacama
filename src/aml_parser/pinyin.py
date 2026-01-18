@@ -12,7 +12,7 @@ The system maintains both in-memory and disk caches for performance.
 """
 
 from dataclasses import dataclass
-import os.path
+import os
 import re
 from typing import Dict, List, Optional, Tuple, Set
 from functools import lru_cache

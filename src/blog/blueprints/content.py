@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Third-party imports
 from flask import (
-    Blueprint,
     flash,
     g,
     jsonify,
@@ -18,21 +17,18 @@ from flask import (
     url_for
 )
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.orm import joinedload, selectinload
 
 # Local application imports
 from common.base.logging_config import get_logger
-from common.config.channel_config import AccessLevel, get_channel_manager
+from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
 from models import get_or_create_user
 from models.database import db
 from models.messages import (
-    check_channel_access,
     check_message_access,
     get_domain_filtered_messages,
-    get_filtered_messages,
-    get_message_by_id,
     get_message_chain,
     get_user_allowed_channels
 )
@@ -41,7 +37,7 @@ from models.models import Message, Article, ReactWidget, Quote, Email
 from models.users import is_user_admin
 from atacama.blueprints.errors import handle_error
 from atacama.decorators import navigable, navigable_per_channel, optional_auth, require_auth
-from .shared import content_bp
+from blog.blueprints.shared import content_bp
 
 logger = get_logger(__name__)
 

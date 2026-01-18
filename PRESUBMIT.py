@@ -173,6 +173,8 @@ def get_requirements() -> Dict[str, str]:
     # Common package name to import name mappings
     PACKAGE_TO_IMPORT = {
         'Flask': 'flask',
+        'Flask-Compress': 'flask_compress',
+        'Flask-cors': 'flask_cors',
         'Werkzeug': 'werkzeug',
         'SQLAlchemy': 'sqlalchemy',
         'PyYAML': 'yaml',
@@ -285,7 +287,7 @@ def check_imports(file_path: Path) -> List[str]:
                         base_package = name.name.split('.')[0]
                         if base_package in stdlib_modules:
                             continue
-                        if base_package.startswith(('common', 'atacama', 'blog', 'parser', 'spaceship', 'trakaido', 'aml_parser', 'models')) or base_package in ("constants",):
+                        if base_package.startswith(('common', 'atacama', 'blog', 'parser', 'spaceship', 'trakaido', 'aml_parser', 'models', 'react_compiler')) or base_package in ("constants",):
                             continue
                         if base_package not in requirements:
                             errors.append(f"Third-party import '{base_package}' not found in requirements.txt (package: {requirements.get(base_package.lower(), base_package)}): {file_path}")
@@ -293,7 +295,7 @@ def check_imports(file_path: Path) -> List[str]:
                     base_package = node.module.split('.')[0]
                     if base_package in stdlib_modules:
                         continue
-                    if base_package.startswith(('common', 'atacama', 'blog', 'parser', 'spaceship', 'trakaido', 'aml_parser', 'models')) or base_package in ("constants",):
+                    if base_package.startswith(('common', 'atacama', 'blog', 'parser', 'spaceship', 'trakaido', 'aml_parser', 'models', 'react_compiler')) or base_package in ("constants",):
                         continue
                     if base_package not in requirements:
                         errors.append(f"Third-party import '{base_package}' not found in requirements.txt (package: {requirements.get(base_package.lower(), base_package)}): {file_path}")

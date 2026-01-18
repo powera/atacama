@@ -16,7 +16,6 @@ from flask import g, jsonify, request
 from flask.typing import ResponseReturnValue
 
 # Local application imports
-import constants
 from atacama.decorators.auth import require_auth
 from common.base.logging_config import get_logger
 from trakaido.blueprints.shared import trakaido_bp, ensure_user_data_dir
@@ -62,6 +61,49 @@ DEFAULT_CONFIG = {
         "lastModified": None
     }
 }
+
+##############################################################################
+# Helper Functions (defined early to avoid forward references)
+##############################################################################
+
+def _deep_copy_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Deep copy configuration dictionary."""
+    return json.loads(json.dumps(config))
+
+
+def _merge_with_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge user config with defaults to ensure all fields exist."""
+    merged = _deep_copy_config(DEFAULT_CONFIG)
+
+    # Merge each top-level section
+    for section in ["learning", "audio", "display", "metadata"]:
+        if section in config and isinstance(config[section], dict):
+            if section in merged:
+                merged[section].update(config[section])
+            else:
+                merged[section] = config[section]
+
+    return merged
+
+
+def _validation_error(field: str, value: Any, message: str, extra_details: Optional[Dict] = None) -> Dict[str, Any]:
+    """Create a validation error response."""
+    details = {
+        "field": field,
+        "value": value
+    }
+    if extra_details:
+        details.update(extra_details)
+
+    return {
+        "success": False,
+        "error": {
+            "code": "VALIDATION_ERROR",
+            "message": message,
+            "details": details
+        }
+    }
+
 
 ##############################################################################
 # File I/O Functions
@@ -123,26 +165,6 @@ def save_user_config(user_id: str, config: Dict[str, Any], language: str) -> boo
     except Exception as e:
         logger.error(f"Error saving config for user {user_id} language {language}: {str(e)}")
         return False
-
-
-def _deep_copy_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Deep copy configuration dictionary."""
-    return json.loads(json.dumps(config))
-
-
-def _merge_with_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge user config with defaults to ensure all fields exist."""
-    merged = _deep_copy_config(DEFAULT_CONFIG)
-
-    # Merge each top-level section
-    for section in ["learning", "audio", "display", "metadata"]:
-        if section in config and isinstance(config[section], dict):
-            if section in merged:
-                merged[section].update(config[section])
-            else:
-                merged[section] = config[section]
-
-    return merged
 
 
 ##############################################################################
@@ -326,25 +348,6 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
                 "message": f"Validation error: {str(e)}"
             }
         }, []
-
-
-def _validation_error(field: str, value: Any, message: str, extra_details: Optional[Dict] = None) -> Dict[str, Any]:
-    """Create a validation error response."""
-    details = {
-        "field": field,
-        "value": value
-    }
-    if extra_details:
-        details.update(extra_details)
-
-    return {
-        "success": False,
-        "error": {
-            "code": "VALIDATION_ERROR",
-            "message": message,
-            "details": details
-        }
-    }
 
 
 def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:

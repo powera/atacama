@@ -1,6 +1,5 @@
 """Channel configuration management for Atacama."""
 
-import os
 from pathlib import Path
 import enum
 import tomli
