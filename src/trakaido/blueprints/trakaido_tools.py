@@ -1,20 +1,16 @@
 """Blueprint for serving Lithuanian language learning resources."""
 
 # Standard library imports
-import json
 import os
-import re
-from typing import Any, Dict, List, Optional, Union
 
 # Third-party imports
-from flask import Blueprint, Response, abort, g, jsonify, request, send_file
+from flask import Response, g, jsonify
 
 # Local application imports
-import constants
-from atacama.decorators.auth import optional_auth, require_auth
-from .shared import *
-from .userstats import user_has_activity_stats, USERSTATS_API_DOCS
-from .userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
+from atacama.decorators.auth import optional_auth
+from trakaido.blueprints.shared import trakaido_bp, logger
+from trakaido.blueprints.userstats import user_has_activity_stats, USERSTATS_API_DOCS
+from trakaido.blueprints.userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
 
 ##############################################################################
 

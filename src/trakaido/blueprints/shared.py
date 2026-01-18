@@ -3,7 +3,7 @@
 # Standard library imports
 import os
 import re
-from typing import Dict, List, Optional, Union
+from typing import Optional
 
 # Third-party imports
 from flask import Blueprint, Response, send_file

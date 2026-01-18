@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 # Local application imports
 import constants
-from .shared import logger, ensure_user_data_dir
+from trakaido.blueprints.shared import logger, ensure_user_data_dir
 
 
 ##############################################################################
@@ -118,16 +118,6 @@ def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, A
                     normalized["practiceHistory"][timestamp_field] = value
 
     return normalized
-
-
-def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
-    """Check if a user has any activity stats."""
-    try:
-        journey_stats = JourneyStats(user_id, language)
-        return not journey_stats.is_empty()
-    except Exception as e:
-        logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
-        return False
 
 
 def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) -> Dict[str, Any]:
@@ -404,9 +394,11 @@ class JourneyStats(BaseStats):
 
     def save_with_daily_update(self) -> bool:
         """Save journey stats and update daily snapshots."""
-        # Import here to avoid circular dependency
-        from .stats_snapshots import ensure_daily_snapshots
-        from .date_utils import get_current_day_key
+        # Import here to avoid circular dependency and forward reference
+        from trakaido.blueprints.stats_snapshots import ensure_daily_snapshots
+        from trakaido.blueprints.date_utils import get_current_day_key
+        # Late-bind DailyStats reference (defined later in this file)
+        DailyStats = globals()['DailyStats']
 
         try:
             if not ensure_daily_snapshots(self.user_id, self.language):
@@ -613,3 +605,17 @@ class DailyStats(BaseStats):
         except Exception as e:
             logger.error(f"Error compressing file {self.file_path} to GZIP: {str(e)}")
             return False
+
+
+##############################################################################
+# Helper Functions (defined after classes to avoid forward references)
+##############################################################################
+
+def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
+    """Check if a user has any activity stats."""
+    try:
+        journey_stats = JourneyStats(user_id, language)
+        return not journey_stats.is_empty()
+    except Exception as e:
+        logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
+        return False

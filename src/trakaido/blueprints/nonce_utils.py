@@ -7,8 +7,8 @@ from typing import List
 
 # Local application imports
 import constants
-from .shared import logger
-from .date_utils import get_current_day_key, get_yesterday_day_key
+from trakaido.blueprints.shared import logger
+from trakaido.blueprints.date_utils import get_current_day_key, get_yesterday_day_key
 
 
 def get_nonce_file_path(user_id: str, day_key: str, language: str = "lithuanian") -> str:
