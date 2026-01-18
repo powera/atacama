@@ -1,6 +1,5 @@
 """Language configuration management for Atacama."""
 
-import os
 from pathlib import Path
 import tomli
 from dataclasses import dataclass
@@ -17,17 +16,7 @@ class LanguageConfig:
     name: str
     code: str
     subdomains: List[str]
-    audio_dir_name: str
     character_set: str = ""
-
-    def get_audio_dir(self) -> str:
-        """
-        Get the audio directory path for this language.
-
-        :return: Path to the language's audio directory
-        """
-        base_dir = constants.get_trakaido_audio_base_dir()
-        return os.path.join(base_dir, self.audio_dir_name)
 
 class LanguageManager:
     """Manages language configuration and validation."""
@@ -62,7 +51,6 @@ class LanguageManager:
                     name=settings.get('name', language_key),
                     code=settings.get('code', language_key),
                     subdomains=settings.get('subdomains', []),
-                    audio_dir_name=settings.get('audio_dir_name', language_key),
                     character_set=settings.get('character_set', '')
                 )
 
