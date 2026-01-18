@@ -1,0 +1,82 @@
+/* ==========================================================================
+   QUOTES PAGE - Quote collection and display
+   ========================================================================== */
+
+.quotes-container {
+    max-width: var(--max-width-content);
+    margin: 0 auto;
+    padding: var(--spacing-base);
+}
+
+/* Quote List */
+.quote-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-lg) 0;
+}
+
+.quote-item {
+    padding: var(--spacing-base);
+    margin-bottom: var(--spacing-base);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+    background: var(--color-surface);
+}
+
+.quote-item:hover {
+    border-color: var(--color-primary);
+}
+
+.quote-text {
+    font-style: italic;
+    margin-bottom: var(--spacing-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.quote-source {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.quote-source a {
+    color: var(--color-primary);
+}
+
+/* Quote Detail View */
+.quote-detail {
+    max-width: var(--max-width-narrow);
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+}
+
+.quote-detail .quote-text {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.quote-metadata {
+    padding-top: var(--spacing-base);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* Navigation Actions */
+.quote-actions {
+    display: flex;
+    gap: var(--spacing-base);
+    margin-top: var(--spacing-lg);
+}
+
+.quote-actions a {
+    color: var(--color-primary);
+}
+
+/* Random Quote Link */
+.random-quote-link {
+    display: inline-block;
+    margin-bottom: var(--spacing-lg);
+}

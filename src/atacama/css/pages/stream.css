@@ -1,20 +1,33 @@
-/* Base container layout */
+/* ==========================================================================
+   STREAM PAGE - Message listing and chain view styles
+   ========================================================================== */
+
+/* ==========================================================================
+   Stream Container
+   ========================================================================== */
+
 .stream-container {
     max-width: 95vw;
     margin: 0 auto;
     padding: var(--spacing-base);
 }
 
-/* Message styling */
+/* ==========================================================================
+   Stream Message Card
+   ========================================================================== */
+
 .stream-message {
-    margin: var(--spacing-large) 0;
+    margin: var(--spacing-lg) 0;
     padding: var(--spacing-base);
     border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-base);
     background: var(--color-background);
 }
 
-/* Primary navigation with All Messages and current channel */
+/* ==========================================================================
+   Primary Navigation (All Messages / Current Channel)
+   ========================================================================== */
+
 .primary-nav {
     display: flex;
     align-items: center;
@@ -23,11 +36,11 @@
 }
 
 .primary-nav .channel-link {
-    padding: var(--spacing-small) var(--spacing-base);
+    padding: var(--spacing-sm) var(--spacing-base);
     color: var(--color-text);
     text-decoration: none;
     border-bottom: 2px solid transparent;
-    transition: border-color 0.2s ease;
+    transition: border-color var(--transition-base);
 }
 
 .primary-nav .channel-link.active {
@@ -40,95 +53,71 @@
     border-bottom-color: var(--color-border);
 }
 
-/* Channel navigation structure */
+/* ==========================================================================
+   Channel Navigation
+   ========================================================================== */
+
 .channel-navigation {
-    margin: var(--spacing-large) 0;
+    margin: var(--spacing-lg) 0;
     border-bottom: 1px solid var(--color-border);
 }
 
-/* Dropdown styles */
-.channel-dropdown {
+/* Stream page dropdown toggle (positioned right) */
+.primary-nav .channel-dropdown {
     position: relative;
     margin-left: auto;
 }
 
-.dropdown-toggle {
-    padding: var(--spacing-small) var(--spacing-base);
-    background-color: var(--color-background);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    display: flex;
-    align-items: center;
-}
-
-.dropdown-toggle::after {
-    content: "▼";
+.primary-nav .dropdown-toggle::after {
+    content: "\25BC";
     font-size: 0.7em;
     margin-left: 0.5em;
 }
 
-.dropdown-toggle:hover {
-    background-color: var(--color-annotation-bg);
-}
-
-.dropdown-menu {
-    position: absolute;
+/* Stream page dropdown menu (right-aligned, wider) */
+.primary-nav .dropdown-menu {
     right: 0;
-    top: 100%;
+    left: auto;
     width: 250px;
     max-height: 80vh;
     overflow-y: auto;
-    background-color: var(--color-background);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
-    z-index: 1000;
-    display: none;
     padding: var(--spacing-base);
 }
 
-.dropdown-menu.show {
+.primary-nav .dropdown-menu.show {
     display: block;
 }
 
-.dropdown-group {
+/* Dropdown group within stream navigation */
+.primary-nav .dropdown-group {
     margin-bottom: var(--spacing-base);
 }
 
-.dropdown-group:last-child {
+.primary-nav .dropdown-group:last-child {
     margin-bottom: 0;
 }
 
 .dropdown-group-heading {
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     padding-bottom: 0.5rem;
     margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--color-border);
 }
 
-.dropdown-item {
-    display: block;
-    padding: 0.5rem;
-    text-decoration: none;
-    color: var(--color-text);
-    border-radius: var(--border-radius);
-    transition: background-color 0.2s ease;
+.primary-nav .dropdown-item {
+    border-radius: var(--border-radius-base);
 }
 
-.dropdown-item:hover {
-    background-color: var(--color-annotation-bg);
-}
-
-.dropdown-item.active {
+.primary-nav .dropdown-item.active {
     background-color: rgba(var(--color-primary-rgb), 0.1);
     color: var(--color-primary);
 }
 
-/* Chain view styling */
+/* ==========================================================================
+   Chain View (Threaded Messages)
+   ========================================================================== */
+
 .chain-container {
     max-width: 95vw;
     margin: 0 auto;
@@ -136,10 +125,10 @@
 }
 
 .chain-message {
-    margin: var(--spacing-large) 0;
+    margin: var(--spacing-lg) 0;
     padding: var(--spacing-base);
     border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-base);
     background: var(--color-background);
     position: relative;
 }
@@ -149,29 +138,31 @@
     background: rgba(var(--color-primary-rgb), 0.05);
 }
 
+/* Message connector lines */
 .message-connector {
     position: absolute;
     left: 50%;
-    height: var(--spacing-large);
+    height: var(--spacing-lg);
     border-left: 2px dashed var(--color-border);
     transform: translateX(-50%);
 }
 
 .connector-top {
-    top: calc(-1 * var(--spacing-large));
+    top: calc(-1 * var(--spacing-lg));
 }
 
 .connector-bottom {
-    bottom: calc(-1 * var(--spacing-large));
+    bottom: calc(-1 * var(--spacing-lg));
 }
 
+/* Chain navigation header */
 .chain-navigation {
     top: var(--spacing-base);
-    z-index: 100;
-    background: var(--background-color);
+    z-index: var(--z-sticky);
+    background: var(--color-background);
     padding: var(--spacing-base);
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-large);
+    border-radius: var(--border-radius-base);
+    margin-bottom: var(--spacing-lg);
 }
 
 .chain-overview {
@@ -181,26 +172,33 @@
     justify-content: space-between;
 }
 
+/* ==========================================================================
+   Message Channel Badge
+   ========================================================================== */
+
 .message-channel {
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     padding: 0.2em 0.5em;
     border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-base);
 }
 
-/* Theme-specific adjustments */
+/* ==========================================================================
+   Theme Adjustments
+   ========================================================================== */
+
 /* Dark theme */
 [data-theme="dark"] .channel-link {
     color: var(--color-text);
 }
 
-[data-theme="dark"] .channel-link.active, 
+[data-theme="dark"] .channel-link.active,
 [data-theme="dark"] .dropdown-item.active {
     color: var(--color-primary);
 }
 
-/* High contrast theme */
+/* Grayscale/High-contrast theme */
 [data-theme="grayscale"] .stream-container {
     max-width: 95vw;
 }
@@ -224,16 +222,14 @@
     border-bottom: 2px solid var(--color-text);
 }
 
-[data-theme="grayscale"] .dropdown-toggle,
-[data-theme="grayscale"] .dropdown-menu {
-    border: 2px solid var(--color-text);
-}
-
 [data-theme="grayscale"] .message-channel {
     border: 2px solid currentColor;
 }
 
-/* Responsive design */
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
 @media screen and (max-width: 1024px) {
     [data-theme="grayscale"] .stream-message {
         grid-template-columns: 1fr;
@@ -251,23 +247,23 @@
     .primary-nav {
         flex-wrap: wrap;
     }
-    
-    .channel-dropdown {
+
+    .primary-nav .channel-dropdown {
         margin-left: 0;
         margin-top: 0.5rem;
         width: 100%;
     }
-    
-    .dropdown-toggle {
+
+    .primary-nav .dropdown-toggle {
         width: 100%;
         justify-content: space-between;
     }
-    
-    .dropdown-menu {
+
+    .primary-nav .dropdown-menu {
         width: 100%;
         max-width: 100%;
     }
-    
+
     .channel-link {
         padding: var(--spacing-base);
     }

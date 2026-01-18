@@ -1,0 +1,60 @@
+/* ==========================================================================
+   SUBMIT PAGE - Content submission form
+   ========================================================================== */
+
+/* Narrow container for form pages */
+.submit-container {
+    max-width: var(--max-width-narrow);
+    margin: 0 auto;
+    padding: var(--spacing-base);
+}
+
+/* Content textarea */
+#content {
+    min-height: 300px;
+    font-family: inherit;
+}
+
+/* Success message with view link */
+.success-container {
+    display: flex;
+    align-items: center;
+}
+
+.view-link {
+    display: inline-block;
+    margin-left: 10px;
+    color: var(--color-success);
+    text-decoration: none;
+}
+
+.view-link:hover {
+    text-decoration: underline;
+}
+
+/* Message preview */
+.message-preview {
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-base);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+}
+
+.preview-controls {
+    margin-top: var(--spacing-sm);
+    text-align: right;
+}
+
+/* Info box */
+.info-box {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-base);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+}
+
+.info-box h3 {
+    margin-top: 0;
+    color: var(--color-text);
+}

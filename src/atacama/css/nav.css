@@ -1,18 +1,22 @@
+/* ==========================================================================
+   NAVIGATION PAGE - Channel navigation listing
+   ========================================================================== */
+
 .navigation-container {
-    max-width: 1200px;
+    max-width: var(--max-width-content);
     margin: 0 auto;
-    padding: var(--spacing-large);
+    padding: var(--spacing-lg);
 }
 
 .nav-section {
-    margin-bottom: calc(var(--spacing-large) * 2);
+    margin-bottom: calc(var(--spacing-lg) * 2);
 }
 
 .nav-section h2 {
     color: var(--color-primary);
     border-bottom: 2px solid var(--color-border);
     padding-bottom: var(--spacing-base);
-    margin-bottom: var(--spacing-large);
+    margin-bottom: var(--spacing-lg);
 }
 
 .nav-list {
@@ -44,12 +48,12 @@
 /* Channel navigation grid */
 .channel-nav-container {
     display: grid;
-    gap: var(--spacing-large);
+    gap: var(--spacing-lg);
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .channel-nav-item {
-    padding: var(--spacing-large);
+    padding: var(--spacing-lg);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
     background: var(--color-card-bg);
