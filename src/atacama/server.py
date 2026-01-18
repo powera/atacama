@@ -118,9 +118,15 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
 
     # Configure session cookies for Trakaido to work across subdomains
     # This allows login credentials to be shared across lt.trakaido.com, zh.trakaido.com, etc.
-    # Only set SESSION_COOKIE_DOMAIN if explicitly configured AND matches trakaido.com pattern
+    # Login can be done from trakaido.com or auth.trakaido.com
     if blueprint_set == 'TRAKAIDO':
+        # Use environment variable if set, otherwise default to .trakaido.com for production
         cookie_domain = os.getenv('SESSION_COOKIE_DOMAIN')
+
+        if not cookie_domain and not constants.is_development_mode():
+            # Auto-configure for trakaido.com in production mode
+            cookie_domain = '.trakaido.com'
+            logger.info("Auto-configuring cookie domain for trakaido.com (production mode)")
 
         # Verify the cookie domain is actually for trakaido.com
         if cookie_domain and cookie_domain.endswith('.trakaido.com'):
@@ -133,7 +139,7 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
         elif cookie_domain:
             logger.warning(f"SESSION_COOKIE_DOMAIN '{cookie_domain}' does not match trakaido.com pattern - not setting cross-subdomain cookies")
         else:
-            logger.info("SESSION_COOKIE_DOMAIN not set - session cookies will be domain-specific")
+            logger.info("Development mode: session cookies will be domain-specific (localhost)")
 
     # Configure CORS for development mode
     if constants.is_development_mode():
