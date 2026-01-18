@@ -18,14 +18,6 @@
     audio_dir_name = "chinese"
     character_set = ""  # Will support all unicode characters for Chinese
 
-  # Korean language configuration
-  [languages.korean]
-    name = "Korean"
-    code = "ko"
-    subdomains = ["ko", "kr"]
-    audio_dir_name = "korean"
-    character_set = ""  # Will support all unicode characters for Korean
-
   # French language configuration
   [languages.french]
     name = "French"
@@ -33,6 +25,54 @@
     subdomains = ["fr"]
     audio_dir_name = "french"
     character_set = "aàâäbcçdeéèêëfghiîïjklmnoôöpqrstuùûüvwxyz"
+
+  # Spanish language configuration
+  [languages.spanish]
+    name = "Spanish"
+    code = "es"
+    subdomains = ["es"]
+    audio_dir_name = "spanish"
+    character_set = "aábcdeéfghiíjklmnñoópqrstuúüvwxyz"
+
+  # German language configuration
+  [languages.german]
+    name = "German"
+    code = "de"
+    subdomains = ["de"]
+    audio_dir_name = "german"
+    character_set = "aäbcdefghijklmnoöpqrstuüvwxyzß"
+
+  # Italian language configuration
+  [languages.italian]
+    name = "Italian"
+    code = "it"
+    subdomains = ["it"]
+    audio_dir_name = "italian"
+    character_set = "aàbcdeèéfghiìíjklmnoòópqrstuùúvwxyz"
+
+  # Portuguese language configuration
+  [languages.portuguese]
+    name = "Portuguese"
+    code = "pt"
+    subdomains = ["pt"]
+    audio_dir_name = "portuguese"
+    character_set = "aáâãàbcçdeéêfghiíjklmnoóôõpqrstuúüvwxyz"
+
+  # Dutch language configuration
+  [languages.dutch]
+    name = "Dutch"
+    code = "nl"
+    subdomains = ["nl"]
+    audio_dir_name = "dutch"
+    character_set = "aäbcdeëéfghiïíjklmnoöópqrstuüúvwxyz"
+
+  # Swedish language configuration
+  [languages.swedish]
+    name = "Swedish"
+    code = "sv"
+    subdomains = ["sv"]
+    audio_dir_name = "swedish"
+    character_set = "aäåbcdeéfghijklmnoöpqrstuvwxyz"
 
 [defaults]
   default_language = "lithuanian"
