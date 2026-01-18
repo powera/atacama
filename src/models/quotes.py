@@ -10,16 +10,14 @@ This module handles all quote-related functionality including:
 
 from typing import List, Dict, Optional, Tuple, Any, Union
 from datetime import datetime
-import re
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 from logging import getLogger
 
 from common.llm.openai_client import DEFAULT_MODEL, generate_chat
 from common.llm.telemetry import LLMUsage
 from common.llm.types import Schema, SchemaProperty
-from common.llm.lib import to_openai_schema, schema_from_dict
-from models.models import Email, email_quotes, Quote
+from models.models import Email, Quote
 
 logger = getLogger(__name__)
 
@@ -117,6 +115,48 @@ For fictional works, distinguish between the actual author and any fictional spe
     
     return response.structured_data, response.usage
 
+
+def extract_quote_details(
+    quote_text: str,
+    commentary: Optional[str] = None,
+    model: str = DEFAULT_MODEL,
+    return_full_response: bool = False
+) -> Union[Dict[str, Any], Any]:
+    """
+    Extract detailed information about a quote including author, source, and type.
+
+    Args:
+        quote_text: The text of the quote to analyze
+        commentary: Optional additional context or commentary about the quote
+        model: The model to use for generation
+        return_full_response: If True, returns the full response object instead of just structured data
+
+    Returns:
+        Dictionary containing the extracted quote details or the full response object
+    """
+    schema = _create_quote_details_schema()
+
+    prompt = f"""Extract detailed information about this quote:
+
+Quote: "{quote_text}"""
+
+    if commentary:
+        prompt += f"\n\nCommentary: {commentary}"
+
+    prompt += "\n\nProvide the most likely original author, source, date, and quote type."
+
+    response = generate_chat(
+        prompt=prompt,
+        model=model,
+        json_schema=schema,
+        context="""You are an expert in quotes and their origins.
+        Extract accurate information about the quote's source and type.
+        If you're not certain about a field, make an educated guess or leave it empty."""
+    )
+
+    return response if return_full_response else response.structured_data
+
+
 def enrich_quote_with_llm(
     db_session: Session,
     quote_id: int,
@@ -205,46 +245,6 @@ def enrich_quote_with_llm(
             logger.exception(f"Unexpected error enriching quote {quote_id}")
             raise Exception(f"Failed to process quote: {str(e)}") from e
         raise
-
-def extract_quote_details(
-    quote_text: str,
-    commentary: Optional[str] = None,
-    model: str = DEFAULT_MODEL,
-    return_full_response: bool = False
-) -> Union[Dict[str, Any], Any]:
-    """
-    Extract detailed information about a quote including author, source, and type.
-    
-    Args:
-        quote_text: The text of the quote to analyze
-        commentary: Optional additional context or commentary about the quote
-        model: The model to use for generation
-        return_full_response: If True, returns the full response object instead of just structured data
-        
-    Returns:
-        Dictionary containing the extracted quote details or the full response object
-    """
-    schema = _create_quote_details_schema()
-    
-    prompt = f"""Extract detailed information about this quote:
-    
-Quote: "{quote_text}"""
-    
-    if commentary:
-        prompt += f"\n\nCommentary: {commentary}"
-        
-    prompt += "\n\nProvide the most likely original author, source, date, and quote type."
-    
-    response = generate_chat(
-        prompt=prompt,
-        model=model,
-        json_schema=schema,
-        context="""You are an expert in quotes and their origins. 
-        Extract accurate information about the quote's source and type. 
-        If you're not certain about a field, make an educated guess or leave it empty."""
-    )
-    
-    return response if return_full_response else response.structured_data
 
 
 def validate_quote(quote_data: Dict) -> Tuple[bool, Optional[str]]:

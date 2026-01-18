@@ -10,8 +10,7 @@ This module sets up consistent logging across the entire application with featur
 """
 
 import logging
-import logging.handlers
-import os
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -68,7 +67,7 @@ def configure_logging(
         log_file_path = log_dir / 'atacama.log'
     
     # Create rotating file handler
-    file_handler = logging.handlers.RotatingFileHandler(
+    file_handler = RotatingFileHandler(
         log_file_path,
         maxBytes=1024 * 1024,  # 1MB per file
         backupCount=10,        # Keep 10 backup files

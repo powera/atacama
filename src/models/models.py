@@ -1,8 +1,8 @@
 from datetime import datetime
 import json
 from typing import Optional, List, Dict
-from sqlalchemy import String, Text, DateTime, ForeignKey, Boolean, Integer, Table, Column, Enum, event
-from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, joinedload, validates
+from sqlalchemy import String, Text, DateTime, ForeignKey, Boolean, Integer, Table, Column, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship, backref, validates
 import enum
 
 from sqlalchemy.orm import DeclarativeBase

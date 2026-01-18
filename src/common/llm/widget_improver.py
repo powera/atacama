@@ -3,9 +3,7 @@ from typing import Dict, Any, Optional, Tuple, List
 
 from common.base.logging_config import get_logger
 from common.llm.openai_client import generate_chat
-from common.llm.types import Response
-from common.llm.widget_schemas import WIDGET_IMPROVEMENT_SCHEMA, create_widget_improvement_schema # Import the dynamic schema creator
-from common.llm.lib import to_openai_schema
+from common.llm.widget_schemas import create_widget_improvement_schema
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)

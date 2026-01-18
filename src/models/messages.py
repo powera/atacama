@@ -1,17 +1,15 @@
 """Database functions for retrieving messages and message chains with configurable access control."""
 
-import json
-from flask import session, g
+from flask import g
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 
 from models.database import db
-from models import Email, User, Message
-from models.users import (get_user_email_domain, check_admin_approval,
-                         check_channel_access, get_user_allowed_channels)
-from common.config.channel_config import get_channel_manager, AccessLevel
+from models import Email, Message
+from models.users import check_channel_access, get_user_allowed_channels
+from common.config.channel_config import get_channel_manager
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 

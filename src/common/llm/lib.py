@@ -10,10 +10,40 @@ converted to the appropriate format for different LLM clients:
 - Ollama
 """
 
-import copy
 from typing import Dict, Any
 
 from common.llm.types import Schema, SchemaProperty
+
+
+def _recursive_clean_for_openai(schema_part: Dict[str, Any]) -> None:
+    """
+    Recursively clean a schema dict for OpenAI, removing properties that cause issues.
+
+    Args:
+        schema_part: A schema or part of a schema to clean
+    """
+    if not isinstance(schema_part, dict):
+        return
+
+    # Remove minimum/maximum from the current level
+    schema_part.pop("minimum", None)
+    schema_part.pop("maximum", None)
+
+    # Process properties if they exist
+    if "properties" in schema_part and isinstance(schema_part["properties"], dict):
+        for prop in schema_part["properties"].values():
+            if isinstance(prop, dict):
+                _recursive_clean_for_openai(prop)
+
+    # Process nested items for arrays
+    if "items" in schema_part and isinstance(schema_part["items"], dict):
+        _recursive_clean_for_openai(schema_part["items"])
+
+    # Check for nested 'items' with 'properties' (array of objects)
+    if "items" in schema_part and isinstance(schema_part["items"], dict) and "properties" in schema_part["items"]:
+        for prop in schema_part["items"]["properties"].values():
+            if isinstance(prop, dict):
+                _recursive_clean_for_openai(prop)
 
 
 def to_openai_schema(schema: Schema) -> Dict[str, Any]:
@@ -380,37 +410,6 @@ def to_ollama_schema(schema: Schema) -> Dict[str, Any]:
         result["properties"][name] = property_schema
     
     return result
-
-
-def _recursive_clean_for_openai(schema_part: Dict[str, Any]) -> None:
-    """
-    Recursively clean a schema dict for OpenAI, removing properties that cause issues.
-    
-    Args:
-        schema_part: A schema or part of a schema to clean
-    """
-    if not isinstance(schema_part, dict):
-        return
-    
-    # Remove minimum/maximum from the current level
-    schema_part.pop("minimum", None)
-    schema_part.pop("maximum", None)
-    
-    # Process properties if they exist
-    if "properties" in schema_part and isinstance(schema_part["properties"], dict):
-        for prop in schema_part["properties"].values():
-            if isinstance(prop, dict):
-                _recursive_clean_for_openai(prop)
-    
-    # Process nested items for arrays
-    if "items" in schema_part and isinstance(schema_part["items"], dict):
-        _recursive_clean_for_openai(schema_part["items"])
-        
-    # Check for nested 'items' with 'properties' (array of objects)
-    if "items" in schema_part and isinstance(schema_part["items"], dict) and "properties" in schema_part["items"]:
-        for prop in schema_part["items"]["properties"].values():
-            if isinstance(prop, dict):
-                _recursive_clean_for_openai(prop)
 
 
 def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
