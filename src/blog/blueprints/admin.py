@@ -6,11 +6,9 @@ from typing import Dict, List
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 
-import constants
 from common.base.logging_config import get_logger
-from common.config.channel_config import AccessLevel, get_channel_manager
+from common.config.channel_config import get_channel_manager
 from models.database import db
-from models.models import User, Email
 from models.users import (
     is_user_admin, get_user_by_id,
     grant_channel_access_by_id, revoke_channel_access_by_id, get_user_channel_access_by_id,

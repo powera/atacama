@@ -5,10 +5,9 @@ Syntax Tree (AST). It handles block structures, inline formatting, and special c
 types while gracefully recovering from malformed input.
 """
 
-from dataclasses import dataclass
 from typing import List, Optional, Iterator, Tuple
 from enum import Enum, auto
-from .lexer import Token, TokenType
+from aml_parser.lexer import Token, TokenType
 
 class NodeType(Enum):
     """Types of nodes in the Abstract Syntax Tree."""

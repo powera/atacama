@@ -10,11 +10,10 @@ from typing import Dict, Any, Optional, List, Tuple
 
 import constants
 
-from models.database import db
 from common.config.channel_config import init_channel_manager, get_channel_manager
 from common.config.domain_config import init_domain_manager, get_domain_manager
 from common.config.language_config import init_language_manager, get_language_manager
-from common.services.archive import init_archive_service, get_archive_service
+from common.services.archive import init_archive_service
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
 

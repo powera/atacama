@@ -1,9 +1,7 @@
 """Blueprint for handling site navigation."""
 
-import json
 from flask import Blueprint, render_template, url_for, g
 from flask.typing import ResponseReturnValue
-from sqlalchemy.orm import joinedload
 
 from atacama.decorators import require_auth, get_navigation_items
 from common.config.channel_config import get_channel_manager

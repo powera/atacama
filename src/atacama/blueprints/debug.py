@@ -11,9 +11,9 @@ from datetime import datetime
 
 # Third-party imports
 import psutil
-from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, url_for, g
+from flask import Blueprint, render_template, jsonify, current_app, session, request, redirect, g
 from flask.typing import ResponseReturnValue
-from sqlalchemy import text, engine
+from sqlalchemy import text
 
 # Local imports
 from atacama.decorators import require_auth, navigable
@@ -21,7 +21,7 @@ from models.database import db
 from common.config.channel_config import get_channel_manager
 from models.messages import check_channel_access
 from common.base.logging_config import get_logger
-from models.models import Article, ReactWidget, Email, Quote, MessageType
+from models.models import Article, ReactWidget, Email, Quote
 
 logger = get_logger(__name__)
 

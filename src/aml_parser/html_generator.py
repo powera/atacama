@@ -7,7 +7,6 @@ maintaining separation between parsing and output generation.
 
 from typing import Dict, Optional, List
 from aml_parser.parser import Node, NodeType, ColorNode, ListItemNode
-from aml_parser.lexer import Token, TokenType
 from aml_parser.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
     create_list_container, create_multiline_block, create_literal_text,
@@ -18,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from aml_parser.chess import fen_to_board
 from models.quotes import save_quotes
-from models import Email, Quote
+from models import Email
 
 class HTMLGenerator:
     """

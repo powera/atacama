@@ -1,6 +1,5 @@
 """Chess board processing and rendering functionality."""
 
-import re
 from typing import Dict, Match, Tuple, Optional
 
 def get_piece_map() -> Dict[str, str]:

@@ -1,22 +1,20 @@
 """Channel statistics functionality for viewing metrics about each channel."""
 
-import json
 from typing import Dict, List, Tuple
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import g, render_template
 from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select, desc
 
-import constants
 from atacama.decorators import optional_auth, navigable
-from common.config.channel_config import AccessLevel, get_channel_manager
+from common.config.channel_config import get_channel_manager
 from models.database import db
 from common.base.logging_config import get_logger
 from models.models import Email, User
 from models.messages import get_user_allowed_channels
-from .shared import statistics_bp
+from blog.blueprints.shared import statistics_bp
 
 logger = get_logger(__name__)
 

@@ -1,26 +1,25 @@
-from flask import Blueprint, render_template, abort, flash, redirect, url_for, g, request, jsonify
+from flask import render_template, abort, flash, redirect, url_for, g, request, jsonify
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
 from datetime import datetime
 import hashlib
 import threading
 import time
 import uuid
 from models.database import db
-from models.models import ReactWidget, User, WidgetVersion
+from models.models import ReactWidget, WidgetVersion
 from models.messages import check_channel_access
-from atacama.decorators import navigable, optional_auth, require_auth, require_admin
+from atacama.decorators import navigable, optional_auth, require_admin
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
 from common.config.domain_config import get_domain_manager
 from common.llm.widget_improver import widget_improver
 from common.llm.widget_initiator import widget_initiator
 from common.llm.widget_schemas import DUAL_FILE_WIDGET_SCHEMA
-from common.llm.types import Schema, SchemaProperty
+from common.llm.types import Schema
 from react_compiler.lib import sanitize_widget_title_for_component_name
 
 from models.messages import get_user_allowed_channels
-from .shared import widgets_bp
+from blog.blueprints.shared import widgets_bp
 
 logger = get_logger(__name__)
 

@@ -8,7 +8,7 @@ from flask import render_template, session, g, request, jsonify
 
 from models.database import db
 from models import get_or_create_user
-from models.models import User, UserToken
+from models.models import UserToken
 from common.config.user_config import get_user_config_manager
 
 logger = logging.getLogger(__name__)

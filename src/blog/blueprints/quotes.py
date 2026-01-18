@@ -1,6 +1,5 @@
-from flask import Blueprint, request, render_template, url_for, redirect
+from flask import request, render_template, url_for, redirect
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
 from typing import Dict, Any
 from common.base.logging_config import get_logger
 
@@ -15,7 +14,7 @@ from models.quotes import (
     search_quotes,
     QuoteValidationError
 )
-from .shared import quotes_bp
+from blog.blueprints.shared import quotes_bp
 
 logger = get_logger(__name__)
 
