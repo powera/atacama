@@ -1,10 +1,9 @@
 """Auth tools. The require_auth web decorator."""
 
-import os
 import logging
 from functools import wraps
 from datetime import datetime, timedelta
-from flask import render_template, session, g, request, jsonify
+from flask import redirect, render_template, session, g, request, jsonify, url_for
 
 from models.database import db
 from models import get_or_create_user
@@ -92,8 +91,8 @@ def require_auth(f):
                     'code': 'UNAUTHORIZED'
                 }), 401
             else:
-                return render_template('login.html', 
-                                   client_id=os.getenv('GOOGLE_CLIENT_ID'))
+                # Redirect to login with current URL as next parameter
+                return redirect(url_for('auth.login', next=request.url))
         
         return f(*args, **kwargs)
 
@@ -111,8 +110,8 @@ def require_admin(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
-            return render_template('login.html', 
-                                   client_id=os.getenv('GOOGLE_CLIENT_ID'))
+            # Redirect to login with current URL as next parameter
+            return redirect(url_for('auth.login', next=request.url))
                                
         _populate_user()
         
