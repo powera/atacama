@@ -243,6 +243,11 @@ def create_app(testing: bool = False, blueprint_set: str = 'BLOG') -> Flask:
     from atacama.blueprints.errors import errors_bp
     app.register_blueprint(errors_bp)
 
+    # Prometheus metrics blueprint
+    from atacama.blueprints.metrics import metrics_bp, setup_request_metrics
+    app.register_blueprint(metrics_bp)
+    setup_request_metrics(app)
+
     return app
 
 # The app instance will be created when needed

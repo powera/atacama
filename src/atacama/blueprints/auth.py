@@ -9,6 +9,7 @@ from flask import Blueprint, request, render_template, session, redirect, url_fo
 from flask.typing import ResponseReturnValue
 
 from atacama.decorators import require_auth
+from atacama.blueprints.metrics import record_login, record_logout
 from models.database import db
 from models import get_or_create_user
 from models.models import UserToken
@@ -60,6 +61,7 @@ def login() -> ResponseReturnValue:
 @auth_bp.route('/logout')
 def logout() -> ResponseReturnValue:
     """Clear user session and redirect to login."""
+    record_logout()
     session.clear()
     return redirect(url_for('auth.login'))
 
@@ -90,6 +92,7 @@ def api_logout() -> ResponseReturnValue:
                 db_session.delete(token_obj)
                 db_session.commit()
                 logger.info(f"Revoked auth token for user {user_email}")
+                record_logout()
                 return jsonify({'success': True, 'message': 'Token revoked'}), 200
 
             return jsonify({'success': False, 'error': 'Token not found'}), 400
@@ -173,6 +176,7 @@ def callback() -> ResponseReturnValue:
     # Verify token and get user info
     user_info = verify_token(token)
     if not user_info:
+        record_login('google', success=False)
         return redirect(url_for('auth.login'))
         
     try:
@@ -188,6 +192,9 @@ def callback() -> ResponseReturnValue:
                 'id': db_user.id
             }
             session.permanent = True
+
+            # Record successful login
+            record_login('google', success=True)
             
             # Initialize user's channel preferences if needed
             if not db_user.channel_preferences:

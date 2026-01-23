@@ -1,5 +1,6 @@
 """Database connection and session management."""
 
+import time
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -80,11 +81,11 @@ class Database:
     def session(self) -> Generator[Session, None, None]:
         """
         Provide a transactional scope around a series of operations.
-        
+
         Usage:
             with db.session() as session:
                 session.query(...)
-        
+
         :yield: SQLAlchemy session
         :raises: DatabaseError if database not initialized
         :raises: SQLAlchemyError if database operations fail
@@ -94,20 +95,34 @@ class Database:
                 "Cannot create database session before system initialization. "
                 "Call either constants.init_testing() or constants.init_production()"
             )
-            
+
         if not self.initialized and not self.initialize():
             raise DatabaseError("Database initialization failed")
-            
+
         session = self._session_factory()
+        start_time = time.time()
         try:
             yield session
             session.commit()
         except Exception as e:
             session.rollback()
             logger.error(f"Session error: {str(e)}")
+            # Record database error metric
+            try:
+                from atacama.blueprints.metrics import record_db_error
+                record_db_error()
+            except ImportError:
+                pass  # Metrics not available (e.g., during testing)
             raise
         finally:
             session.close()
+            # Record session duration metric
+            duration = time.time() - start_time
+            try:
+                from atacama.blueprints.metrics import record_db_session_duration
+                record_db_session_duration(duration)
+            except ImportError:
+                pass  # Metrics not available (e.g., during testing)
 
     def get_session(self) -> Optional[sessionmaker]:
         """

@@ -17,6 +17,7 @@ from sqlalchemy import text
 
 # Local imports
 from atacama.decorators import require_auth, navigable
+from atacama.blueprints.metrics import record_login, record_logout
 from models.database import db
 from common.config.channel_config import get_channel_manager
 from models.messages import check_channel_access
@@ -318,7 +319,8 @@ def debug_login() -> ResponseReturnValue:
         'email': email,
         'provider': 'debug'
     }
-    
+
+    record_login('debug', success=True)
     logger.info(f"Debug login for user {email}")
     return redirect('/')
 
@@ -331,7 +333,8 @@ def debug_logout() -> ResponseReturnValue:
     """
     if os.getenv('FLASK_ENV') != 'development':
         return "Debug logout only available in development mode", 403
-        
+
+    record_logout()
     session.clear()
     logger.info("Debug logout")
     return redirect('/')
