@@ -140,6 +140,60 @@ http_errors_total = Counter(
     ['status_class']
 )
 
+# Authentication metrics
+auth_logins_total = Counter(
+    'atacama_auth_logins_total',
+    'Total number of login attempts',
+    ['provider', 'status']  # provider: google, debug; status: success, failure
+)
+
+auth_logouts_total = Counter(
+    'atacama_auth_logouts_total',
+    'Total number of logouts'
+)
+
+# Database latency metrics
+db_session_duration_seconds = Histogram(
+    'atacama_db_session_duration_seconds',
+    'Database session duration in seconds',
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)
+)
+
+db_query_errors_total = Counter(
+    'atacama_db_query_errors_total',
+    'Total number of database query errors'
+)
+
+
+def record_login(provider: str, success: bool):
+    """
+    Record a login attempt for metrics.
+
+    :param provider: Authentication provider (e.g., 'google', 'debug')
+    :param success: Whether the login was successful
+    """
+    status = 'success' if success else 'failure'
+    auth_logins_total.labels(provider=provider, status=status).inc()
+
+
+def record_logout():
+    """Record a logout event for metrics."""
+    auth_logouts_total.inc()
+
+
+def record_db_session_duration(duration: float):
+    """
+    Record database session duration for metrics.
+
+    :param duration: Session duration in seconds
+    """
+    db_session_duration_seconds.observe(duration)
+
+
+def record_db_error():
+    """Record a database error for metrics."""
+    db_query_errors_total.inc()
+
 
 def update_system_metrics():
     """Update system-level metrics (CPU, memory, disk, network)."""
