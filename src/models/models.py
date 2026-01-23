@@ -244,7 +244,6 @@ class ReactWidget(Message):
 
     # Widget-specific settings
     props: Mapped[Optional[Dict]] = mapped_column(Text)  # JSON-encoded default props
-    dependencies: Mapped[Optional[Dict]] = mapped_column(Text)  # External dependencies needed
     config: Mapped[Optional[Dict]] = mapped_column(Text)  # Widget configuration
 
     # Current active version
@@ -254,8 +253,8 @@ class ReactWidget(Message):
     versions: Mapped[List["WidgetVersion"]] = relationship("WidgetVersion", back_populates="widget", foreign_keys="[WidgetVersion.widget_id]", cascade="all, delete-orphan")
     active_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", foreign_keys=[active_version_id], post_update=True)
 
-    def build(self, development_mode: bool = None):
-        """Build the widget code into a browser-ready bundle."""        
+    def build(self, development_mode: Optional[bool] = None):
+        """Build the widget code into a browser-ready bundle."""
         builder = WidgetBuilder()
         widget_name = self.title.replace(' ', '')
 
@@ -336,7 +335,7 @@ class WidgetVersion(Base):
     widget: Mapped["ReactWidget"] = relationship("ReactWidget", back_populates="versions", foreign_keys=[widget_id])
     previous_version: Mapped[Optional["WidgetVersion"]] = relationship("WidgetVersion", remote_side=[id])
 
-    def build(self, development_mode: bool = None):
+    def build(self, development_mode: Optional[bool] = None):
         """Build this version of the widget code."""
         import hashlib
 

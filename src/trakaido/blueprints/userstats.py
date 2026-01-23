@@ -628,7 +628,7 @@ def merge_local_stats() -> ResponseReturnValue:
 
         # Merge each word from local stats
         all_word_keys = set(server_word_stats.keys()) | set(local_word_stats.keys())
-        merged_stats = {"stats": {}}
+        merged_stats: Dict[str, Any] = {"stats": {}}
 
         for word_key in all_word_keys:
             server_word = server_word_stats.get(word_key, {})

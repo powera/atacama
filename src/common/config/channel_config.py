@@ -6,7 +6,7 @@ import tomli
 
 import constants
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
@@ -49,10 +49,10 @@ class ChannelConfig:
 class ChannelManager:
     """Manages channel configuration and validation."""
     
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: Union[str, Path]):
         """
         Initialize channel manager with configuration file.
-        
+
         :param config_path: Path to TOML configuration file
         """
         self.config_path = config_path
@@ -209,7 +209,7 @@ DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "channels.toml"
 # Global channel manager instance
 _channel_manager = None
 
-def init_channel_manager(config_path: Optional[str] = None) -> ChannelManager:
+def init_channel_manager(config_path: Optional[Union[str, Path]] = None) -> ChannelManager:
     """
     Initialize global channel manager instance.
     

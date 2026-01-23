@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 @dataclass
 class ArchiveConfig:
     """Configuration for archive.org integration."""
-    excluded_domains: List[str] = None
+    excluded_domains: Optional[List[str]] = None
     access_key: Optional[str] = None
     secret_key: Optional[str] = None
     
@@ -86,7 +86,7 @@ class ArchiveService:
                 domain = domain.split(':')[0]
                 
             # Check if domain is in excluded list
-            for excluded in self.config.excluded_domains:
+            for excluded in self.config.excluded_domains or []:
                 if domain == excluded.lower() or domain.endswith('.' + excluded.lower()):
                     return False
                     
@@ -197,7 +197,7 @@ class ArchiveService:
             logger.error(f"Unexpected error submitting URL to archive.org: {url}, error: {e}")
             return False
     
-    def submit_urls_to_archive(self, urls: Set[str], delay_between_requests: float = None) -> int:
+    def submit_urls_to_archive(self, urls: Set[str], delay_between_requests: Optional[float] = None) -> int:
         """
         Submit multiple URLs to archive.org for archiving.
         
@@ -237,7 +237,7 @@ class ArchiveService:
         logger.info(f"Archive submission complete: {successful_submissions}/{len(urls)} URLs successfully submitted")
         return successful_submissions
     
-    def archive_urls_from_content(self, urls=None, content: str = None, processed_content: str = None) -> int:
+    def archive_urls_from_content(self, urls: Optional[List[str]] = None, content: Optional[str] = None, processed_content: Optional[str] = None) -> int:
         """
         Archive all URLs found in message content (always in production, regardless of domain/channel).
         

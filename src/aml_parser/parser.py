@@ -29,21 +29,21 @@ class NodeType(Enum):
 
 class Node:
     """Base class for all AST nodes with position tracking."""
-    def __init__(self, type: NodeType, token: Optional[Token] = None, children: List['Node'] = None):
+    def __init__(self, type: NodeType, token: Optional[Token] = None, children: Optional[List['Node']] = None):
         self.type = type
         self.token = token
         self.children = children or []
 
 class ColorNode(Node):
     """Node for color-formatted content."""
-    def __init__(self, color: str, is_line: bool, token: Token, children: List[Node] = None):
+    def __init__(self, color: str, is_line: bool, token: Token, children: Optional[List[Node]] = None):
         super().__init__(NodeType.COLOR_BLOCK, token, children)
         self.color = color
         self.is_line = is_line
 
 class ListItemNode(Node):
     """Node for list items with marker type."""
-    def __init__(self, marker_type: str, token: Token, children: List[Node] = None):
+    def __init__(self, marker_type: str, token: Token, children: Optional[List[Node]] = None):
         super().__init__(NodeType.LIST_ITEM, token, children)
         self.marker_type = marker_type
 

@@ -6,10 +6,10 @@ from typing import Dict, List, Callable, Any, Optional
 
 # Store for registered navigable routes
 # Structure: {blueprint_name: [{route_info}, {route_info}, ...]}
-_navigable_routes = {}
+_navigable_routes: Dict[str, List[Dict[str, Any]]] = {}
 
 # Store for per-channel navigable routes
-_per_channel_routes = {}
+_per_channel_routes: Dict[str, List[Dict[str, Any]]] = {}
 
 def _detect_blueprint_name(route_func: Callable) -> str:
     """
@@ -215,7 +215,7 @@ def get_navigation_items(user: Optional[Any] = None) -> Dict[str, List[Dict[str,
     from flask import url_for
     
     # Initialize navigation structure
-    nav_items = {
+    nav_items: Dict[str, List[Dict[str, Any]]] = {
         'main': [],
         'channels': [],
         'admin': [],

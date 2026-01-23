@@ -164,7 +164,7 @@ def calculate_progress_delta(current_stats: DailyStats, baseline_stats: DailySta
     - contextualExposure (sentences)
     - exposed words (new and total)
     """
-    progress = {
+    progress: Dict[str, Any] = {
         "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
         "contextualExposure": {activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES},
         "exposed": {"new": 0, "total": 0}

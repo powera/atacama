@@ -163,15 +163,15 @@ Ensure the widget provides an excellent mobile user experience.'''
         return css_content
 
     def improve_widget(
-        self, 
-        current_code: str, 
-        prompt: str, 
+        self,
+        current_code: str,
+        prompt: str,
         improvement_type: str = 'custom',
         widget_title: str = "Widget",
         use_advanced_model: bool = False,
-        data_file: str = None,
-        additional_files: Dict[str, str] = None,
-        target_files: List[str] = None
+        data_file: Optional[str] = None,
+        additional_files: Optional[Dict[str, str]] = None,
+        target_files: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
         Improve an existing React widget based on a prompt, potentially updating multiple files.

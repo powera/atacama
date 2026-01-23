@@ -1,6 +1,7 @@
 from flask import render_template, abort, flash, redirect, url_for, g, request, jsonify
 from flask.typing import ResponseReturnValue
 from datetime import datetime
+from typing import Any, Dict, Optional
 import hashlib
 import threading
 import time
@@ -24,7 +25,7 @@ from blog.blueprints.shared import widgets_bp
 logger = get_logger(__name__)
 
 # Global storage for improvement jobs
-improvement_jobs = {}
+improvement_jobs: Dict[str, Dict[str, Any]] = {}
 
 # OpenAI API Schema Requirements:
 # - All schema properties must be properly typed using Schema and SchemaProperty from common.llm.types
@@ -55,7 +56,7 @@ def validate_llm_parameters(params: dict) -> dict:
     return cleaned
 
 
-def generate_widget_content_hash(code: str, data_file: str = None) -> str:
+def generate_widget_content_hash(code: str, data_file: Optional[str] = None) -> str:
     """
     Generate a composite hash for widget content including both code and data file.
     This ensures that changes to either the code or data file create a unique version.

@@ -14,7 +14,7 @@ from models.users import (
     grant_channel_access_by_id, revoke_channel_access_by_id, get_user_channel_access_by_id,
     get_all_users
 )
-from models.messages import get_message_by_id
+from models.messages import get_raw_message_by_id
 from atacama.decorators import require_auth, navigable
 
 logger = get_logger(__name__)
@@ -153,7 +153,7 @@ def rechannel_message(message_id: int) -> ResponseReturnValue:
         return redirect(url_for('content.get_message', message_id=message_id))
         
     with db.session() as db_session:
-        message = get_message_by_id(db_session, message_id)
+        message = get_raw_message_by_id(db_session, message_id)
         
         if not message:
             flash('Message not found')

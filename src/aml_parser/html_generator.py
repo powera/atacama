@@ -56,9 +56,9 @@ class HTMLGenerator:
 
     def _generate_document(self, node: Node) -> str:
         """Generate HTML for the root document node."""
-        final_html_segments = []
-        current_paragraph_parts = []
-        current_list_items_for_ul = []  # Stores full <li> HTML strings
+        final_html_segments: List[str] = []
+        current_paragraph_parts: List[str] = []
+        current_list_items_for_ul: List[str] = []  # Stores full <li> HTML strings
         active_list_marker_type = None  # e.g., 'bullet', 'number' from ListItemNode.marker_type
 
         def flush_paragraph():
@@ -187,8 +187,8 @@ class HTMLGenerator:
     
     def _generate_mlq(self, node: Node) -> str:
         """Generate HTML for a multi-line quote block."""
-        paragraphs = []
-        current_paragraph_parts = []
+        paragraphs: List[str] = []
+        current_paragraph_parts: List[str] = []
         
         for child in node.children:
             # Check if child is a NEWLINE separating paragraphs within MLQ

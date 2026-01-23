@@ -63,7 +63,7 @@ def get_trakaido_audio_base_dir() -> str:
 
 # Database path - will be updated when testing mode is set
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
-_TEST_DB_PATH: str = "sqlite:///:memory:"
+_TEST_DB_PATH: Optional[str] = "sqlite:///:memory:"
 DB_PATH = _PROD_DB_PATH
 
 def init_testing(test_db_path: Optional[str] = None, service: Optional[str] = None) -> None:
@@ -79,7 +79,7 @@ def init_testing(test_db_path: Optional[str] = None, service: Optional[str] = No
     SERVICE = service
     if test_db_path:
         _TEST_DB_PATH = test_db_path
-    DB_PATH = _TEST_DB_PATH
+    DB_PATH = _TEST_DB_PATH or "sqlite:///:memory:"
     
     # Update log directories based on service
     LOG_DIR = get_log_dir()

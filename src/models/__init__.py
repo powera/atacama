@@ -21,10 +21,6 @@ from .database import (
 
 # Import message-related functions
 from .messages import (
-    get_user_email_domain,
-    check_admin_approval,
-    check_channel_access,
-    get_user_allowed_channels,
     check_message_access,
     get_message_by_id,
     get_message_chain,
@@ -48,6 +44,10 @@ from .quotes import (
 
 from .users import (
     get_or_create_user,
+    get_user_email_domain,
+    check_admin_approval,
+    check_channel_access,
+    get_user_allowed_channels,
 )
 
 __all__ = [

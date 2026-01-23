@@ -2,6 +2,7 @@
 
 # Standard library imports
 import os
+from typing import Any, Dict
 
 # Third-party imports
 from flask import Response, g, jsonify
@@ -9,7 +10,8 @@ from flask import Response, g, jsonify
 # Local application imports
 from atacama.decorators.auth import optional_auth
 from trakaido.blueprints.shared import trakaido_bp, logger
-from trakaido.blueprints.userstats import user_has_activity_stats, USERSTATS_API_DOCS
+from trakaido.blueprints.userstats import USERSTATS_API_DOCS
+from trakaido.blueprints.stats_schema import user_has_activity_stats
 from trakaido.blueprints.userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
 
 ##############################################################################
@@ -53,7 +55,7 @@ def get_user_info() -> Response:
         # The specific implementation depends on how authentication is handled
         is_authenticated = hasattr(g, 'user') and g.user is not None
         
-        response_data = {
+        response_data: Dict[str, Any] = {
             "authenticated": is_authenticated,
             "can_save_journey_stats": is_authenticated,
             "can_save_corpus_choices": is_authenticated,

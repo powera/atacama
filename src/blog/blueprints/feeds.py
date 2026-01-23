@@ -148,8 +148,8 @@ def sitemap() -> ResponseReturnValue:
         
         # Add public messages that are allowed on this domain
         for message in messages:
-            config = channel_manager.get_channel_config(message.channel)
-            if (config and config.access_level == AccessLevel.PUBLIC and 
+            msg_config = channel_manager.get_channel_config(message.channel)
+            if (msg_config and msg_config.access_level == AccessLevel.PUBLIC and
                 domain_manager.is_channel_allowed(current_domain, message.channel)):
                 urls.append({
                     'loc': f"{base_url}/messages/{message.id}",
@@ -202,7 +202,7 @@ def rss_feed(channel: Optional[str] = None) -> ResponseReturnValue:
             return handle_error("404", "Channel Not Found", "The requested channel does not exist")
         if config.access_level != AccessLevel.PUBLIC:
             return handle_error("403", "Access Denied", "This channel is not public")
-        site_title += f" - {config.get_display_name(channel)}"
+        site_title += f" - {config.get_display_name()}"
         
     with db.session() as db_session:
         # Get recent public messages, optionally filtered by channel

@@ -5,7 +5,7 @@ import tempfile
 import shutil
 import re
 from pathlib import Path
-from typing import Dict, Tuple, List, Optional
+from typing import Any, Dict, Tuple, List, Optional
 
 import constants
 from common.base.logging_config import get_logger
@@ -44,7 +44,7 @@ class WidgetBuilder:
         'lucide-react': 'LucideReact'
     }
 
-    def __init__(self, build_dir: str = None):
+    def __init__(self, build_dir: Optional[str] = None):
         self.build_dir = build_dir or os.path.join(tempfile.gettempdir(), 'widget_builds')
         Path(self.build_dir).mkdir(parents=True, exist_ok=True)
         
@@ -337,7 +337,7 @@ class WidgetBuilder:
             logger.info(f"No existing export found, adding export for {widget_name}")
             return f"{code}\n\n// Export the component\nexport default {widget_name};"
     
-    def build_widget(self, widget_code: str, widget_name: str, dependencies: List[str] = None, external_dependencies: List[str] = None, development_mode: bool = False, data_file: str = None) -> Tuple[bool, str, str]:
+    def build_widget(self, widget_code: str, widget_name: str, dependencies: Optional[List[str]] = None, external_dependencies: Optional[List[str]] = None, development_mode: bool = False, data_file: Optional[str] = None) -> Tuple[bool, str, str]:
         """
         Build a widget with webpack to create a browser-ready bundle.
         
@@ -360,7 +360,7 @@ class WidgetBuilder:
                 logger.info(f"Detected built-in hooks needed: {', '.join(hooks_needed)}")
             
             # Build package.json with only required dependencies
-            package_json = {
+            package_json: Dict[str, Any] = {
                 "name": f"widget-{widget_name}",
                 "version": "1.0.0",
                 "private": True,

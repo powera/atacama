@@ -203,7 +203,7 @@ class OpenAIClient:
             token_limit = max_tokens
         else:
             token_limit = 512 if brief else 4096
-        kwargs = {
+        kwargs: Dict[str, Any] = {
             "model": model,
             "input": prompt,
         }
@@ -252,7 +252,7 @@ class OpenAIClient:
                 kwargs["temperature"] = 0.15
             
             # Use text.format for structured outputs in Responses API
-            text_config = {
+            text_config: Dict[str, Any] = {
                 "format": {
                     "type": "json_schema",
                     "name": "Details",
