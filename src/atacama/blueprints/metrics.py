@@ -2,10 +2,11 @@
 Prometheus metrics blueprint for monitoring and observability.
 
 This blueprint exposes a /metrics endpoint that returns metrics in Prometheus format.
-Metrics include system stats (CPU, memory, disk), application stats (uptime, content counts),
-and HTTP request metrics.
+Metrics include system stats (CPU, memory, disk, network), application stats (uptime,
+content counts), process stats (threads, file descriptors), and HTTP request metrics.
 """
 
+import os
 import time
 
 import psutil
@@ -28,10 +29,13 @@ metrics_bp = Blueprint('metrics', __name__)
 # Track server start time
 _SERVER_START_TIME = time.time()
 
+# Get process for process-specific metrics
+_PROCESS = psutil.Process(os.getpid())
+
 # System metrics
 cpu_usage_gauge = Gauge(
     'atacama_cpu_usage_percent',
-    'Current CPU usage percentage'
+    'Current CPU usage percentage (non-blocking snapshot)'
 )
 
 memory_usage_gauge = Gauge(
@@ -62,6 +66,38 @@ disk_used_bytes = Gauge(
 disk_total_bytes = Gauge(
     'atacama_disk_total_bytes',
     'Total disk space in bytes'
+)
+
+# Network I/O metrics
+network_bytes_sent = Gauge(
+    'atacama_network_bytes_sent_total',
+    'Total bytes sent over network'
+)
+
+network_bytes_recv = Gauge(
+    'atacama_network_bytes_recv_total',
+    'Total bytes received over network'
+)
+
+# Process-specific metrics
+process_cpu_percent = Gauge(
+    'atacama_process_cpu_percent',
+    'CPU usage of this process'
+)
+
+process_memory_bytes = Gauge(
+    'atacama_process_memory_bytes',
+    'Memory usage of this process in bytes'
+)
+
+process_threads = Gauge(
+    'atacama_process_threads',
+    'Number of threads in this process'
+)
+
+process_open_fds = Gauge(
+    'atacama_process_open_fds',
+    'Number of open file descriptors'
 )
 
 # Application metrics
@@ -97,11 +133,20 @@ http_request_duration_seconds = Histogram(
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 )
 
+# Error tracking
+http_errors_total = Counter(
+    'atacama_http_errors_total',
+    'Total number of HTTP errors (4xx and 5xx)',
+    ['status_class']
+)
+
 
 def update_system_metrics():
-    """Update system-level metrics (CPU, memory, disk)."""
+    """Update system-level metrics (CPU, memory, disk, network)."""
     try:
-        cpu_usage_gauge.set(psutil.cpu_percent(interval=0.1))
+        # Use interval=None for non-blocking CPU sampling (returns cached value)
+        # This avoids the 100ms+ blocking call on each scrape
+        cpu_usage_gauge.set(psutil.cpu_percent(interval=None))
 
         memory = psutil.virtual_memory()
         memory_usage_gauge.set(memory.percent)
@@ -112,8 +157,30 @@ def update_system_metrics():
         disk_usage_gauge.set(disk.percent)
         disk_used_bytes.set(disk.used)
         disk_total_bytes.set(disk.total)
+
+        # Network I/O counters
+        net_io = psutil.net_io_counters()
+        network_bytes_sent.set(net_io.bytes_sent)
+        network_bytes_recv.set(net_io.bytes_recv)
     except Exception as e:
         logger.warning(f"Error updating system metrics: {e}")
+
+
+def update_process_metrics():
+    """Update process-specific metrics (CPU, memory, threads, file descriptors)."""
+    try:
+        process_cpu_percent.set(_PROCESS.cpu_percent())
+        process_memory_bytes.set(_PROCESS.memory_info().rss)
+        process_threads.set(_PROCESS.num_threads())
+
+        # File descriptors (Unix only)
+        try:
+            process_open_fds.set(_PROCESS.num_fds())
+        except AttributeError:
+            # num_fds() not available on Windows
+            pass
+    except Exception as e:
+        logger.warning(f"Error updating process metrics: {e}")
 
 
 def update_application_metrics():
@@ -170,6 +237,7 @@ def metrics():
     """
     # Update all metrics before generating output
     update_system_metrics()
+    update_process_metrics()
     update_application_metrics()
     update_database_metrics()
 
@@ -223,5 +291,10 @@ def setup_request_metrics(app):
                 method=request.method,
                 endpoint=endpoint
             ).observe(duration)
+
+            # Track errors by class (4xx, 5xx)
+            if response.status_code >= 400:
+                status_class = '4xx' if response.status_code < 500 else '5xx'
+                http_errors_total.labels(status_class=status_class).inc()
 
         return response

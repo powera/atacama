@@ -133,7 +133,8 @@ spaceship_http_request_duration_seconds = Histogram(
 def update_spaceship_metrics():
     """Update Spaceship-specific metrics."""
     spaceship_uptime_seconds.set(time.time() - _SERVER_START_TIME)
-    spaceship_cpu_usage_percent.set(psutil.cpu_percent(interval=0.1))
+    # Use interval=None for non-blocking CPU sampling (returns cached value)
+    spaceship_cpu_usage_percent.set(psutil.cpu_percent(interval=None))
     spaceship_memory_usage_percent.set(psutil.virtual_memory().percent)
 
     # Calculate image age
