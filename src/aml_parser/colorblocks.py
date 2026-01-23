@@ -73,11 +73,11 @@ def create_chinese_annotation(hanzi: str) -> str:
     try:
         from aml_parser import pinyin
         metadata = pinyin.default_processor.get_annotation(hanzi)
-        
+
         attrs = []
-        if metadata.pinyin:
+        if metadata is not None and metadata.pinyin:
             attrs.append(f'data-pinyin="{metadata.pinyin}"')
-        if metadata.definition:
+        if metadata is not None and metadata.definition:
             attrs.append(f'data-definition="{metadata.definition}"')
             
         attr_str = ' ' + ' '.join(attrs) if attrs else ''

@@ -203,7 +203,7 @@ class AtacamaParser:
         ))
         
         parsed_children = []
-        while self.peek() and self.peek().type != TokenType.MLQ_END:
+        while (peeked := self.peek()) is not None and peeked.type != TokenType.MLQ_END:
             if node := self.parse_inline_content():
                 parsed_children.append(node)
             else:
@@ -231,13 +231,15 @@ class AtacamaParser:
 
         saved_position = self.position
         color_token = self.consume()
+        assert color_token is not None  # Checked by peek() above
         color = color_token.value.strip('<>')
 
         whitespace_tokens = []
-        while self.peek() and self.peek().type == TokenType.TEXT and self.peek().value.isspace():
+        while (peeked := self.peek()) is not None and peeked.type == TokenType.TEXT and peeked.value.isspace():
             whitespace_tokens.append(self.consume())
 
-        if not self.peek() or self.peek().type != TokenType.MLQ_START:
+        peeked = self.peek()
+        if peeked is None or peeked.type != TokenType.MLQ_START:
             self.position = saved_position
             return None
 
@@ -248,7 +250,7 @@ class AtacamaParser:
         
         # If parse_mlq returned a valid MLQ node (not its text fallback)
         if mlq.type == NodeType.MLQ:
-            mlq.color = color # Add color attribute to the MLQ node
+            setattr(mlq, 'color', color)  # Add color attribute to the MLQ node
             return mlq
         else: # parse_mlq returned a text fallback, meaning the MLQ wasn't properly closed.
               # In this context, the colored_mlq construct is invalid. Backtrack.
@@ -274,8 +276,8 @@ class AtacamaParser:
 
         self.consume()  # Consume marker
         children = []
-        
-        while self.peek() and self.peek().type not in {
+
+        while (peeked := self.peek()) is not None and peeked.type not in {
             TokenType.NEWLINE, TokenType.SECTION_BREAK,
             TokenType.BULLET_LIST_MARKER, TokenType.NUMBER_LIST_MARKER, TokenType.ARROW_LIST_MARKER
         }:
@@ -285,8 +287,9 @@ class AtacamaParser:
                 unhandled_token = self.consume()
                 if unhandled_token:
                     children.append(Node(type=NodeType.TEXT, token=unhandled_token))
-        
-        if self.peek() and self.peek().type == TokenType.NEWLINE:
+
+        peeked = self.peek()
+        if peeked is not None and peeked.type == TokenType.NEWLINE:
             self.consume() # Consume trailing newline for the list item
 
         return ListItemNode(marker_type=marker_types[marker_token.type], 
@@ -305,7 +308,7 @@ class AtacamaParser:
         
         # For line-level color blocks, parse until newline or section break
         if is_line:
-            while self.peek() and self.peek().type not in {TokenType.NEWLINE, TokenType.SECTION_BREAK}:
+            while (peeked := self.peek()) is not None and peeked.type not in {TokenType.NEWLINE, TokenType.SECTION_BREAK}:
                 if node := self.parse_inline_content():
                     children.append(node)
                 else:
@@ -328,11 +331,12 @@ class AtacamaParser:
         
         color_token_for_paren = None
         # Check if the very next token is a color tag, e.g. '(<red> ...)'
-        if self.peek() and self.peek().type == TokenType.COLOR_TAG:
+        peeked = self.peek()
+        if peeked is not None and peeked.type == TokenType.COLOR_TAG:
             color_token_for_paren = self.consume()
         
         children_within_paren = []
-        while self.peek() and self.peek().type != TokenType.PARENTHESIS_END:
+        while (peeked := self.peek()) is not None and peeked.type != TokenType.PARENTHESIS_END:
             if node := self.parse_inline_content():
                 children_within_paren.append(node)
             else:
@@ -418,24 +422,22 @@ class AtacamaParser:
         # Keep track of nesting depth for proper handling of nested brackets
         nesting_depth = 0
         
-        while self.peek():
-            current_token = self.peek()
-            
+        while (current_token := self.peek()) is not None:
             # Stop parsing on newline, or if we hit structural elements
             if current_token.type in {TokenType.NEWLINE, TokenType.SECTION_BREAK, TokenType.MORE_TAG}:
                 break
-                
+
             # Handle nested start tokens
             if current_token.type == start_type:
                 nesting_depth += 1
-                
+
             # Handle end tokens - only break if we're at the top level
             if current_token.type == end_type:
                 if nesting_depth == 0:
                     break  # This is our closing token
                 else:
                     nesting_depth -= 1
-                    
+
             # Stop if we encounter tokens that typically end color blocks or parentheses
             if current_token.type in {TokenType.PARENTHESIS_END} and nesting_depth == 0:
                 break
