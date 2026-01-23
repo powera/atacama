@@ -2,7 +2,7 @@
 
 import os
 import re
-import requests
+import requests  # type: ignore[import-untyped]
 import time
 from typing import List, Set, Optional
 from urllib.parse import urlparse

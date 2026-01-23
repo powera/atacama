@@ -122,8 +122,8 @@ def channel_statistics() -> ResponseReturnValue:
         for date, count in activity_data:
             date_counts[str(date)] = count
         
-        # Sort channels by total count
-        channel_stats.sort(key=lambda x: x['total_count'], reverse=True)
+        # Sort channels by total count (total_count is always int from scalar() or 0)
+        channel_stats.sort(key=lambda x: x['total_count'] or 0, reverse=True)  # type: ignore[return-value]
             
         return render_template(
             'admin/channel_statistics.html',

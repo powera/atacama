@@ -58,7 +58,7 @@ def list_users() -> ResponseReturnValue:
         channel_manager = get_channel_manager()
         admin_channels = [
             name for name in channel_manager.get_channel_names()
-            if channel_manager.get_channel_config(name).requires_admin
+            if (config := channel_manager.get_channel_config(name)) and config.requires_admin
         ]
             
         return render_template(
@@ -94,7 +94,10 @@ def grant_access(user_id: int) -> ResponseReturnValue:
             db_session.commit()
             # Get user for display purposes only
             user = get_user_by_id(db_session, user_id)
-            flash(f'Granted {channel} access to {user.email}')
+            if user:
+                flash(f'Granted {channel} access to {user.email}')
+            else:
+                flash(f'Granted {channel} access to user {user_id}')
         else:
             flash(f'Failed to grant {channel} access (user not found or invalid channel)')
         
@@ -127,7 +130,10 @@ def revoke_access(user_id: int) -> ResponseReturnValue:
             db_session.commit()
             # Get user for display purposes only
             user = get_user_by_id(db_session, user_id)
-            flash(f'Revoked {channel} access from {user.email}')
+            if user:
+                flash(f'Revoked {channel} access from {user.email}')
+            else:
+                flash(f'Revoked {channel} access from user {user_id}')
         else:
             flash(f'Failed to revoke {channel} access (user not found or invalid channel)')
         

@@ -49,7 +49,7 @@ class Database:
 
             # Configure engine based on database type
             engine_kwargs = {}
-            if db_url.startswith('postgresql'):
+            if db_url and db_url.startswith('postgresql'):
                 # PostgreSQL/Supabase connection pooling settings
                 engine_kwargs = {
                     'pool_size': 5,

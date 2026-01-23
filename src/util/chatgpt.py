@@ -1,10 +1,7 @@
 """Functions for analyzing email content using LLM models."""
 
-from typing import Tuple, Optional
-from sqlalchemy.orm import Session
+from typing import Tuple
 
-from models.database import db
-from models.models import Email
 from models.messages import get_message_by_id
 from common.llm import openai_client
 from common.llm.telemetry import LLMUsage
@@ -58,10 +55,10 @@ Subject: {message.subject}
 {message.content}"""
 
     # Request analysis from the model
-    response, _, usage = openai_client.generate_chat(
+    response = openai_client.generate_chat(
         prompt=prompt,
         model=model,
         context=context
     )
-    
-    return response.strip(), usage
+
+    return response.response_text.strip(), response.usage
