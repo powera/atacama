@@ -182,6 +182,7 @@ def get_requirements() -> Dict[str, str]:
         'beautifulsoup4': 'bs4',
         'python-dotenv': 'dotenv',
         'google-auth': 'google',
+        'prometheus-client': 'prometheus_client',
     }
     
     requirements = {}
