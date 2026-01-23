@@ -5,7 +5,7 @@
 import os
 from pathlib import Path
 from flask import Flask, request, g
-from waitress import serve
+from waitress import serve  # type: ignore[import-untyped]
 from typing import Dict, Any, Optional, List, Tuple
 
 import constants

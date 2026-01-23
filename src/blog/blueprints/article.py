@@ -109,9 +109,9 @@ def edit_article(slug: str) -> ResponseReturnValue:
                     article.published_at = datetime.utcnow()
                 
                 tokens = tokenize(content)
-                ast = parse(tokens)
+                ast = parse(iter(tokens))
                 article.processed_content = generate_html(ast)
-                
+
                 article.last_modified_at = datetime.utcnow()
                 session.commit()
                 
@@ -155,9 +155,9 @@ def submit_article() -> ResponseReturnValue:
                 )
                 
                 tokens = tokenize(content)
-                ast = parse(tokens)
+                ast = parse(iter(tokens))
                 article.processed_content = generate_html(ast)
-                
+
                 session.add(article)
                 session.commit()
                 

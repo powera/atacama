@@ -5,9 +5,8 @@ import threading
 import time
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
-from waitress import serve
+from waitress import serve  # type: ignore[import-untyped]
 
 # Initialize logging
 logger = logging.getLogger(__name__)

@@ -356,7 +356,8 @@ def landing_page() -> ResponseReturnValue:
             # Further filter messages based on domain restrictions
             if not domain_manager.get_domain_config(current_domain).allows_all_channels:
                 domain_channels = domain_manager.get_allowed_channels(current_domain)
-                messages = [msg for msg in messages if msg.channel in domain_channels]
+                if domain_channels is not None:
+                    messages = [msg for msg in messages if msg.channel in domain_channels]
                 
             for message in messages:
                 message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -367,7 +368,10 @@ def landing_page() -> ResponseReturnValue:
             # Filter channels based on domain restrictions
             if not domain_manager.get_domain_config(current_domain).allows_all_channels:
                 domain_channels = domain_manager.get_allowed_channels(current_domain)
-                available_channels = [c for c in user_channels if c in domain_channels]
+                if domain_channels is not None:
+                    available_channels = [c for c in user_channels if c in domain_channels]
+                else:
+                    available_channels = user_channels
             else:
                 available_channels = user_channels
 
@@ -377,12 +381,13 @@ def landing_page() -> ResponseReturnValue:
             messages = []
             available_channels = []
 
+        user_email = g.user.email if g.user and hasattr(g.user, 'email') else None
         return render_template(
             'landing.html',
             db_status=db_status,
             messages=messages,
             user=session.get('user'),
-            is_admin=is_user_admin(g.user.email if g.user else None),
+            is_admin=is_user_admin(user_email) if user_email else False,
             available_channels=available_channels,
             channel_configs=channel_manager.channels
         )
@@ -425,7 +430,8 @@ def all_messages(tsdate: Optional[str] = None, tstime: Optional[str] = None) -> 
         # Filter channels based on domain restrictions
         if not domain_manager.get_domain_config(current_domain).allows_all_channels:
             domain_channels = domain_manager.get_allowed_channels(current_domain)
-            allowed_channels = [c for c in allowed_channels if c in domain_channels]
+            if domain_channels is not None:
+                allowed_channels = [c for c in allowed_channels if c in domain_channels]
         
         # Query Messages table with proper filtering
         query = db_session.query(Message).options(

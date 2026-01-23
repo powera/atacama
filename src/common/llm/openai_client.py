@@ -7,7 +7,7 @@ import os
 import time
 from typing import Dict, Optional, Any, Tuple
 
-import requests
+import requests  # type: ignore[import-untyped]
 import tiktoken
 
 import constants

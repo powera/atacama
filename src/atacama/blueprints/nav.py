@@ -1,5 +1,7 @@
 """Blueprint for handling site navigation."""
 
+from typing import Any, Dict, List
+
 from flask import Blueprint, render_template, url_for, g
 from flask.typing import ResponseReturnValue
 
@@ -34,21 +36,16 @@ def navigation() -> ResponseReturnValue:
             config = channel_manager.get_channel_config(channel_name)
             if config and check_channel_access(channel_name, g.user):
                 display_name = channel_manager.get_display_name(channel_name)
-                channel_item = {
-                    'name': display_name,
-                    'channel': channel_name,
-                    'description': config.description,
-                    'links': []
-                }
-                
+                links: List[Dict[str, Any]] = []
+
                 # Add per-channel routes
                 for route in per_channel_routes:
                     try:
                         # Build URL with channel parameter
                         route_kwargs = {route['channel_param']: channel_name}
                         link_url = url_for(route['endpoint'], **route_kwargs)
-                        
-                        channel_item['links'].append({
+
+                        links.append({
                             'name': route['name'],
                             'url': link_url,
                             'description': route['description'],
@@ -57,9 +54,16 @@ def navigation() -> ResponseReturnValue:
                     except Exception as e:
                         # Route might not be available for this channel
                         logger.debug(f"Could not generate URL for {route['endpoint']} with channel {channel_name}: {e}")
-                        
+
                 # Sort links by order
-                channel_item['links'].sort(key=lambda x: x.get('order', 100))
+                links.sort(key=lambda x: x.get('order', 100))
+
+                channel_item: Dict[str, Any] = {
+                    'name': display_name,
+                    'channel': channel_name,
+                    'description': config.description,
+                    'links': links
+                }
                     
                 channel_nav.append(channel_item)
     
