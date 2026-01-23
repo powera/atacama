@@ -95,7 +95,7 @@ def check_channel_access(channel: str, user: Optional[User] = None,
         return False
 
     # First check system access restrictions
-    has_admin_access = user and check_admin_approval(user.id, channel)
+    has_admin_access = bool(user and check_admin_approval(user.id, channel))
     system_access = channel_manager.check_system_access(
         channel, 
         email=user.email if user else None,

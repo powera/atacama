@@ -4,7 +4,7 @@
 import gzip
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Local application imports
 import constants
@@ -239,7 +239,7 @@ class BaseStats:
     def __init__(self, user_id: str, language: str = "lithuanian"):
         self.user_id = str(user_id)
         self.language = language
-        self._stats = None
+        self._stats: Optional[Dict[str, Any]] = None
         self._loaded = False
 
     @property
@@ -335,6 +335,8 @@ class BaseStats:
         """Set stats for a specific word."""
         if not self._loaded:
             self.load()
+        if self._stats is None:
+            self._stats = {"stats": {}}
         if "stats" not in self._stats:
             self._stats["stats"] = {}
         self._stats["stats"][word_key] = word_stats
@@ -381,7 +383,7 @@ class JourneyStats(BaseStats):
             return False
 
         # Filter out invalid stat types before saving
-        filtered_data = {"stats": {}}
+        filtered_data: Dict[str, Any] = {"stats": {}}
         if "stats" in self._stats:
             for word_key, word_stats in self._stats["stats"].items():
                 filtered_data["stats"][word_key] = validate_and_normalize_word_stats(word_stats)

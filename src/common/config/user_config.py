@@ -3,7 +3,7 @@
 import enum
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 import tomli
 
 import constants
@@ -18,10 +18,10 @@ class AdminRole(enum.Enum):
 class UserConfigManager:
     """Manages user admin configuration."""
     
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: Union[str, Path]):
         """
         Initialize user config manager with configuration file.
-        
+
         :param config_path: Path to TOML configuration file
         """
         self.config_path = config_path
@@ -97,7 +97,7 @@ DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "admin.toml"
 # Global user config manager instance
 _user_config_manager = None
 
-def init_user_config_manager(config_path: Optional[str] = None) -> UserConfigManager:
+def init_user_config_manager(config_path: Optional[Union[str, Path]] = None) -> UserConfigManager:
     """
     Initialize global user config manager instance.
     

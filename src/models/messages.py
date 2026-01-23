@@ -64,8 +64,8 @@ def get_message_chain(message_id: int) -> List[Email]:
         
         if not message or not check_message_access(message, ignore_preferences=True):
             return []
-            
-        chain = []
+
+        chain: List[Email] = []
         
         # Add parent chain
         current = message
@@ -219,10 +219,10 @@ def get_domain_filtered_messages(
     )
 
 
-def get_message_by_id(db_session, message_id: int) -> Optional[Message]:
+def get_raw_message_by_id(db_session, message_id: int) -> Optional[Message]:
     """
-    Retrieve a message by ID.
-    
+    Retrieve a message by ID without access control checks.
+
     :param db_session: SQLAlchemy session
     :param message_id: ID of the message to retrieve
     :return: Email object if found, None otherwise

@@ -192,27 +192,27 @@ class PinyinProcessor:
         """Segment Chinese text into words using jieba."""
         return list(jieba.cut(text))
 
-    def annotate_text(self, text: str) -> Dict[str, Dict[str, str]]:
+    def annotate_text_by_words(self, text: str) -> Dict[str, Dict[str, str]]:
         """
         Process text and return word-level annotations.
-        
+
         Returns dictionary mapping each word to its annotation data.
         Words are determined by jieba segmentation.
         """
         annotations = {}
         words = self._segment_words(text)
-        
+
         for word in words:
             if not self.chinese_pattern.match(word):
                 continue
-                
+
             annotation = self.get_annotation(word)
             if annotation:
                 annotations[word] = {
                     "pinyin": annotation.pinyin,
                     "definition": annotation.definition
                 }
-            
+
         return annotations
 
     def _get_pinyin_for_text(self, text: str) -> str:

@@ -3,7 +3,7 @@
 from pathlib import Path
 import tomli
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import constants
 from common.base.logging_config import get_logger
@@ -21,7 +21,7 @@ class LanguageConfig:
 class LanguageManager:
     """Manages language configuration and validation."""
 
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: Union[str, Path]):
         """
         Initialize language manager with configuration file.
 
@@ -143,7 +143,7 @@ DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "languages.toml"
 # Global language manager instance
 _language_manager = None
 
-def init_language_manager(config_path: Optional[str] = None) -> LanguageManager:
+def init_language_manager(config_path: Optional[Union[str, Path]] = None) -> LanguageManager:
     """
     Initialize global language manager instance.
 

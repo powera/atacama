@@ -3,7 +3,7 @@
 from pathlib import Path
 import tomli
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 
 import constants
 from common.base.logging_config import get_logger
@@ -26,7 +26,7 @@ class DomainConfig:
     channels: List[str]  # Empty list means all channels
     theme: str
     description: Optional[str] = None
-    domains: List[str] = None  # List of hostnames that map to this domain config
+    domains: Optional[List[str]] = None  # List of hostnames that map to this domain config
     auto_archive_enabled: bool = False  # Whether to enable auto-archiving for this domain
     
     @property
@@ -46,10 +46,10 @@ class DomainConfig:
 class DomainManager:
     """Manages domain configuration and validation."""
     
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: Union[str, Path]):
         """
         Initialize domain manager with configuration file.
-        
+
         :param config_path: Path to TOML configuration file
         """
         self.config_path = config_path
@@ -232,7 +232,7 @@ DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "domains.toml"
 # Global domain manager instance
 _domain_manager = None
 
-def init_domain_manager(config_path: Optional[str] = None) -> DomainManager:
+def init_domain_manager(config_path: Optional[Union[str, Path]] = None) -> DomainManager:
     """
     Initialize global domain manager instance.
     

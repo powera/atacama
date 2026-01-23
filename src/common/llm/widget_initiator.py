@@ -209,7 +209,7 @@ class WidgetInitiator:
         self,
         slug: str,
         description: str,
-        widget_title: str = None,
+        widget_title: Optional[str] = None,
         use_advanced_model: bool = False,
         look_and_feel: Optional[Dict[str, str]] = None,
         dual_file: bool = False
