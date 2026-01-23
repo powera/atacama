@@ -87,6 +87,9 @@ class LanguageManager:
         """
         Get language key for a host name based on subdomain.
 
+        Supports staging subdomains: if a subdomain ends with '-staging',
+        the suffix is stripped before lookup (e.g., 'lt-staging' -> 'lt').
+
         :param host: Host name from request
         :return: Language key from config, or default if not found
         """
@@ -99,10 +102,20 @@ class LanguageManager:
         parts = host.split('.')
         if len(parts) > 2:  # Has subdomain
             potential_subdomain = parts[0]
+
+            # Check for exact subdomain match first
             if potential_subdomain in self.subdomain_to_language:
                 language_key = self.subdomain_to_language[potential_subdomain]
                 logger.debug(f"Subdomain match found: {potential_subdomain} -> {language_key}")
                 return language_key
+
+            # Check for staging subdomain (e.g., 'lt-staging' -> 'lt')
+            if potential_subdomain.endswith('-staging'):
+                base_subdomain = potential_subdomain[:-8]  # Remove '-staging' suffix
+                if base_subdomain in self.subdomain_to_language:
+                    language_key = self.subdomain_to_language[base_subdomain]
+                    logger.debug(f"Staging subdomain match found: {potential_subdomain} -> {base_subdomain} -> {language_key}")
+                    return language_key
 
         # Fall back to default
         if host != "localhost" and len(parts) > 1:
