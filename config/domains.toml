@@ -3,11 +3,14 @@
 #
 # Database Configuration:
 # By default, Atacama uses SQLite (emails.db in project root).
-# For PostgreSQL/Supabase, set the DATABASE_URL environment variable:
-#   export DATABASE_URL="postgresql://user:password@host:port/database"
+# For PostgreSQL/Supabase, use the --postgres flag and store the URL in keys/database_url:
+#   echo "postgresql://user:password@host:port/database" > keys/database_url
+#   python launch.py --web --postgres
 #
 # Supabase connection string format:
-#   DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
+#   postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+#
+# To migrate existing data: python tools/migrate_sqlite_to_postgres.py
 
 # Archive configuration
 [archive]
