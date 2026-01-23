@@ -61,10 +61,42 @@ def get_trakaido_audio_base_dir() -> str:
         return _DEV_TRAKAIDO_AUDIO_BASE_DIR
     return _PROD_TRAKAIDO_AUDIO_BASE_DIR
 
-# Database path - will be updated when testing mode is set
+# Database configuration
+# DATABASE_URL environment variable takes precedence for PostgreSQL/Supabase connections
+# Format: postgresql://user:password@host:port/database
+# If not set, falls back to SQLite at _PROD_DB_PATH
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
 _TEST_DB_PATH: str = "sqlite:///:memory:"
 DB_PATH = _PROD_DB_PATH
+
+def get_database_url() -> str:
+    """
+    Get the database connection URL.
+
+    Priority:
+    1. DATABASE_URL environment variable (for PostgreSQL/Supabase)
+    2. SQLite file at _PROD_DB_PATH (default)
+
+    :return: Database connection URL string
+    """
+    # Check for DATABASE_URL environment variable (standard for PostgreSQL/Supabase)
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        # Handle Supabase URLs that may use postgres:// instead of postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return database_url
+
+    # Fall back to SQLite
+    return f'sqlite:///{_PROD_DB_PATH}'
+
+def is_using_postgres() -> bool:
+    """
+    Check if the application is configured to use PostgreSQL.
+
+    :return: True if DATABASE_URL is set, False otherwise
+    """
+    return os.getenv('DATABASE_URL') is not None
 
 def init_testing(test_db_path: Optional[str] = None, service: Optional[str] = None) -> None:
     """
