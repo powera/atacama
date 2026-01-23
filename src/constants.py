@@ -61,10 +61,80 @@ def get_trakaido_audio_base_dir() -> str:
         return _DEV_TRAKAIDO_AUDIO_BASE_DIR
     return _PROD_TRAKAIDO_AUDIO_BASE_DIR
 
-# Database path - will be updated when testing mode is set
+# Database configuration
+# PostgreSQL/Supabase connection URL can be stored in keys/database_url
+# Format: postgresql://user:password@host:port/database
+# If not found, falls back to SQLite at _PROD_DB_PATH
 _PROD_DB_PATH = os.path.join(PROJECT_ROOT, "emails.db")
 _TEST_DB_PATH: Optional[str] = "sqlite:///:memory:"
 DB_PATH = _PROD_DB_PATH
+
+# Flag to enable PostgreSQL mode (set via --postgres command line flag)
+USE_POSTGRES: bool = False
+
+def _load_database_url_from_file() -> Optional[str]:
+    """
+    Load database URL from keys/database_url file.
+
+    :return: Database URL string if file exists, None otherwise
+    """
+    db_url_path = os.path.join(KEY_DIR, 'database_url')
+    if os.path.exists(db_url_path):
+        try:
+            with open(db_url_path, 'r') as f:
+                url = f.read().strip()
+                if url:
+                    return url
+        except (IOError, OSError):
+            pass
+    return None
+
+def get_database_url() -> str:
+    """
+    Get the database connection URL.
+
+    Priority (when USE_POSTGRES is True):
+    1. keys/database_url file
+    2. DATABASE_URL environment variable (fallback)
+
+    When USE_POSTGRES is False, always returns SQLite path.
+
+    :return: Database connection URL string
+    """
+    if not USE_POSTGRES:
+        return f'sqlite:///{_PROD_DB_PATH}'
+
+    # Try loading from file first
+    database_url = _load_database_url_from_file()
+
+    # Fall back to environment variable
+    if not database_url:
+        database_url = os.getenv('DATABASE_URL')
+
+    if database_url:
+        # Handle Supabase URLs that may use postgres:// instead of postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return database_url
+
+    # No PostgreSQL URL found - error since --postgres was specified
+    raise ValueError(
+        "PostgreSQL mode enabled but no database URL found. "
+        "Either create keys/database_url file or set DATABASE_URL environment variable."
+    )
+
+def is_using_postgres() -> bool:
+    """
+    Check if the application is configured to use PostgreSQL.
+
+    :return: True if USE_POSTGRES flag is set, False otherwise
+    """
+    return USE_POSTGRES
+
+def enable_postgres() -> None:
+    """Enable PostgreSQL mode."""
+    global USE_POSTGRES
+    USE_POSTGRES = True
 
 def init_testing(test_db_path: Optional[str] = None, service: Optional[str] = None) -> None:
     """

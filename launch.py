@@ -69,10 +69,14 @@ def parse_args():
                        help='Port for server (default: 5000 for web, 5001 for trakaido, 8998 for spaceship)')
     
     # Development options
-    parser.add_argument('--dev', action='store_true', 
+    parser.add_argument('--dev', action='store_true',
                        help='Enable development mode with auto-reload')
-    parser.add_argument('--debug', action='store_true', 
+    parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode')
+
+    # Database options
+    parser.add_argument('--postgres', action='store_true',
+                       help='Use PostgreSQL database (reads URL from keys/database_url or DATABASE_URL env var)')
     
     # Logging configuration
     parser.add_argument('--log-level', default='INFO',
@@ -93,6 +97,7 @@ Examples:
   %(prog)s --spaceship             # Launch spaceship server
   %(prog)s --mode web --dev        # Launch web server in development mode
   %(prog)s --mode trakaido --dev   # Launch trakaido server in development mode
+  %(prog)s --web --postgres        # Launch web server with PostgreSQL database
 
 Note: Log files are created with timestamp and PID in the filename format: 
       atacama_YYYYMMDD_HHMMSS_pidNNNN.log
@@ -143,11 +148,17 @@ def main():
         elif args.spaceship:
             service = 'spaceship'
         
+        # Enable PostgreSQL if requested
+        if args.postgres:
+            constants.enable_postgres()
+            if not args.quiet:
+                print("PostgreSQL mode enabled")
+
         # Initialize system with configured log levels
         log_level = 'DEBUG' if args.debug else args.log_level
         if args.quiet:
             log_level = 'WARNING'
-            
+
         init_system(log_level=log_level, app_log_level=args.app_log_level, service=service)
         
         # Get logger after initialization to ensure it's properly configured

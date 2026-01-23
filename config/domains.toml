@@ -1,5 +1,16 @@
 # Domain configuration for Atacama
 # Maps domain names to channel settings and theme configurations
+#
+# Database Configuration:
+# By default, Atacama uses SQLite (emails.db in project root).
+# For PostgreSQL/Supabase, use the --postgres flag and store the URL in keys/database_url:
+#   echo "postgresql://user:password@host:port/database" > keys/database_url
+#   python launch.py --web --postgres
+#
+# Supabase connection string format:
+#   postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+#
+# To migrate existing data: python tools/migrate_sqlite_to_postgres.py
 
 # Archive configuration
 [archive]

@@ -25,7 +25,10 @@ class Database:
     def initialize(self) -> bool:
         """
         Initialize database engine and create tables.
-        
+
+        Supports both SQLite (default) and PostgreSQL/Supabase (via DATABASE_URL).
+        When using PostgreSQL, connection pooling is enabled for better performance.
+
         :return: True if initialization successful, False otherwise
         :raises: DatabaseError if system not initialized
         """
@@ -37,23 +40,38 @@ class Database:
 
         if self.initialized:
             return True
-        
+
         try:
             if constants.TESTING:
                 db_url = constants._TEST_DB_PATH
             else:
-                db_url = f'sqlite:///{constants._PROD_DB_PATH}'
-            
-            self._engine = create_engine(db_url)
-            
+                db_url = constants.get_database_url()
+
+            # Configure engine based on database type
+            engine_kwargs = {}
+            if db_url.startswith('postgresql'):
+                # PostgreSQL/Supabase connection pooling settings
+                engine_kwargs = {
+                    'pool_size': 5,
+                    'max_overflow': 10,
+                    'pool_timeout': 30,
+                    'pool_recycle': 1800,  # Recycle connections after 30 minutes
+                    'pool_pre_ping': True,  # Verify connections before use
+                }
+                logger.info("Using PostgreSQL database with connection pooling")
+            else:
+                logger.info(f"Using SQLite database: {db_url}")
+
+            self._engine = create_engine(db_url, **engine_kwargs)
+
             # Import here to avoid circular imports
             from models import Base
             Base.metadata.create_all(self._engine)
-            
+
             self._session_factory = sessionmaker(bind=self._engine)
             self.initialized = True
             return True
-            
+
         except Exception as e:
             logger.error(f"Database initialization failed: {str(e)}")
             return False
