@@ -149,16 +149,17 @@ class AtacamaLexer:
             token_type = TokenType.ARROW_LIST_MARKER
 
         if token_type:
-            self._advance_n(temp_pos - self.pos) 
-            marker_val = self.current_char
+            self._advance_n(temp_pos - self.pos)
+            marker_val = self.current_char or ""
             marker_actual_line, marker_actual_col = self.line, self.column
-            self._advance() 
+            self._advance()
             return Token(token_type, marker_val, marker_actual_line, marker_actual_col)
         
         return None
 
     def _try_handle_emphasis(self, tok_line: int, tok_col: int) -> Optional[Token]:
-        if self.current_char == '*' and self._peek(1) and self._peek(1) not in ' \n':
+        peek1 = self._peek(1)
+        if self.current_char == '*' and peek1 is not None and peek1 not in ' \n':
             original_pos, original_ln, original_col = self.pos, self.line, self.column
             self._advance()
             
@@ -288,8 +289,9 @@ class AtacamaLexer:
 
             if self.text.startswith("{{", self.pos): break
             
-            if self.current_char == '*' and self._peek(1) and self._peek(1) not in ' \n':
-                break 
+            peek1 = self._peek(1)
+            if self.current_char == '*' and peek1 is not None and peek1 not in ' \n':
+                break
             
             if self.text.startswith("http", self.pos):
                 if self.URL_PATTERN.match(self.text, self.pos):

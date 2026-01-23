@@ -93,17 +93,17 @@ class HTMLGenerator:
                     # When showing full content, display a sigil instead
                     final_html_segments.append('<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>')
             
-            elif child_node.type == NodeType.LIST_ITEM:
+            elif child_node.type == NodeType.LIST_ITEM and isinstance(child_node, ListItemNode):
                 flush_paragraph()  # End current paragraph before starting/continuing a list
-                
+
                 # ListItemNode's children make up the content of the <li>
                 item_content_html = "".join(self.generate(c) for c in child_node.children)
-                
+
                 # child_node here is a ListItemNode, which has a marker_type attribute
-                if active_list_marker_type != child_node.marker_type: # If list type changes or new list starts
+                if active_list_marker_type != child_node.marker_type:  # If list type changes or new list starts
                     flush_list()  # Finalize previous list if any
                     active_list_marker_type = child_node.marker_type
-                
+
                 # create_list_item (from colorblocks) generates the actual <li>...</li> HTML
                 current_list_items_for_ul.append(create_list_item(item_content_html, child_node.marker_type))
 
