@@ -8,16 +8,18 @@ from trakaido.blueprints import shared  # Shared utils imported first
 from trakaido.blueprints import trakaido_tools
 from trakaido.blueprints import userconfig_v2
 from trakaido.blueprints import userstats
+from trakaido.blueprints import grammarstats
 
 __all__ = [
     'trakaido_bp',
     'trakaido_tools',
     'userconfig_v2',
     'userstats',
+    'grammarstats',
 ]
 
 # Export the blueprint
 trakaido_bp = shared.trakaido_bp
 
 # Reference side-effect imports to satisfy static analysis
-_side_effect_modules = (trakaido_tools, userconfig_v2, userstats)
+_side_effect_modules = (trakaido_tools, userconfig_v2, userstats, grammarstats)
