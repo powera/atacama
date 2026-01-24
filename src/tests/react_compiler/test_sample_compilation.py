@@ -24,7 +24,7 @@ import tempfile
 import shutil
 import re
 import subprocess
-from typing import Dict, List, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple
 import logging
 
 # Import the React Compiler
@@ -37,7 +37,11 @@ logger = logging.getLogger(__name__)
 
 class TestSampleCompilation(unittest.TestCase):
     """Test compilation of sample React widgets."""
-    
+
+    samples_dir: ClassVar[str]
+    build_dir: ClassVar[str]
+    widget_builder: ClassVar[WidgetBuilder]
+
     @classmethod
     def setUpClass(cls):
         """Set up test environment once for all tests."""
@@ -80,7 +84,7 @@ class TestSampleCompilation(unittest.TestCase):
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()
     
-    def _extract_expected_export_name(self, widget_code: str) -> str:
+    def _extract_expected_export_name(self, widget_code: str) -> Optional[str]:
         """Extract the expected export name from widget code."""
         # Look for "export default ComponentName"
         default_export_match = re.search(r'export\s+default\s+(\w+)', widget_code)

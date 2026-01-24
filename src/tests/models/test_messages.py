@@ -7,14 +7,16 @@ from datetime import datetime
 import json
 
 from models.messages import (
-    get_user_email_domain,
-    check_admin_approval,
-    check_channel_access,
-    get_user_allowed_channels,
     check_message_access,
     get_message_by_id,
     get_message_chain,
     get_filtered_messages
+)
+from models.users import (
+    get_user_email_domain,
+    check_admin_approval,
+    check_channel_access,
+    get_user_allowed_channels
 )
 from models.models import User, Email
 from common.config.channel_config import ChannelConfig, AccessLevel
