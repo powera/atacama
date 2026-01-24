@@ -10,11 +10,11 @@ cd /home/atacama/atacama/
 git pull --recurse-submodules
 
 # Restart the systemd service
-sudo systemctl restart atacama.service
+sudo systemctl restart blog.service
 
 # Verify the service started successfully
 sleep 2
-systemctl status atacama.service --no-pager
+systemctl status blog.service --no-pager
 
 # Check the logs for startup
-journalctl -u atacama.service -n 20 --no-pager
+journalctl -u blog.service -n 20 --no-pager
