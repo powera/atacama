@@ -4,6 +4,9 @@ Prometheus metrics blueprint for monitoring and observability.
 This blueprint exposes a /metrics endpoint that returns metrics in Prometheus format.
 Metrics include system stats (CPU, memory, disk, network), application stats (uptime,
 content counts), process stats (threads, file descriptors), and HTTP request metrics.
+
+The prometheus_client library is optional. If not installed, the server will start
+but the /metrics endpoint will return an error message.
 """
 
 import os
@@ -11,18 +14,68 @@ import time
 
 import psutil
 from flask import Blueprint, Response, current_app
-from prometheus_client import (
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-    REGISTRY,
-)
 
 from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Try to import prometheus_client, fall back to no-op stubs if unavailable
+PROMETHEUS_AVAILABLE = False
+try:
+    from prometheus_client import (
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+        REGISTRY,
+    )
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    logger.error(
+        "prometheus_client is not installed. Metrics will be unavailable. "
+        "Install with: pip install prometheus_client"
+    )
+
+    # No-op stub classes for when prometheus_client is not available
+    class _NoOpMetric:
+        """No-op metric that silently ignores all operations."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def labels(self, **kwargs):
+            return self
+
+        def inc(self, amount=1):
+            pass
+
+        def dec(self, amount=1):
+            pass
+
+        def set(self, value):
+            pass
+
+        def observe(self, value):
+            pass
+
+    class Gauge(_NoOpMetric):
+        """No-op Gauge stub."""
+        pass
+
+    class Counter(_NoOpMetric):
+        """No-op Counter stub."""
+        pass
+
+    class Histogram(_NoOpMetric):
+        """No-op Histogram stub."""
+        pass
+
+    def generate_latest(registry=None):
+        return b""
+
+    CONTENT_TYPE_LATEST = "text/plain"
+    REGISTRY = None
 
 metrics_bp = Blueprint('metrics', __name__)
 
@@ -289,6 +342,13 @@ def metrics():
 
     :return: Prometheus-formatted metrics response
     """
+    if not PROMETHEUS_AVAILABLE:
+        return Response(
+            "# Prometheus metrics unavailable: prometheus_client not installed\n",
+            status=503,
+            mimetype="text/plain"
+        )
+
     # Update all metrics before generating output
     update_system_metrics()
     update_process_metrics()
@@ -312,8 +372,14 @@ def setup_request_metrics(app):
     This should be called during app initialization to enable
     per-request metrics collection.
 
+    If prometheus_client is not available, this function does nothing.
+
     :param app: Flask application instance
     """
+    if not PROMETHEUS_AVAILABLE:
+        logger.warning("Skipping request metrics setup: prometheus_client not installed")
+        return
+
     @app.before_request
     def before_request():
         from flask import g
