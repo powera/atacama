@@ -9,17 +9,67 @@ from typing import Optional
 from waitress import serve  # type: ignore[import-untyped]
 
 import psutil
-from prometheus_client import (
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-    REGISTRY,
-)
 
 # Initialize logging
 logger = logging.getLogger(__name__)
+
+# Try to import prometheus_client, fall back to no-op stubs if unavailable
+PROMETHEUS_AVAILABLE = False
+try:
+    from prometheus_client import (
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+        REGISTRY,
+    )
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    logger.error(
+        "prometheus_client is not installed. Metrics will be unavailable. "
+        "Install with: pip install prometheus_client"
+    )
+
+    # No-op stub classes for when prometheus_client is not available
+    class _NoOpMetric:
+        """No-op metric that silently ignores all operations."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def labels(self, **kwargs):
+            return self
+
+        def inc(self, amount=1):
+            pass
+
+        def dec(self, amount=1):
+            pass
+
+        def set(self, value):
+            pass
+
+        def observe(self, value):
+            pass
+
+    class Gauge(_NoOpMetric):
+        """No-op Gauge stub."""
+        pass
+
+    class Counter(_NoOpMetric):
+        """No-op Counter stub."""
+        pass
+
+    class Histogram(_NoOpMetric):
+        """No-op Histogram stub."""
+        pass
+
+    def generate_latest(registry=None):
+        return b""
+
+    CONTENT_TYPE_LATEST = "text/plain"
+    REGISTRY = None
 
 app = Flask(__name__)
 
@@ -244,6 +294,13 @@ def metrics():
 
     :return: Prometheus-formatted metrics response
     """
+    if not PROMETHEUS_AVAILABLE:
+        return Response(
+            "# Prometheus metrics unavailable: prometheus_client not installed\n",
+            status=503,
+            mimetype="text/plain"
+        )
+
     update_spaceship_metrics()
     return Response(
         generate_latest(REGISTRY),
