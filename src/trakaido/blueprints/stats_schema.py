@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 # Local application imports
 import constants
+from common.atomic_file import atomic_write_json, read_json_with_lock, recover_from_backup
 from trakaido.blueprints.shared import logger, ensure_user_data_dir
 
 
@@ -248,18 +249,40 @@ class BaseStats:
         raise NotImplementedError
 
     def _load_from_file(self, file_path: str) -> Dict[str, Any]:
-        """Load stats from the specified file path."""
+        """Load stats from the specified file path with locking and corruption recovery."""
         if not os.path.exists(file_path):
             logger.debug(f"No stats file found at {file_path}, returning empty stats")
             return {"stats": {}}
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Try to read with lock
+        data = read_json_with_lock(file_path)
+
+        # If read failed (None), try to recover from backup
+        if data is None:
+            logger.warning(f"Failed to read {file_path}, attempting recovery from backup")
+            if recover_from_backup(file_path):
+                # Try reading again after recovery
+                data = read_json_with_lock(file_path)
+
+        # If still None, check if file exists but is corrupted
+        if data is None and os.path.exists(file_path):
+            logger.error(f"Could not read stats file {file_path}, returning empty stats")
+            return {"stats": {}}
+
+        if data is None:
+            return {"stats": {}}
 
         return data if isinstance(data, dict) and "stats" in data else {"stats": {}}
 
     def _save_to_file(self, file_path: str, stats: Dict[str, Any]) -> bool:
-        """Save stats to the specified file path."""
+        """Save stats to the specified file path using atomic writes.
+
+        Uses atomic file operations to prevent corruption:
+        - Writes to a temporary file first
+        - Uses file locking to prevent concurrent access
+        - Keeps a backup (.bak) of the previous version
+        - Uses fsync to ensure data is flushed to disk
+        """
         try:
             ensure_user_data_dir(self.user_id)
 
@@ -286,11 +309,23 @@ class BaseStats:
                     logger.warning(f"Error checking file size for {file_path}: {str(e)}")
                     # Continue with save if size check fails
 
-            # Save with custom formatting (each word entry on one line)
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(formatted_json)
+            # Use atomic write with custom formatter (keeps each word entry on one line)
+            # This ensures:
+            # - File locking prevents concurrent writes
+            # - Temp file + rename prevents partial writes
+            # - Backup (.bak) allows recovery if something goes wrong
+            success = atomic_write_json(
+                file_path=file_path,
+                data=stats,
+                formatter=format_stats_json,
+                backup=True,
+                use_lock=True
+            )
 
-            return True
+            if not success:
+                logger.error(f"Atomic write failed for {file_path}")
+
+            return success
         except Exception as e:
             logger.error(f"Error saving stats to {file_path}: {str(e)}")
             return False
