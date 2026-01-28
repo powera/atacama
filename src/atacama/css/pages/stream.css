@@ -25,32 +25,58 @@
 }
 
 /* ==========================================================================
-   Primary Navigation (All Messages / Current Channel)
+   Primary Navigation (All Messages / Current Channel / View Index)
    ========================================================================== */
 
 .primary-nav {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     margin-bottom: 1rem;
+    font-size: var(--font-size-sm);
 }
 
 .primary-nav .channel-link {
-    padding: var(--spacing-sm) var(--spacing-base);
-    color: var(--color-text);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color var(--transition-base);
-}
-
-.primary-nav .channel-link.active {
-    border-bottom-color: var(--color-primary);
+    padding: var(--spacing-xs) var(--spacing-sm);
     color: var(--color-primary);
-    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--border-radius-sm);
+    transition: background-color var(--transition-base), color var(--transition-base);
 }
 
 .primary-nav .channel-link:hover {
-    border-bottom-color: var(--color-border);
+    background-color: var(--color-annotation-bg);
+    text-decoration: none;
+}
+
+/* Back link styling */
+.primary-nav .nav-back {
+    color: var(--color-text-secondary);
+}
+
+.primary-nav .nav-back:hover {
+    color: var(--color-primary);
+}
+
+/* Current location indicator */
+.primary-nav .nav-current {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+/* Separator between nav items */
+.primary-nav .nav-separator {
+    color: var(--color-border);
+    user-select: none;
+}
+
+/* Action link styling (View Index) */
+.primary-nav .nav-action {
+    color: var(--color-text-secondary);
+}
+
+.primary-nav .nav-action:hover {
+    color: var(--color-primary);
 }
 
 /* ==========================================================================
@@ -60,58 +86,6 @@
 .channel-navigation {
     margin: var(--spacing-lg) 0;
     border-bottom: 1px solid var(--color-border);
-}
-
-/* Stream page dropdown toggle (positioned right) */
-.primary-nav .channel-dropdown {
-    position: relative;
-    margin-left: auto;
-}
-
-.primary-nav .dropdown-toggle::after {
-    content: "\25BC";
-    font-size: 0.7em;
-    margin-left: 0.5em;
-}
-
-/* Stream page dropdown menu (right-aligned, wider) */
-.primary-nav .dropdown-menu {
-    right: 0;
-    left: auto;
-    width: 250px;
-    max-height: 80vh;
-    overflow-y: auto;
-    padding: var(--spacing-base);
-}
-
-.primary-nav .dropdown-menu.show {
-    display: block;
-}
-
-/* Dropdown group within stream navigation */
-.primary-nav .dropdown-group {
-    margin-bottom: var(--spacing-base);
-}
-
-.primary-nav .dropdown-group:last-child {
-    margin-bottom: 0;
-}
-
-.dropdown-group-heading {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.primary-nav .dropdown-item {
-    border-radius: var(--border-radius-base);
-}
-
-.primary-nav .dropdown-item.active {
-    background-color: rgba(var(--color-primary-rgb), 0.1);
-    color: var(--color-primary);
 }
 
 /* ==========================================================================
@@ -189,12 +163,16 @@
    ========================================================================== */
 
 /* Dark theme */
-[data-theme="dark"] .channel-link {
+[data-theme="dark"] .primary-nav .nav-current {
     color: var(--color-text);
 }
 
-[data-theme="dark"] .channel-link.active,
-[data-theme="dark"] .dropdown-item.active {
+[data-theme="dark"] .primary-nav .nav-back,
+[data-theme="dark"] .primary-nav .nav-action {
+    color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .primary-nav .channel-link:hover {
     color: var(--color-primary);
 }
 
@@ -215,10 +193,6 @@
 }
 
 [data-theme="grayscale"] .channel-navigation {
-    border-bottom: 2px solid var(--color-text);
-}
-
-[data-theme="grayscale"] .dropdown-group-heading {
     border-bottom: 2px solid var(--color-text);
 }
 
@@ -246,26 +220,8 @@
 @media screen and (max-width: 768px) {
     .primary-nav {
         flex-wrap: wrap;
-    }
-
-    .primary-nav .channel-dropdown {
-        margin-left: 0;
-        margin-top: 0.5rem;
-        width: 100%;
-    }
-
-    .primary-nav .dropdown-toggle {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .primary-nav .dropdown-menu {
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .channel-link {
-        padding: var(--spacing-base);
+        gap: 0.5rem;
+        justify-content: center;
     }
 
     .message-channel {
