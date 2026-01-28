@@ -502,6 +502,12 @@
    List Styles (AML-specific)
    ========================================================================== */
 
+.bullet-list,
+.number-list,
+.arrow-list {
+    list-style: none;
+}
+
 .bullet-list::before { content: "\2022"; }
 .number-list::before { content: counter(list-item) "."; }
 .arrow-list::before { content: "\2192"; }
