@@ -14,47 +14,19 @@
     <div class="stream-container">
         <nav class="channel-navigation">
             <div class="primary-nav">
-                <a href="{{ url_for('content.message_stream') }}" 
-                   class="channel-link {% if not current_channel %}active{% endif %}">
-                    All Messages
-                </a>
-                
                 {% if current_channel %}
-                <a href="{{ url_for('content.message_stream', channel=current_channel) }}" 
-                   class="channel-link active">
-                    {{ channel_manager.get_display_name(current_channel) }}
+                <a href="{{ url_for('content.message_stream') }}" class="channel-link nav-back">
+                    ← All Messages
                 </a>
-
-                <a href="{{ url_for('content.channel_list', channel=current_channel) }}" 
-                   class="channel-link">
-                    View Index
+                <span class="nav-separator">|</span>
+                <span class="nav-current">{{ channel_manager.get_display_name(current_channel) }}</span>
+                <span class="nav-separator">|</span>
+                <a href="{{ url_for('content.channel_list', channel=current_channel) }}" class="channel-link nav-action">
+                    View Index →
                 </a>
+                {% else %}
+                <span class="nav-current">All Messages</span>
                 {% endif %}
-                
-                <div class="channel-dropdown">
-                    <button class="dropdown-toggle">Select Channel</button>
-                    <div class="dropdown-menu">
-                        {% for group, channels in channel_manager.get_channel_groups().items() %}
-                            {% set visible_channels = [] %}
-                            {% for channel in channels %}
-                                {% if channel in available_channels %}
-                                    {% set _ = visible_channels.append(channel) %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if visible_channels %}
-                                <div class="dropdown-group">
-                                    <div class="dropdown-group-heading">{{ group }}</div>
-                                    {% for channel in visible_channels %}
-                                        <a href="{{ url_for('content.message_stream', channel=channel) }}"
-                                           class="dropdown-item {% if current_channel == channel %}active{% endif %}">
-                                            {{ channel_manager.get_display_name(channel) }}
-                                        </a>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </div>
             </div>
         </nav>
         
@@ -101,25 +73,5 @@
     {% endif %}
     
 </div>
-<script>
-    // Add dropdown toggle functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        const dropdownToggle = document.querySelector('.dropdown-toggle');
-        const dropdownMenu = document.querySelector('.dropdown-menu');
-        
-        if (dropdownToggle && dropdownMenu) {
-            dropdownToggle.addEventListener('click', function() {
-                dropdownMenu.classList.toggle('show');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!event.target.closest('.channel-dropdown')) {
-                    dropdownMenu.classList.remove('show');
-                }
-            });
-        }
-    });
-</script>
     
 {% endblock %}
