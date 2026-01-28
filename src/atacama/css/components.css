@@ -325,6 +325,30 @@ input[type="radio"] {
     outline: none;
 }
 
+/* Navigation link styled like a button (for "All Messages" link) */
+.nav-link-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    text-decoration: none;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-base);
+    transition: background-color var(--transition-fast),
+                border-color var(--transition-fast);
+}
+
+.nav-link-button:hover,
+.nav-link-button:focus {
+    background-color: var(--color-annotation-bg);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    outline: none;
+}
+
 .dropdown-arrow {
     font-size: 0.7em;
     transition: transform var(--transition-base);
@@ -377,7 +401,8 @@ input[type="radio"] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="grayscale"] .dropdown-toggle {
+[data-theme="grayscale"] .dropdown-toggle,
+[data-theme="grayscale"] .nav-link-button {
     border: 1px solid var(--color-text);
     background: var(--color-background);
 }
@@ -664,16 +689,20 @@ th {
         width: 100%;
     }
 
+    .nav-link-button {
+        width: 100%;
+        justify-content: center;
+        border-radius: 0;
+        border-bottom-width: 0;
+        border-top-left-radius: var(--border-radius-base);
+        border-top-right-radius: var(--border-radius-base);
+    }
+
     .dropdown-toggle {
         width: 100%;
         justify-content: space-between;
         border-radius: 0;
         border-bottom-width: 0;
-    }
-
-    .dropdown-group:first-child .dropdown-toggle {
-        border-top-left-radius: var(--border-radius-base);
-        border-top-right-radius: var(--border-radius-base);
     }
 
     .dropdown-group:last-child .dropdown-toggle {

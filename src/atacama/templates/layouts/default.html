@@ -35,6 +35,7 @@
 
       {% if channel_manager is defined and channel_manager.get_channel_groups is defined %}
       <nav class="channel-dropdown" aria-label="Channel navigation">
+        <a href="{{ url_for('content.message_stream') }}" class="nav-link-button">All Messages</a>
         {% for group, channels in channel_manager.get_channel_groups().items() %}
           {% set visible_channels = [] %}
           {% for channel in channels %}
