@@ -1,0 +1,195 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Editor - Atacama{% endblock %}
+
+{% block page_title %}
+<h1 class="site-title">Editor</h1>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/blog/editor.css">
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Metadata: subject, channel, parent -->
+    <div class="editor-meta-section">
+        <div class="form-group">
+            <label for="subject">Subject:</label>
+            <input type="text" id="subject" name="subject" required>
+        </div>
+        <div class="form-group">
+            <label for="channel">Channel:</label>
+            <select id="channel" name="channel" required>
+                {% for name, config in channels.items() %}
+                    <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
+                        {{ config.get_display_name() }} - {{ config.description }}
+                        {% if config.requires_auth %}(Private){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="parentId">Reply to (optional):</label>
+            <select id="parentId" name="parent_id">
+                <option value="">No parent message</option>
+                {% for message in recent_messages %}
+                    <option value="{{ message.id }}"
+                            data-channel="{{ message.channel or '' }}"
+                            data-subject="{{ message.subject or '' }}">
+                        {{ message.subject or '(No Subject)' }}
+                        {% if message.author %} by {{ message.author.name }}{% endif %}
+                        - #{{ message.id }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Input: textarea + button stack -->
+    <div class="editor-input-section">
+        <div class="input-row">
+            <textarea id="userInput" class="input-textarea" rows="3" placeholder="Type text to add..."></textarea>
+            <div class="button-stack">
+                <button type="button" id="quickAppend" class="stack-btn btn-primary" title="Add text exactly as typed">Add</button>
+                <button type="button" id="aiAppend" class="stack-btn btn-primary" title="AI writes based on your prompt, appended to existing">AI Append</button>
+                <button type="button" id="aiCommand" class="stack-btn btn-primary" title="AI executes command (delete, rewrite, etc.)">AI Command</button>
+            </div>
+        </div>
+        <div class="input-row secondary">
+            <div class="history-controls">
+                <button type="button" id="undoBtn" class="small-btn" disabled>Undo</button>
+                <button type="button" id="redoBtn" class="small-btn" disabled>Redo</button>
+            </div>
+            <div class="secondary-controls">
+                <select id="targetVersion" class="small-select" title="Target version">
+                    <option value="both">Both</option>
+                    <option value="private">Private only</option>
+                </select>
+                <select id="modelSelect" class="small-select" title="AI model">
+                    <option value="gpt-5-nano">Nano</option>
+                    <option value="gpt-5-mini">Mini</option>
+                </select>
+            </div>
+            <div class="status-area">
+                <span id="statusText"></span>
+                <span id="spinner" class="spinner hidden"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content: the main textarea -->
+    <div class="editor-content-section">
+        <div class="section-header">
+            <div class="tab-group">
+                <button type="button" class="tab-btn active" data-tab="private">Private</button>
+                <button type="button" class="tab-btn" data-tab="public">Public</button>
+            </div>
+            <div class="content-meta">
+                <span id="wordCount">0 words</span>
+                <span id="privateIndicator" class="private-indicator hidden">Has private content</span>
+            </div>
+        </div>
+        <textarea id="amlContent" class="aml-textarea" placeholder="Start writing..."></textarea>
+    </div>
+
+    <!-- Preview -->
+    <div class="editor-preview-section">
+        <div class="section-header">
+            <div class="tab-group">
+                <button type="button" class="tab-btn preview-tab-btn active" data-preview="private">Private</button>
+                <button type="button" class="tab-btn preview-tab-btn" data-preview="public">Public</button>
+            </div>
+            <button type="button" id="refreshPreview" class="small-btn">Refresh</button>
+        </div>
+        <div class="preview-container">
+            <div id="previewContent" class="message-body">
+                <div class="message-main">
+                    <p class="empty-content">Preview</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Publish actions -->
+    <div class="editor-actions">
+        <button type="button" id="saveDraft" class="btn-secondary">Save Draft</button>
+        <button type="button" id="publishBtn" class="btn-primary">Publish</button>
+    </div>
+</div>
+
+<script id="draftData" type="application/json">{"draftId": "{{ draft_id }}"}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/threeStageEditor.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const draftData = JSON.parse(document.getElementById('draftData').textContent);
+    window.editor = new ThreeStageEditor(draftData.draftId);
+
+    // Handle parent message selection - update channel and subject
+    document.getElementById('parentId')?.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (!selectedOption.value) {
+            return;
+        }
+
+        const parentChannel = selectedOption.dataset.channel;
+        const parentSubject = selectedOption.dataset.subject;
+
+        // Update channel dropdown
+        if (parentChannel) {
+            const channelSelect = document.getElementById('channel');
+            if (channelSelect) {
+                for (let i = 0; i < channelSelect.options.length; i++) {
+                    if (channelSelect.options[i].value === parentChannel) {
+                        channelSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Update subject with incremented part number
+        if (parentSubject) {
+            const subjectInput = document.getElementById('subject');
+            if (subjectInput && !subjectInput.value) {
+                subjectInput.value = incrementPartNumber(parentSubject);
+            }
+        }
+    });
+
+    function incrementPartNumber(subject) {
+        // (Part ##) or (part ##)
+        const partPattern = /\(([pP]art)\s+(\d+)\)/;
+        let match = subject.match(partPattern);
+        if (match) {
+            const partWord = match[1];
+            const num = parseInt(match[2], 10) + 1;
+            return subject.replace(partPattern, `(${partWord} ${num})`);
+        }
+
+        // , part ##
+        const commaPartPattern = /,\s*part\s+(\d+)/i;
+        match = subject.match(commaPartPattern);
+        if (match) {
+            const num = parseInt(match[1], 10) + 1;
+            return subject.replace(commaPartPattern, `, part ${num}`);
+        }
+
+        // (##/##)
+        const sequencePattern = /\((\d+)\/(\d+)\)/;
+        match = subject.match(sequencePattern);
+        if (match) {
+            const currentNum = parseInt(match[1], 10) + 1;
+            const totalNum = match[2];
+            return subject.replace(sequencePattern, `(${currentNum}/${totalNum})`);
+        }
+
+        // No pattern - add "(part 2)"
+        return subject.trim() + ' (part 2)';
+    }
+});
+</script>
+{% endblock %}

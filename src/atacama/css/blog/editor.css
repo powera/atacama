@@ -1,0 +1,335 @@
+/* ==========================================================================
+   THREE-STAGE EDITOR
+
+   Design intent:
+   - Input field is the hero - wide, prominent
+   - All controls are small, muted, secondary
+   - Content textarea dominates the page
+   - Preview is for reference, not editing
+   ========================================================================== */
+
+.editor-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--spacing-base);
+}
+
+/* ==========================================================================
+   META SECTION - Subject, channel, parent (standard form layout)
+   ========================================================================== */
+
+.editor-meta-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.editor-meta-section .form-group {
+    margin-bottom: var(--spacing-base);
+}
+
+.editor-meta-section label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.editor-meta-section input,
+.editor-meta-section select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--color-input-bg);
+    color: var(--color-text);
+}
+
+.editor-meta-section input:focus,
+.editor-meta-section select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* ==========================================================================
+   INPUT SECTION - The command line
+   ========================================================================== */
+
+.editor-input-section {
+    margin-bottom: var(--spacing-base);
+}
+
+/* Main input row: textarea + button stack */
+.input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.input-textarea {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    resize: vertical;
+    min-height: 60px;
+}
+
+.input-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.input-textarea::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* Button stack (vertical) */
+.button-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stack-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.stack-btn:hover {
+    border-color: var(--color-text-muted);
+}
+
+.stack-btn.btn-primary {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.stack-btn.btn-primary:hover {
+    background: var(--color-primary-dark);
+}
+
+/* Secondary controls row: small, muted */
+.input-row.secondary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.history-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.secondary-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.status-area {
+    margin-left: 12px;
+    font-style: italic;
+}
+
+/* Small controls - buttons and selects in secondary row */
+.small-btn {
+    padding: 3px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.small-btn:hover:not(:disabled) {
+    border-color: var(--color-text-muted);
+}
+
+.small-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.small-select {
+    padding: 3px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+/* Primary action button */
+.btn-primary {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background: var(--color-primary);
+    color: white;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-dark);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner.hidden { display: none; }
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   CONTENT SECTION - The main textarea
+   ========================================================================== */
+
+.editor-content-section {
+    margin-bottom: var(--spacing-base);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.tab-group {
+    display: flex;
+    gap: 2px;
+}
+
+.tab-btn {
+    padding: 2px 8px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.tab-btn:hover {
+    color: var(--color-text);
+}
+
+.tab-btn.active {
+    background: var(--color-text-muted);
+    color: white;
+}
+
+.content-meta {
+    display: flex;
+    gap: 12px;
+}
+
+.private-indicator {
+    color: var(--color-warning);
+}
+
+.private-indicator.hidden { display: none; }
+
+.aml-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    resize: vertical;
+}
+
+.aml-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* ==========================================================================
+   PREVIEW SECTION
+   ========================================================================== */
+
+.editor-preview-section {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-base);
+}
+
+.editor-preview-section .section-header {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-background);
+}
+
+.preview-container {
+    padding: 12px;
+    min-height: 100px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.preview-container .empty-content {
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* ==========================================================================
+   ACTIONS - Save/Publish buttons at bottom
+   ========================================================================== */
+
+.editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    border-color: var(--color-text-muted);
+}

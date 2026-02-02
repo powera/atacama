@@ -160,6 +160,10 @@ class Email(Message):
     preview_content: Mapped[str] = mapped_column(Text, nullable=True)  # Truncated at --MORE--
     processed_content: Mapped[str] = mapped_column(Text)
 
+    # Public version fields (for dual public/private visibility)
+    public_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Extracted public version (<<PRIVATE:>> markers stripped)
+    public_processed_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Rendered HTML for public version
+
     # Chain relationships directly in Email
     parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('emails.id'))
     children: Mapped[List["Email"]] = relationship(

@@ -2,13 +2,49 @@
 
 import time
 from contextlib import contextmanager
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Optional, Generator
 
 import constants
 from common.base.logging_config import get_logger
 logger = get_logger(__name__)
+
+
+def upgrade_schema(engine) -> None:
+    """
+    Apply schema upgrades for columns added after initial table creation.
+
+    SQLAlchemy's create_all() only creates new tables, not new columns on existing tables.
+    This function checks for missing columns and adds them.
+    """
+    inspector = inspect(engine)
+
+    # Define columns that may need to be added to existing tables
+    # Format: (table_name, column_name, column_type)
+    schema_upgrades = [
+        ('emails', 'public_content', 'TEXT'),
+        ('emails', 'public_processed_content', 'TEXT'),
+    ]
+
+    with engine.connect() as conn:
+        for table_name, column_name, column_type in schema_upgrades:
+            # Check if table exists
+            if table_name not in inspector.get_table_names():
+                continue
+
+            # Check if column already exists
+            existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
+            if column_name in existing_columns:
+                continue
+
+            # Add the missing column
+            logger.info(f"Adding column {column_name} to table {table_name}")
+            try:
+                conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not add column {column_name} to {table_name}: {e}")
 
 class DatabaseError(Exception):
     """Custom exception for database-related errors."""
@@ -68,6 +104,9 @@ class Database:
             # Import here to avoid circular imports
             from models import Base
             Base.metadata.create_all(self._engine)
+
+            # Apply any pending schema upgrades (new columns on existing tables)
+            upgrade_schema(self._engine)
 
             self._session_factory = sessionmaker(bind=self._engine)
             self.initialized = True

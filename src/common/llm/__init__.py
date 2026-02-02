@@ -30,6 +30,9 @@ from .lib import (
 from .widget_initiator import WidgetInitiator
 from .widget_improver import WidgetImprover
 
+# Editor assistant
+from .editor_assistant import EditorAssistant
+
 __all__ = [
     # Types
     'SchemaProperty', 'Schema', 'Response',
@@ -41,5 +44,8 @@ __all__ = [
     'to_openai_schema', 'to_anthropic_schema', 'to_gemini_schema', 'to_ollama_schema', 'schema_from_dict',
     
     # Widget tools
-    'WidgetInitiator', 'WidgetImprover'
+    'WidgetInitiator', 'WidgetImprover',
+
+    # Editor assistant
+    'EditorAssistant'
 ]
