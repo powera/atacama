@@ -1,23 +1,9 @@
 """Tests for the chess module FEN parsing and board rendering."""
 
-import sys
 import unittest
 from unittest.mock import MagicMock
 
-# Import chess module directly to avoid aml_parser.__init__.py dependencies
-# This allows the tests to run without sqlalchemy being installed
-import importlib.util
-spec = importlib.util.spec_from_file_location(
-    "chess",
-    "src/aml_parser/chess.py"
-)
-chess_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(chess_module)
-
-get_piece_map = chess_module.get_piece_map
-validate_fen = chess_module.validate_fen
-fen_to_board = chess_module.fen_to_board
-fen_to_board_old = chess_module.fen_to_board_old
+from aml_parser.chess import get_piece_map, validate_fen, fen_to_board, fen_to_board_old
 
 
 class TestGetPieceMap(unittest.TestCase):

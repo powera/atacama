@@ -224,9 +224,17 @@ class AtacamaParser:
             return text_node_for_fallback
 
     def parse_colored_mlq(self) -> Optional[Node]:
-        """Parse a color tag at line start followed by an MLQ block."""
+        """Parse a color tag at line start followed by an MLQ block.
+
+        This only applies when the color tag is at the start of a line (column 1).
+        Mid-line color tags followed by MLQ blocks are handled separately.
+        """
         token = self.peek()
         if not token or token.type != TokenType.COLOR_TAG:
+            return None
+
+        # Only apply colored MLQ syntax when color tag is at line start
+        if token.column != 1:
             return None
 
         saved_position = self.position

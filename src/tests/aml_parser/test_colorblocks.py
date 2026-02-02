@@ -2,30 +2,22 @@
 
 import unittest
 from unittest.mock import patch, MagicMock
-import importlib.util
 
-# Import colorblocks module directly to avoid aml_parser.__init__.py dependencies
-# This allows the tests to run without sqlalchemy being installed
-spec = importlib.util.spec_from_file_location(
-    "colorblocks",
-    "src/aml_parser/colorblocks.py"
+from aml_parser.colorblocks import (
+    COLORS,
+    create_color_block,
+    create_chinese_annotation,
+    create_list_item,
+    create_list_container,
+    create_multiline_block,
+    create_literal_text,
+    _detect_youtube_url,
+    create_url_link,
+    create_wiki_link,
+    create_emphasis,
+    create_inline_title,
+    create_template_html,
 )
-colorblocks_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(colorblocks_module)
-
-COLORS = colorblocks_module.COLORS
-create_color_block = colorblocks_module.create_color_block
-create_chinese_annotation = colorblocks_module.create_chinese_annotation
-create_list_item = colorblocks_module.create_list_item
-create_list_container = colorblocks_module.create_list_container
-create_multiline_block = colorblocks_module.create_multiline_block
-create_literal_text = colorblocks_module.create_literal_text
-_detect_youtube_url = colorblocks_module._detect_youtube_url
-create_url_link = colorblocks_module.create_url_link
-create_wiki_link = colorblocks_module.create_wiki_link
-create_emphasis = colorblocks_module.create_emphasis
-create_inline_title = colorblocks_module.create_inline_title
-create_template_html = colorblocks_module.create_template_html
 
 
 class TestColorsConstant(unittest.TestCase):

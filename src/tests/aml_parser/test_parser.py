@@ -1,42 +1,8 @@
 import unittest
 from textwrap import dedent
-import importlib.util
-import sys
 
-# Import modules directly to avoid aml_parser.__init__.py dependencies
-# First load colorblocks dependency for lexer
-colorblocks_spec = importlib.util.spec_from_file_location(
-    "aml_parser.colorblocks",
-    "src/aml_parser/colorblocks.py"
-)
-colorblocks_module = importlib.util.module_from_spec(colorblocks_spec)
-sys.modules['aml_parser.colorblocks'] = colorblocks_module
-colorblocks_spec.loader.exec_module(colorblocks_module)
-
-# Load lexer
-lexer_spec = importlib.util.spec_from_file_location(
-    "aml_parser.lexer",
-    "src/aml_parser/lexer.py"
-)
-lexer_module = importlib.util.module_from_spec(lexer_spec)
-sys.modules['aml_parser.lexer'] = lexer_module
-lexer_spec.loader.exec_module(lexer_module)
-
-# Load parser
-parser_spec = importlib.util.spec_from_file_location(
-    "aml_parser.parser",
-    "src/aml_parser/parser.py"
-)
-parser_module = importlib.util.module_from_spec(parser_spec)
-parser_spec.loader.exec_module(parser_module)
-
-tokenize = lexer_module.tokenize
-TokenType = lexer_module.TokenType
-parse = parser_module.parse
-NodeType = parser_module.NodeType
-ColorNode = parser_module.ColorNode
-Node = parser_module.Node
-ListItemNode = parser_module.ListItemNode
+from aml_parser.lexer import tokenize, TokenType
+from aml_parser.parser import parse, display_ast, NodeType, ColorNode, Node, ListItemNode
 
 class TestAtacamaParser(unittest.TestCase):
     """Test suite for the Atacama parser implementation."""
@@ -390,7 +356,6 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_display_ast_returns_string(self):
         """display_ast should return string when return_string=True."""
-        display_ast = parser_module.display_ast
         text = "Hello"
         ast = self.parse_text(text)
         result = display_ast(ast, return_string=True)
@@ -400,7 +365,6 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_display_ast_none_node(self):
         """display_ast should handle None node."""
-        display_ast = parser_module.display_ast
         result = display_ast(None, return_string=True)
         self.assertEqual(result, "")
 

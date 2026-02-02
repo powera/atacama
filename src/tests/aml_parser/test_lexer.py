@@ -1,31 +1,7 @@
 import unittest
 from textwrap import dedent
-import importlib.util
 
-# Import lexer module directly to avoid aml_parser.__init__.py dependencies
-# This allows the tests to run without sqlalchemy being installed
-spec = importlib.util.spec_from_file_location(
-    "lexer",
-    "src/aml_parser/lexer.py"
-)
-# First load the colorblocks dependency
-colorblocks_spec = importlib.util.spec_from_file_location(
-    "aml_parser.colorblocks",
-    "src/aml_parser/colorblocks.py"
-)
-colorblocks_module = importlib.util.module_from_spec(colorblocks_spec)
-import sys
-sys.modules['aml_parser.colorblocks'] = colorblocks_module
-colorblocks_spec.loader.exec_module(colorblocks_module)
-
-# Now load lexer
-lexer_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(lexer_module)
-
-tokenize = lexer_module.tokenize
-TokenType = lexer_module.TokenType
-Token = lexer_module.Token
-LexerError = lexer_module.LexerError
+from aml_parser.lexer import tokenize, TokenType, Token, LexerError
 
 class TestAtacamaLexer(unittest.TestCase):
     """Test suite for the Atacama lexer component."""

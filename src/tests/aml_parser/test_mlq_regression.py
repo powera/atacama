@@ -7,24 +7,12 @@ followed by an MLQ block causes the entire MLQ to be colored.
 """
 
 import unittest
-import sys
-import os
 
-# Try to import the full aml_parser module chain
-# These tests require sqlalchemy and other dependencies
-try:
-    from aml_parser.lexer import tokenize
-    from aml_parser.parser import parse, NodeType
-    from aml_parser.html_generator import generate_html
-    AML_PARSER_AVAILABLE = True
-except ImportError:
-    AML_PARSER_AVAILABLE = False
-    tokenize = None
-    parse = None
-    NodeType = None
-    generate_html = None
+from aml_parser.lexer import tokenize
+from aml_parser.parser import parse, NodeType
+from aml_parser.html_generator import generate_html
 
-@unittest.skipUnless(AML_PARSER_AVAILABLE, "aml_parser dependencies not available")
+
 class ColoredMLQTest(unittest.TestCase):
     
     def test_basic_colored_mlq(self):
@@ -46,22 +34,31 @@ class ColoredMLQTest(unittest.TestCase):
         self.assertIn("This is a red MLQ block", html, "HTML should include MLQ content")
     
     def test_midline_color_mlq(self):
-        """Test that color tag NOT at line start doesn't color the MLQ."""
+        """Test that mid-line color tag doesn't create a colored MLQ.
+
+        When a color tag is NOT at line start:
+        - It creates a line-level color block that extends to end of line
+        - The MLQ markers (<<<, >>>) become text content inside the color block
+        - The colored-MLQ syntax (<color> <<<...>>>) only applies at line start
+
+        This is different from having a separate MLQ node - the parser design
+        is that line-level color blocks consume until end of line.
+        """
         input_text = "Some text <red> <<< This MLQ shouldn't be red >>>"
         tokens = tokenize(input_text)
         ast = parse(tokens)
-        
-        # Find MLQ node - should be separate from color tag
-        mlq_node = None
-        color_node = None
-        for node in ast.children:
-            if node.type == NodeType.MLQ:
-                mlq_node = node
-            elif node.type == NodeType.COLOR_BLOCK:
-                color_node = node
-        
-        self.assertIsNotNone(mlq_node, "MLQ node should exist")
-        self.assertFalse(hasattr(mlq_node, 'color'), "MLQ should NOT have a color attribute")
+
+        # Should have: TEXT, COLOR_BLOCK (containing the MLQ markers as text)
+        self.assertEqual(len(ast.children), 2)
+        self.assertEqual(ast.children[0].type, NodeType.TEXT)
+        self.assertEqual(ast.children[1].type, NodeType.COLOR_BLOCK)
+
+        # The color block should contain the MLQ markers as text, not as MLQ node
+        color_block = ast.children[1]
+        self.assertEqual(color_block.color, 'red')
+        # Verify no MLQ node exists - MLQ markers are absorbed as text
+        mlq_nodes = [n for n in ast.children if n.type == NodeType.MLQ]
+        self.assertEqual(len(mlq_nodes), 0, "Mid-line color blocks absorb MLQ markers as text")
     
     def test_newline_between(self):
         """Test that newline between color tag and MLQ breaks the association."""

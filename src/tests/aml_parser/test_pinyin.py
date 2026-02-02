@@ -1,29 +1,20 @@
 """Tests for the pinyin module Chinese text annotation."""
 
-import sys
 import unittest
 from unittest.mock import patch, MagicMock
 
-# Import pinyin module directly to avoid aml_parser.__init__.py dependencies
-# This allows the tests to run even when some dependencies are missing
+# Pinyin module requires jieba and pypinyin dependencies
 try:
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "pinyin_module",
-        "src/aml_parser/pinyin.py"
+    from aml_parser.pinyin import (
+        ChineseAnnotation,
+        PinyinFormatter,
+        ToneSandhi,
+        PinyinProcessor,
+        annotate_chinese,
     )
-    pinyin_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pinyin_module)
-
-    ChineseAnnotation = pinyin_module.ChineseAnnotation
-    PinyinFormatter = pinyin_module.PinyinFormatter
-    ToneSandhi = pinyin_module.ToneSandhi
-    PinyinProcessor = pinyin_module.PinyinProcessor
-    annotate_chinese = pinyin_module.annotate_chinese
     PINYIN_AVAILABLE = True
-except (ImportError, ModuleNotFoundError) as e:
-    # Some dependencies (jieba, pypinyin) may not be installed
-    # Skip tests that require them
+except ImportError:
+    # Dependencies (jieba, pypinyin) not installed - skip tests
     PINYIN_AVAILABLE = False
     ChineseAnnotation = None
     PinyinFormatter = None
