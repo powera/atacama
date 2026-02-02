@@ -1,5 +1,6 @@
 import unittest
 from textwrap import dedent
+
 from aml_parser.lexer import tokenize, TokenType, Token, LexerError
 
 class TestAtacamaLexer(unittest.TestCase):
@@ -250,9 +251,9 @@ class TestAtacamaLexer(unittest.TestCase):
             <red> <<< #] #] (((
             Quoted text
         """).strip()
-        
+
         tokens = list(tokenize(text))
-        
+
         # Verify the overall token sequence is correct
         self.assert_tokens(text, [
             TokenType.TEXT,
@@ -271,6 +272,185 @@ class TestAtacamaLexer(unittest.TestCase):
             TokenType.NEWLINE,
             TokenType.TEXT,
             ])
+
+    def test_templates_basic(self):
+        """Lexer should tokenize templates correctly."""
+        text = "Book: {{isbn|1234567890}}"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Book: "),
+            (TokenType.TEMPLATE, "1234567890")
+        ])
+        # Verify template name
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[1].template_name, "isbn")
+
+    def test_templates_wikidata(self):
+        """Lexer should handle wikidata template."""
+        text = "Entity: {{wikidata|Q12345}}"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Entity: "),
+            (TokenType.TEMPLATE, "Q12345")
+        ])
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[1].template_name, "wikidata")
+
+    def test_templates_nested_braces(self):
+        """Lexer should handle templates with nested braces."""
+        text = "{{pgn|{{nested}}}}"
+        tokens = list(tokenize(text))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.TEMPLATE)
+        self.assertEqual(tokens[0].value, "{{nested}}")
+        self.assertEqual(tokens[0].template_name, "pgn")
+
+    def test_templates_invalid_no_pipe(self):
+        """Lexer should not tokenize template without pipe as template."""
+        text = "{{notatemplate}}"
+        tokens = list(tokenize(text))
+        # Should become text since no pipe separator
+        self.assertTrue(all(t.type == TokenType.TEXT for t in tokens))
+
+    def test_templates_unclosed(self):
+        """Lexer should handle unclosed templates gracefully."""
+        text = "{{isbn|unclosed"
+        tokens = list(tokenize(text))
+        # Should become text
+        self.assertTrue(all(t.type == TokenType.TEXT for t in tokens))
+
+    def test_title_tags(self):
+        """Lexer should tokenize title tags correctly."""
+        text = "[# Section Title #]"
+        self.assert_token_values(text, [
+            (TokenType.TITLE_START, "[#"),
+            (TokenType.TEXT, " Section Title "),
+            (TokenType.TITLE_END, "#]")
+        ])
+
+    def test_title_with_formatting(self):
+        """Lexer should handle title with inner formatting."""
+        text = "[# *Emphasized* Title #]"
+        self.assert_tokens(text, [
+            TokenType.TITLE_START,
+            TokenType.TEXT,  # space
+            TokenType.EMPHASIS,
+            TokenType.TEXT,
+            TokenType.TITLE_END
+        ])
+
+    def test_wikilinks(self):
+        """Lexer should tokenize wikilinks correctly."""
+        text = "See [[Article Name]] for info"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "See "),
+            (TokenType.WIKILINK_START, "[["),
+            (TokenType.TEXT, "Article Name"),
+            (TokenType.WIKILINK_END, "]]"),
+            (TokenType.TEXT, " for info")
+        ])
+
+    def test_wikilink_unclosed(self):
+        """Lexer should handle unclosed wikilinks."""
+        text = "See [[Unclosed"
+        tokens = list(tokenize(text))
+        # Should have start marker but no end
+        has_start = any(t.type == TokenType.WIKILINK_START for t in tokens)
+        has_end = any(t.type == TokenType.WIKILINK_END for t in tokens)
+        self.assertTrue(has_start)
+        self.assertFalse(has_end)
+
+    def test_emphasis_basic(self):
+        """Lexer should tokenize basic emphasis correctly."""
+        text = "This is *emphasized* text"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "This is "),
+            (TokenType.EMPHASIS, "emphasized"),
+            (TokenType.TEXT, " text")
+        ])
+
+    def test_emphasis_at_start(self):
+        """Lexer should handle emphasis at start of text."""
+        text = "*start* of line"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[0].type, TokenType.EMPHASIS)
+        self.assertEqual(tokens[0].value, "start")
+
+    def test_emphasis_at_end(self):
+        """Lexer should handle emphasis at end of text."""
+        text = "end of *line*"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[-1].type, TokenType.EMPHASIS)
+        self.assertEqual(tokens[-1].value, "line")
+
+    def test_emphasis_with_punctuation(self):
+        """Lexer should handle emphasis with punctuation inside."""
+        text = "Say *hello, world!* today"
+        tokens = list(tokenize(text))
+        emphasis_tokens = [t for t in tokens if t.type == TokenType.EMPHASIS]
+        self.assertEqual(len(emphasis_tokens), 1)
+        self.assertEqual(emphasis_tokens[0].value, "hello, world!")
+
+    def test_emphasis_max_length(self):
+        """Lexer should accept emphasis up to 40 characters."""
+        # Exactly 40 chars should work
+        text = "*" + "x" * 40 + "*"
+        tokens = list(tokenize(text))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.EMPHASIS)
+        self.assertEqual(len(tokens[0].value), 40)
+
+    def test_emphasis_boundary_cases(self):
+        """Lexer should handle emphasis edge cases."""
+        # Asterisk with space after - not emphasis, becomes list marker at line start
+        text = "* bullet item"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[0].type, TokenType.BULLET_LIST_MARKER)
+
+        # Asterisk mid-word without closing asterisk - splits into text tokens
+        # This is because the lexer sees *3 as potential emphasis start, but
+        # with no closing *, it backtracks and outputs * as separate text
+        text = "2*3=6"
+        tokens = list(tokenize(text))
+        self.assertTrue(all(t.type == TokenType.TEXT for t in tokens))
+        # Should have 3 tokens: "2", "*", "3=6"
+        self.assertEqual(len(tokens), 3)
+
+        # Too long emphasis (over 40 chars) - not tokenized as emphasis
+        text = "*" + "x" * 41 + "*"
+        tokens = list(tokenize(text))
+        self.assertTrue(all(t.type == TokenType.TEXT for t in tokens))
+
+    def test_url_with_fragment(self):
+        """Lexer should handle URLs with fragments."""
+        text = "Link: https://example.com/page#section"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Link: "),
+            (TokenType.URL, "https://example.com/page#section")
+        ])
+
+    def test_url_http(self):
+        """Lexer should handle http URLs."""
+        text = "Visit http://example.com"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "Visit "),
+            (TokenType.URL, "http://example.com")
+        ])
+
+    def test_url_complex_query(self):
+        """Lexer should handle URLs with complex query strings."""
+        text = "API: https://api.example.com/v1?foo=bar&baz=qux"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[1].type, TokenType.URL)
+        self.assertIn("foo=bar", tokens[1].value)
+        self.assertIn("baz=qux", tokens[1].value)
+
+    def test_lexer_error_class(self):
+        """LexerError should have line and column info."""
+        error = LexerError("Test error", line=5, column=10)
+        self.assertEqual(error.message, "Test error")
+        self.assertEqual(error.line, 5)
+        self.assertEqual(error.column, 10)
+        self.assertIn("line 5", str(error))
+        self.assertIn("column 10", str(error))
 
 if __name__ == '__main__':
     unittest.main()

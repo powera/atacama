@@ -5,7 +5,7 @@ the Atacama parser. It handles all node types and formatting features while
 maintaining separation between parsing and output generation.
 """
 
-from typing import Dict, Optional, List
+from typing import Any, Dict, Optional, List
 from aml_parser.parser import Node, NodeType, ColorNode, ListItemNode
 from aml_parser.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
@@ -13,28 +13,31 @@ from aml_parser.colorblocks import (
     create_url_link, create_wiki_link, create_emphasis, create_inline_title,
     create_template_html
 )
-from sqlalchemy.orm import Session
 
 from aml_parser.chess import fen_to_board
-from models.quotes import save_quotes
-from models import Email
 
 class HTMLGenerator:
     """
     Converts an Atacama AST into formatted HTML following the formal grammar.
-    
+
     This generator creates semantic HTML that preserves the document structure and
     formatting defined by the Atacama markup language. It handles all node types
     defined in the parser, including section breaks, multi-quote blocks, color
     formatting, lists, Chinese text annotations, URLs, wiki-style links, literal
     text, emphasized text, and templates.
     """
-    
+
     def __init__(self,
-                 db_session: Optional[Session] = None,
-                 message: Optional[Email] = None,
+                 db_session: Optional[Any] = None,
+                 message: Optional[Any] = None,
                  truncated: Optional[bool] = False):
-        """Initialize the HTML generator."""
+        """Initialize the HTML generator.
+
+        Args:
+            db_session: Optional SQLAlchemy session for quote saving (quote feature only)
+            message: Optional Email model instance for quote saving (quote feature only)
+            truncated: Whether to truncate output at --MORE-- tags
+        """
         self.db_session = db_session
         self.message = message
         self.truncated = truncated
@@ -217,9 +220,12 @@ class HTMLGenerator:
         """Generate HTML for a color-formatted block."""
         content = ''.join(self.generate(child) for child in node.children)
 
+        # Quote saving feature - imports are local to avoid requiring SQLAlchemy
+        # for basic parsing functionality
         if node.color in ('yellow', 'quote') and content and self.db_session and self.message:
+            from models.quotes import save_quotes
             save_quotes(
-                [{'text': content.strip(), 'quote_type': 'reference'}], 
+                [{'text': content.strip(), 'quote_type': 'reference'}],
                 self.message, self.db_session)
 
         return create_color_block(node.color, content, node.is_line)
