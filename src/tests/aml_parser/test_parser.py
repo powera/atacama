@@ -1,7 +1,42 @@
 import unittest
 from textwrap import dedent
-from aml_parser.lexer import tokenize, TokenType
-from aml_parser.parser import parse, NodeType, ColorNode, Node, ListItemNode
+import importlib.util
+import sys
+
+# Import modules directly to avoid aml_parser.__init__.py dependencies
+# First load colorblocks dependency for lexer
+colorblocks_spec = importlib.util.spec_from_file_location(
+    "aml_parser.colorblocks",
+    "src/aml_parser/colorblocks.py"
+)
+colorblocks_module = importlib.util.module_from_spec(colorblocks_spec)
+sys.modules['aml_parser.colorblocks'] = colorblocks_module
+colorblocks_spec.loader.exec_module(colorblocks_module)
+
+# Load lexer
+lexer_spec = importlib.util.spec_from_file_location(
+    "aml_parser.lexer",
+    "src/aml_parser/lexer.py"
+)
+lexer_module = importlib.util.module_from_spec(lexer_spec)
+sys.modules['aml_parser.lexer'] = lexer_module
+lexer_spec.loader.exec_module(lexer_module)
+
+# Load parser
+parser_spec = importlib.util.spec_from_file_location(
+    "aml_parser.parser",
+    "src/aml_parser/parser.py"
+)
+parser_module = importlib.util.module_from_spec(parser_spec)
+parser_spec.loader.exec_module(parser_module)
+
+tokenize = lexer_module.tokenize
+TokenType = lexer_module.TokenType
+parse = parser_module.parse
+NodeType = parser_module.NodeType
+ColorNode = parser_module.ColorNode
+Node = parser_module.Node
+ListItemNode = parser_module.ListItemNode
 
 class TestAtacamaParser(unittest.TestCase):
     """Test suite for the Atacama parser implementation."""
@@ -255,21 +290,119 @@ class TestAtacamaParser(unittest.TestCase):
         """Parser should handle unclosed literal blocks within color blocks."""
         text = dedent("""
             He defines a << contract guaranteed by law >> to be a type of security. (<red> I would define a security as << a financial instrument structured in a regular way, publicly registered, and based in the interest in some real property.) (<orange> this definition is *intended* to exclude << derivatives >>; they are not securities)
-            
+
             --MORE--
-            
+
             The differences
         """).strip()
-        
+
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
-        
+
         # Should have various nodes including MORE_TAG
         more_nodes = [n for n in ast.children if n.type == NodeType.MORE_TAG]
         self.assertEqual(len(more_nodes), 1)
-        
+
         # Should handle the unclosed literal gracefully without crashing
         self.assertGreater(len(ast.children), 3)
 
+    def test_title_tags(self):
+        """Parser should handle title tags correctly."""
+        text = "[# Section Title #]"
+        ast = self.parse_text(text)
+
+        title_nodes = [n for n in ast.children if n.type == NodeType.TITLE]
+        self.assertEqual(len(title_nodes), 1)
+        # Title should have children (the text content)
+        self.assertGreater(len(title_nodes[0].children), 0)
+
+    def test_title_with_emphasis(self):
+        """Parser should handle title with inner formatting."""
+        text = "[# *Bold* Title #]"
+        ast = self.parse_text(text)
+
+        title_nodes = [n for n in ast.children if n.type == NodeType.TITLE]
+        self.assertEqual(len(title_nodes), 1)
+
+        # Should have emphasis node as child
+        emphasis_children = [n for n in title_nodes[0].children if n.type == NodeType.EMPHASIS]
+        self.assertEqual(len(emphasis_children), 1)
+
+    def test_unclosed_title(self):
+        """Parser should handle unclosed title tags gracefully."""
+        text = "[# Unclosed title"
+        ast = self.parse_text(text)
+        # Should convert to text
+        self.assertTrue(any(n.type == NodeType.TEXT and '[#' in n.token.value
+                          for n in ast.children))
+
+    def test_templates(self):
+        """Parser should handle template tokens."""
+        text = "ISBN: {{isbn|1234567890}}"
+        ast = self.parse_text(text)
+
+        template_nodes = [n for n in ast.children if n.type == NodeType.TEMPLATE]
+        self.assertEqual(len(template_nodes), 1)
+        self.assertEqual(template_nodes[0].token.template_name, "isbn")
+        self.assertEqual(template_nodes[0].token.value, "1234567890")
+
+    def test_template_wikidata(self):
+        """Parser should handle wikidata template."""
+        text = "Entity: {{wikidata|Q42}}"
+        ast = self.parse_text(text)
+
+        template_nodes = [n for n in ast.children if n.type == NodeType.TEMPLATE]
+        self.assertEqual(len(template_nodes), 1)
+        self.assertEqual(template_nodes[0].token.template_name, "wikidata")
+        self.assertEqual(template_nodes[0].token.value, "Q42")
+
+    def test_nested_wikilinks(self):
+        """Parser should handle wikilinks with formatted content."""
+        text = "[[Article with *emphasis*]]"
+        ast = self.parse_text(text)
+
+        wikilink_nodes = [n for n in ast.children if n.type == NodeType.WIKILINK]
+        self.assertEqual(len(wikilink_nodes), 1)
+        # Should have emphasis node as child
+        emphasis_children = [n for n in wikilink_nodes[0].children if n.type == NodeType.EMPHASIS]
+        self.assertEqual(len(emphasis_children), 1)
+
+    def test_multiple_list_items(self):
+        """Parser should handle multiple consecutive list items."""
+        text = dedent("""
+            * First
+            * Second
+            * Third
+        """).strip()
+
+        ast = self.parse_text(text)
+        list_items = [n for n in ast.children if isinstance(n, ListItemNode)]
+        self.assertEqual(len(list_items), 3)
+        self.assertTrue(all(item.marker_type == 'bullet' for item in list_items))
+
+    def test_deep_nesting(self):
+        """Parser should handle deeply nested parentheses."""
+        text = "(((<red>deep)))"
+        ast = self.parse_text(text)
+        # Should not crash and should produce valid AST
+        self.assert_node_type(ast, NodeType.DOCUMENT)
+        self.assertGreater(len(ast.children), 0)
+
+    def test_display_ast_returns_string(self):
+        """display_ast should return string when return_string=True."""
+        display_ast = parser_module.display_ast
+        text = "Hello"
+        ast = self.parse_text(text)
+        result = display_ast(ast, return_string=True)
+        self.assertIsInstance(result, str)
+        self.assertIn("DOCUMENT", result)
+        self.assertIn("TEXT", result)
+
+    def test_display_ast_none_node(self):
+        """display_ast should handle None node."""
+        display_ast = parser_module.display_ast
+        result = display_ast(None, return_string=True)
+        self.assertEqual(result, "")
+
 if __name__ == '__main__':
-      unittest.main()
+    unittest.main()
