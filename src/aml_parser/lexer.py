@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import List, Generator, Optional, Set
@@ -73,6 +74,9 @@ class AtacamaLexer:
     VALID_COLORS: Set[str] = set(COLORS.keys())
     URL_PATTERN = re.compile(r'https?://[a-zA-Z0-9\-._~:/?#\[\]@!$&\'()*+,;=%]+')
 
+    # Maximum length for emphasized text (*text*) to prevent greedy matching across lines
+    MAX_EMPHASIS_LENGTH = 40
+
     def __init__(self):
         self.init("")
 
@@ -98,6 +102,29 @@ class AtacamaLexer:
         for _ in range(n):
             if self.current_char is None: break
             self._advance()
+
+    @contextmanager
+    def _save_position(self):
+        """Context manager to save and restore lexer position on failure.
+
+        Usage:
+            with self._save_position() as restore:
+                # try to parse something
+                if parsing_failed:
+                    restore()
+                    return None
+        """
+        saved_pos = self.pos
+        saved_line = self.line
+        saved_column = self.column
+
+        def restore():
+            self.pos = saved_pos
+            self.line = saved_line
+            self.column = saved_column
+            self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+
+        yield restore
 
     def _peek(self, offset: int = 0) -> Optional[str]:
         peek_pos = self.pos + offset
@@ -160,21 +187,20 @@ class AtacamaLexer:
     def _try_handle_emphasis(self, tok_line: int, tok_col: int) -> Optional[Token]:
         peek1 = self._peek(1)
         if self.current_char == '*' and peek1 is not None and peek1 not in ' \n':
-            original_pos, original_ln, original_col = self.pos, self.line, self.column
-            self._advance()
-            
-            text_content_start_idx = self.pos
-            while self.current_char and self.current_char != '*' and self.current_char != '\n':
+            with self._save_position() as restore:
                 self._advance()
-            
-            if self.current_char == '*':
-                text_val = self.text[text_content_start_idx:self.pos]
-                if 0 < len(text_val) <= 40:
-                    self._advance()
-                    return Token(TokenType.EMPHASIS, text_val, tok_line, tok_col)
 
-            self.pos, self.line, self.column = original_pos, original_ln, original_col
-            self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+                text_content_start_idx = self.pos
+                while self.current_char and self.current_char != '*' and self.current_char != '\n':
+                    self._advance()
+
+                if self.current_char == '*':
+                    text_val = self.text[text_content_start_idx:self.pos]
+                    if 0 < len(text_val) <= self.MAX_EMPHASIS_LENGTH:
+                        self._advance()
+                        return Token(TokenType.EMPHASIS, text_val, tok_line, tok_col)
+
+                restore()
         return None
 
     def _try_handle_delimiters(self, tok_line: int, tok_col: int,
@@ -188,61 +214,59 @@ class AtacamaLexer:
 
     def _try_handle_color_tag(self, tok_line: int, tok_col: int) -> Optional[Token]:
         if self.current_char == '<':
-            original_pos, original_ln, original_col = self.pos, self.line, self.column
-            self._advance() 
-            
-            tag_name_chars = []
-            while self.current_char and self.current_char.isalnum():
-                tag_name_chars.append(self.current_char)
+            with self._save_position() as restore:
                 self._advance()
-            
-            tag_name = "".join(tag_name_chars)
-            if self.current_char == '>' and tag_name in self.VALID_COLORS:
-                self._advance() 
-                return Token(TokenType.COLOR_TAG, f"<{tag_name}>", tok_line, tok_col)
 
-            self.pos, self.line, self.column = original_pos, original_ln, original_col
-            self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+                tag_name_chars = []
+                while self.current_char and self.current_char.isalnum():
+                    tag_name_chars.append(self.current_char)
+                    self._advance()
+
+                tag_name = "".join(tag_name_chars)
+                if self.current_char == '>' and tag_name in self.VALID_COLORS:
+                    self._advance()
+                    return Token(TokenType.COLOR_TAG, f"<{tag_name}>", tok_line, tok_col)
+
+                restore()
         return None
 
     def _try_handle_template(self, tok_line: int, tok_col: int) -> Optional[Token]:
         if self.text.startswith("{{", self.pos):
-            original_pos, original_ln, original_col = self.pos, self.line, self.column
-            self._advance_n(2)
+            with self._save_position() as restore:
+                self._advance_n(2)
 
-            name_chars = []
-            while self.current_char and self.current_char != '|' and not self.text.startswith("}}", self.pos):
-                name_chars.append(self.current_char)
-                self._advance()
-            
-            if self.current_char == '|':
-                template_name = "".join(name_chars)
-                self._advance() 
-                
-                value_chars = []
-                nesting_level = 0
-                while self.current_char:
-                    if self.text.startswith("{{", self.pos):
-                        nesting_level +=1
-                        value_chars.append("{{")
-                        self._advance_n(2)
-                        continue
-                    if self.text.startswith("}}", self.pos):
-                        if nesting_level == 0:
-                            break
-                        nesting_level -=1
-                        value_chars.append("}}")
-                        self._advance_n(2)
-                        continue
-                    value_chars.append(self.current_char)
+                name_chars = []
+                while self.current_char and self.current_char != '|' and not self.text.startswith("}}", self.pos):
+                    name_chars.append(self.current_char)
                     self._advance()
-                
-                if self.text.startswith("}}", self.pos):
-                    self._advance_n(2) 
-                    return Token(TokenType.TEMPLATE, "".join(value_chars), tok_line, tok_col, template_name=template_name)
 
-            self.pos, self.line, self.column = original_pos, original_ln, original_col
-            self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+                if self.current_char == '|':
+                    template_name = "".join(name_chars)
+                    self._advance()
+
+                    value_chars = []
+                    nesting_level = 0
+                    while self.current_char:
+                        if self.text.startswith("{{", self.pos):
+                            nesting_level += 1
+                            value_chars.append("{{")
+                            self._advance_n(2)
+                            continue
+                        if self.text.startswith("}}", self.pos):
+                            if nesting_level == 0:
+                                break
+                            nesting_level -= 1
+                            value_chars.append("}}")
+                            self._advance_n(2)
+                            continue
+                        value_chars.append(self.current_char)
+                        self._advance()
+
+                    if self.text.startswith("}}", self.pos):
+                        self._advance_n(2)
+                        return Token(TokenType.TEMPLATE, "".join(value_chars), tok_line, tok_col, template_name=template_name)
+
+                restore()
         return None
 
     def _try_handle_chinese(self, tok_line: int, tok_col: int) -> Optional[Token]:
@@ -263,67 +287,107 @@ class AtacamaLexer:
                 return Token(TokenType.URL, url, tok_line, tok_col)
         return None
 
+    def _is_at_color_tag(self) -> bool:
+        """Check if current position is at a valid color tag like <red>."""
+        if self.current_char != '<':
+            return False
+        tag_name_start = self.pos + 1
+        tag_name_end = tag_name_start
+        while tag_name_end < len(self.text) and self.text[tag_name_end].isalnum():
+            tag_name_end += 1
+        if tag_name_end < len(self.text) and self.text[tag_name_end] == '>':
+            return self.text[tag_name_start:tag_name_end] in self.VALID_COLORS
+        return False
+
+    def _is_at_list_marker(self) -> bool:
+        """Check if current position (at column 1) is at a list marker."""
+        if self.column != 1:
+            return False
+        temp_pos = self.pos
+        while temp_pos < len(self.text) and self.text[temp_pos] in ' \t':
+            temp_pos += 1
+        if temp_pos >= len(self.text):
+            return False
+        marker_char = self.text[temp_pos]
+        next_char = self.text[temp_pos + 1] if temp_pos + 1 < len(self.text) else None
+        return marker_char in "*#>" and next_char is not None and next_char.isspace()
+
+    def _is_at_emphasis_start(self) -> bool:
+        """Check if current position is at the start of emphasized text *like this*."""
+        if self.current_char != '*':
+            return False
+        peek1 = self._peek(1)
+        return peek1 is not None and peek1 not in ' \n'
+
+    def _should_break_text_parsing(self) -> bool:
+        """
+        Determine if we should stop collecting text and let another handler take over.
+        This checks for all special sequences that should interrupt plain text parsing.
+        """
+        # Newlines end text runs
+        if self.current_char == '\n':
+            return True
+
+        # Special tags and breaks
+        if self.text.startswith("--MORE--", self.pos):
+            return True
+        peek4 = self._peek(4)
+        if self.text.startswith("----", self.pos) and (peek4 is None or peek4.isspace() or peek4 == '\n'):
+            return True
+
+        # Multi-line quote and literal block delimiters
+        if self.text.startswith("<<<", self.pos) or self.text.startswith(">>>", self.pos):
+            return True
+        if self.text.startswith("<<", self.pos) or self.text.startswith(">>", self.pos):
+            return True
+
+        # Color tags
+        if self._is_at_color_tag():
+            return True
+
+        # Templates
+        if self.text.startswith("{{", self.pos):
+            return True
+
+        # Emphasis
+        if self._is_at_emphasis_start():
+            return True
+
+        # URLs
+        if self.text.startswith("http", self.pos) and self.URL_PATTERN.match(self.text, self.pos):
+            return True
+
+        # Chinese text
+        if '\u4e00' <= self.current_char <= '\u9fff':
+            return True
+
+        # Title and wikilink brackets
+        if self.text.startswith("[#", self.pos) or self.text.startswith("#]", self.pos):
+            return True
+        if self.text.startswith("[[", self.pos) or self.text.startswith("]]", self.pos):
+            return True
+
+        # Parentheses (for inline color blocks)
+        if self.current_char in '()':
+            return True
+
+        # List markers at start of line
+        if self._is_at_list_marker():
+            return True
+
+        return False
+
     def _handle_text(self, tok_line: int, tok_col: int) -> Token:
+        """Collect plain text until a special sequence is encountered."""
         start_idx = self.pos
-        
-        while self.current_char is not None:
-            if self.current_char == '\n': break 
 
-            if self.text.startswith("--MORE--", self.pos): break
-            peek4 = self._peek(4)
-            if self.text.startswith("----", self.pos) and (peek4 is None or peek4.isspace() or peek4 == '\n'): break
-            
-            if self.text.startswith("<<<", self.pos): break
-            if self.text.startswith(">>>", self.pos): break
-            if self.text.startswith("<<", self.pos): break
-            if self.text.startswith(">>", self.pos): break
-            
-            if self.current_char == '<':
-                temp_tag_name_start = self.pos + 1
-                temp_tag_name_end = temp_tag_name_start
-                while temp_tag_name_end < len(self.text) and self.text[temp_tag_name_end].isalnum():
-                    temp_tag_name_end += 1
-                if temp_tag_name_end < len(self.text) and self.text[temp_tag_name_end] == '>':
-                    if self.text[temp_tag_name_start:temp_tag_name_end] in self.VALID_COLORS:
-                        break
-
-            if self.text.startswith("{{", self.pos): break
-            
-            peek1 = self._peek(1)
-            if self.current_char == '*' and peek1 is not None and peek1 not in ' \n':
-                break
-            
-            if self.text.startswith("http", self.pos):
-                if self.URL_PATTERN.match(self.text, self.pos):
-                    break
-
-            if '\u4e00' <= self.current_char <= '\u9fff': break
-
-            if self.text.startswith("[#", self.pos): break 
-            if self.text.startswith("#]", self.pos): break 
-            if self.text.startswith("[[", self.pos): break 
-            if self.text.startswith("]]", self.pos): break 
-
-            if self.current_char == '(': break 
-            if self.current_char == ')': break 
-
-            if self.column == 1:
-                temp_marker_pos = self.pos
-                while temp_marker_pos < len(self.text) and self.text[temp_marker_pos] in ' \t':
-                    temp_marker_pos += 1
-                
-                if temp_marker_pos < len(self.text):
-                    marker_char_candidate = self.text[temp_marker_pos]
-                    next_after_marker_candidate = self.text[temp_marker_pos+1] if temp_marker_pos+1 < len(self.text) else None
-                    if marker_char_candidate in "*#>" and \
-                       (next_after_marker_candidate and next_after_marker_candidate.isspace()):
-                        break
-            
+        while self.current_char is not None and not self._should_break_text_parsing():
             self._advance()
 
+        # If we didn't advance at all, consume one character to avoid infinite loop
         if self.pos == start_idx and self.current_char is not None:
             self._advance()
-            
+
         value = self.text[start_idx:self.pos]
         return Token(TokenType.TEXT, value, tok_line, tok_col)
 

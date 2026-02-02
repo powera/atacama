@@ -5,7 +5,7 @@ the Atacama parser. It handles all node types and formatting features while
 maintaining separation between parsing and output generation.
 """
 
-from typing import Any, Dict, Optional, List
+from typing import Any, Optional, List
 from aml_parser.parser import Node, NodeType, ColorNode, ListItemNode
 from aml_parser.colorblocks import (
     create_color_block, create_chinese_annotation, create_list_item,
@@ -15,6 +15,62 @@ from aml_parser.colorblocks import (
 )
 
 from aml_parser.chess import fen_to_board
+
+
+class ParagraphAggregator:
+    """Collects inline content and flushes to paragraph HTML."""
+
+    def __init__(self):
+        self._parts: List[str] = []
+
+    def add(self, content: str) -> None:
+        """Add inline content to the current paragraph."""
+        if content:
+            self._parts.append(content)
+
+    def has_content(self) -> bool:
+        """Check if there's any content in the current paragraph."""
+        return bool(self._parts)
+
+    def flush(self) -> str:
+        """Flush the current paragraph and return HTML."""
+        if not self._parts:
+            return ""
+        content = "".join(self._parts)
+        self._parts = []
+        if not content.strip():
+            return ""
+        return f"<p>{content}</p>"
+
+
+class ListAggregator:
+    """Collects list items and flushes to list HTML."""
+
+    def __init__(self):
+        self._items: List[str] = []
+        self._marker_type: Optional[str] = None
+
+    def add(self, item_html: str, marker_type: str) -> str:
+        """Add a list item. Returns HTML to flush if marker type changed."""
+        flushed = ""
+        if self._marker_type is not None and self._marker_type != marker_type:
+            flushed = self.flush()
+        self._marker_type = marker_type
+        self._items.append(item_html)
+        return flushed
+
+    def has_content(self) -> bool:
+        """Check if there are any list items."""
+        return bool(self._items)
+
+    def flush(self) -> str:
+        """Flush the current list and return HTML."""
+        if not self._items:
+            return ""
+        html = create_list_container(self._items)
+        self._items = []
+        self._marker_type = None
+        return html
 
 class HTMLGenerator:
     """
@@ -59,86 +115,75 @@ class HTMLGenerator:
 
     def _generate_document(self, node: Node) -> str:
         """Generate HTML for the root document node."""
-        final_html_segments: List[str] = []
-        current_paragraph_parts: List[str] = []
-        current_list_items_for_ul: List[str] = []  # Stores full <li> HTML strings
-        active_list_marker_type = None  # e.g., 'bullet', 'number' from ListItemNode.marker_type
+        segments: List[str] = []
+        paragraph = ParagraphAggregator()
+        list_items = ListAggregator()
 
-        def flush_paragraph():
-            nonlocal current_paragraph_parts
-            if current_paragraph_parts:
-                content = "".join(current_paragraph_parts)
-                if content.strip(): # Avoid empty <p></p>
-                    final_html_segments.append(f"<p>{content}</p>")
-                current_paragraph_parts = []
+        def flush_all() -> None:
+            """Flush both paragraph and list to segments."""
+            p_html = paragraph.flush()
+            if p_html:
+                segments.append(p_html)
+            l_html = list_items.flush()
+            if l_html:
+                segments.append(l_html)
 
-        def flush_list():
-            nonlocal current_list_items_for_ul, active_list_marker_type
-            if current_list_items_for_ul:
-                final_html_segments.append(create_list_container(current_list_items_for_ul))
-                current_list_items_for_ul = []
-            active_list_marker_type = None
+        def flush_paragraph_only() -> None:
+            """Flush paragraph to segments."""
+            p_html = paragraph.flush()
+            if p_html:
+                segments.append(p_html)
+
+        def flush_list_only() -> None:
+            """Flush list to segments."""
+            l_html = list_items.flush()
+            if l_html:
+                segments.append(l_html)
 
         for child_node in node.children:
             if child_node.type == NodeType.HR:
-                flush_paragraph()
-                flush_list()
-                final_html_segments.append(self.generate(child_node)) # Calls _generate_hr
-            
+                flush_all()
+                segments.append(self.generate(child_node))
+
             elif child_node.type == NodeType.MORE_TAG:
-                flush_paragraph()
-                flush_list()
+                flush_all()
                 if self.truncated:
-                    # When truncated, show a message suggesting to click the title to read more
-                    final_html_segments.append('<p class="readmore">Click title to read full message...</p>')
+                    segments.append('<p class="readmore">Click title to read full message...</p>')
                     break
                 else:
-                    # When showing full content, display a sigil instead
-                    final_html_segments.append('<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>')
-            
+                    segments.append('<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>')
+
             elif child_node.type == NodeType.LIST_ITEM and isinstance(child_node, ListItemNode):
-                flush_paragraph()  # End current paragraph before starting/continuing a list
-
-                # ListItemNode's children make up the content of the <li>
+                flush_paragraph_only()
                 item_content_html = "".join(self.generate(c) for c in child_node.children)
-
-                # child_node here is a ListItemNode, which has a marker_type attribute
-                if active_list_marker_type != child_node.marker_type:  # If list type changes or new list starts
-                    flush_list()  # Finalize previous list if any
-                    active_list_marker_type = child_node.marker_type
-
-                # create_list_item (from colorblocks) generates the actual <li>...</li> HTML
-                current_list_items_for_ul.append(create_list_item(item_content_html, child_node.marker_type))
+                flushed = list_items.add(
+                    create_list_item(item_content_html, child_node.marker_type),
+                    child_node.marker_type
+                )
+                if flushed:
+                    segments.append(flushed)
 
             elif child_node.type == NodeType.NEWLINE:
-                # A NEWLINE at this level means it's time to end the current paragraph.
-                # If this NEWLINE is meant to be a <br /> within a line of text, 
-                # self.generate(child_node) will handle it when it's part of current_paragraph_parts.
-                flush_paragraph()
-                # It could also be that this NEWLINE is from the parser and should become a <br />
-                # if it's not just a structural separator.
-                # If the intent is for explicit <br /> tags from NEWLINE nodes at this level:
-                # generated_br = self.generate(child_node) # This would call _generate_newline
-                # final_html_segments.append(generated_br) # Or append to current_paragraph_parts if context demands
+                flush_paragraph_only()
 
-            else:  # Default case for other elements like MLQ, TEXT, COLOR_BLOCK etc.
-                flush_list()  # Any non-list item means current list (if any) must end.
-                
+            else:
+                # Any non-list item ends the current list
+                flush_list_only()
                 generated_content = self.generate(child_node)
-                
-                # Distinguish block-level vs. inline-level to correctly form paragraphs
-                if child_node.type in {NodeType.MLQ}: # Add other block types if necessary
-                    flush_paragraph()  # Ensure current paragraph is written before this block
-                    if generated_content:
-                        final_html_segments.append(generated_content)
-                elif generated_content: # Inline content, add to current paragraph
-                    current_paragraph_parts.append(generated_content)
 
-        # After loop, flush any remaining paragraph or list
-        flush_paragraph()
-        flush_list()
-        
-        return "\n".join(final_html_segments)
+                # Block-level elements go directly to segments
+                if child_node.type == NodeType.MLQ:
+                    flush_paragraph_only()
+                    if generated_content:
+                        segments.append(generated_content)
+                elif generated_content:
+                    # Inline content goes to current paragraph
+                    paragraph.add(generated_content)
+
+        # Flush any remaining content
+        flush_all()
+
+        return "\n".join(segments)
     
     def _wrap_section(self, contents: List[str]) -> str:
         """Wrap a section's contents in a section tag (currently a no-op for the tag itself)."""

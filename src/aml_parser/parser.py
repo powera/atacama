@@ -5,7 +5,8 @@ Syntax Tree (AST). It handles block structures, inline formatting, and special c
 types while gracefully recovering from malformed input.
 """
 
-from typing import List, Optional, Iterator, Tuple
+from contextlib import contextmanager
+from typing import List, Optional, Iterator
 from enum import Enum, auto
 from aml_parser.lexer import Token, TokenType
 
@@ -56,20 +57,20 @@ class ParseError(Exception):
 
 class AtacamaParser:
     """Parser for Atacama message formatting that creates an AST."""
-    
+
     def __init__(self, tokens: Iterator[Token]):
         """Initialize parser with token stream."""
         self.tokens = list(tokens)
         self.position = 0
         self.current_paren_depth = 0
-    
+
     def peek(self, offset: int = 0) -> Optional[Token]:
         """Look ahead in token stream without consuming."""
         pos = self.position + offset
         if pos < len(self.tokens):
             return self.tokens[pos]
         return None
-    
+
     def consume(self) -> Optional[Token]:
         """Consume and return next token."""
         token = self.peek()
@@ -88,6 +89,49 @@ class AtacamaParser:
         if not token or token.type != token_type:
             return None
         return self.consume()
+
+    @contextmanager
+    def _save_position(self):
+        """Context manager to save and restore parser position on failure.
+
+        Usage:
+            with self._save_position() as restore:
+                # try to parse something
+                if parsing_failed:
+                    restore()
+                    return None
+        """
+        saved_position = self.position
+
+        def restore():
+            self.position = saved_position
+
+        yield restore
+
+    def _create_text_fallback(self, token: Token, children: Optional[List[Node]] = None) -> Node:
+        """Create a TEXT node as a fallback for failed parsing.
+
+        When a construct like MLQ or brackets fails to close properly, we need to
+        convert the opening delimiter to plain text and preserve any content that
+        was parsed before we realized it was malformed.
+
+        Args:
+            token: The token representing the opening delimiter (e.g., '<<<', '[[')
+            children: Optional list of nodes parsed before the failure
+
+        Returns:
+            A TEXT node containing the delimiter text, with children attached
+        """
+        fallback_token = Token(
+            TokenType.TEXT,
+            token.value,
+            token.line,
+            token.column
+        )
+        fallback_node = Node(type=NodeType.TEXT, token=fallback_token)
+        if children:
+            fallback_node.children.extend(children)
+        return fallback_node
 
     def parse(self) -> Node:
         """Parse tokens into an AST."""
@@ -193,15 +237,7 @@ class AtacamaParser:
         start_token = self.expect(TokenType.MLQ_START)
         if not start_token:
             return None
-            
-        # Create a text node based on start_token for fallback
-        text_node_for_fallback = Node(type=NodeType.TEXT, token=Token(
-            TokenType.TEXT,
-            start_token.value, # This is '<<<'
-            start_token.line,
-            start_token.column
-        ))
-        
+
         parsed_children = []
         while (peeked := self.peek()) is not None and peeked.type != TokenType.MLQ_END:
             if node := self.parse_inline_content():
@@ -212,16 +248,15 @@ class AtacamaParser:
                 unhandled_token = self.consume()
                 if unhandled_token:
                     parsed_children.append(Node(type=NodeType.TEXT, token=unhandled_token))
-                
+
         if self.expect(TokenType.MLQ_END):
             # Successfully parsed MLQ
             mlq_node = Node(type=NodeType.MLQ, token=start_token)
             mlq_node.children = parsed_children
             return mlq_node
         else:
-            # No end marker - return as text, appending parsed children to the start_token's text representation
-            text_node_for_fallback.children.extend(parsed_children)
-            return text_node_for_fallback
+            # No end marker - return as text fallback
+            return self._create_text_fallback(start_token, parsed_children)
 
     def parse_colored_mlq(self) -> Optional[Node]:
         """Parse a color tag at line start followed by an MLQ block.
@@ -237,33 +272,34 @@ class AtacamaParser:
         if token.column != 1:
             return None
 
-        saved_position = self.position
-        color_token = self.consume()
-        assert color_token is not None  # Checked by peek() above
-        color = color_token.value.strip('<>')
+        with self._save_position() as restore:
+            color_token = self.consume()
+            assert color_token is not None  # Checked by peek() above
+            color = color_token.value.strip('<>')
 
-        whitespace_tokens = []
-        while (peeked := self.peek()) is not None and peeked.type == TokenType.TEXT and peeked.value.isspace():
-            whitespace_tokens.append(self.consume())
+            # Skip whitespace between color tag and MLQ start
+            while (peeked := self.peek()) is not None and peeked.type == TokenType.TEXT and peeked.value.isspace():
+                self.consume()
 
-        peeked = self.peek()
-        if peeked is None or peeked.type != TokenType.MLQ_START:
-            self.position = saved_position
-            return None
+            peeked = self.peek()
+            if peeked is None or peeked.type != TokenType.MLQ_START:
+                restore()
+                return None
 
-        mlq = self.parse_mlq()
-        if not mlq: # This implies parse_mlq itself might have returned a fallback TEXT node
-            self.position = saved_position # Revert if MLQ parsing (even fallback) wasn't what we wanted here
-            return None
-        
-        # If parse_mlq returned a valid MLQ node (not its text fallback)
-        if mlq.type == NodeType.MLQ:
-            setattr(mlq, 'color', color)  # Add color attribute to the MLQ node
-            return mlq
-        else: # parse_mlq returned a text fallback, meaning the MLQ wasn't properly closed.
-              # In this context, the colored_mlq construct is invalid. Backtrack.
-            self.position = saved_position
-            return None
+            mlq = self.parse_mlq()
+            if not mlq:
+                restore()
+                return None
+
+            # If parse_mlq returned a valid MLQ node (not its text fallback)
+            if mlq.type == NodeType.MLQ:
+                setattr(mlq, 'color', color)  # Add color attribute to the MLQ node
+                return mlq
+            else:
+                # parse_mlq returned a text fallback, meaning the MLQ wasn't properly closed.
+                # In this context, the colored_mlq construct is invalid. Backtrack.
+                restore()
+                return None
 
 
     def parse_list_item(self) -> Optional[ListItemNode]:
@@ -334,15 +370,15 @@ class AtacamaParser:
         start_token = self.expect(TokenType.PARENTHESIS_START)
         if not start_token:
             return None
-            
+
         self.current_paren_depth += 1
-        
+
         color_token_for_paren = None
         # Check if the very next token is a color tag, e.g. '(<red> ...)'
         peeked = self.peek()
         if peeked is not None and peeked.type == TokenType.COLOR_TAG:
             color_token_for_paren = self.consume()
-        
+
         children_within_paren = []
         while (peeked := self.peek()) is not None and peeked.type != TokenType.PARENTHESIS_END:
             if node := self.parse_inline_content():
@@ -352,10 +388,10 @@ class AtacamaParser:
                 unhandled_token = self.consume()
                 if unhandled_token:
                     children_within_paren.append(Node(type=NodeType.TEXT, token=unhandled_token))
-        
+
         end_token = self.expect(TokenType.PARENTHESIS_END)
-        self.current_paren_depth -= 1 # Decrement depth regardless of finding end_token or not
-        
+        self.current_paren_depth -= 1  # Decrement depth regardless of finding end_token or not
+
         if end_token:
             if color_token_for_paren:
                 # Case: (<color> child1 child2 )
@@ -364,24 +400,18 @@ class AtacamaParser:
             else:
                 # Case: ( child1 child2 )
                 # Represent as: TEXT(token='(') with children: [child1, child2, ..., TEXT(token=')')]
-                container = Node(type=NodeType.TEXT, token=start_token) 
-                container.children = children_within_paren 
-                container.children.append(Node(type=NodeType.TEXT, token=end_token)) 
+                container = Node(type=NodeType.TEXT, token=start_token)
+                container.children = children_within_paren
+                container.children.append(Node(type=NodeType.TEXT, token=end_token))
                 return container
         else:
-            # No closing parenthesis - fallback to text.
-            # The start_token ('(') becomes text. Append collected children.
-            # If there was a color_token_for_paren, it's effectively part of the children now if it was consumed.
-            # We need to ensure color_token_for_paren is also prepended if it was consumed.
-            text_fallback_node = Node(type=NodeType.TEXT, token=Token(
-                TokenType.TEXT, start_token.value, start_token.line, start_token.column
-            ))
-            
-            if color_token_for_paren: # If we consumed a color tag but didn't find closing paren
-                text_fallback_node.children.append(Node(type=NodeType.TEXT, token=color_token_for_paren))
-
-            text_fallback_node.children.extend(children_within_paren)
-            return text_fallback_node
+            # No closing parenthesis - fallback to text
+            # If there was a color_token_for_paren, prepend it to children
+            fallback_children = []
+            if color_token_for_paren:
+                fallback_children.append(Node(type=NodeType.TEXT, token=color_token_for_paren))
+            fallback_children.extend(children_within_paren)
+            return self._create_text_fallback(start_token, fallback_children)
 
     def parse_wikilink(self) -> Optional[Node]:
         """Parse a wiki-style link. Reuses parse_bracketed_content."""
@@ -405,31 +435,17 @@ class AtacamaParser:
         Used for wikilinks, literal blocks, and title text.
 
         :param start_type: Expected start token type
-        :param end_type: Expected end token type  
+        :param end_type: Expected end token type
         :param node_type: Type of node to create if successfully parsed
         :return: Parsed node or a TEXT fallback node if brackets are unclosed/malformed.
         """
         start_token = self.expect(start_type)
         if not start_token:
-            return None # Should not happen if called correctly
+            return None
 
-        # Create a text node based on the start_token's original value, for fallback.
-        # This node will store the start delimiter as text, and then any parsed children.
-        text_fallback_node = Node(type=NodeType.TEXT, token=Token(
-            TokenType.TEXT,
-            start_token.value, # e.g., "[[" or "<<" or "[#"
-            start_token.line,
-            start_token.column
-        ))
-
-        # Collect content that is between the start and potential end markers.
-        # These children will be used for the actual 'node_type' if parsing is successful,
-        # OR they will be appended to 'text_fallback_node.children' if parsing fails (e.g. no end marker).
-        parsed_children_for_node = []
-        
-        # Keep track of nesting depth for proper handling of nested brackets
+        parsed_children = []
         nesting_depth = 0
-        
+
         while (current_token := self.peek()) is not None:
             # Stop parsing on newline, or if we hit structural elements
             if current_token.type in {TokenType.NEWLINE, TokenType.SECTION_BREAK, TokenType.MORE_TAG}:
@@ -447,26 +463,23 @@ class AtacamaParser:
                     nesting_depth -= 1
 
             # Stop if we encounter tokens that typically end color blocks or parentheses
-            if current_token.type in {TokenType.PARENTHESIS_END} and nesting_depth == 0:
+            if current_token.type == TokenType.PARENTHESIS_END and nesting_depth == 0:
                 break
 
             if inline_node := self.parse_inline_content():
-                parsed_children_for_node.append(inline_node)
+                parsed_children.append(inline_node)
             else:
                 # Unhandled token within the brackets. Consume and add as raw text.
                 unhandled_token = self.consume()
                 if unhandled_token:
-                    parsed_children_for_node.append(Node(type=NodeType.TEXT, token=unhandled_token))
+                    parsed_children.append(Node(type=NodeType.TEXT, token=unhandled_token))
 
-        if self.expect(end_type): # Successfully found and consumed the end_type token
-            # Create the proper node with the original start_token and the collected children.
-            return Node(type=node_type, token=start_token, children=parsed_children_for_node)
+        if self.expect(end_type):
+            # Successfully found and consumed the end token
+            return Node(type=node_type, token=start_token, children=parsed_children)
         else:
-            # No end marker found.
-            # Return the text_fallback_node, which contains the start delimiter as text,
-            # and append the children parsed so far.
-            text_fallback_node.children.extend(parsed_children_for_node)
-            return text_fallback_node
+            # No end marker found - return text fallback
+            return self._create_text_fallback(start_token, parsed_children)
 
 
 def parse(tokens: Iterator[Token]) -> Node:

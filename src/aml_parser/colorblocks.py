@@ -1,7 +1,16 @@
 """HTML generation functions for Atacama formatting elements."""
 
 import re
-from typing import Dict, Optional, List, Tuple
+from typing import Optional, List, Tuple
+
+# Pre-compiled YouTube URL patterns for performance
+# Video IDs are exactly 11 characters: [a-zA-Z0-9_-]{11}
+_YOUTUBE_PATTERNS = [
+    re.compile(r'(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})'),
+    re.compile(r'(?:https?://)?(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})'),
+    # Variant with v param not first in query string
+    re.compile(r'(?:https?://)?(?:www\.)?youtube\.com/watch\?(?:[^&]*&)*v=([a-zA-Z0-9_-]{11})'),
+]
 
 # Color definitions with their sigils and descriptions
 # 'TAGNAME': ('SIGIL', 'CSS Class', 'Short description')
@@ -154,21 +163,12 @@ def create_literal_text(content: str) -> str:
 def _detect_youtube_url(url: str) -> Tuple[bool, Optional[str]]:
     """
     Check if URL is a Youtube video and extract video ID.
-    
+
     :param url: URL to check
     :return: Tuple of (is_youtube, video_id)
     """
-    # This pattern is a common way to match YouTube URLs.
-    # Consider that video IDs can be 11 characters long.
-    youtube_patterns = [
-        r'(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
-        r'(?:https?://)?(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})',
-        # More specific variant with optional query params after video ID
-        r'(?:https?://)?(?:www\.)?youtube\.com/watch\?(?:[^&]*&)*v=([a-zA-Z0-9_-]{11})'
-    ]
-
-    for pattern in youtube_patterns:
-        match = re.search(pattern, url) # Use re.search for flexibility
+    for pattern in _YOUTUBE_PATTERNS:
+        match = pattern.search(url)
         if match:
             return True, match.group(1)
     return False, None
