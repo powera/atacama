@@ -382,6 +382,46 @@ class TestAtacamaLexer(unittest.TestCase):
         self.assertTrue(has_start)
         self.assertFalse(has_end)
 
+    def test_emphasis_basic(self):
+        """Lexer should tokenize basic emphasis correctly."""
+        text = "This is *emphasized* text"
+        self.assert_token_values(text, [
+            (TokenType.TEXT, "This is "),
+            (TokenType.EMPHASIS, "emphasized"),
+            (TokenType.TEXT, " text")
+        ])
+
+    def test_emphasis_at_start(self):
+        """Lexer should handle emphasis at start of text."""
+        text = "*start* of line"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[0].type, TokenType.EMPHASIS)
+        self.assertEqual(tokens[0].value, "start")
+
+    def test_emphasis_at_end(self):
+        """Lexer should handle emphasis at end of text."""
+        text = "end of *line*"
+        tokens = list(tokenize(text))
+        self.assertEqual(tokens[-1].type, TokenType.EMPHASIS)
+        self.assertEqual(tokens[-1].value, "line")
+
+    def test_emphasis_with_punctuation(self):
+        """Lexer should handle emphasis with punctuation inside."""
+        text = "Say *hello, world!* today"
+        tokens = list(tokenize(text))
+        emphasis_tokens = [t for t in tokens if t.type == TokenType.EMPHASIS]
+        self.assertEqual(len(emphasis_tokens), 1)
+        self.assertEqual(emphasis_tokens[0].value, "hello, world!")
+
+    def test_emphasis_max_length(self):
+        """Lexer should accept emphasis up to 40 characters."""
+        # Exactly 40 chars should work
+        text = "*" + "x" * 40 + "*"
+        tokens = list(tokenize(text))
+        self.assertEqual(len(tokens), 1)
+        self.assertEqual(tokens[0].type, TokenType.EMPHASIS)
+        self.assertEqual(len(tokens[0].value), 40)
+
     def test_emphasis_boundary_cases(self):
         """Lexer should handle emphasis edge cases."""
         # Asterisk with space after - not emphasis, becomes list marker at line start
