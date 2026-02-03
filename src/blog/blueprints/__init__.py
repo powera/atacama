@@ -6,7 +6,6 @@ from .shared import content_bp, quotes_bp, feeds_bp, statistics_bp, widgets_bp
 # Import individual modules to register their routes with the shared blueprints
 from . import content
 from . import article
-from . import submit
 from . import quotes
 from . import feeds
 from . import statistics
