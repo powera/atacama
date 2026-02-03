@@ -575,7 +575,16 @@ def channel_list(channel: str) -> ResponseReturnValue:
     # Check authentication if required
     if config.requires_auth and 'user' not in session:
         return redirect(url_for('auth.login'))
-    
+
+    # Get available channels for sidebar
+    channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+
+    # Filter channels based on domain restrictions
+    domain_allowed_channels = []
+    for ch in channels:
+        if domain_manager.is_channel_allowed(current_domain, ch):
+            domain_allowed_channels.append(ch)
+
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = 100  # Number of messages per page
@@ -610,5 +619,7 @@ def channel_list(channel: str) -> ResponseReturnValue:
             per_page=per_page,
             total_pages=total_pages,
             has_prev=has_prev,
-            has_next=has_next
+            has_next=has_next,
+            current_channel=channel,
+            available_channels=domain_allowed_channels
         )
