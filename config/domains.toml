@@ -36,6 +36,14 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     channels = ["wikipedia"]
     theme = "shragafeivel"
     
+  # Pow3 blog domain
+  [domains.pow3]
+    name = "Pow3 Blog"
+    domains = ["blog.pow3.com"]
+    channels = ["tech", "llm", "atacama", "gardening"]
+    theme = "default"
+    description = "Pow3 Technology Blog"
+
   # Shragafeivel domain
   [domains.shragafeivel]
     name = "Shragafeivel"
