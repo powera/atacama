@@ -1,13 +1,13 @@
 {% extends "layouts/" + theme_layout + ".html" %}
 
-{% block title %}{% if current_channel %}{{ current_channel|title }} Channel{% else %}Recent Messages{% endif %}{% endblock %}
+{% block title %}{% if current_channel %}{{ current_channel|title }} Channel{% else %}{{ domain_config.name }}{% endif %}{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/css/blog/stream.css">
 {% endblock %}
 
 {% block page_title %}
-<h1 class="site-title">{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}Recent Messages{% endif %}</h1>
+<h1 class="site-title">{% if current_channel %}{{ channel_manager.get_display_name(current_channel) }} Channel{% else %}{{ domain_config.name }}{% endif %}</h1>
 {% endblock %}
 
 {% block content %}
