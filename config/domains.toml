@@ -41,7 +41,7 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     name = "Pow3 Blog"
     domains = ["blog.pow3.com"]
     channels = ["tech", "llm", "atacama", "gardening"]
-    theme = "default"
+    theme = "pow3"
     description = "Pow3 Technology Blog"
 
   # Shragafeivel domain
@@ -74,4 +74,10 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     name = "Shragafeivel"
     css_files = ["base.css", "components.css", "flash.css", "themes/atacama.css", "pages/stream.css", "themes/shragafeivel.css", "pages/chess.css"]
     layout = "shragafeivel"
+    banner = true
+
+  [themes.pow3]
+    name = "Pow3"
+    css_files = ["base.css", "components.css", "flash.css", "themes/atacama.css", "pages/stream.css", "themes/pow3.css", "pages/chess.css"]
+    layout = "pow3"
     banner = true
