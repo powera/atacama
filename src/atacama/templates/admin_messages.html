@@ -1,0 +1,69 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Manage Posts{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/css/pages/admin_messages.css">
+{% endblock %}
+
+{% block page_title %}
+<h1 class="site-title">Manage Posts</h1>
+{% endblock %}
+
+{% block content %}
+<div class="admin-messages-container">
+    <p class="admin-subtitle">{{ messages|length }} posts shown. Change channels using the dropdown on each row.</p>
+
+    {% if messages %}
+    <table class="messages-table">
+        <thead>
+            <tr>
+                <th class="col-date">Date</th>
+                <th class="col-title">Title</th>
+                <th class="col-channel">Channel</th>
+                <th class="col-action">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for message in messages %}
+            <tr class="message-row" data-message-id="{{ message.id }}">
+                <td class="col-date">
+                    <a href="{{ url_for('content.get_message', message_id=message.id) }}">
+                        {{ message.created_at_formatted }}
+                    </a>
+                </td>
+                <td class="col-title">
+                    <a href="{{ url_for('content.get_message', message_id=message.id) }}">
+                        {{ message.subject or '(No Subject)' }}
+                    </a>
+                </td>
+                <td class="col-channel">
+                    <form action="{{ url_for('admin.rechannel_message', message_id=message.id) }}" method="POST" class="rechannel-form">
+                        <select name="new_channel" class="channel-select" onchange="this.form.submit()">
+                            {% for channel_name, config in channel_configs.items() %}
+                            <option value="{{ channel_name }}" {% if channel_name == message.channel %}selected{% endif %}>
+                                {{ channel_manager.get_display_name(channel_name) }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </td>
+                <td class="col-action">
+                    <a href="{{ url_for('content.get_message', message_id=message.id) }}" class="view-link">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if has_more %}
+    <div class="pagination">
+        <a href="{{ url_for('content.landing_page', older_than_id=older_than_id) }}" class="button load-more-button">Load More Posts</a>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="empty-state">No messages found.</p>
+    {% endif %}
+</div>
+{% endblock %}
