@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{{ domain_config.name }}{% endblock %}</title>
+
+    {# Global CSS #}
+    {% for css_file in theme_css_files %}
+    <link rel="stylesheet" href="/css/{{ css_file }}">
+    {% endfor %}
+    {# Per-page CSS #}
+    {% block styles %}{% endblock %}
+
+    <script src="/js/atacama.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                        <button type="button" class="flash-close" onclick="this.parentElement.style.display='none';">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <header class="site-banner">
+        <div class="banner-content">
+            {% block page_title %}
+            <a href="{{ url_for('content.message_stream') }}" class="site-title-link">
+                <h1 class="site-title">{{ domain_config.name }}</h1>
+            </a>
+            {% if domain_config.description %}
+            <span class="site-description">{{ domain_config.description }}</span>
+            {% endif %}
+            {% endblock %}
+        </div>
+        <div class="banner-actions">
+            {% if user %}
+            <span class="user-badge">{{ user.name }}</span>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="page-container">
+        <aside class="sidebar">
+            <nav class="channel-navigation">
+                <a href="{{ url_for('content.message_stream') }}" class="home-link">
+                    <span class="home-icon">&#8962;</span> All Posts
+                </a>
+
+                <div class="channel-section">
+                    <span class="channel-section-title">Channels</span>
+                    <ul class="channel-list">
+                        {% for group, channels in channel_manager.get_channel_groups().items() %}
+                            {% for channel in channels %}
+                                {% if domain_manager.is_channel_allowed(current_domain, channel) and channel in available_channels %}
+                                    <li class="channel-item {% if current_channel == channel %}active{% endif %}">
+                                        <a href="{{ url_for('content.message_stream', channel=channel) }}"
+                                           class="channel-link">
+                                            {{ channel_manager.get_display_name(channel) }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
