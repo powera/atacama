@@ -17,7 +17,6 @@ from flask import (
     url_for
 )
 from flask.typing import ResponseReturnValue
-from sqlalchemy import text
 from sqlalchemy.orm import joinedload, selectinload
 
 # Local application imports
@@ -34,9 +33,8 @@ from models.messages import (
 )
 
 from models.models import Message, Article, ReactWidget, Quote, Email
-from models.users import is_user_admin
 from atacama.blueprints.errors import handle_error
-from atacama.decorators import navigable, navigable_per_channel, optional_auth, require_auth
+from atacama.decorators import navigable, navigable_per_channel, optional_auth, require_admin, require_auth
 from blog.blueprints.shared import content_bp
 
 logger = get_logger(__name__)
@@ -326,69 +324,60 @@ def message_stream(older_than_id: Optional[int] = None,
 
 
 @content_bp.route('/details')
-@optional_auth
-@navigable(name="Detailed Message List", category="admin")
-def landing_page() -> ResponseReturnValue:
-    """Serve the landing page with basic service information and message list."""
+@content_bp.route('/details/older/<int:older_than_id>')
+@require_admin
+@navigable(name="Manage Posts", category="admin")
+def landing_page(older_than_id: Optional[int] = None) -> ResponseReturnValue:
+    """Admin page for reviewing and rechanneling messages."""
     channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
     current_domain = g.current_domain
 
+    per_page = 100  # Show many posts for quick review
+
     with db.session() as db_session:
         try:
-            db_session.execute(text('SELECT 1'))
-            db_status = "Connected"
-
-            messages = db_session.query(Email).options(
+            # Build query with optional pagination
+            query = db_session.query(Email).options(
                 joinedload(Email.parent),
-                joinedload(Email.children),
-                joinedload(Email.quotes)
-            ).order_by(Email.created_at.desc()).limit(50).all()
+                joinedload(Email.children)
+            ).order_by(Email.created_at.desc())
 
-            # Get user if logged in
-            user = None
-            if 'user' in session:
-                user = get_or_create_user(db_session, session['user'])
+            if older_than_id:
+                # Get the timestamp of the reference message for pagination
+                ref_message = db_session.query(Email).get(older_than_id)
+                if ref_message:
+                    query = query.filter(Email.created_at < ref_message.created_at)
 
-            # Filter messages and get available channels
-            messages = [msg for msg in messages if check_message_access(msg)]
-            
-            # Further filter messages based on domain restrictions
+            # Get one extra to check if there are more
+            messages = query.limit(per_page + 1).all()
+
+            has_more = len(messages) > per_page
+            messages = messages[:per_page]
+
+            # Filter messages based on domain restrictions
             if not domain_manager.get_domain_config(current_domain).allows_all_channels:
                 domain_channels = domain_manager.get_allowed_channels(current_domain)
                 if domain_channels is not None:
                     messages = [msg for msg in messages if msg.channel in domain_channels]
-                
+
             for message in messages:
                 message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
 
-            # Get available channels for user
-            user_channels = get_user_allowed_channels(g.user, ignore_preferences=False)
-            
-            # Filter channels based on domain restrictions
-            if not domain_manager.get_domain_config(current_domain).allows_all_channels:
-                domain_channels = domain_manager.get_allowed_channels(current_domain)
-                if domain_channels is not None:
-                    available_channels = [c for c in user_channels if c in domain_channels]
-                else:
-                    available_channels = user_channels
-            else:
-                available_channels = user_channels
+            # Get next page ID if there are more messages
+            older_than_next_id = messages[-1].id if messages and has_more else None
 
         except Exception as e:
-            logger.error(f"Database error in landing page: {str(e)}")
-            db_status = f"Error: {str(e)}"
+            logger.error(f"Database error in admin details page: {str(e)}")
             messages = []
-            available_channels = []
+            has_more = False
+            older_than_next_id = None
 
-        user_email = g.user.email if g.user and hasattr(g.user, 'email') else None
         return render_template(
-            'landing.html',
-            db_status=db_status,
+            'admin_messages.html',
             messages=messages,
-            user=session.get('user'),
-            is_admin=is_user_admin(user_email) if user_email else False,
-            available_channels=available_channels,
+            has_more=has_more,
+            older_than_id=older_than_next_id,
             channel_configs=channel_manager.channels
         )
     
