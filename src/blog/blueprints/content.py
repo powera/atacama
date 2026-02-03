@@ -133,7 +133,16 @@ def get_message(message_id: int) -> ResponseReturnValue:
         
         if request.headers.get('Accept', '').startswith('text/html'):
             channel_config = get_channel_manager().get_channel_config(message.channel)
-            
+
+            # Get available channels for sidebar
+            channels = get_user_allowed_channels(g.user, ignore_preferences=False)
+
+            # Filter channels based on domain restrictions
+            domain_allowed_channels = []
+            for ch in channels:
+                if domain_manager.is_channel_allowed(current_domain, ch):
+                    domain_allowed_channels.append(ch)
+
             return render_template(
                 'messages/message.html',
                 message=message,
@@ -141,7 +150,9 @@ def get_message(message_id: int) -> ResponseReturnValue:
                 raw_content=message.content,
                 quotes=message.quotes,
                 channel=message.channel,
-                channel_config=channel_config
+                channel_config=channel_config,
+                current_channel=message.channel,
+                available_channels=domain_allowed_channels
             )
                 
         return jsonify({
