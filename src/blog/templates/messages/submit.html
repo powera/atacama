@@ -16,7 +16,7 @@
     <div class="error">{{ error }}</div>
     {% endif %}
 
-    <form method="POST" action="/submit">
+    <form method="POST" action="/admin/submit">
         <div class="form-group">
             <label for="subject">Subject:</label>
             <input type="text" id="subject" name="subject" required>
@@ -176,7 +176,7 @@
         const previewContent = document.getElementById('previewContent').querySelector('.message-main');
 
         try {
-            const response = await fetch('/api/preview', {
+            const response = await fetch('/admin/api/preview', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
