@@ -6,7 +6,7 @@
     --banner-height: 72px;
     --sidebar-width: 260px;
     --border-radius: 8px;
-    --content-max-width: 900px;
+    --content-max-width: 1100px;
 
     /* Light mode colors - refined indigo/violet palette */
     --banner-background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
@@ -194,9 +194,9 @@ body {
 .main-content {
     flex: 1;
     margin-left: var(--sidebar-width);
-    padding: 2.5rem 3rem;
+    padding: 2rem 2rem;
     box-sizing: border-box;
-    max-width: calc(var(--content-max-width) + 6rem);
+    max-width: calc(var(--content-max-width) + 4rem);
     transition: all 0.25s ease;
 }
 
