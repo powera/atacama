@@ -5,6 +5,7 @@ from flask.typing import ResponseReturnValue
 from sqlalchemy.exc import SQLAlchemyError
 
 from common.config.channel_config import get_channel_manager
+from common.config.domain_config import get_domain_manager
 from common.base.logging_config import get_logger
 from models.database import db
 from models import get_or_create_user
@@ -12,6 +13,42 @@ from models import get_or_create_user
 logger = get_logger(__name__)
 
 errors_bp = Blueprint('errors', __name__)
+
+
+def _ensure_domain_context() -> None:
+    """
+    Ensure domain/theme context is set up for error pages.
+
+    For 404 errors, Flask's before_request handler doesn't run because there's
+    no matching route. This function ensures the domain and theme are detected
+    from the request host so error pages use the correct layout.
+    """
+    # Skip if already set (e.g., from before_request handler for non-404 errors)
+    if hasattr(g, 'theme_layout') and g.theme_layout:
+        return
+
+    try:
+        domain_manager = get_domain_manager()
+        host = request.host
+
+        # Detect domain from host
+        domain_key = domain_manager.get_domain_for_host(host)
+        domain_config = domain_manager.get_domain_config(domain_key)
+
+        # Get theme configuration
+        theme_key = domain_config.theme
+        theme_config = domain_manager.get_theme_config(theme_key)
+
+        # Set values in Flask's g object for the context processor
+        g.current_domain = domain_key
+        g.domain_config = domain_config
+        g.theme_config = theme_config
+        g.theme_css_files = theme_config.css_files
+        g.theme_layout = theme_config.layout
+    except Exception as e:
+        logger.warning(f"Failed to detect domain for error page: {e}")
+        # Fall back to defaults - context processor will handle missing values
+
 
 def handle_error(error_code: str, error_title: str, error_message: str, details: str | None = None) -> ResponseReturnValue:
     """
@@ -24,7 +61,10 @@ def handle_error(error_code: str, error_title: str, error_message: str, details:
     :return: HTML template or JSON response with appropriate status code
     """
     status_code = int(error_code)
-    
+
+    # Ensure domain/theme context is set up (may not be for 404 errors)
+    _ensure_domain_context()
+
     # Ensure user session is populated if available
     if 'user' in session and not hasattr(g, 'user'):
         try:
