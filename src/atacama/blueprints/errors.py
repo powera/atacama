@@ -77,12 +77,20 @@ def handle_error(error_code: str, error_title: str, error_message: str, details:
     
     # Get channel info for error page context
     channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+    current_domain = getattr(g, 'current_domain', 'default')
+
     try:
         public_channels = channel_manager.get_public_channels()
+        # Filter channels by domain restrictions
+        domain_allowed_channels = [
+            ch for ch in public_channels
+            if domain_manager.is_channel_allowed(current_domain, ch)
+        ]
     except Exception as e:
         logger.error(f"Error fetching channels during error handling: {str(e)}")
-        public_channels = []
-    
+        domain_allowed_channels = []
+
     if request.headers.get('Accept', '').startswith('text/html'):
         return render_template(
             'error.html',
@@ -90,8 +98,10 @@ def handle_error(error_code: str, error_title: str, error_message: str, details:
             error_title=error_title,
             error_message=error_message,
             technical_details=details if current_app.debug else None,
-            public_channels=public_channels,
-            channel_manager=channel_manager
+            public_channels=domain_allowed_channels,
+            channel_manager=channel_manager,
+            available_channels=domain_allowed_channels,
+            current_channel=None
         ), status_code
     
     response = {
