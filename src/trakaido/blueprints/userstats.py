@@ -22,10 +22,10 @@ from trakaido.blueprints.stats_schema import (
     CONTEXTUAL_EXPOSURE_TYPES,
     create_empty_word_stats,
     validate_and_normalize_word_stats,
-    JourneyStats,
     merge_word_stats
 )
-from trakaido.blueprints.stats_snapshots import (
+from trakaido.blueprints.stats_backend import (
+    get_journey_stats,
     ensure_daily_snapshots,
     calculate_daily_progress,
     calculate_weekly_progress,
@@ -169,7 +169,7 @@ def get_all_journey_stats() -> ResponseReturnValue:
     try:
         user_id = str(g.user.id)
         language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
         return jsonify(journey_stats.stats)
     except Exception as e:
         logger.error(f"Error getting all journey stats: {str(e)}")
@@ -188,7 +188,7 @@ def save_all_journey_stats() -> ResponseReturnValue:
         if not data or "stats" not in data:
             return jsonify({"error": "Invalid request body. Expected 'stats' field."}), 400
 
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
         journey_stats.stats = data
         if journey_stats.save_with_daily_update():
             return jsonify({"success": True})
@@ -214,7 +214,7 @@ def update_word_stats() -> ResponseReturnValue:
         word_key = data["wordKey"]
         word_stats = data["wordStats"]
 
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
         journey_stats.set_word_stats(word_key, word_stats)
         
         if journey_stats.save_with_daily_update():
@@ -233,7 +233,7 @@ def get_word_stats(word_key: str) -> ResponseReturnValue:
     try:
         user_id = str(g.user.id)
         language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
         word_stats = journey_stats.get_word_stats(word_key)
         return jsonify({"wordStats": word_stats})
     except Exception as e:
@@ -287,7 +287,7 @@ def increment_word_stats() -> ResponseReturnValue:
             return jsonify({"error": "Failed to initialize daily stats"}), 500
 
         # Load current overall stats
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
 
         # Increment the word stats using helper function
         current_timestamp = int(datetime.now().timestamp() * 1000)
@@ -384,7 +384,7 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
             return jsonify({"error": "Failed to initialize daily stats"}), 500
 
         # Load journey stats once
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
 
         processed_count = 0
         failed_count = 0
@@ -617,7 +617,7 @@ def merge_local_stats() -> ResponseReturnValue:
             return jsonify({"error": "Failed to initialize daily stats"}), 500
 
         # Load current server stats
-        journey_stats = JourneyStats(user_id, language)
+        journey_stats = get_journey_stats(user_id, language)
         server_word_stats = journey_stats.stats.get("stats", {})
 
         # Track merge statistics

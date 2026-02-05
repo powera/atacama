@@ -651,7 +651,8 @@ class DailyStats(BaseStats):
 def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
     """Check if a user has any activity stats."""
     try:
-        journey_stats = JourneyStats(user_id, language)
+        from trakaido.blueprints.stats_backend import get_journey_stats
+        journey_stats = get_journey_stats(user_id, language)
         return not journey_stats.is_empty()
     except Exception as e:
         logger.error(f"Error checking activity stats for user {user_id}: {str(e)}")
