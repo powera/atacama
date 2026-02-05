@@ -40,7 +40,7 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
   [domains.pow3]
     name = "Alex Power's blog"
     domains = ["blog.pow3.com"]
-    channels = ["tech", "llm", "atacama", "gardening"]
+    channels = ["tech", "llm", "atacama", "barsukas", "trakaido", "gardening"]
     theme = "pow3"
     description = "technology blog"
 

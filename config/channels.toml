@@ -91,6 +91,16 @@ description = "On Atacama Development"
 access_level = "public"
 group = "Atacama"
 
+[channels.barsukas]
+description = "Barsukas"
+access_level = "public"
+group = "Atacama"
+
+[channels.trakaido]
+description = "Trakaido"
+access_level = "public"
+group = "Atacama"
+
 [channels.cities]
 description = "Project Journal"
 access_level = "public"
