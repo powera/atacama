@@ -54,6 +54,12 @@
               <div class="message-sidebar"></div>
             </div>
 
+            {% if message.english_annotations %}
+            <script type="application/json" id="english-annotations-{{ message.id }}">
+            {{ message.english_annotations | safe }}
+            </script>
+            {% endif %}
+
             {% if message.quotes %}
                 <div class="quote-section">
                     <h2>Quotes</h2>

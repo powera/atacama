@@ -13,6 +13,7 @@ class AtacamaViewer {
         // Bind methods to maintain correct 'this' context
         this.handleSigilClick = this.handleSigilClick.bind(this);
         this.handleAnnotationClick = this.handleAnnotationClick.bind(this);
+        this.handleEnglishAnnotationClick = this.handleEnglishAnnotationClick.bind(this);
         this.handleKeyDown = this.handleKeyDown.bind(this);
         
         // Defer initialization until DOM is ready
@@ -32,6 +33,7 @@ class AtacamaViewer {
         this.setupThemeSwitcher();
         this.setupThemeObserver();
         this.setupEventDelegation();
+        this.initializeEnglishAnnotations();
     }
 
     initializeTheme() {
@@ -137,6 +139,10 @@ class AtacamaViewer {
             
             if (e.target.closest('.annotated-chinese')) {
                 this.handleAnnotationClick(e);
+            }
+
+            if (e.target.closest('.annotated-english') || e.target.closest('.annotated-stopword')) {
+                this.handleEnglishAnnotationClick(e);
             }
 
             if (e.target.closest('.mlq-collapse')) {
@@ -270,7 +276,7 @@ class AtacamaViewer {
      */
     handleKeyDown(e) {
         if (e.key === 'Escape') {
-            document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
+            document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded, .annotation-english-inline.expanded')
                 .forEach(el => el.classList.remove('expanded'));
         }
     }
@@ -369,6 +375,204 @@ class AtacamaViewer {
         });
     }
 
+    /**
+     * Finds all english-annotations script blocks and wraps annotated words
+     * in the corresponding message bodies.
+     */
+    initializeEnglishAnnotations() {
+        const scripts = document.querySelectorAll('script[id^="english-annotations-"]');
+        scripts.forEach(script => {
+            try {
+                const annotations = JSON.parse(script.textContent);
+                const messageId = script.id.replace('english-annotations-', '');
+                // Find the article containing this script block
+                const article = script.closest('article');
+                if (!article) return;
+                const container = article.querySelector('.message-main');
+                if (container) {
+                    this.wrapAnnotatedWords(container, annotations);
+                }
+            } catch (e) {
+                // Skip invalid JSON silently
+            }
+        });
+    }
+
+    /**
+     * Walks text nodes in the container and wraps matched English words
+     * with annotation spans.
+     */
+    wrapAnnotatedWords(container, annotations) {
+        const wordRegex = /[a-zA-Z']+(?:-[a-zA-Z']+)*/g;
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode(node) {
+                    const parent = node.parentElement;
+                    if (!parent) return NodeFilter.FILTER_REJECT;
+                    // Skip elements that should not be annotated
+                    if (parent.closest('.literal-text, .annotated-chinese, script, style, .annotated-english, .annotated-stopword, .annotation-inline, .annotation-english-inline')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }
+        );
+
+        // Collect text nodes first to avoid modifying DOM during traversal
+        const textNodes = [];
+        while (walker.nextNode()) {
+            textNodes.push(walker.currentNode);
+        }
+
+        textNodes.forEach(textNode => {
+            const text = textNode.textContent;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+
+            wordRegex.lastIndex = 0;
+            while ((match = wordRegex.exec(text)) !== null) {
+                const word = match[0];
+                const key = word.toLowerCase();
+                const ann = annotations[key];
+
+                if (!ann) {
+                    continue;
+                }
+
+                // Add text before this match
+                if (match.index > lastIndex) {
+                    parts.push(document.createTextNode(text.slice(lastIndex, match.index)));
+                }
+
+                const span = document.createElement('span');
+
+                if (ann.is_stopword) {
+                    span.className = 'annotated-stopword';
+                    span.setAttribute('data-pos-category', ann.pos_type || '');
+                    span.setAttribute('data-lemma', ann.lemma || '');
+                } else {
+                    span.className = 'annotated-english';
+                    if (ann.guid) span.setAttribute('data-guid', ann.guid);
+                    span.setAttribute('data-lemma', ann.lemma || '');
+                    if (ann.definition) span.setAttribute('data-definition', ann.definition);
+                    if (ann.pos_type) span.setAttribute('data-pos-type', ann.pos_type);
+                    if (ann.pos_subtype) span.setAttribute('data-pos-subtype', ann.pos_subtype);
+                    if (ann.translations) span.setAttribute('data-translations', JSON.stringify(ann.translations));
+                    if (ann.form) span.setAttribute('data-form', ann.form);
+                }
+
+                span.textContent = word;
+                parts.push(span);
+                lastIndex = match.index + word.length;
+            }
+
+            if (parts.length === 0) return; // No matches in this text node
+
+            // Add remaining text
+            if (lastIndex < text.length) {
+                parts.push(document.createTextNode(text.slice(lastIndex)));
+            }
+
+            // Replace the text node with the parts
+            const fragment = document.createDocumentFragment();
+            parts.forEach(p => fragment.appendChild(p));
+            textNode.parentNode.replaceChild(fragment, textNode);
+        });
+    }
+
+    /**
+     * Handles clicks on annotated English words and stopwords
+     */
+    handleEnglishAnnotationClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const span = e.target.closest('.annotated-english, .annotated-stopword');
+        if (!span) return;
+
+        const existing = span.nextElementSibling;
+        if (existing?.classList.contains('annotation-english-inline')) {
+            // Close all others first
+            document.querySelectorAll('.annotation-english-inline.expanded').forEach(other => {
+                if (other !== existing) other.classList.remove('expanded');
+            });
+            existing.classList.toggle('expanded');
+            return;
+        }
+
+        // Close other open popups
+        document.querySelectorAll('.annotation-english-inline.expanded').forEach(el => {
+            el.classList.remove('expanded');
+        });
+
+        if (span.classList.contains('annotated-stopword')) {
+            this.createStopwordAnnotationElement(span);
+        } else {
+            this.createEnglishAnnotationElement(span);
+        }
+    }
+
+    /**
+     * Creates an inline annotation popup for a vocabulary word
+     */
+    createEnglishAnnotationElement(span) {
+        const lemma = span.getAttribute('data-lemma') || '';
+        const definition = span.getAttribute('data-definition') || '';
+        const posType = span.getAttribute('data-pos-type') || '';
+        const posSubtype = span.getAttribute('data-pos-subtype') || '';
+        const guid = span.getAttribute('data-guid') || '';
+        const form = span.getAttribute('data-form') || '';
+        let translationsHtml = '';
+
+        try {
+            const translations = JSON.parse(span.getAttribute('data-translations') || '{}');
+            const entries = Object.entries(translations);
+            if (entries.length > 0) {
+                translationsHtml = '<span class="translations">' +
+                    entries.map(([lang, text]) =>
+                        `<span class="lang-code">${lang}</span> ${text}`
+                    ).join(' · ') +
+                    '</span>';
+            }
+        } catch (e) {
+            // Skip invalid translations
+        }
+
+        const posDisplay = posSubtype ? `${posType} / ${posSubtype}` : posType;
+        const formDisplay = form ? ` (${form})` : '';
+
+        const el = document.createElement('div');
+        el.className = 'annotation-english-inline';
+        el.innerHTML =
+            `<span class="lemma-text">${lemma}</span>${formDisplay}` +
+            ` <span class="pos-type">${posDisplay}</span>` +
+            (definition ? `<span class="definition">${definition}</span>` : '') +
+            translationsHtml +
+            (guid ? ` <span class="guid">${guid}</span>` : '');
+
+        span.parentNode.insertBefore(el, span.nextSibling);
+        el.classList.add('expanded');
+    }
+
+    /**
+     * Creates a simpler inline popup for stopwords
+     */
+    createStopwordAnnotationElement(span) {
+        const posCategory = span.getAttribute('data-pos-category') || '';
+        const lemma = span.getAttribute('data-lemma') || '';
+
+        const el = document.createElement('div');
+        el.className = 'annotation-english-inline';
+        el.innerHTML =
+            `<span class="lemma-text">${lemma}</span>` +
+            ` <span class="pos-type">${posCategory}</span>`;
+
+        span.parentNode.insertBefore(el, span.nextSibling);
+        el.classList.add('expanded');
+    }
 
 }
 
