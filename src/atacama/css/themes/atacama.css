@@ -373,6 +373,81 @@
 }
 
 /* ==========================================================================
+   English Word Annotation System
+   ========================================================================== */
+
+.annotated-english {
+    border-bottom: 1px dotted var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.annotated-english:hover {
+    border-bottom-color: var(--color-primary);
+}
+
+.annotated-stopword {
+    border-bottom: 1px dotted var(--color-border);
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.annotated-stopword:hover {
+    opacity: 1;
+}
+
+.annotation-english-inline {
+    display: none;
+    opacity: 0;
+    background: var(--color-background);
+    box-shadow: var(--shadow-base);
+    border-radius: 4px;
+    padding: 0;
+    font-size: 0.85em;
+    transition: opacity var(--transition-slow);
+}
+
+.annotation-english-inline.expanded {
+    display: inline-block;
+    opacity: 1;
+    padding: 8px;
+    margin: 4px 0;
+}
+
+.annotation-english-inline .lemma-text {
+    font-weight: 600;
+}
+
+.annotation-english-inline .pos-type {
+    color: var(--color-text-secondary);
+    font-style: italic;
+    font-size: 0.85em;
+}
+
+.annotation-english-inline .definition {
+    display: block;
+    color: var(--color-text-secondary);
+    margin-top: 0.2em;
+}
+
+.annotation-english-inline .translations {
+    display: block;
+    margin-top: 0.3em;
+}
+
+.annotation-english-inline .lang-code {
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75em;
+    color: var(--color-text-secondary);
+}
+
+.annotation-english-inline .guid {
+    font-family: var(--font-family-mono);
+    font-size: 0.7em;
+    color: var(--color-text-secondary);
+}
+
+/* ==========================================================================
    Multi-Line Quote Blocks (MLQ)
    ========================================================================== */
 
