@@ -395,53 +395,74 @@
     opacity: 1;
 }
 
-.annotation-english-inline {
-    display: none;
-    opacity: 0;
+.annotation-english-tooltip {
+    position: absolute;
+    z-index: 1000;
     background: var(--color-background);
-    box-shadow: var(--shadow-base);
-    border-radius: 4px;
-    padding: 0;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 8px 10px;
     font-size: 0.85em;
-    transition: opacity var(--transition-slow);
+    max-width: 320px;
+    pointer-events: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
 }
 
-.annotation-english-inline.expanded {
-    display: inline-block;
+.annotation-english-tooltip.visible {
     opacity: 1;
-    padding: 8px;
-    margin: 4px 0;
+    visibility: visible;
 }
 
-.annotation-english-inline .lemma-text {
+.annotation-english-tooltip::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+}
+
+.annotation-english-tooltip.arrow-down::before {
+    bottom: -12px;
+    border-top-color: var(--color-border);
+}
+
+.annotation-english-tooltip.arrow-up::before {
+    top: -12px;
+    border-bottom-color: var(--color-border);
+}
+
+.annotation-english-tooltip .lemma-text {
     font-weight: 600;
 }
 
-.annotation-english-inline .pos-type {
+.annotation-english-tooltip .pos-type {
     color: var(--color-text-secondary);
     font-style: italic;
     font-size: 0.85em;
 }
 
-.annotation-english-inline .definition {
+.annotation-english-tooltip .definition {
     display: block;
     color: var(--color-text-secondary);
     margin-top: 0.2em;
 }
 
-.annotation-english-inline .translations {
+.annotation-english-tooltip .translations {
     display: block;
     margin-top: 0.3em;
 }
 
-.annotation-english-inline .lang-code {
+.annotation-english-tooltip .lang-code {
     font-weight: 500;
     text-transform: uppercase;
     font-size: 0.75em;
     color: var(--color-text-secondary);
 }
 
-.annotation-english-inline .guid {
+.annotation-english-tooltip .guid {
     font-family: var(--font-family-mono);
     font-size: 0.7em;
     color: var(--color-text-secondary);
@@ -666,6 +687,10 @@ li::before {
     .annotation-inline.expanded {
         margin: var(--spacing-base) calc(-1 * var(--spacing-base));
         border-radius: 0;
+    }
+
+    .annotation-english-tooltip {
+        max-width: min(90vw, 320px);
     }
 
     .content-sigil {

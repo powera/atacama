@@ -13,8 +13,11 @@ class AtacamaViewer {
         // Bind methods to maintain correct 'this' context
         this.handleSigilClick = this.handleSigilClick.bind(this);
         this.handleAnnotationClick = this.handleAnnotationClick.bind(this);
-        this.handleEnglishAnnotationClick = this.handleEnglishAnnotationClick.bind(this);
         this.handleKeyDown = this.handleKeyDown.bind(this);
+
+        // Tooltip state
+        this.englishTooltip = null;
+        this.tooltipHideTimeout = null;
         
         // Defer initialization until DOM is ready
         if (document.readyState === 'loading') {
@@ -32,8 +35,26 @@ class AtacamaViewer {
         this.initializeTheme();
         this.setupThemeSwitcher();
         this.setupThemeObserver();
+        this.createEnglishTooltip();
         this.setupEventDelegation();
         this.initializeEnglishAnnotations();
+    }
+
+    /**
+     * Creates the singleton tooltip element for English annotations
+     */
+    createEnglishTooltip() {
+        this.englishTooltip = document.createElement('div');
+        this.englishTooltip.className = 'annotation-english-tooltip';
+        document.body.appendChild(this.englishTooltip);
+
+        // Keep tooltip visible when hovering over it
+        this.englishTooltip.addEventListener('mouseenter', () => {
+            clearTimeout(this.tooltipHideTimeout);
+        });
+        this.englishTooltip.addEventListener('mouseleave', () => {
+            this.hideEnglishTooltip();
+        });
     }
 
     initializeTheme() {
@@ -141,10 +162,6 @@ class AtacamaViewer {
                 this.handleAnnotationClick(e);
             }
 
-            if (e.target.closest('.annotated-english') || e.target.closest('.annotated-stopword')) {
-                this.handleEnglishAnnotationClick(e);
-            }
-
             if (e.target.closest('.mlq-collapse')) {
                 this.handleMlqCollapse(e);
             }
@@ -160,6 +177,34 @@ class AtacamaViewer {
         });
 
         document.addEventListener('keydown', this.handleKeyDown);
+
+        // English annotation hover events
+        document.addEventListener('mouseover', (e) => {
+            const span = e.target.closest('.annotated-english, .annotated-stopword');
+            if (span) {
+                clearTimeout(this.tooltipHideTimeout);
+                this.showEnglishTooltip(span);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            const span = e.target.closest('.annotated-english, .annotated-stopword');
+            if (span) {
+                this.hideEnglishTooltip();
+            }
+        });
+
+        // Touch support: tap to show, tap elsewhere to dismiss
+        document.addEventListener('touchstart', (e) => {
+            const span = e.target.closest('.annotated-english, .annotated-stopword');
+            if (span) {
+                e.preventDefault();
+                clearTimeout(this.tooltipHideTimeout);
+                this.showEnglishTooltip(span);
+            } else if (this.englishTooltip && !this.englishTooltip.contains(e.target)) {
+                this.englishTooltip.classList.remove('visible');
+            }
+        }, { passive: false });
     }
 
     /**
@@ -276,8 +321,11 @@ class AtacamaViewer {
      */
     handleKeyDown(e) {
         if (e.key === 'Escape') {
-            document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded, .annotation-english-inline.expanded')
+            document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
                 .forEach(el => el.classList.remove('expanded'));
+            if (this.englishTooltip) {
+                this.englishTooltip.classList.remove('visible');
+            }
         }
     }
 
@@ -412,7 +460,7 @@ class AtacamaViewer {
                     const parent = node.parentElement;
                     if (!parent) return NodeFilter.FILTER_REJECT;
                     // Skip elements that should not be annotated
-                    if (parent.closest('.literal-text, .annotated-chinese, script, style, .annotated-english, .annotated-stopword, .annotation-inline, .annotation-english-inline')) {
+                    if (parent.closest('.literal-text, .annotated-chinese, script, style, .annotated-english, .annotated-stopword, .annotation-inline')) {
                         return NodeFilter.FILTER_REJECT;
                     }
                     return NodeFilter.FILTER_ACCEPT;
@@ -484,94 +532,108 @@ class AtacamaViewer {
     }
 
     /**
-     * Handles clicks on annotated English words and stopwords
+     * Shows the English annotation tooltip for a given annotated span
      */
-    handleEnglishAnnotationClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    showEnglishTooltip(span) {
+        const tooltip = this.englishTooltip;
+        if (!tooltip) return;
 
-        const span = e.target.closest('.annotated-english, .annotated-stopword');
-        if (!span) return;
-
-        const existing = span.nextElementSibling;
-        if (existing?.classList.contains('annotation-english-inline')) {
-            // Close all others first
-            document.querySelectorAll('.annotation-english-inline.expanded').forEach(other => {
-                if (other !== existing) other.classList.remove('expanded');
-            });
-            existing.classList.toggle('expanded');
-            return;
-        }
-
-        // Close other open popups
-        document.querySelectorAll('.annotation-english-inline.expanded').forEach(el => {
-            el.classList.remove('expanded');
-        });
-
+        // Build tooltip content
         if (span.classList.contains('annotated-stopword')) {
-            this.createStopwordAnnotationElement(span);
+            const posCategory = span.getAttribute('data-pos-category') || '';
+            const lemma = span.getAttribute('data-lemma') || '';
+            tooltip.innerHTML =
+                `<span class="lemma-text">${lemma}</span>` +
+                ` <span class="pos-type">${posCategory}</span>`;
         } else {
-            this.createEnglishAnnotationElement(span);
-        }
-    }
+            const lemma = span.getAttribute('data-lemma') || '';
+            const definition = span.getAttribute('data-definition') || '';
+            const posType = span.getAttribute('data-pos-type') || '';
+            const posSubtype = span.getAttribute('data-pos-subtype') || '';
+            const guid = span.getAttribute('data-guid') || '';
+            const form = span.getAttribute('data-form') || '';
+            let translationsHtml = '';
 
-    /**
-     * Creates an inline annotation popup for a vocabulary word
-     */
-    createEnglishAnnotationElement(span) {
-        const lemma = span.getAttribute('data-lemma') || '';
-        const definition = span.getAttribute('data-definition') || '';
-        const posType = span.getAttribute('data-pos-type') || '';
-        const posSubtype = span.getAttribute('data-pos-subtype') || '';
-        const guid = span.getAttribute('data-guid') || '';
-        const form = span.getAttribute('data-form') || '';
-        let translationsHtml = '';
-
-        try {
-            const translations = JSON.parse(span.getAttribute('data-translations') || '{}');
-            const entries = Object.entries(translations);
-            if (entries.length > 0) {
-                translationsHtml = '<span class="translations">' +
-                    entries.map(([lang, text]) =>
-                        `<span class="lang-code">${lang}</span> ${text}`
-                    ).join(' · ') +
-                    '</span>';
+            try {
+                const translations = JSON.parse(span.getAttribute('data-translations') || '{}');
+                const entries = Object.entries(translations);
+                if (entries.length > 0) {
+                    translationsHtml = '<span class="translations">' +
+                        entries.map(([lang, text]) =>
+                            `<span class="lang-code">${lang}</span> ${text}`
+                        ).join(' &middot; ') +
+                        '</span>';
+                }
+            } catch (e) {
+                // Skip invalid translations
             }
-        } catch (e) {
-            // Skip invalid translations
+
+            const posDisplay = posSubtype ? `${posType} / ${posSubtype}` : posType;
+            const formDisplay = form ? ` (${form})` : '';
+
+            tooltip.innerHTML =
+                `<span class="lemma-text">${lemma}</span>${formDisplay}` +
+                ` <span class="pos-type">${posDisplay}</span>` +
+                (definition ? `<span class="definition">${definition}</span>` : '') +
+                translationsHtml +
+                (guid ? ` <span class="guid">${guid}</span>` : '');
         }
 
-        const posDisplay = posSubtype ? `${posType} / ${posSubtype}` : posType;
-        const formDisplay = form ? ` (${form})` : '';
-
-        const el = document.createElement('div');
-        el.className = 'annotation-english-inline';
-        el.innerHTML =
-            `<span class="lemma-text">${lemma}</span>${formDisplay}` +
-            ` <span class="pos-type">${posDisplay}</span>` +
-            (definition ? `<span class="definition">${definition}</span>` : '') +
-            translationsHtml +
-            (guid ? ` <span class="guid">${guid}</span>` : '');
-
-        span.parentNode.insertBefore(el, span.nextSibling);
-        el.classList.add('expanded');
+        // Position and show
+        this.positionTooltip(span);
+        tooltip.classList.add('visible');
     }
 
     /**
-     * Creates a simpler inline popup for stopwords
+     * Hides the English annotation tooltip after a short delay
      */
-    createStopwordAnnotationElement(span) {
-        const posCategory = span.getAttribute('data-pos-category') || '';
-        const lemma = span.getAttribute('data-lemma') || '';
+    hideEnglishTooltip() {
+        this.tooltipHideTimeout = setTimeout(() => {
+            if (this.englishTooltip) {
+                this.englishTooltip.classList.remove('visible');
+            }
+        }, 200);
+    }
 
-        const el = document.createElement('div');
-        el.className = 'annotation-english-inline';
-        el.innerHTML =
-            `<span class="lemma-text">${lemma}</span>` +
-            ` <span class="pos-type">${posCategory}</span>`;
+    /**
+     * Positions the tooltip relative to the given span element.
+     * Places above the word by default; flips below if near the top of the viewport.
+     */
+    positionTooltip(span) {
+        const tooltip = this.englishTooltip;
+        if (!tooltip) return;
 
-        span.parentNode.insertBefore(el, span.nextSibling);
-        el.classList.add('expanded');
+        // Make visible off-screen first to measure
+        tooltip.style.left = '-9999px';
+        tooltip.style.top = '-9999px';
+        tooltip.classList.add('visible');
+
+        const rect = span.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const gap = 8;
+
+        // Decide above or below
+        const placeAbove = rect.top > tooltipRect.height + gap + 10;
+
+        let top, arrowClass;
+        if (placeAbove) {
+            top = rect.top + window.scrollY - tooltipRect.height - gap;
+            arrowClass = 'arrow-down';
+        } else {
+            top = rect.bottom + window.scrollY + gap;
+            arrowClass = 'arrow-up';
+        }
+
+        // Center horizontally on the word, clamp to viewport
+        let left = rect.left + window.scrollX + (rect.width / 2) - (tooltipRect.width / 2);
+        const viewportPadding = 8;
+        const maxLeft = window.scrollX + document.documentElement.clientWidth - tooltipRect.width - viewportPadding;
+        left = Math.max(window.scrollX + viewportPadding, Math.min(left, maxLeft));
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+        tooltip.classList.remove('arrow-down', 'arrow-up');
+        tooltip.classList.add(arrowClass);
     }
 
 }
