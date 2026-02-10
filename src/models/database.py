@@ -25,6 +25,7 @@ def upgrade_schema(engine) -> None:
     schema_upgrades = [
         ('emails', 'public_content', 'TEXT'),
         ('emails', 'public_processed_content', 'TEXT'),
+        ('emails', 'english_annotations', 'TEXT'),
     ]
 
     with engine.connect() as conn:
