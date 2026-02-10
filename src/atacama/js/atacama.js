@@ -556,12 +556,16 @@ class AtacamaViewer {
 
             try {
                 const translations = JSON.parse(span.getAttribute('data-translations') || '{}');
-                const entries = Object.entries(translations);
+                const zhPinyin = translations['zh_pinyin'];
+                const entries = Object.entries(translations).filter(([lang]) => lang !== 'zh_pinyin');
                 if (entries.length > 0) {
                     translationsHtml = '<span class="translations">' +
-                        entries.map(([lang, text]) =>
-                            `<span class="lang-code">${lang}</span> ${text}`
-                        ).join(' &middot; ') +
+                        entries.map(([lang, text]) => {
+                            if (lang === 'zh' && zhPinyin) {
+                                return `<span class="lang-code">${lang}</span> ${text} <span class="zh-pinyin">(${zhPinyin})</span>`;
+                            }
+                            return `<span class="lang-code">${lang}</span> ${text}`;
+                        }).join(' &middot; ') +
                         '</span>';
                 }
             } catch (e) {

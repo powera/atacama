@@ -20,6 +20,15 @@ from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
+def _get_pinyin_for_chinese(text: str) -> Optional[str]:
+    """Get formatted pinyin for Chinese text using the pinyin processor."""
+    try:
+        from aml_parser.pinyin import default_processor
+        return default_processor._get_pinyin_for_text(text)
+    except Exception:
+        return None
+
 WORD_PATTERN = re.compile(r"[a-zA-Z']+(?:-[a-zA-Z']+)*")
 
 # Simple suffix-stripping rules for lemmatization fallback
@@ -207,7 +216,13 @@ class EnglishAnnotationProcessor:
                 if ann.pos_subtype:
                     result["pos_subtype"] = ann.pos_subtype
                 if ann.translations:
-                    result["translations"] = ann.translations
+                    translations = dict(ann.translations)
+                    zh_text = translations.get("zh")
+                    if zh_text:
+                        py = _get_pinyin_for_chinese(zh_text)
+                        if py:
+                            translations["zh_pinyin"] = py
+                    result["translations"] = translations
                 if ann.derivative_form:
                     result["form"] = ann.derivative_form
             annotations[key] = result

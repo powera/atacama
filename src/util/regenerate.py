@@ -2,6 +2,7 @@
 """Interactive function to regenerate processed content for emails with diff display and approval."""
 
 import difflib
+import json
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ from models import Email
 from aml_parser.lexer import tokenize
 from aml_parser.parser import parse
 from aml_parser.html_generator import generate_html
+from aml_parser.english_annotations import annotate_english
 
 
 def regenerate_email_content(
@@ -47,26 +49,43 @@ def regenerate_email_content(
     try:
         # Tokenize
         tokens = tokenize(email.content)
-        
+
         # Parse
         ast = parse(iter(tokens))
-        
+
         # Generate HTML
         new_content = generate_html(
-            ast, 
-            db_session=db_session, 
+            ast,
+            db_session=db_session,
             message=email,
             truncated=False
         )
-        
+
+        # Re-parse for preview content (truncated)
+        tokens = tokenize(email.content)
+        ast = parse(iter(tokens))
+        new_preview = generate_html(
+            ast,
+            db_session=db_session,
+            message=email,
+            truncated=True
+        )
+
+        # Regenerate English annotations from raw content
+        new_annotations = annotate_english(email.content)
+        new_annotations_json = json.dumps(new_annotations, ensure_ascii=False) if new_annotations else None
+
     except Exception as e:
         print(f"Error regenerating content: {e}")
         import traceback
         traceback.print_exc()
         return False
-    
+
     # Check if content has changed
-    if old_content == new_content:
+    old_preview = email.preview_content
+    old_annotations = email.english_annotations
+    if (old_content == new_content and old_preview == new_preview
+            and old_annotations == new_annotations_json):
         print("No changes in processed content")
         return False
     
@@ -121,6 +140,8 @@ def regenerate_email_content(
     # Update the database
     try:
         email.processed_content = new_content
+        email.preview_content = new_preview
+        email.english_annotations = new_annotations_json
         db_session.commit()
         print(f"Successfully updated email ID {email_id}")
         return True

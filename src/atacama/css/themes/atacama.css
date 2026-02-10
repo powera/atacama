@@ -462,6 +462,12 @@
     color: var(--color-text-secondary);
 }
 
+.annotation-english-tooltip .zh-pinyin {
+    font-size: 0.85em;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
 .annotation-english-tooltip .guid {
     font-family: var(--font-family-mono);
     font-size: 0.7em;
