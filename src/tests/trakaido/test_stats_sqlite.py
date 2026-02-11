@@ -574,11 +574,11 @@ class BackendSelectionTests(unittest.TestCase):
         if os.path.exists(self.test_data_dir):
             shutil.rmtree(self.test_data_dir)
 
-    def test_default_backend_is_flatfile(self):
-        """Test that default backend is flatfile when no settings file exists."""
+    def test_default_backend_is_sqlite(self):
+        """Test that default backend is sqlite when no settings file exists."""
         with patch('constants.DATA_DIR', self.test_data_dir):
             backend = get_storage_backend(self.test_user_id, self.test_language)
-            self.assertEqual(backend, BACKEND_FLATFILE)
+            self.assertEqual(backend, BACKEND_SQLITE)
 
     def test_sqlite_backend_from_settings(self):
         """Test that SQLite backend is selected from server_settings.json."""
@@ -610,7 +610,7 @@ class BackendSelectionTests(unittest.TestCase):
             self.assertEqual(backend, BACKEND_FLATFILE)
 
     def test_invalid_settings_falls_back(self):
-        """Test that invalid settings file falls back to default."""
+        """Test that invalid settings file falls back to default (sqlite)."""
         with patch('constants.DATA_DIR', self.test_data_dir):
             user_dir = os.path.join(
                 self.test_data_dir, "trakaido", self.test_user_id, self.test_language
@@ -621,7 +621,7 @@ class BackendSelectionTests(unittest.TestCase):
                 f.write("not valid json")
 
             backend = get_storage_backend(self.test_user_id, self.test_language)
-            self.assertEqual(backend, BACKEND_FLATFILE)
+            self.assertEqual(backend, BACKEND_SQLITE)
 
     def test_factory_returns_sqlite_journey_stats(self):
         """Test that factory returns SqliteJourneyStats when configured."""
@@ -637,9 +637,23 @@ class BackendSelectionTests(unittest.TestCase):
             js = get_journey_stats(self.test_user_id, self.test_language)
             self.assertIsInstance(js, SqliteJourneyStats)
 
-    def test_factory_returns_flatfile_journey_stats(self):
-        """Test that factory returns JourneyStats when not configured for SQLite."""
+    def test_factory_returns_sqlite_journey_stats_by_default(self):
+        """Test that factory returns SqliteJourneyStats when no settings file exists."""
         with patch('constants.DATA_DIR', self.test_data_dir):
+            js = get_journey_stats(self.test_user_id, self.test_language)
+            self.assertIsInstance(js, SqliteJourneyStats)
+
+    def test_factory_returns_flatfile_journey_stats_when_configured(self):
+        """Test that factory returns JourneyStats when configured for flatfile."""
+        with patch('constants.DATA_DIR', self.test_data_dir):
+            user_dir = os.path.join(
+                self.test_data_dir, "trakaido", self.test_user_id, self.test_language
+            )
+            os.makedirs(user_dir, exist_ok=True)
+            settings_path = os.path.join(user_dir, "server_settings.json")
+            with open(settings_path, "w") as f:
+                json.dump({"storage_backend": "flatfile"}, f)
+
             from trakaido.blueprints.stats_schema import JourneyStats
             js = get_journey_stats(self.test_user_id, self.test_language)
             self.assertIsInstance(js, JourneyStats)
@@ -667,6 +681,16 @@ class BackendDispatchTests(unittest.TestCase):
         with open(settings_path, "w") as f:
             json.dump({"storage_backend": "sqlite"}, f)
 
+    def _enable_flatfile(self):
+        """Create server_settings.json for flatfile backend."""
+        user_dir = os.path.join(
+            self.test_data_dir, "trakaido", self.test_user_id, self.test_language
+        )
+        os.makedirs(user_dir, exist_ok=True)
+        settings_path = os.path.join(user_dir, "server_settings.json")
+        with open(settings_path, "w") as f:
+            json.dump({"storage_backend": "flatfile"}, f)
+
     def test_dispatch_ensure_daily_snapshots_sqlite(self):
         """Test ensure_daily_snapshots dispatches to SQLite backend."""
         with patch('constants.DATA_DIR', self.test_data_dir):
@@ -677,6 +701,7 @@ class BackendDispatchTests(unittest.TestCase):
     def test_dispatch_ensure_daily_snapshots_flatfile(self):
         """Test ensure_daily_snapshots dispatches to flatfile backend."""
         with patch('constants.DATA_DIR', self.test_data_dir):
+            self._enable_flatfile()
             result = ensure_daily_snapshots(self.test_user_id, self.test_language)
             self.assertTrue(result)
 
