@@ -10,9 +10,7 @@ Design decisions:
 - Nonces kept in flat files (shared with grammar stats)
 - Backend selection via server_settings.json in user data directory
 
-TODO(): Write a migration script to convert existing flat file data to SQLite.
-This should read stats.json + daily snapshot files and populate the SQLite
-database tables. See stats_schema.py for the flat file format.
+Migration script: tools/migrate_flatfile_to_sqlite.py
 """
 
 # Standard library imports

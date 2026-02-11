@@ -7,9 +7,9 @@ The server_settings.json file lives in the user's data directory:
     data/trakaido/{user_id}/{language}/server_settings.json
 
 Example content:
-    {"storage_backend": "sqlite"}
+    {"storage_backend": "flatfile"}
 
-If the file is absent or doesn't specify "sqlite", flat file storage is used.
+If the file is absent or doesn't specify a valid backend, SQLite storage is used.
 """
 
 # Standard library imports
@@ -24,7 +24,7 @@ from trakaido.blueprints.shared import logger
 # Storage backend constants
 BACKEND_FLATFILE = "flatfile"
 BACKEND_SQLITE = "sqlite"
-DEFAULT_BACKEND = BACKEND_FLATFILE
+DEFAULT_BACKEND = BACKEND_SQLITE
 
 
 def _get_settings_path(user_id: str, language: str = "lithuanian") -> str:
@@ -38,7 +38,8 @@ def get_storage_backend(user_id: str, language: str = "lithuanian") -> str:
     """Determine which storage backend to use for a user.
 
     Reads server_settings.json from the user's data directory.
-    Returns BACKEND_FLATFILE if the file doesn't exist or doesn't specify SQLite.
+    Returns DEFAULT_BACKEND (SQLite) if the file doesn't exist or doesn't
+    specify a valid backend.
     """
     settings_path = _get_settings_path(user_id, language)
 
@@ -50,9 +51,9 @@ def get_storage_backend(user_id: str, language: str = "lithuanian") -> str:
             settings = json.load(f)
 
         backend = settings.get("storage_backend", DEFAULT_BACKEND)
-        if backend == BACKEND_SQLITE:
-            return BACKEND_SQLITE
-        return BACKEND_FLATFILE
+        if backend in (BACKEND_SQLITE, BACKEND_FLATFILE):
+            return backend
+        return DEFAULT_BACKEND
     except Exception as e:
         logger.warning(
             f"Error reading server_settings.json for user {user_id} "
