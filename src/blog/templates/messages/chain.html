@@ -62,7 +62,7 @@
                 </div>
                 <div class="message-sidebar"></div>
             </div>
-            {% if message.english_annotations %}
+            {% if show_english_annotations and message.english_annotations %}
             <script type="application/json" id="english-annotations-{{ message.id }}">
             {{ message.english_annotations | safe }}
             </script>

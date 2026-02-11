@@ -35,18 +35,9 @@ class AtacamaViewer {
         this.initializeTheme();
         this.setupThemeSwitcher();
         this.setupThemeObserver();
-
-        // English annotations: enabled by default, disable with ?ea=0
-        const params = new URLSearchParams(window.location.search);
-        const eaParam = params.get('ea');
-        this.englishAnnotationsEnabled = eaParam !== '0';
-
-        if (this.englishAnnotationsEnabled) {
-            this.createEnglishTooltip();
-            this.initializeEnglishAnnotations();
-        }
-
+        this.createEnglishTooltip();
         this.setupEventDelegation();
+        this.initializeEnglishAnnotations();
     }
 
     /**

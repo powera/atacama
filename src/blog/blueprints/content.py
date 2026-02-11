@@ -143,6 +143,8 @@ def get_message(message_id: int) -> ResponseReturnValue:
                 if domain_manager.is_channel_allowed(current_domain, ch):
                     domain_allowed_channels.append(ch)
 
+            show_english_annotations = request.args.get('ea', '1') != '0'
+
             return render_template(
                 'messages/message.html',
                 message=message,
@@ -152,7 +154,8 @@ def get_message(message_id: int) -> ResponseReturnValue:
                 channel=message.channel,
                 channel_config=channel_config,
                 current_channel=message.channel,
-                available_channels=domain_allowed_channels
+                available_channels=domain_allowed_channels,
+                show_english_annotations=show_english_annotations
             )
                 
         return jsonify({
@@ -206,12 +209,15 @@ def view_chain(message_id: int) -> ResponseReturnValue:
             message.created_at_formatted = message.created_at.strftime('%Y-%m-%d %H:%M:%S')
     
     if request.headers.get('Accept', '').startswith('text/html'):
+        show_english_annotations = request.args.get('ea', '1') != '0'
+
         return render_template(
             'messages/chain.html',
             messages=chain,
             target_id=message_id,
             channel=chain[0].channel if chain else None,
-            channel_config=channel_config
+            channel_config=channel_config,
+            show_english_annotations=show_english_annotations
         )
     
     return jsonify({
