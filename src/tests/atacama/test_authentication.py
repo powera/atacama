@@ -320,6 +320,103 @@ class AuthenticationRouteTests(unittest.TestCase):
                 self.assertEqual(sess.get('mobile_redirect'), 'myapp://callback')
 
 
+class AuthVerifyTests(unittest.TestCase):
+    """Test cases for /auth/verify endpoint (NGINX auth_request for admin access)."""
+
+    def setUp(self):
+        """Set up test application."""
+        self.app = create_app(testing=True)
+        self.app.config.update({
+            'TESTING': True,
+            'SERVER_NAME': 'test.local',
+        })
+        self.client = self.app.test_client()
+
+    def tearDown(self):
+        """Clean up after tests."""
+        db.cleanup()
+
+    def test_verify_unauthenticated_returns_401(self):
+        """Test that /auth/verify returns 401 when no user is logged in."""
+        response = self.client.get('/auth/verify')
+        self.assertEqual(response.status_code, 401)
+
+    @patch('atacama.blueprints.auth.get_user_config_manager')
+    def test_verify_non_admin_returns_403(self, mock_get_ucm):
+        """Test that /auth/verify returns 403 for authenticated non-admin users."""
+        mock_ucm = MagicMock()
+        mock_ucm.is_admin.return_value = False
+        mock_get_ucm.return_value = mock_ucm
+
+        with self.client.session_transaction() as sess:
+            sess['user'] = {'email': 'regular@example.com', 'name': 'Regular User'}
+
+        response = self.client.get('/auth/verify')
+        self.assertEqual(response.status_code, 403)
+        mock_ucm.is_admin.assert_called_once()
+
+    @patch('atacama.blueprints.auth.get_user_config_manager')
+    def test_verify_admin_returns_200(self, mock_get_ucm):
+        """Test that /auth/verify returns 200 for admin users."""
+        mock_ucm = MagicMock()
+        mock_ucm.is_admin.return_value = True
+        mock_get_ucm.return_value = mock_ucm
+
+        with self.client.session_transaction() as sess:
+            sess['user'] = {'email': 'admin@example.com', 'name': 'Admin User'}
+
+        response = self.client.get('/auth/verify')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b'')
+
+    @patch('atacama.blueprints.auth.get_user_config_manager')
+    def test_verify_admin_with_token(self, mock_get_ucm):
+        """Test that /auth/verify works with token-based auth."""
+        mock_ucm = MagicMock()
+        mock_ucm.is_admin.return_value = True
+        mock_get_ucm.return_value = mock_ucm
+
+        # Create user and token in database
+        with self.app.app_context():
+            with db.session() as db_session:
+                user = User(email='tokenadmin@example.com', name='Token Admin')
+                db_session.add(user)
+                db_session.flush()
+
+                token = UserToken(
+                    user_id=user.id,
+                    token='admin-verify-token',
+                    created_at=datetime.utcnow()
+                )
+                db_session.add(token)
+                db_session.commit()
+
+        response = self.client.get(
+            '/auth/verify',
+            headers={'Authorization': 'Bearer admin-verify-token'}
+        )
+        self.assertEqual(response.status_code, 200)
+
+    @patch('atacama.blueprints.auth.get_user_config_manager')
+    def test_verify_returns_empty_body(self, mock_get_ucm):
+        """Test that /auth/verify returns empty body for all status codes."""
+        # Admin case - 200 with empty body
+        mock_ucm = MagicMock()
+        mock_ucm.is_admin.return_value = True
+        mock_get_ucm.return_value = mock_ucm
+
+        with self.client.session_transaction() as sess:
+            sess['user'] = {'email': 'admin@example.com', 'name': 'Admin User'}
+
+        response = self.client.get('/auth/verify')
+        self.assertEqual(response.data, b'')
+
+        # Non-admin case - 403 with empty body
+        mock_ucm.is_admin.return_value = False
+        response = self.client.get('/auth/verify')
+        self.assertEqual(response.data, b'')
+
+
 class UserCreationTests(unittest.TestCase):
     """Test cases for user creation and management."""
 

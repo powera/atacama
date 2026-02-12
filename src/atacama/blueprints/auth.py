@@ -5,16 +5,18 @@ import secrets
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify
+from flask import Blueprint, request, render_template, session, redirect, url_for, jsonify, g
 from flask.typing import ResponseReturnValue
 
 from atacama.decorators import require_auth
+from atacama.decorators.auth import _populate_user
 from atacama.blueprints.metrics import record_login, record_logout
 from models.database import db
 from models import get_or_create_user
 from models.models import UserToken
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
+from common.config.user_config import get_user_config_manager
 
 logger = get_logger(__name__)
 
@@ -64,6 +66,16 @@ def logout() -> ResponseReturnValue:
     record_logout()
     session.clear()
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/auth/verify')
+def verify_admin():
+    """Internal endpoint for NGINX auth_request. Returns 200 for admins, 401 otherwise."""
+    _populate_user()
+    if not g.user:
+        return '', 401
+    if not get_user_config_manager().is_admin(g.user.email):
+        return '', 403
+    return '', 200
 
 @auth_bp.route('/api/logout', methods=['POST'])
 @require_auth
