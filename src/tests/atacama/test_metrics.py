@@ -89,6 +89,17 @@ class MetricsEndpointTests(unittest.TestCase):
         # prometheus_client includes process metrics by default
         self.assertIn(b'process_', response.data)
 
+    def test_404_requests_not_tracked_in_metrics(self):
+        """Test that 404 responses are excluded from HTTP metrics."""
+        # Make a request to a nonexistent path (like scanner spam)
+        self.client.get('/nonexistent-path.php')
+
+        response = self.client.get('/metrics')
+        data = response.data.decode('utf-8')
+
+        # The 404 request should not appear in http_requests_total
+        self.assertNotIn('status="404"', data)
+
 
 class MetricsWithContentTests(unittest.TestCase):
     """Test cases for content metrics in BLOG mode."""

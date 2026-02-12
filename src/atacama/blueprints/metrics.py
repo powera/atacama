@@ -397,6 +397,11 @@ def setup_request_metrics(app):
         if hasattr(g, 'start_time'):
             duration = time.time() - g.start_time
 
+            # Skip 404 responses to avoid polluting metrics with
+            # spammy requests to nonexistent paths (e.g., xax.php, b.php)
+            if response.status_code == 404:
+                return response
+
             # Get endpoint name, use path if endpoint is None
             endpoint = request.endpoint or request.path
 
