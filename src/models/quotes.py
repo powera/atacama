@@ -314,7 +314,9 @@ def save_quotes(quotes: List[Dict], message: Email, db_session: Session) -> None
                 original_author=quote_data.get('original_author'),
                 source=quote_data.get('source'),
                 date=quote_data.get('date'),
-                commentary=quote_data.get('commentary')
+                commentary=quote_data.get('commentary'),
+                author=message.author,
+                channel=message.channel
             )
             
             message.quotes.append(quote)
