@@ -13,7 +13,7 @@
     <script src="/js/atacama.js"></script>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}" data-keyboard-shortcuts-enabled="{{ 'true' if current_domain is defined and current_domain == 'earlyversion' else 'false' }}">
+<body class="{% block body_class %}{% endblock %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="flash-messages">
