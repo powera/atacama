@@ -32,12 +32,17 @@ class AtacamaViewer {
      * document is ready
      */
     initialize() {
+        this.keyboardShortcutsEnabled = this.isKeyboardShortcutsEnabled();
         this.initializeTheme();
         this.setupThemeSwitcher();
         this.setupThemeObserver();
         this.createEnglishTooltip();
         this.setupEventDelegation();
         this.initializeEnglishAnnotations();
+    }
+
+    isKeyboardShortcutsEnabled() {
+        return document.body?.dataset.keyboardShortcutsEnabled === 'true';
     }
 
     /**
@@ -77,9 +82,9 @@ class AtacamaViewer {
                 <button data-theme-option="dark">Dark</button>
                 <button data-theme-option="grayscale">Grayscale</button>
                 <hr>
-                <button data-expand-action="expand-all">Expand All</button>
-                <button data-expand-action="collapse-all">Collapse All</button>
-                <button data-expand-action="restore-default">Restore Default</button>
+                <button data-expand-action="expand-all" title="${this.keyboardShortcutsEnabled ? 'Keyboard: E' : 'Expand all'}">Expand All${this.keyboardShortcutsEnabled ? ' (E)' : ''}</button>
+                <button data-expand-action="collapse-all" title="${this.keyboardShortcutsEnabled ? 'Keyboard: C' : 'Collapse all'}">Collapse All${this.keyboardShortcutsEnabled ? ' (C)' : ''}</button>
+                <button data-expand-action="restore-default" title="${this.keyboardShortcutsEnabled ? 'Keyboard: R' : 'Restore default'}">Restore Default${this.keyboardShortcutsEnabled ? ' (R)' : ''}</button>
             </div>
         `;
 
@@ -320,12 +325,35 @@ class AtacamaViewer {
      * Handles global keyboard events, particularly for closing expanded elements
      */
     handleKeyDown(e) {
+        if (!this.keyboardShortcutsEnabled) {
+            return;
+        }
+
+        const target = e.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+            return;
+        }
+
         if (e.key === 'Escape') {
             document.querySelectorAll('.colortext-content.expanded, .annotation-inline.expanded')
                 .forEach(el => el.classList.remove('expanded'));
             if (this.englishTooltip) {
                 this.englishTooltip.classList.remove('visible');
             }
+            return;
+        }
+
+        if (e.altKey || e.ctrlKey || e.metaKey) {
+            return;
+        }
+
+        const key = e.key.toLowerCase();
+        if (key === 'e') {
+            this.expandAll();
+        } else if (key === 'c') {
+            this.collapseAll();
+        } else if (key === 'r') {
+            this.restoreDefault();
         }
     }
 
