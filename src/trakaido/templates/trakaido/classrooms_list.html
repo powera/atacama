@@ -1,0 +1,30 @@
+{% extends "trakaido/base_stats.html" %}
+{% block content %}
+<div class="section-head">
+  <h1>My Classrooms</h1>
+  <span class="pill">{{ classrooms|length }} total</span>
+</div>
+<div class="card muted">These endpoints are under <code>/api/</code> for routing compatibility but return full HTML pages.</div>
+<div class="card">
+  <table>
+    <thead><tr><th>Classroom</th><th>Your role</th><th>Created</th><th>Quick links</th></tr></thead>
+    <tbody>
+      {% for c in classrooms %}
+      <tr>
+        <td><strong>{{ c.name }}</strong>{% if c.archived %} <span class="pill">Archived</span>{% endif %}</td>
+        <td><span class="pill">{{ c.role }}</span></td>
+        <td class="muted">{{ c.createdAt }}</td>
+        <td>
+          <a href="/api/trakaido/classrooms/{{ c.id }}/members">Members</a> ·
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/daily">Daily</a> ·
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/weekly">Weekly</a> ·
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/monthly">Monthly</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No classrooms yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

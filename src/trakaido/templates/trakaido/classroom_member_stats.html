@@ -1,0 +1,24 @@
+{% extends "trakaido/base_stats.html" %}
+{% block content %}
+<div class="section-head">
+  <h1>{{ classroom.name }} · {{ member.name }}</h1>
+  <a href="/api/trakaido/classrooms/{{ classroom.id }}/members">← Back to members</a>
+</div>
+<div class="grid card">
+  <div class="metric"><div class="muted">Words known</div><strong>{{ summary.wordsKnown }}</strong></div>
+  <div class="metric"><div class="muted">Words exposed</div><strong>{{ summary.wordsExposed }}</strong></div>
+  <div class="metric"><div class="muted">Words tracked</div><strong>{{ summary.wordsTracked }}</strong></div>
+  <div class="metric"><div class="muted">Daily activity</div><strong>{{ summary.activitySummary.combined.totalAnswered }}</strong></div>
+</div>
+<div class="card">
+  <h2>Period deltas</h2>
+  <table>
+    <thead><tr><th>Period</th><th>Newly exposed</th><th>Total exposed</th><th>Current day</th><th>Baseline</th></tr></thead>
+    <tbody>
+      <tr><td>Daily</td><td>+{{ daily.progress.exposed.new if daily.progress is defined else 0 }}</td><td>{{ daily.progress.exposed.total if daily.progress is defined else 0 }}</td><td>{{ daily.currentDay }}</td><td>{{ daily.targetBaselineDay if daily.targetBaselineDay is defined else '-' }}</td></tr>
+      <tr><td>Weekly</td><td>+{{ weekly.progress.exposed.new if weekly.progress is defined else 0 }}</td><td>{{ weekly.progress.exposed.total if weekly.progress is defined else 0 }}</td><td>{{ weekly.currentDay }}</td><td>{{ weekly.actualBaselineDay if weekly.actualBaselineDay is defined else '-' }}</td></tr>
+      <tr><td>Monthly</td><td>+{{ monthly.monthlyAggregate.exposed.new if monthly.monthlyAggregate is defined else 0 }}</td><td>{{ monthly.monthlyAggregate.exposed.total if monthly.monthlyAggregate is defined else 0 }}</td><td>{{ monthly.currentDay }}</td><td>{{ monthly.actualBaselineDay if monthly.actualBaselineDay is defined else '-' }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

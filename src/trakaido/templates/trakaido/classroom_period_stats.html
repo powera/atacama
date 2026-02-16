@@ -1,0 +1,39 @@
+{% extends "trakaido/base_stats.html" %}
+{% block content %}
+<div class="section-head">
+  <h1>{{ classroom.name }} · {{ period|capitalize }} classroom stats</h1>
+  <a href="/api/trakaido/classrooms/{{ classroom.id }}/members">Members</a>
+</div>
+<div class="grid card">
+  <div class="metric"><div class="muted">Members</div><strong>{{ aggregate.membersCount }}</strong></div>
+  <div class="metric"><div class="muted">Words known</div><strong>{{ aggregate.wordsKnown }}</strong></div>
+  <div class="metric"><div class="muted">Words exposed</div><strong>{{ aggregate.wordsExposed }}</strong></div>
+  <div class="metric"><div class="muted">Words tracked</div><strong>{{ aggregate.wordsTracked }}</strong></div>
+  <div class="metric"><div class="muted">Newly exposed ({{ period }})</div><strong class="ok">+{{ aggregate.delta.exposed.new }}</strong></div>
+</div>
+<div class="card">
+  <h2>Aggregate daily activity</h2>
+  <div class="grid">
+    <div class="metric"><div class="muted">Direct answered</div><strong>{{ aggregate.activitySummary.directPractice.totalAnswered }}</strong></div>
+    <div class="metric"><div class="muted">Contextual answered</div><strong>{{ aggregate.activitySummary.contextualExposure.totalAnswered }}</strong></div>
+    <div class="metric"><div class="muted">Combined answered</div><strong>{{ aggregate.activitySummary.combined.totalAnswered }}</strong></div>
+  </div>
+</div>
+<div class="card">
+  <h2>Per-member breakdown</h2>
+  <table>
+    <thead><tr><th>Member</th><th>Role</th><th>Words known</th><th>Daily activity</th><th>{{ period|capitalize }} exposed delta</th></tr></thead>
+    <tbody>
+      {% for row in members %}
+      <tr>
+        <td><a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ row.member.userId }}/stats">{{ row.member.name }}</a></td>
+        <td><span class="pill">{{ row.member.role }}</span></td>
+        <td>{{ row.summary.wordsKnown }}</td>
+        <td>{{ row.summary.activitySummary.combined.totalAnswered }}</td>
+        <td>+{{ row.periodDelta.exposed.new if row.periodDelta.exposed is defined else 0 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
