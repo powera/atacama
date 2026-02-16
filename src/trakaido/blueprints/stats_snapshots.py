@@ -8,6 +8,7 @@ from typing import Any, Dict
 # Local application imports
 from trakaido.blueprints.shared import logger
 from trakaido.blueprints.stats_schema import JourneyStats, DailyStats, DIRECT_PRACTICE_TYPES, CONTEXTUAL_EXPOSURE_TYPES
+from trakaido.blueprints.stats_metrics import compute_member_summary, empty_activity_summary
 from trakaido.blueprints.date_utils import (
     get_current_day_key,
     get_week_ago_day_key,
@@ -281,6 +282,8 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
        - questionsAnswered: Number of questions answered on each day
        - exposedWordsCount: Total number of exposed words on each day
        - newlyExposedWords: Number of words newly exposed on each day (compared to most recent previous day with data)
+       - wordsKnown: Known words count computed with compute_words_known rules
+       - activitySummary: Direct/contextual/combined totals computed with compute_daily_activity_summary rules
     """
     try:
         current_day = get_current_day_key()
@@ -416,11 +419,18 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                         if not baseline_found:
                             newly_exposed_words_on_day = 0
 
+            day_summary = compute_member_summary(user_id, language, journey_stats=daily_stats.stats) if date_str in available_dates and not daily_stats.is_empty() else {
+                "wordsKnown": 0,
+                "activitySummary": empty_activity_summary(),
+            }
+
             daily_data.append({
                 "date": date_str,
                 "questionsAnswered": questions_answered_on_day,
                 "exposedWordsCount": exposed_words_count_on_day,
-                "newlyExposedWords": newly_exposed_words_on_day
+                "newlyExposedWords": newly_exposed_words_on_day,
+                "wordsKnown": day_summary["wordsKnown"],
+                "activitySummary": day_summary["activitySummary"],
             })
 
             current_date += timedelta(days=1)

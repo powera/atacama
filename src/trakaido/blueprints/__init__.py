@@ -9,6 +9,7 @@ from trakaido.blueprints import trakaido_tools
 from trakaido.blueprints import userconfig_v2
 from trakaido.blueprints import userstats
 from trakaido.blueprints import grammarstats
+from trakaido.blueprints import classroom_stats
 
 __all__ = [
     'trakaido_bp',
@@ -16,10 +17,11 @@ __all__ = [
     'userconfig_v2',
     'userstats',
     'grammarstats',
+    'classroom_stats',
 ]
 
 # Export the blueprint
 trakaido_bp = shared.trakaido_bp
 
 # Reference side-effect imports to satisfy static analysis
-_side_effect_modules = (trakaido_tools, userconfig_v2, userstats, grammarstats)
+_side_effect_modules = (trakaido_tools, userconfig_v2, userstats, grammarstats, classroom_stats)
