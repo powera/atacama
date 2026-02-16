@@ -47,6 +47,33 @@ def upgrade_schema(engine) -> None:
             except Exception as e:
                 logger.warning(f"Could not add column {column_name} to {table_name}: {e}")
 
+        if constants.SERVICE == 'trakaido':
+            # Migration support for early classroom deployments without archived flag
+            if 'classrooms' in inspector.get_table_names():
+                classroom_columns = [col['name'] for col in inspector.get_columns('classrooms')]
+                if 'archived' not in classroom_columns:
+                    logger.info("Adding archived column to table classrooms")
+                    try:
+                        conn.execute(text('ALTER TABLE classrooms ADD COLUMN archived BOOLEAN DEFAULT 0 NOT NULL'))
+                        conn.commit()
+                    except Exception as e:
+                        logger.warning(f"Could not add archived column to classrooms: {e}")
+
+            # Indexes for efficient classroom membership lookups
+            if 'classroom_memberships' in inspector.get_table_names():
+                index_statements = [
+                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id ON classroom_memberships (classroom_id)',
+                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id ON classroom_memberships (user_id)',
+                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id_role ON classroom_memberships (classroom_id, role)',
+                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id_role ON classroom_memberships (user_id, role)',
+                ]
+                for stmt in index_statements:
+                    try:
+                        conn.execute(text(stmt))
+                    except Exception as e:
+                        logger.warning(f"Could not create classroom index with '{stmt}': {e}")
+                conn.commit()
+
 class DatabaseError(Exception):
     """Custom exception for database-related errors."""
     pass
@@ -102,6 +129,10 @@ class Database:
 
             self._engine = create_engine(db_url, **engine_kwargs)
 
+            # Register service-specific models only for enabled service.
+            if constants.SERVICE == 'trakaido':
+                import trakaido.models  # noqa: F401
+
             # Import here to avoid circular imports
             from models import Base
             Base.metadata.create_all(self._engine)
@@ -109,7 +140,7 @@ class Database:
             # Apply any pending schema upgrades (new columns on existing tables)
             upgrade_schema(self._engine)
 
-            self._session_factory = sessionmaker(bind=self._engine)
+            self._session_factory = sessionmaker(bind=self._engine, expire_on_commit=False)
             self.initialized = True
             return True
 

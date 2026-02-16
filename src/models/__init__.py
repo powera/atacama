@@ -42,6 +42,13 @@ from .quotes import (
     delete_quote
 )
 
+
+from .classrooms import (
+    is_class_manager,
+    get_user_classrooms,
+    get_class_members,
+)
+
 from .users import (
     get_or_create_user,
     get_user_email_domain,
@@ -67,4 +74,7 @@ __all__ = [
     
     # User functions
     'get_or_create_user',
+
+    # Classroom functions
+    'is_class_manager', 'get_user_classrooms', 'get_class_members',
 ]
