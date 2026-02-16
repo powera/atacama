@@ -47,6 +47,12 @@
                 </div>
             </div>
 
+            {% if current_domain == 'earlyversion' %}
+            <div class="keyboard-shortcuts-hint" role="note" aria-label="Keyboard shortcuts">
+                Keyboard shortcuts: <kbd>E</kbd> expand all, <kbd>C</kbd> collapse all, <kbd>R</kbd> restore default, <kbd>Esc</kbd> close open panels.
+            </div>
+
+            {% endif %}
             <div class="message-body">
               <div class="message-main">
                   {{ message.processed_content | safe }}
