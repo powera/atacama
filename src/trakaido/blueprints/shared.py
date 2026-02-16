@@ -18,7 +18,8 @@ trakaido_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Create the blueprint that will be used by all trakaido modules
 trakaido_bp = Blueprint('trakaido', __name__,
-                       static_folder=os.path.join(trakaido_dir, 'static'))
+                       static_folder=os.path.join(trakaido_dir, 'static'),
+                       template_folder=os.path.join(trakaido_dir, 'templates'))
 
 # Lithuanian character set for validation and sanitization
 LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"

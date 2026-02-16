@@ -1,0 +1,23 @@
+{% extends "trakaido/base_stats.html" %}
+{% block content %}
+<div class="section-head">
+  <h1>{{ classroom.name }} · Members</h1>
+  <a href="/api/trakaido/classrooms/">← Back to classrooms</a>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Stats</th></tr></thead>
+    <tbody>
+      {% for m in members %}
+      <tr>
+        <td>{{ m.name }}</td>
+        <td class="muted">{{ m.email }}</td>
+        <td><span class="pill">{{ m.role }}</span></td>
+        <td class="muted">{{ m.joinedAt }}</td>
+        <td><a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ m.userId }}/stats">Open member stats</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
