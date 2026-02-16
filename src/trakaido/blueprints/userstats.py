@@ -31,12 +31,14 @@ from trakaido.blueprints.stats_backend import (
     calculate_weekly_progress,
     calculate_monthly_progress
 )
+from trakaido.blueprints.stats_metrics import compute_member_summary
 
 ##############################################################################
 
 # API Documentation for journey stats endpoints
 USERSTATS_API_DOCS = {
     "GET /api/trakaido/journeystats/": "Get all journey stats for authenticated user",
+    "GET /api/trakaido/journeystats/summary": "Get normalized dashboard summary for authenticated user",
     "PUT /api/trakaido/journeystats/": "Save all journey stats for authenticated user",
     "POST /api/trakaido/journeystats/word": "Update stats for a specific word",
     "GET /api/trakaido/journeystats/word/{wordKey}": "Get stats for a specific word",
@@ -170,9 +172,31 @@ def get_all_journey_stats() -> ResponseReturnValue:
         user_id = str(g.user.id)
         language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
         journey_stats = get_journey_stats(user_id, language)
+
+        # Optional shape extension used by dashboard surfaces that need
+        # normalized summary metrics alongside raw per-word stats.
+        include_summary = request.args.get("includeSummary", "false").lower() == "true"
+        if include_summary:
+            payload = dict(journey_stats.stats)
+            payload["summary"] = compute_member_summary(user_id, language)
+            return jsonify(payload)
+
         return jsonify(journey_stats.stats)
     except Exception as e:
         logger.error(f"Error getting all journey stats: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/journeystats/summary', methods=['GET'])
+@require_auth
+def get_member_stats_summary() -> ResponseReturnValue:
+    """Get normalized summary metrics for the authenticated user dashboard."""
+    try:
+        user_id = str(g.user.id)
+        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        return jsonify(compute_member_summary(user_id, language))
+    except Exception as e:
+        logger.error(f"Error getting journey stats summary: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

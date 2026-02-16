@@ -11,6 +11,7 @@ from flask import Response, g, jsonify
 from atacama.decorators.auth import optional_auth
 from trakaido.blueprints.shared import trakaido_bp, logger
 from trakaido.blueprints.userstats import USERSTATS_API_DOCS
+from trakaido.blueprints.classroom_stats import CLASSROOM_STATS_API_DOCS
 from trakaido.blueprints.stats_schema import user_has_activity_stats
 from trakaido.blueprints.userconfig_v2 import get_userconfig_file_path, USERCONFIG_API_DOCS
 
@@ -33,7 +34,8 @@ def lithuanian_api_index() -> Response:
         "endpoints": {
             "userstats": USERSTATS_API_DOCS,
             "userconfig": USERCONFIG_API_DOCS,
-            "userinfo": USERINFO_API_DOCS
+            "userinfo": USERINFO_API_DOCS,
+            "classroom_stats": CLASSROOM_STATS_API_DOCS
         }
     }
     return jsonify(api_info)

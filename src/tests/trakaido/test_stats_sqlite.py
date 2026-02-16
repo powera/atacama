@@ -262,6 +262,7 @@ class SqliteStatsDBSnapshotTests(unittest.TestCase):
 
             self.assertIsNotNone(snapshot)
             self.assertEqual(snapshot["exposed_words_count"], 3)
+            self.assertEqual(snapshot["words_known_count"], 0)
             # 3 words × (5 correct + 2 incorrect) = 21
             self.assertEqual(snapshot["total_questions_answered"], 21)
 
@@ -270,6 +271,24 @@ class SqliteStatsDBSnapshotTests(unittest.TestCase):
                 activity_totals["directPractice"]["multipleChoice_englishToTarget"]["correct"],
                 15,
             )
+
+    def test_snapshot_tracks_words_known_count(self):
+        """Test snapshot stores known-word count for day-level tracking."""
+        with patch('constants.DATA_DIR', self.test_data_dir):
+            db = SqliteStatsDB(self.test_user_id, self.test_language)
+
+            known_word = create_empty_word_stats()
+            known_word["exposed"] = True
+            known_word["markedAsKnown"] = True
+
+            unknown_word = create_empty_word_stats()
+            unknown_word["exposed"] = True
+
+            db.save_all_stats({"stats": {"known": known_word, "unknown": unknown_word}})
+            self.assertTrue(db.save_snapshot_from_current("2025-01-15"))
+
+            snapshot = db._get_snapshot("2025-01-15")
+            self.assertEqual(snapshot["words_known_count"], 1)
 
     def test_ensure_daily_snapshots(self):
         """Test ensure_daily_snapshots creates both snapshots."""
@@ -403,6 +422,8 @@ class SqliteProgressTests(unittest.TestCase):
             self.assertNotIn("error", result)
 
             self.assertIsInstance(result["dailyData"], list)
+            self.assertIn("wordsKnown", result["dailyData"][0])
+            self.assertIn("activitySummary", result["dailyData"][0])
 
             aggregate = result["monthlyAggregate"]
             self.assertIn("directPractice", aggregate)

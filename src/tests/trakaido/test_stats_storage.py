@@ -376,6 +376,7 @@ class CalculateDailyProgressTests(unittest.TestCase):
             journey_stats.load()
             word = create_empty_word_stats()
             word["exposed"] = True
+            word["markedAsKnown"] = True
             word["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 5
             journey_stats.set_word_stats("word1", word)
             journey_stats.save()
@@ -688,11 +689,15 @@ class CalculateMonthlyProgressTests(unittest.TestCase):
             self.assertIn("questionsAnswered", today_data)
             self.assertIn("exposedWordsCount", today_data)
             self.assertIn("newlyExposedWords", today_data)
+            self.assertIn("wordsKnown", today_data)
+            self.assertIn("activitySummary", today_data)
 
             # Should have 7 questions answered (5 correct + 2 incorrect)
             self.assertEqual(today_data["questionsAnswered"], 7)
             # Should have 1 exposed word
             self.assertEqual(today_data["exposedWordsCount"], 1)
+            self.assertEqual(today_data["wordsKnown"], 1)
+            self.assertEqual(today_data["activitySummary"]["combined"]["totalAnswered"], 7)
 
 
 # ============================================================================

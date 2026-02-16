@@ -29,6 +29,7 @@ from trakaido.blueprints.stats_schema import (
     create_empty_word_stats,
     validate_and_normalize_word_stats,
 )
+from trakaido.blueprints.stats_metrics import build_activity_summary_from_totals, empty_activity_summary
 from trakaido.blueprints.date_utils import (
     get_current_day_key,
     get_yesterday_day_key,
@@ -99,6 +100,7 @@ class SqliteStatsDB:
                 CREATE TABLE IF NOT EXISTS daily_snapshots (
                     date TEXT PRIMARY KEY,
                     exposed_words_count INTEGER NOT NULL DEFAULT 0,
+                    words_known_count INTEGER NOT NULL DEFAULT 0,
                     total_questions_answered INTEGER NOT NULL DEFAULT 0,
                     newly_exposed_words INTEGER NOT NULL DEFAULT 0,
                     activity_totals_json TEXT NOT NULL DEFAULT '{}'
@@ -110,6 +112,17 @@ class SqliteStatsDB:
                 );
             """)
 
+
+            # Forward-compatible migration: older DBs may not have
+            # words_known_count in daily_snapshots.
+            snapshot_columns = {
+                row["name"] for row in conn.execute("PRAGMA table_info(daily_snapshots)")
+            }
+            if "words_known_count" not in snapshot_columns:
+                conn.execute(
+                    "ALTER TABLE daily_snapshots ADD COLUMN words_known_count INTEGER NOT NULL DEFAULT 0"
+                )
+
             cursor = conn.execute(
                 "SELECT value FROM schema_info WHERE key = 'version'"
             )
@@ -117,6 +130,11 @@ class SqliteStatsDB:
             if not row:
                 conn.execute(
                     "INSERT INTO schema_info (key, value) VALUES ('version', ?)",
+                    (str(SCHEMA_VERSION),),
+                )
+            elif row["value"] != str(SCHEMA_VERSION):
+                conn.execute(
+                    "UPDATE schema_info SET value = ? WHERE key = 'version'",
                     (str(SCHEMA_VERSION),),
                 )
 
@@ -247,6 +265,9 @@ class SqliteStatsDB:
         cursor = conn.execute("SELECT COUNT(*) FROM word_stats WHERE exposed = 1")
         exposed_count = cursor.fetchone()[0]
 
+        cursor = conn.execute("SELECT COUNT(*) FROM word_stats WHERE marked_as_known = 1")
+        words_known_count = cursor.fetchone()[0]
+
         cursor = conn.execute(
             "SELECT COALESCE(SUM(correct + incorrect), 0) FROM word_activity_stats"
         )
@@ -280,6 +301,7 @@ class SqliteStatsDB:
 
         return {
             "exposed_words_count": exposed_count,
+            "words_known_count": words_known_count,
             "total_questions_answered": total_questions,
             "activity_totals": activity_totals,
         }
@@ -304,12 +326,13 @@ class SqliteStatsDB:
 
             conn.execute("""
                 INSERT OR REPLACE INTO daily_snapshots
-                (date, exposed_words_count, total_questions_answered,
+                (date, exposed_words_count, words_known_count, total_questions_answered,
                  newly_exposed_words, activity_totals_json)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 date,
                 totals["exposed_words_count"],
+                totals["words_known_count"],
                 totals["total_questions_answered"],
                 newly_exposed,
                 json.dumps(totals["activity_totals"], separators=(",", ":")),
@@ -356,6 +379,7 @@ class SqliteStatsDB:
                 return {
                     "date": row["date"],
                     "exposed_words_count": row["exposed_words_count"],
+                    "words_known_count": row["words_known_count"],
                     "total_questions_answered": row["total_questions_answered"],
                     "newly_exposed_words": row["newly_exposed_words"],
                     "activity_totals_json": row["activity_totals_json"],
@@ -601,11 +625,14 @@ class SqliteStatsDB:
                 snapshot = snapshot_by_date.get(date_str)
 
                 if snapshot:
+                    activity_totals = json.loads(snapshot["activity_totals_json"])
                     daily_data.append({
                         "date": date_str,
                         "questionsAnswered": snapshot["total_questions_answered"],
                         "exposedWordsCount": snapshot["exposed_words_count"],
                         "newlyExposedWords": snapshot["newly_exposed_words"],
+                        "wordsKnown": snapshot["words_known_count"],
+                        "activitySummary": build_activity_summary_from_totals(activity_totals),
                     })
                 else:
                     daily_data.append({
@@ -613,6 +640,8 @@ class SqliteStatsDB:
                         "questionsAnswered": 0,
                         "exposedWordsCount": 0,
                         "newlyExposedWords": 0,
+                        "wordsKnown": 0,
+                        "activitySummary": empty_activity_summary(),
                     })
 
                 current_dt += timedelta(days=1)
