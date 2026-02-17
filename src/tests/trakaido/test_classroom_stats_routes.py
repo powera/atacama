@@ -279,6 +279,7 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertIn(b"Questions answered per day (past 30 days)", response.data)
         self.assertIn(b"Ten most recent words", response.data)
         self.assertIn(b"labas", response.data)
+        self.assertIn(b"Lithuanian", response.data)
         self.assertIn("labas — hello".encode("utf-8"), response.data)
 
     @patch("atacama.decorators.auth.get_user_config_manager")

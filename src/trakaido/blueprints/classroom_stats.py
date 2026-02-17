@@ -64,6 +64,12 @@ def _validate_language(language: str) -> Optional[ResponseReturnValue]:
     return None
 
 
+def _get_language_display_name(language: str) -> str:
+    manager = get_language_manager()
+    config = manager.get_language_config(language)
+    return config.name
+
+
 def _get_user_active_languages(user_id: str) -> List[str]:
     """Return language keys for which the user has any stats data on disk.
 
@@ -556,6 +562,7 @@ def get_classroom_member_stats_html(
         page_title=f"{classroom['name']} · {member['name']} stats",
         classroom=classroom,
         language=language,
+        language_display_name=_get_language_display_name(language),
         member=member,
         summary=summary,
         daily=daily,
