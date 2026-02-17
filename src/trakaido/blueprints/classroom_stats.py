@@ -5,6 +5,7 @@ that use the same metric calculators as self-service endpoints.
 """
 
 import os
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import constants
@@ -19,8 +20,9 @@ from models.models import User
 from trakaido.blueprints.shared import trakaido_bp, logger
 from trakaido.blueprints.stats_backend import (
     calculate_daily_progress,
-    calculate_weekly_progress,
     calculate_monthly_progress,
+    calculate_weekly_progress,
+    get_journey_stats,
 )
 from trakaido.blueprints.stats_metrics import (
     build_activity_summary_from_totals,
@@ -97,6 +99,70 @@ def _membership_payload(user: User, membership: ClassroomMembership) -> Dict[str
         "role": role,
         "joinedAt": membership.joined_at,
     }
+
+
+def _build_monthly_questions_series(monthly: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Build privacy-preserving daily question totals for chart rendering."""
+    daily_data = monthly.get("dailyData", [])
+    if not isinstance(daily_data, list):
+        return []
+
+    chart_points: List[Dict[str, Any]] = []
+    for row in daily_data:
+        date_value = str(row.get("date", ""))
+        questions_answered = int(row.get("questionsAnswered", 0) or 0)
+        day_label = date_value[5:] if len(date_value) >= 10 else date_value
+        chart_points.append(
+            {
+                "date": date_value,
+                "dayLabel": day_label,
+                "questionsAnswered": max(0, questions_answered),
+            }
+        )
+
+    return chart_points
+
+
+def _get_recent_words(user_id: str, language: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Return the most recently seen words with day-level timestamps only."""
+    journey_stats = get_journey_stats(user_id, language)
+    stats = journey_stats.stats.get("stats", {})
+
+    recents: List[Dict[str, Any]] = []
+    for word_key, word_stats in stats.items():
+        practice_history = word_stats.get("practiceHistory", {})
+        last_seen = practice_history.get("lastSeen")
+        if not last_seen:
+            continue
+
+        total_answers = 0
+        for category in ("directPractice", "contextualExposure"):
+            category_data = word_stats.get(category, {})
+            if not isinstance(category_data, dict):
+                continue
+            for activity_data in category_data.values():
+                if isinstance(activity_data, dict):
+                    total_answers += int(activity_data.get("correct", 0) or 0)
+                    total_answers += int(activity_data.get("incorrect", 0) or 0)
+
+        last_seen_value = float(last_seen)
+        if last_seen_value > 1_000_000_000_000:
+            last_seen_value = last_seen_value / 1000.0
+
+        last_seen_day = datetime.fromtimestamp(last_seen_value, tz=timezone.utc).date().isoformat()
+        recents.append(
+            {
+                "wordKey": word_key,
+                "lastSeenDay": last_seen_day,
+                "totalAnswered": total_answers,
+                "_lastSeenEpoch": last_seen_value,
+            }
+        )
+
+    recents.sort(key=lambda item: item["_lastSeenEpoch"], reverse=True)
+    for row in recents:
+        row.pop("_lastSeenEpoch", None)
+    return recents[:limit]
 
 
 def _get_user_classrooms_with_role(user_id: int) -> List[Dict[str, Any]]:
@@ -394,6 +460,8 @@ def get_classroom_member_stats_html(
     daily = calculate_daily_progress(str(user_id), language)
     weekly = calculate_weekly_progress(str(user_id), language)
     monthly = calculate_monthly_progress(str(user_id), language)
+    monthly_questions_series = _build_monthly_questions_series(monthly)
+    recent_words = _get_recent_words(str(user_id), language)
 
     return render_template(
         "trakaido/classroom_member_stats.html",
@@ -405,6 +473,8 @@ def get_classroom_member_stats_html(
         daily=daily,
         weekly=weekly,
         monthly=monthly,
+        monthly_questions_series=monthly_questions_series,
+        recent_words=recent_words,
     )
 
 

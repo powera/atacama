@@ -16,6 +16,7 @@ from trakaido.blueprints.stats_schema import (
 from trakaido.blueprints.stats_metrics import compute_member_summary, empty_activity_summary
 from trakaido.blueprints.date_utils import (
     get_current_day_key,
+    get_yesterday_day_key,
     get_week_ago_day_key,
     get_30_days_ago_day_key,
     get_30_day_date_range,
@@ -290,7 +291,11 @@ def calculate_daily_progress(user_id: str, language: str = "lithuanian") -> Dict
         # Calculate progress delta
         daily_progress = calculate_progress_delta(current_daily_stats, yesterday_daily_stats)
 
-        return {"currentDay": current_day, "progress": daily_progress}
+        return {
+            "currentDay": current_day,
+            "targetBaselineDay": get_yesterday_day_key(),
+            "progress": daily_progress,
+        }
     except Exception as e:
         logger.error(f"Error calculating daily progress for user {user_id}: {str(e)}")
         return {"error": str(e)}
