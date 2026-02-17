@@ -1,5 +1,6 @@
 """Tests for classroom stats HTML routes."""
 
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -97,6 +98,39 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertIn(b'Manager access required', response.data)
+
+    def test_members_page_shows_no_activity_when_no_stats_dirs(self):
+        response = self.client.get(
+            f'/api/trakaido/classrooms/{self.classroom_id}/members',
+            headers=self._auth_headers("manager-token"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'No activity yet', response.data)
+
+    def test_members_page_shows_language_links_for_active_languages(self):
+        # Create a non-empty stats directory for the member in Lithuanian and Chinese
+        for language in ('lithuanian', 'chinese'):
+            user_dir = os.path.join(
+                self.temp_dir, "trakaido", str(self.member.id), language
+            )
+            os.makedirs(user_dir, exist_ok=True)
+            open(os.path.join(user_dir, "stats.json"), "w").close()
+
+        response = self.client.get(
+            f'/api/trakaido/classrooms/{self.classroom_id}/members',
+            headers=self._auth_headers("manager-token"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Lithuanian', response.data)
+        self.assertIn(b'Chinese', response.data)
+        # Member with activity should have language-specific links
+        member_stats_prefix = f'/api/trakaido/classrooms/{self.classroom_id}/members/{self.member.id}/stats/'.encode()
+        self.assertIn(member_stats_prefix + b'lithuanian', response.data)
+        self.assertIn(member_stats_prefix + b'chinese', response.data)
+        # Manager (no stats dirs) should still show "No activity yet"
+        self.assertIn(b'No activity yet', response.data)
 
     @patch('trakaido.blueprints.classroom_stats.calculate_monthly_progress')
     @patch('trakaido.blueprints.classroom_stats.calculate_weekly_progress')

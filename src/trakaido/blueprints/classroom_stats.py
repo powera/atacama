@@ -4,8 +4,10 @@ These routes provide manager/admin access to normalized per-member summaries
 that use the same metric calculators as self-service endpoints.
 """
 
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
+import constants
 from flask import jsonify, render_template, request, g
 from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select
@@ -56,6 +58,24 @@ def _validate_language(language: str) -> Optional[ResponseReturnValue]:
         valid = ", ".join(sorted(manager.get_all_language_keys()))
         return jsonify({"error": f"Unknown language '{language}'. Valid options: {valid}"}), 400
     return None
+
+
+def _get_user_active_languages(user_id: str) -> List[str]:
+    """Return language keys for which the user has any stats data on disk.
+
+    Uses a lightweight directory-existence check rather than loading stats.
+    Languages are returned in configured order (matches languages.toml).
+    """
+    manager = get_language_manager()
+    active = []
+    for language_key in manager.get_all_language_keys():
+        user_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language_key)
+        try:
+            if os.path.isdir(user_dir) and any(os.scandir(user_dir)):
+                active.append(language_key)
+        except OSError:
+            pass
+    return active
 
 
 def _classroom_payload(classroom: Classroom) -> Dict[str, Any]:
@@ -295,12 +315,19 @@ def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
 
     members = _get_classroom_member_rows(classroom_id)
     language = getattr(g, 'current_language', 'lithuanian')
+
+    manager = get_language_manager()
+    language_names = {k: manager.get_language_config(k).name for k in manager.get_all_language_keys()}
+    for member in members:
+        member['activeLanguages'] = _get_user_active_languages(str(member['userId']))
+
     return render_template(
         'trakaido/classroom_members.html',
         page_title=f"{classroom['name']} · Members",
         classroom=classroom,
         members=members,
         language=language,
+        language_names=language_names,
     )
 
 
