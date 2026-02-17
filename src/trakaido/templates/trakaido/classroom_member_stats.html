@@ -14,18 +14,66 @@
   <h2>Questions answered per day (past 30 days)</h2>
   <p class="muted">Day-level totals only; exact practice times are intentionally hidden.</p>
   {% if monthly_questions_series %}
-    {% set max_questions = monthly_questions_series | map(attribute='questionsAnswered') | max %}
-    <div class="daily-chart">
-      {% for point in monthly_questions_series %}
-        {% set height = ((point.questionsAnswered / max_questions) * 100) if max_questions > 0 else 0 %}
-        <div class="daily-bar-wrap" title="{{ point.date }}: {{ point.questionsAnswered }} questions">
-          <div class="daily-bar" style="height: {{ '%.1f'|format(height) }}%"></div>
-          {% if loop.index0 % 5 == 0 or loop.last %}
-            <div class="daily-label">{{ point.dayLabel }}</div>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
+    <div id="daily-questions-chart" style="width:100%; height:260px;"></div>
+    <script src="/js/third_party/react.production.min.js"></script>
+    <script src="/js/third_party/react-dom.production.min.js"></script>
+    <script src="/js/third_party/Recharts.js"></script>
+    <script>
+      (function renderDailyQuestionsChart() {
+        const data = {{ monthly_questions_series | tojson }};
+        const chartData = data.map((point) => ({
+          date: point.date,
+          dayLabel: point.dayLabel,
+          questionsAnswered: point.questionsAnswered,
+          tooltipLabel: `${point.date}: ${point.questionsAnswered} questions`,
+        }));
+
+        const chartRoot = document.getElementById("daily-questions-chart");
+        if (!chartRoot || !Array.isArray(chartData) || !chartData.length) {
+          return;
+        }
+
+        const maxQuestions = chartData.reduce(
+          (maxValue, point) => Math.max(maxValue, point.questionsAnswered || 0),
+          0,
+        );
+        const yAxisMax = Math.max(1, maxQuestions);
+        const { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } = Recharts;
+
+        ReactDOM.createRoot(chartRoot).render(
+          React.createElement(
+            ResponsiveContainer,
+            { width: "100%", height: "100%" },
+            React.createElement(
+              BarChart,
+              { data: chartData, margin: { top: 8, right: 24, left: 0, bottom: 8 } },
+              React.createElement(CartesianGrid, { strokeDasharray: "3 3", stroke: "#dde3ee" }),
+              React.createElement(XAxis, {
+                dataKey: "dayLabel",
+                interval: 4,
+                tick: { fill: "#5e6b87", fontSize: 11 },
+              }),
+              React.createElement(YAxis, {
+                allowDecimals: false,
+                domain: [0, yAxisMax],
+                tick: { fill: "#5e6b87", fontSize: 11 },
+              }),
+              React.createElement(Tooltip, {
+                formatter: (value) => [`${value} questions`, "Answered"],
+                labelFormatter: (_label, payload) =>
+                  payload && payload.length ? payload[0].payload.date : "",
+              }),
+              React.createElement(Bar, {
+                dataKey: "questionsAnswered",
+                fill: "#3669f7",
+                radius: [4, 4, 0, 0],
+                isAnimationActive: false,
+              }),
+            ),
+          ),
+        );
+      })();
+    </script>
   {% else %}
     <p class="muted">No daily activity yet.</p>
   {% endif %}

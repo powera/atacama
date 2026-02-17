@@ -281,6 +281,8 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertIn(b"labas", response.data)
         self.assertIn(b"Lithuanian", response.data)
         self.assertIn("labas — hello".encode("utf-8"), response.data)
+        self.assertIn(b"daily-questions-chart", response.data)
+        self.assertIn(b"/js/third_party/Recharts.js", response.data)
 
     @patch("atacama.decorators.auth.get_user_config_manager")
     def test_admin_can_create_classroom_and_manage_members_by_email(self, mock_get_manager):
