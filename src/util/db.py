@@ -1,12 +1,11 @@
-from sqlalchemy.orm import Session
 from typing import Optional, Tuple
 import logging
 
 from sqlalchemy.orm import joinedload
   
-from common.config.channel_config import get_channel_manager, AccessLevel
+from common.config.channel_config import get_channel_manager
 from models.database import db
-from models.models import Email, Quote, Message, email_quotes
+from models.models import Email, Message, email_quotes
 
 import aml_parser
 
