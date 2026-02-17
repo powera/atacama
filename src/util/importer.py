@@ -9,7 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 
-from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
 # Gross hack for imports

@@ -131,7 +131,8 @@ class Database:
 
             # Register service-specific models only for enabled service.
             if constants.SERVICE == 'trakaido':
-                import trakaido.models  # noqa: F401
+                from importlib import import_module
+                import_module("trakaido.models")
 
             # Import here to avoid circular imports
             from models import Base

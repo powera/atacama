@@ -1,10 +1,9 @@
 """Message utility functions for retrieving message and quote relationships."""
 
 from typing import List
-from sqlalchemy.orm import Session
 
 from models.database import db
-from models import Email, Quote
+from models import Email
 
 def get_parent_chain_ids(message_id: int) -> List[int]:
     """

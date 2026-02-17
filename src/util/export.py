@@ -15,7 +15,7 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from models.database import db
-from models.models import Email, Quote
+from models.models import Email
 from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
