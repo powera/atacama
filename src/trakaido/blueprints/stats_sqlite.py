@@ -446,6 +446,24 @@ class SqliteStatsDB:
         finally:
             conn.close()
 
+    def _get_latest_snapshot_before(self, date: str) -> Optional[Dict[str, Any]]:
+        """Get the most recent snapshot before a given date."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                SELECT * FROM daily_snapshots
+                WHERE date < ?
+                ORDER BY date DESC
+                LIMIT 1
+            """,
+                (date,),
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
     ##########################################################################
     # Progress Calculations
     ##########################################################################
@@ -523,7 +541,11 @@ class SqliteStatsDB:
                 baseline_exposed,
             )
 
-            return {"currentDay": today, "progress": progress}
+            return {
+                "currentDay": today,
+                "targetBaselineDay": get_yesterday_day_key(),
+                "progress": progress,
+            }
         except Exception as e:
             logger.error(f"Error calculating daily progress for user {self.user_id}: {str(e)}")
             return {"error": str(e)}
@@ -603,6 +625,10 @@ class SqliteStatsDB:
             start_date, end_date = get_30_day_date_range()
             snapshots = self._get_snapshots_in_range(start_date, end_date)
             snapshot_by_date = {s["date"]: s for s in snapshots}
+            baseline_snapshot = self._get_latest_snapshot_before(start_date)
+            previous_total_questions = (
+                baseline_snapshot["total_questions_answered"] if baseline_snapshot else 0
+            )
 
             daily_data: List[Dict[str, Any]] = []
             start_dt = datetime.strptime(start_date, "%Y-%m-%d")
@@ -615,10 +641,15 @@ class SqliteStatsDB:
 
                 if snapshot:
                     activity_totals = json.loads(snapshot["activity_totals_json"])
+                    questions_answered_on_day = max(
+                        0,
+                        snapshot["total_questions_answered"] - previous_total_questions,
+                    )
+                    previous_total_questions = snapshot["total_questions_answered"]
                     daily_data.append(
                         {
                             "date": date_str,
-                            "questionsAnswered": snapshot["total_questions_answered"],
+                            "questionsAnswered": questions_answered_on_day,
                             "exposedWordsCount": snapshot["exposed_words_count"],
                             "newlyExposedWords": snapshot["newly_exposed_words"],
                             "wordsKnown": snapshot["words_known_count"],

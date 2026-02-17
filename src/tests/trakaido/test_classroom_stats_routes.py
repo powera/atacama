@@ -211,6 +211,72 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertIn(b"Manager access required", response.data)
 
+    @patch("trakaido.blueprints.classroom_stats.get_journey_stats")
+    @patch("trakaido.blueprints.classroom_stats.calculate_monthly_progress")
+    @patch("trakaido.blueprints.classroom_stats.calculate_weekly_progress")
+    @patch("trakaido.blueprints.classroom_stats.calculate_daily_progress")
+    @patch("trakaido.blueprints.classroom_stats.compute_member_summary")
+    def test_member_detail_shows_daily_chart_and_recent_words(
+        self,
+        mock_summary,
+        mock_daily,
+        mock_weekly,
+        mock_monthly,
+        mock_journey_stats,
+    ):
+        mock_summary.return_value = {
+            "wordsKnown": 10,
+            "wordsExposed": 18,
+            "wordsTracked": 18,
+            "activitySummary": {"combined": {"totalAnswered": 44}},
+        }
+        mock_daily.return_value = {
+            "currentDay": "2026-01-10",
+            "targetBaselineDay": "2026-01-09",
+            "progress": {"exposed": {"new": 2, "total": 18}},
+        }
+        mock_weekly.return_value = {
+            "currentDay": "2026-01-10",
+            "actualBaselineDay": "2026-01-03",
+            "progress": {"exposed": {"new": 4, "total": 18}},
+        }
+        mock_monthly.return_value = {
+            "currentDay": "2026-01-10",
+            "actualBaselineDay": "2025-12-11",
+            "monthlyAggregate": {"exposed": {"new": 6, "total": 18}},
+            "dailyData": [
+                {"date": "2026-01-08", "questionsAnswered": 3},
+                {"date": "2026-01-09", "questionsAnswered": 5},
+                {"date": "2026-01-10", "questionsAnswered": 7},
+            ],
+        }
+
+        mock_journey = mock_journey_stats.return_value
+        mock_journey.stats = {
+            "stats": {
+                "labas": {
+                    "practiceHistory": {"lastSeen": 1761000000},
+                    "directPractice": {
+                        "multipleChoice_englishToTarget": {"correct": 2, "incorrect": 1}
+                    },
+                },
+                "rytas": {
+                    "practiceHistory": {"lastSeen": 1760900000},
+                    "contextualExposure": {"sentences": {"correct": 1, "incorrect": 0}},
+                },
+            }
+        }
+
+        response = self.client.get(
+            f"/api/trakaido/classrooms/{self.classroom_id}/members/{self.member.id}/stats/lithuanian",
+            headers=self._auth_headers("manager-token"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Questions answered per day (past 30 days)", response.data)
+        self.assertIn(b"Ten most recent words", response.data)
+        self.assertIn(b"labas", response.data)
+
     @patch("atacama.decorators.auth.get_user_config_manager")
     def test_admin_can_create_classroom_and_manage_members_by_email(self, mock_get_manager):
         mock_get_manager.return_value.is_admin.return_value = True

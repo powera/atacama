@@ -8,17 +8,52 @@
   <div class="metric"><div class="muted">Words known</div><strong>{{ summary.wordsKnown }}</strong></div>
   <div class="metric"><div class="muted">Words exposed</div><strong>{{ summary.wordsExposed }}</strong></div>
   <div class="metric"><div class="muted">Words tracked</div><strong>{{ summary.wordsTracked }}</strong></div>
-  <div class="metric"><div class="muted">Daily activity</div><strong>{{ summary.activitySummary.combined.totalAnswered }}</strong></div>
+  <div class="metric"><div class="muted">All-time answered</div><strong>{{ summary.activitySummary.combined.totalAnswered }}</strong></div>
 </div>
 <div class="card">
-  <h2>Period deltas</h2>
+  <h2>Questions answered per day (past 30 days)</h2>
+  <p class="muted">Day-level totals only; exact practice times are intentionally hidden.</p>
+  {% if monthly_questions_series %}
+    {% set max_questions = monthly_questions_series | map(attribute='questionsAnswered') | max %}
+    <div class="daily-chart">
+      {% for point in monthly_questions_series %}
+        {% set height = ((point.questionsAnswered / max_questions) * 100) if max_questions > 0 else 0 %}
+        <div class="daily-bar-wrap" title="{{ point.date }}: {{ point.questionsAnswered }} questions">
+          <div class="daily-bar" style="height: {{ '%.1f'|format(height) }}%"></div>
+          {% if loop.index0 % 5 == 0 or loop.last %}
+            <div class="daily-label">{{ point.dayLabel }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No daily activity yet.</p>
+  {% endif %}
+</div>
+<div class="card">
+  <h2>Period overview</h2>
   <table>
-    <thead><tr><th>Period</th><th>Newly exposed</th><th>Total exposed</th><th>Current day</th><th>Baseline</th></tr></thead>
+    <thead><tr><th>Period</th><th>Newly exposed</th><th>Total exposed</th><th>Current day</th><th>Compared with</th></tr></thead>
     <tbody>
-      <tr><td>Daily</td><td>+{{ daily.progress.exposed.new if daily.progress is defined else 0 }}</td><td>{{ daily.progress.exposed.total if daily.progress is defined else 0 }}</td><td>{{ daily.currentDay }}</td><td>{{ daily.targetBaselineDay if daily.targetBaselineDay is defined else '-' }}</td></tr>
+      <tr><td>Daily</td><td>+{{ daily.progress.exposed.new if daily.progress is defined else 0 }}</td><td>{{ daily.progress.exposed.total if daily.progress is defined else 0 }}</td><td>{{ daily.currentDay }}</td><td>Yesterday ({{ daily.targetBaselineDay if daily.targetBaselineDay is defined else '-' }})</td></tr>
       <tr><td>Weekly</td><td>+{{ weekly.progress.exposed.new if weekly.progress is defined else 0 }}</td><td>{{ weekly.progress.exposed.total if weekly.progress is defined else 0 }}</td><td>{{ weekly.currentDay }}</td><td>{{ weekly.actualBaselineDay if weekly.actualBaselineDay is defined else '-' }}</td></tr>
       <tr><td>Monthly</td><td>+{{ monthly.monthlyAggregate.exposed.new if monthly.monthlyAggregate is defined else 0 }}</td><td>{{ monthly.monthlyAggregate.exposed.total if monthly.monthlyAggregate is defined else 0 }}</td><td>{{ monthly.currentDay }}</td><td>{{ monthly.actualBaselineDay if monthly.actualBaselineDay is defined else '-' }}</td></tr>
     </tbody>
   </table>
+</div>
+<div class="card">
+  <h2>Ten most recent words</h2>
+  {% if recent_words %}
+    <table>
+      <thead><tr><th>Word</th><th>Last seen (UTC day)</th><th>Total answers</th></tr></thead>
+      <tbody>
+      {% for row in recent_words %}
+        <tr><td><code>{{ row.wordKey }}</code></td><td>{{ row.lastSeenDay }}</td><td>{{ row.totalAnswered }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No recent words yet.</p>
+  {% endif %}
 </div>
 {% endblock %}
