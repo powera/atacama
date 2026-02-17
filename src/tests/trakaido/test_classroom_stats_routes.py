@@ -28,7 +28,8 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
             self.manager = User(email="manager@example.com", name="Manager")
             self.member = User(email="member@example.com", name="Member")
             self.outsider = User(email="outsider@example.com", name="Outsider")
-            session.add_all([self.manager, self.member, self.outsider])
+            self.admin = User(email="admin@example.com", name="Admin")
+            session.add_all([self.manager, self.member, self.outsider, self.admin])
             session.flush()
 
             session.add_all([
@@ -64,6 +65,19 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
 
     def _auth_headers(self, token: str):
         return {"Authorization": f"Bearer {token}"}
+
+    def _set_admin_session(self):
+        with self.client.session_transaction() as sess:
+            sess['user'] = {
+                'email': 'admin@example.com',
+                'name': 'Admin',
+            }
+
+    def _admin_post(self, path: str, **kwargs):
+        return self.client.post(path, base_url='https://trakaido.com', **kwargs)
+
+    def _admin_get(self, path: str, **kwargs):
+        return self.client.get(path, base_url='https://trakaido.com', **kwargs)
 
     def test_classrooms_page_renders_for_authenticated_user(self):
         response = self.client.get('/api/trakaido/classrooms/', headers=self._auth_headers("manager-token"))
@@ -136,6 +150,63 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertIn(b'Manager access required', response.data)
+
+    @patch('atacama.decorators.auth.get_user_config_manager')
+    def test_admin_can_create_classroom_and_manage_members_by_email(self, mock_get_manager):
+        mock_get_manager.return_value.is_admin.return_value = True
+        self._set_admin_session()
+
+        create_response = self._admin_post(
+            '/api/trakaido/admin/classrooms',
+            json={"name": "Evening Group", "managerEmail": self.manager.email},
+        )
+        self.assertEqual(create_response.status_code, 201)
+        created_classroom_id = create_response.get_json()["classroom"]["id"]
+
+        search_response = self._admin_get('/api/trakaido/admin/users/search?email=member@')
+        self.assertEqual(search_response.status_code, 200)
+        search_payload = search_response.get_json()
+        self.assertGreaterEqual(search_payload["count"], 1)
+        self.assertTrue(any(user["email"] == self.member.email for user in search_payload["users"]))
+
+        add_response = self._admin_post(
+            f'/api/trakaido/admin/classrooms/{created_classroom_id}/members',
+            json={"email": self.member.email},
+        )
+        self.assertEqual(add_response.status_code, 201)
+        self.assertEqual(add_response.get_json()["member"]["role"], ClassroomRole.MEMBER.value)
+
+        promote_response = self._admin_post(
+            f'/api/trakaido/admin/classrooms/{created_classroom_id}/members',
+            json={"email": self.member.email, "role": "manager"},
+        )
+        self.assertEqual(promote_response.status_code, 200)
+        self.assertEqual(promote_response.get_json()["member"]["role"], ClassroomRole.MANAGER.value)
+
+        remove_response = self._admin_post(
+            f'/api/trakaido/admin/classrooms/{created_classroom_id}/members/remove',
+            json={"email": self.member.email},
+        )
+        self.assertEqual(remove_response.status_code, 200)
+        self.assertEqual(remove_response.get_json()["removed"]["email"], self.member.email)
+
+    @patch('atacama.decorators.auth.get_user_config_manager')
+    def test_admin_cannot_remove_last_classroom_manager(self, mock_get_manager):
+        mock_get_manager.return_value.is_admin.return_value = True
+        self._set_admin_session()
+
+        create_response = self._admin_post(
+            '/api/trakaido/admin/classrooms',
+            json={"name": "Solo Manager Group"},
+        )
+        created_classroom_id = create_response.get_json()["classroom"]["id"]
+
+        remove_response = self._admin_post(
+            f'/api/trakaido/admin/classrooms/{created_classroom_id}/members/remove',
+            json={"email": self.admin.email},
+        )
+        self.assertEqual(remove_response.status_code, 400)
+        self.assertIn("last classroom manager", remove_response.get_json()["error"])
 
 
 if __name__ == '__main__':
