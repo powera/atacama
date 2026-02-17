@@ -1,7 +1,7 @@
 {% extends "trakaido/base_stats.html" %}
 {% block content %}
 <div class="section-head">
-  <h1>{{ classroom.name }} · {{ member.name }}</h1>
+  <h1>{{ classroom.name }} · {{ member.name }} · {{ language_display_name }}</h1>
   <a href="/api/trakaido/classrooms/{{ classroom.id }}/members">← Back to members</a>
 </div>
 <div class="grid card">
@@ -45,10 +45,10 @@
   <h2>Ten most recent words</h2>
   {% if recent_words %}
     <table>
-      <thead><tr><th>Word</th><th>Last seen (UTC day)</th><th>Total answers</th></tr></thead>
+      <thead><tr><th>Word</th><th>GUID</th><th>Last seen (UTC day)</th><th>Total answers</th></tr></thead>
       <tbody>
       {% for row in recent_words %}
-        <tr><td><code>{{ row.wordKey }}</code></td><td>{{ row.lastSeenDay }}</td><td>{{ row.totalAnswered }}</td></tr>
+        <tr><td>{{ row.wordLabel }}</td><td><code>{{ row.wordKey }}</code></td><td>{{ row.lastSeenDay }}</td><td>{{ row.totalAnswered }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

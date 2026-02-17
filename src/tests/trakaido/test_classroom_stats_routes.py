@@ -212,6 +212,7 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertIn(b"Manager access required", response.data)
 
     @patch("trakaido.blueprints.classroom_stats.get_journey_stats")
+    @patch("trakaido.blueprints.classroom_stats._load_guid_word_labels")
     @patch("trakaido.blueprints.classroom_stats.calculate_monthly_progress")
     @patch("trakaido.blueprints.classroom_stats.calculate_weekly_progress")
     @patch("trakaido.blueprints.classroom_stats.calculate_daily_progress")
@@ -222,8 +223,10 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         mock_daily,
         mock_weekly,
         mock_monthly,
+        mock_word_labels,
         mock_journey_stats,
     ):
+        mock_word_labels.return_value = {"labas": "labas — hello", "rytas": "rytas — morning"}
         mock_summary.return_value = {
             "wordsKnown": 10,
             "wordsExposed": 18,
@@ -276,6 +279,8 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertIn(b"Questions answered per day (past 30 days)", response.data)
         self.assertIn(b"Ten most recent words", response.data)
         self.assertIn(b"labas", response.data)
+        self.assertIn(b"Lithuanian", response.data)
+        self.assertIn("labas — hello".encode("utf-8"), response.data)
 
     @patch("atacama.decorators.auth.get_user_config_manager")
     def test_admin_can_create_classroom_and_manage_members_by_email(self, mock_get_manager):

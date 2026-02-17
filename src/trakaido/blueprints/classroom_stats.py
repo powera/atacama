@@ -4,7 +4,9 @@ These routes provide manager/admin access to normalized per-member summaries
 that use the same metric calculators as self-service endpoints.
 """
 
+import json
 import os
+from functools import lru_cache
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -60,6 +62,12 @@ def _validate_language(language: str) -> Optional[ResponseReturnValue]:
         valid = ", ".join(sorted(manager.get_all_language_keys()))
         return jsonify({"error": f"Unknown language '{language}'. Valid options: {valid}"}), 400
     return None
+
+
+def _get_language_display_name(language: str) -> str:
+    manager = get_language_manager()
+    config = manager.get_language_config(language)
+    return config.name
 
 
 def _get_user_active_languages(user_id: str) -> List[str]:
@@ -123,6 +131,91 @@ def _build_monthly_questions_series(monthly: Dict[str, Any]) -> List[Dict[str, A
     return chart_points
 
 
+def _get_wireword_dir(language: str) -> Optional[str]:
+    manager = get_language_manager()
+    language_config = manager.get_language_config(language)
+    lang_code = language_config.code
+    wireword_dir = os.path.join(
+        constants.DATA_DIR,
+        "trakaido_wordlists",
+        f"lang_{lang_code}",
+        "generated",
+        "wireword",
+    )
+    if not os.path.isdir(wireword_dir):
+        return None
+    return wireword_dir
+
+
+def _build_word_label(lithuanian: str, english: str) -> str:
+    if lithuanian and english:
+        return f"{lithuanian} — {english}"
+    return lithuanian or english
+
+
+@lru_cache(maxsize=32)
+def _load_guid_word_labels(language: str) -> Dict[str, str]:
+    """Load guid -> word labels from wireword files for a language."""
+    wireword_dir = _get_wireword_dir(language)
+    if wireword_dir is None:
+        return {}
+
+    labels: Dict[str, str] = {}
+
+    for filename in sorted(os.listdir(wireword_dir)):
+        if not filename.endswith(".json"):
+            continue
+
+        file_path = os.path.join(wireword_dir, filename)
+        try:
+            with open(file_path, "r", encoding="utf-8") as infile:
+                file_data = json.load(infile)
+        except Exception as exc:
+            logger.warning(f"Failed to load wireword file {file_path}: {exc}")
+            continue
+
+        if not isinstance(file_data, list):
+            continue
+
+        for entry in file_data:
+            if not isinstance(entry, dict):
+                continue
+
+            guid = str(entry.get("guid", "")).strip()
+            if not guid:
+                continue
+
+            base_label = _build_word_label(
+                str(entry.get("base_lithuanian", "")).strip()
+                or str(entry.get("lithuanian", "")).strip(),
+                str(entry.get("base_english", "")).strip() or str(entry.get("english", "")).strip(),
+            )
+            if base_label:
+                labels.setdefault(guid, base_label)
+
+            grammatical_forms = entry.get("grammatical_forms", {})
+            if not isinstance(grammatical_forms, dict):
+                continue
+
+            for form_key, form_data in grammatical_forms.items():
+                if not isinstance(form_data, dict):
+                    continue
+                form_label = _build_word_label(
+                    str(form_data.get("lithuanian", "")).strip(),
+                    str(form_data.get("english", "")).strip(),
+                )
+                if not form_label:
+                    continue
+                labels.setdefault(f"{guid}_{form_key}", form_label)
+
+    return labels
+
+
+def _resolve_word_label(word_key: str, language: str) -> str:
+    labels = _load_guid_word_labels(language)
+    return labels.get(word_key, word_key)
+
+
 def _get_recent_words(user_id: str, language: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Return the most recently seen words with day-level timestamps only."""
     journey_stats = get_journey_stats(user_id, language)
@@ -153,6 +246,7 @@ def _get_recent_words(user_id: str, language: str, limit: int = 10) -> List[Dict
         recents.append(
             {
                 "wordKey": word_key,
+                "wordLabel": _resolve_word_label(word_key, language),
                 "lastSeenDay": last_seen_day,
                 "totalAnswered": total_answers,
                 "_lastSeenEpoch": last_seen_value,
@@ -468,6 +562,7 @@ def get_classroom_member_stats_html(
         page_title=f"{classroom['name']} · {member['name']} stats",
         classroom=classroom,
         language=language,
+        language_display_name=_get_language_display_name(language),
         member=member,
         summary=summary,
         daily=daily,
