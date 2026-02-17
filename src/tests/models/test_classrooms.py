@@ -6,6 +6,7 @@ import constants
 from models.database import db
 from models.classrooms import (
     get_class_members,
+    get_user_classroom_capabilities,
     get_user_classrooms,
     is_class_manager,
 )
@@ -68,6 +69,17 @@ class TestClassroomHelpers(unittest.TestCase):
         self.assertEqual(len(classrooms), 1)
         self.assertEqual(classrooms[0].name, "Lithuanian A1")
 
+
+    def test_get_user_classroom_capabilities(self):
+        capabilities = get_user_classroom_capabilities(self.manager_id)
+
+        self.assertTrue(capabilities["is_class_manager"])
+        self.assertEqual(len(capabilities["managed_classrooms"]), 1)
+        self.assertEqual(capabilities["managed_classrooms"][0]["id"], self.classroom_id)
+        self.assertEqual(capabilities["managed_classrooms"][0]["display_name"], "Lithuanian A1")
+        self.assertEqual(capabilities["managed_classrooms"][0]["member_count"], 2)
+        self.assertEqual(capabilities["member_classrooms"], [])
+
     def test_get_class_members(self):
         memberships = get_class_members(self.classroom_id)
         self.assertEqual(len(memberships), 2)
@@ -88,6 +100,14 @@ class TestClassroomHelpersDisabledService(unittest.TestCase):
         self.assertFalse(is_class_manager(1, 1))
         self.assertEqual(get_user_classrooms(1), [])
         self.assertEqual(get_class_members(1), [])
+        self.assertEqual(
+            get_user_classroom_capabilities(1),
+            {
+                "is_class_manager": False,
+                "managed_classrooms": [],
+                "member_classrooms": [],
+            },
+        )
 
 
 if __name__ == "__main__":
