@@ -2,6 +2,9 @@
 
 This document provides comprehensive guidance for AI assistants working with the Atacama codebase.
 
+Look at .agents/ for more detailed information about other repos used with
+this one.
+
 ## Project Overview
 
 Atacama is a multi-purpose web application consisting of three main components:
