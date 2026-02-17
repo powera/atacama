@@ -1,0 +1,87 @@
+{% extends "trakaido/base_stats.html" %}
+{% block content %}
+<style>
+  .field { margin-bottom: 12px; }
+  .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+  .field input { width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+  .btn-primary { padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .btn-primary:hover { opacity: 0.88; }
+  .msg { margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+  .msg.ok { background: #d4edda; color: #155724; }
+  .msg.err { background: #f8d7da; color: #721c24; }
+</style>
+
+<div class="section-head">
+  <h1>Admin · Classrooms</h1>
+  <span class="pill">{{ classrooms|length }} total</span>
+</div>
+
+<div class="card">
+  <h2>Create classroom</h2>
+  <form id="create-form">
+    <div class="field">
+      <label for="name">Classroom name</label>
+      <input type="text" id="name" name="name" required placeholder="e.g. Spring 2026 Lithuanian A1">
+    </div>
+    <div class="field">
+      <label for="managerEmail">Manager email (optional — assigned as manager alongside you)</label>
+      <input type="email" id="managerEmail" name="managerEmail" placeholder="teacher@example.com">
+    </div>
+    <button type="submit" class="btn-primary">Create classroom</button>
+  </form>
+  <div id="create-msg" class="msg" hidden></div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Classroom</th>
+        <th>Created</th>
+        <th>Manage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in classrooms %}
+      <tr>
+        <td>
+          <strong>{{ c.name }}</strong>
+          {% if c.archived %} <span class="pill">Archived</span>{% endif %}
+        </td>
+        <td class="muted">{{ c.createdAt }}</td>
+        <td><a href="/api/trakaido/admin/classrooms/{{ c.id }}">Manage members</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">No classrooms yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById('create-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const msg = document.getElementById('create-msg');
+  msg.hidden = true;
+
+  const body = { name: this.name.value.trim() };
+  const email = this.managerEmail.value.trim();
+  if (email) body.managerEmail = email;
+
+  const res = await fetch('/api/trakaido/admin/classrooms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    window.location.href = '/api/trakaido/admin/classrooms/' + data.classroom.id;
+  } else {
+    msg.className = 'msg err';
+    msg.textContent = data.error || 'Unknown error';
+    msg.hidden = false;
+  }
+});
+</script>
+{% endblock %}
