@@ -135,7 +135,7 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         mock_monthly.return_value = {"monthlyAggregate": {"exposed": {"new": 5, "total": 20}}}
 
         response = self.client.get(
-            f'/api/trakaido/classrooms/{self.classroom_id}/stats/daily',
+            f'/api/trakaido/classrooms/{self.classroom_id}/stats/lithuanian/daily',
             headers=self._auth_headers("manager-token"),
         )
 
@@ -145,9 +145,27 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         self.assertIn(b'Manager', response.data)
         self.assertIn(b'Member', response.data)
 
+    @patch('trakaido.blueprints.classroom_stats.calculate_monthly_progress')
+    @patch('trakaido.blueprints.classroom_stats.calculate_weekly_progress')
+    @patch('trakaido.blueprints.classroom_stats.calculate_daily_progress')
+    @patch('trakaido.blueprints.classroom_stats.compute_member_summary')
+    def test_stats_page_rejects_unknown_language(
+        self,
+        mock_summary,
+        mock_daily,
+        mock_weekly,
+        mock_monthly,
+    ):
+        response = self.client.get(
+            f'/api/trakaido/classrooms/{self.classroom_id}/stats/klingon/daily',
+            headers=self._auth_headers("manager-token"),
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Unknown language', response.data)
+
     def test_member_detail_requires_manager(self):
         response = self.client.get(
-            f'/api/trakaido/classrooms/{self.classroom_id}/members/{self.member.id}/stats',
+            f'/api/trakaido/classrooms/{self.classroom_id}/members/{self.member.id}/stats/lithuanian',
             headers=self._auth_headers("member-token"),
         )
 
