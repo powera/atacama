@@ -4,13 +4,16 @@ These routes provide manager/admin access to normalized per-member summaries
 that use the same metric calculators as self-service endpoints.
 """
 
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
+import constants
 from flask import jsonify, render_template, request, g
 from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select
 
 from atacama.decorators.auth import require_admin, require_auth
+from common.config.language_config import get_language_manager
 from models.database import db
 from models.models import User
 from trakaido.blueprints.shared import trakaido_bp, logger
@@ -27,14 +30,14 @@ from trakaido.models import Classroom, ClassroomMembership, ClassroomRole
 
 
 CLASSROOM_STATS_API_DOCS = {
-    "GET /api/trakaido/classroom_stats/member/<user_id>": "Get normalized stats summary for one classroom member",
-    "POST /api/trakaido/classroom_stats/members": "Get normalized stats summaries for multiple classroom members",
+    "GET /api/trakaido/classroom_stats/<language>/member/<user_id>": "Get normalized stats summary for one classroom member",
+    "POST /api/trakaido/classroom_stats/<language>/members": "Get normalized stats summaries for multiple classroom members",
     "GET /api/trakaido/classrooms/": "HTML list of user classrooms and role",
     "GET /api/trakaido/classrooms/<classroom_id>/members": "HTML classroom members list (manager only)",
-    "GET /api/trakaido/classrooms/<classroom_id>/stats/daily": "HTML classroom daily aggregate stats (manager only)",
-    "GET /api/trakaido/classrooms/<classroom_id>/stats/weekly": "HTML classroom weekly aggregate stats (manager only)",
-    "GET /api/trakaido/classrooms/<classroom_id>/stats/monthly": "HTML classroom monthly aggregate stats (manager only)",
-    "GET /api/trakaido/classrooms/<classroom_id>/members/<user_id>/stats": "HTML member stats detail (manager only)",
+    "GET /api/trakaido/classrooms/<classroom_id>/stats/<language>/daily": "HTML classroom daily aggregate stats (manager only)",
+    "GET /api/trakaido/classrooms/<classroom_id>/stats/<language>/weekly": "HTML classroom weekly aggregate stats (manager only)",
+    "GET /api/trakaido/classrooms/<classroom_id>/stats/<language>/monthly": "HTML classroom monthly aggregate stats (manager only)",
+    "GET /api/trakaido/classrooms/<classroom_id>/members/<user_id>/stats/<language>": "HTML member stats detail (manager only)",
     "GET /api/trakaido/admin/users/search": "Admin user search by email",
     "GET /api/trakaido/admin/classrooms": "Admin HTML page: list all classrooms, create new",
     "GET /api/trakaido/admin/classrooms/<classroom_id>": "Admin HTML page: manage classroom members",
@@ -46,6 +49,33 @@ CLASSROOM_STATS_API_DOCS = {
 
 def _normalize_email(value: Optional[str]) -> str:
     return (value or "").strip().lower()
+
+
+def _validate_language(language: str) -> Optional[ResponseReturnValue]:
+    """Return a 400 error response if language is not a configured language key."""
+    manager = get_language_manager()
+    if language not in manager.get_all_language_keys():
+        valid = ", ".join(sorted(manager.get_all_language_keys()))
+        return jsonify({"error": f"Unknown language '{language}'. Valid options: {valid}"}), 400
+    return None
+
+
+def _get_user_active_languages(user_id: str) -> List[str]:
+    """Return language keys for which the user has any stats data on disk.
+
+    Uses a lightweight directory-existence check rather than loading stats.
+    Languages are returned in configured order (matches languages.toml).
+    """
+    manager = get_language_manager()
+    active = []
+    for language_key in manager.get_all_language_keys():
+        user_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language_key)
+        try:
+            if os.path.isdir(user_dir) and any(os.scandir(user_dir)):
+                active.append(language_key)
+        except OSError:
+            pass
+    return active
 
 
 def _classroom_payload(classroom: Classroom) -> Dict[str, Any]:
@@ -266,10 +296,12 @@ def get_user_classrooms_html() -> ResponseReturnValue:
     """Render classrooms list for the authenticated user."""
     user_id = int(g.user.id)
     classrooms = _get_user_classrooms_with_role(user_id)
+    language = getattr(g, 'current_language', 'lithuanian')
     return render_template(
         'trakaido/classrooms_list.html',
         page_title='My Classrooms',
         classrooms=classrooms,
+        language=language,
     )
 
 
@@ -282,18 +314,31 @@ def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
         return auth_error
 
     members = _get_classroom_member_rows(classroom_id)
+    language = getattr(g, 'current_language', 'lithuanian')
+
+    manager = get_language_manager()
+    language_names = {k: manager.get_language_config(k).name for k in manager.get_all_language_keys()}
+    for member in members:
+        member['activeLanguages'] = _get_user_active_languages(str(member['userId']))
+
     return render_template(
         'trakaido/classroom_members.html',
         page_title=f"{classroom['name']} · Members",
         classroom=classroom,
         members=members,
+        language=language,
+        language_names=language_names,
     )
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/stats/<period>', methods=['GET'])
+@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/stats/<language>/<period>', methods=['GET'])
 @require_auth
-def get_classroom_stats_html(classroom_id: int, period: str) -> ResponseReturnValue:
+def get_classroom_stats_html(classroom_id: int, language: str, period: str) -> ResponseReturnValue:
     """Render classroom aggregate period stats (manager only)."""
+    lang_error = _validate_language(language)
+    if lang_error:
+        return lang_error
+
     if period not in {'daily', 'weekly', 'monthly'}:
         return jsonify({"error": "Invalid period. Use daily, weekly, or monthly."}), 400
 
@@ -301,7 +346,6 @@ def get_classroom_stats_html(classroom_id: int, period: str) -> ResponseReturnVa
     if auth_error:
         return auth_error
 
-    language = request.args.get('language', 'lithuanian')
     members = _get_classroom_member_rows(classroom_id)
     stats_payload = _aggregate_classroom_period_stats(members, language, period)
 
@@ -316,15 +360,18 @@ def get_classroom_stats_html(classroom_id: int, period: str) -> ResponseReturnVa
     )
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/members/<int:user_id>/stats', methods=['GET'])
+@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/members/<int:user_id>/stats/<language>', methods=['GET'])
 @require_auth
-def get_classroom_member_stats_html(classroom_id: int, user_id: int) -> ResponseReturnValue:
+def get_classroom_member_stats_html(classroom_id: int, user_id: int, language: str) -> ResponseReturnValue:
     """Render one member detail stats page (manager only)."""
+    lang_error = _validate_language(language)
+    if lang_error:
+        return lang_error
+
     auth_error, classroom = _require_classroom_manager(int(g.user.id), classroom_id)
     if auth_error:
         return auth_error
 
-    language = request.args.get('language', 'lithuanian')
     members = _get_classroom_member_rows(classroom_id)
     member = next((m for m in members if int(m['userId']) == user_id), None)
     if member is None:
@@ -348,37 +395,36 @@ def get_classroom_member_stats_html(classroom_id: int, user_id: int) -> Response
     )
 
 
-@trakaido_bp.route('/api/trakaido/classroom_stats/member/<user_id>', methods=['GET'])
+@trakaido_bp.route('/api/trakaido/classroom_stats/<language>/member/<user_id>', methods=['GET'])
 @require_admin
-def get_classroom_member_summary(user_id: str) -> ResponseReturnValue:
-    """Get normalized summary for one member.
-
-    Query params:
-    - language (optional): defaults to lithuanian
-    """
+def get_classroom_member_summary(language: str, user_id: str) -> ResponseReturnValue:
+    """Get normalized summary for one member."""
+    lang_error = _validate_language(language)
+    if lang_error:
+        return lang_error
     try:
-        language = request.args.get("language", "lithuanian")
         return jsonify(compute_member_summary(str(user_id), language))
     except Exception as e:
         logger.error(f"Error getting classroom member summary for user {user_id}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/classroom_stats/members', methods=['POST'])
+@trakaido_bp.route('/api/trakaido/classroom_stats/<language>/members', methods=['POST'])
 @require_admin
-def get_classroom_members_summary() -> ResponseReturnValue:
+def get_classroom_members_summary(language: str) -> ResponseReturnValue:
     """Get normalized summaries for multiple members in one request.
 
     Request body:
     {
-        "userIds": ["123", "456"],
-        "language": "lithuanian"
+        "userIds": ["123", "456"]
     }
     """
+    lang_error = _validate_language(language)
+    if lang_error:
+        return lang_error
     try:
         data = request.get_json() or {}
         user_ids = data.get("userIds", [])
-        language = data.get("language", "lithuanian")
 
         if not isinstance(user_ids, list) or not user_ids:
             return jsonify({"error": "Field 'userIds' must be a non-empty array"}), 400

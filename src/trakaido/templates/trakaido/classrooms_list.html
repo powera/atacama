@@ -16,9 +16,9 @@
         <td class="muted">{{ c.createdAt }}</td>
         <td>
           <a href="/api/trakaido/classrooms/{{ c.id }}/members">Members</a> ·
-          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/daily">Daily</a> ·
-          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/weekly">Weekly</a> ·
-          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/monthly">Monthly</a>
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/{{ language }}/daily">Daily</a> ·
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/{{ language }}/weekly">Weekly</a> ·
+          <a href="/api/trakaido/classrooms/{{ c.id }}/stats/{{ language }}/monthly">Monthly</a>
         </td>
       </tr>
       {% else %}

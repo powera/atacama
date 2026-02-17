@@ -14,7 +14,13 @@
         <td class="muted">{{ m.email }}</td>
         <td><span class="pill">{{ m.role }}</span></td>
         <td class="muted">{{ m.joinedAt }}</td>
-        <td><a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ m.userId }}/stats">Open member stats</a></td>
+        <td>
+          {% for lang in m.activeLanguages %}
+            <a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ m.userId }}/stats/{{ lang }}">{{ language_names[lang] }}</a>{% if not loop.last %} · {% endif %}
+          {% else %}
+            <span class="muted">No activity yet</span>
+          {% endfor %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

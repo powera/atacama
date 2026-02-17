@@ -26,7 +26,7 @@
     <tbody>
       {% for row in members %}
       <tr>
-        <td><a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ row.member.userId }}/stats">{{ row.member.name }}</a></td>
+        <td><a href="/api/trakaido/classrooms/{{ classroom.id }}/members/{{ row.member.userId }}/stats/{{ language }}">{{ row.member.name }}</a></td>
         <td><span class="pill">{{ row.member.role }}</span></td>
         <td>{{ row.summary.wordsKnown }}</td>
         <td>{{ row.summary.activitySummary.combined.totalAnswered }}</td>
