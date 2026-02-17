@@ -36,6 +36,8 @@ CLASSROOM_STATS_API_DOCS = {
     "GET /api/trakaido/classrooms/<classroom_id>/stats/monthly": "HTML classroom monthly aggregate stats (manager only)",
     "GET /api/trakaido/classrooms/<classroom_id>/members/<user_id>/stats": "HTML member stats detail (manager only)",
     "GET /api/trakaido/admin/users/search": "Admin user search by email",
+    "GET /api/trakaido/admin/classrooms": "Admin HTML page: list all classrooms, create new",
+    "GET /api/trakaido/admin/classrooms/<classroom_id>": "Admin HTML page: manage classroom members",
     "POST /api/trakaido/admin/classrooms": "Admin create student group (classroom)",
     "POST /api/trakaido/admin/classrooms/<classroom_id>/members": "Admin add member by email",
     "POST /api/trakaido/admin/classrooms/<classroom_id>/members/remove": "Admin remove member by email",
@@ -399,6 +401,41 @@ def get_classroom_members_summary() -> ResponseReturnValue:
     except Exception as e:
         logger.error(f"Error getting classroom member summaries: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/admin/classrooms', methods=['GET'])
+@require_admin
+def admin_list_classrooms_html() -> ResponseReturnValue:
+    """Admin HTML page: list all classrooms and create new ones."""
+    with db.session() as db_session:
+        stmt = select(Classroom).order_by(Classroom.created_at.desc())
+        classrooms = db_session.execute(stmt).scalars().all()
+        classroom_list = [_classroom_payload(c) for c in classrooms]
+
+    return render_template(
+        'trakaido/admin_classrooms.html',
+        page_title='Admin · Classrooms',
+        classrooms=classroom_list,
+    )
+
+
+@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>', methods=['GET'])
+@require_admin
+def admin_classroom_detail_html(classroom_id: int) -> ResponseReturnValue:
+    """Admin HTML page: view and manage classroom members."""
+    with db.session() as db_session:
+        classroom = db_session.get(Classroom, classroom_id)
+        if classroom is None:
+            return jsonify({"error": "Classroom not found"}), 404
+        classroom_data = _classroom_payload(classroom)
+
+    members = _get_classroom_member_rows(classroom_id)
+    return render_template(
+        'trakaido/admin_classroom_detail.html',
+        page_title=f"Admin · {classroom_data['name']}",
+        classroom=classroom_data,
+        members=members,
+    )
 
 
 @trakaido_bp.route('/api/trakaido/admin/users/search', methods=['GET'])
