@@ -12,6 +12,7 @@ try:
         PinyinProcessor,
         annotate_chinese,
     )
+
     PINYIN_AVAILABLE = True
 except ImportError:
     # Dependencies (jieba, pypinyin) not installed - skip tests
@@ -29,11 +30,7 @@ class TestChineseAnnotation(unittest.TestCase):
 
     def test_create_annotation(self):
         """ChineseAnnotation should store hanzi, pinyin, and definition."""
-        annotation = ChineseAnnotation(
-            hanzi="你好",
-            pinyin="NǏ HǍO",
-            definition="hello"
-        )
+        annotation = ChineseAnnotation(hanzi="你好", pinyin="NǏ HǍO", definition="hello")
         self.assertEqual(annotation.hanzi, "你好")
         self.assertEqual(annotation.pinyin, "NǏ HǍO")
         self.assertEqual(annotation.definition, "hello")
@@ -203,7 +200,7 @@ class TestPinyinProcessor(unittest.TestCase):
 
     def setUp(self):
         """Set up test processor with mocked CEDICT loading."""
-        with patch.object(PinyinProcessor, '_load_cedict'):
+        with patch.object(PinyinProcessor, "_load_cedict"):
             self.processor = PinyinProcessor()
             self.processor.cedict = {
                 "你好": ("ni3 hao3", "hello"),
@@ -280,7 +277,7 @@ class TestPinyinProcessor(unittest.TestCase):
         self.processor.clear_cache()
         self.assertEqual(len(self.processor._local_cache), 0)
 
-    @patch.object(PinyinProcessor, '_segment_words')
+    @patch.object(PinyinProcessor, "_segment_words")
     def test_annotate_text_by_words(self, mock_segment):
         """annotate_text_by_words should use jieba segmentation."""
         mock_segment.return_value = ["你好", "世界"]
@@ -293,7 +290,7 @@ class TestPinyinProcessor(unittest.TestCase):
 class TestAnnotateChinese(unittest.TestCase):
     """Test suite for annotate_chinese convenience function."""
 
-    @patch('aml_parser.pinyin.default_processor')
+    @patch("aml_parser.pinyin.default_processor")
     def test_uses_default_processor(self, mock_processor):
         """annotate_chinese should use the default processor."""
         mock_processor.annotate_text.return_value = {"好": {"pinyin": "HǍO", "definition": "good"}}
@@ -302,5 +299,5 @@ class TestAnnotateChinese(unittest.TestCase):
         self.assertEqual(result, {"好": {"pinyin": "HǍO", "definition": "good"}})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

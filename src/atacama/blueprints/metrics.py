@@ -30,6 +30,7 @@ try:
         CONTENT_TYPE_LATEST,
         REGISTRY,
     )
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     logger.error(
@@ -61,14 +62,17 @@ except ImportError:
 
     class Gauge(_NoOpMetric):
         """No-op Gauge stub."""
+
         pass
 
     class Counter(_NoOpMetric):
         """No-op Counter stub."""
+
         pass
 
     class Histogram(_NoOpMetric):
         """No-op Histogram stub."""
+
         pass
 
     def generate_latest(registry=None):
@@ -77,7 +81,7 @@ except ImportError:
     CONTENT_TYPE_LATEST = "text/plain"
     REGISTRY = None
 
-metrics_bp = Blueprint('metrics', __name__)
+metrics_bp = Blueprint("metrics", __name__)
 
 # Track server start time
 _SERVER_START_TIME = time.time()
@@ -87,134 +91,83 @@ _PROCESS = psutil.Process(os.getpid())
 
 # System metrics
 cpu_usage_gauge = Gauge(
-    'atacama_cpu_usage_percent',
-    'Current CPU usage percentage (non-blocking snapshot)'
+    "atacama_cpu_usage_percent", "Current CPU usage percentage (non-blocking snapshot)"
 )
 
-memory_usage_gauge = Gauge(
-    'atacama_memory_usage_percent',
-    'Current memory usage percentage'
-)
+memory_usage_gauge = Gauge("atacama_memory_usage_percent", "Current memory usage percentage")
 
-memory_used_bytes = Gauge(
-    'atacama_memory_used_bytes',
-    'Memory used in bytes'
-)
+memory_used_bytes = Gauge("atacama_memory_used_bytes", "Memory used in bytes")
 
-memory_total_bytes = Gauge(
-    'atacama_memory_total_bytes',
-    'Total memory in bytes'
-)
+memory_total_bytes = Gauge("atacama_memory_total_bytes", "Total memory in bytes")
 
-disk_usage_gauge = Gauge(
-    'atacama_disk_usage_percent',
-    'Current disk usage percentage'
-)
+disk_usage_gauge = Gauge("atacama_disk_usage_percent", "Current disk usage percentage")
 
-disk_used_bytes = Gauge(
-    'atacama_disk_used_bytes',
-    'Disk space used in bytes'
-)
+disk_used_bytes = Gauge("atacama_disk_used_bytes", "Disk space used in bytes")
 
-disk_total_bytes = Gauge(
-    'atacama_disk_total_bytes',
-    'Total disk space in bytes'
-)
+disk_total_bytes = Gauge("atacama_disk_total_bytes", "Total disk space in bytes")
 
 # Network I/O metrics
-network_bytes_sent = Gauge(
-    'atacama_network_bytes_sent_total',
-    'Total bytes sent over network'
-)
+network_bytes_sent = Gauge("atacama_network_bytes_sent_total", "Total bytes sent over network")
 
-network_bytes_recv = Gauge(
-    'atacama_network_bytes_recv_total',
-    'Total bytes received over network'
-)
+network_bytes_recv = Gauge("atacama_network_bytes_recv_total", "Total bytes received over network")
 
 # Process-specific metrics
-process_cpu_percent = Gauge(
-    'atacama_process_cpu_percent',
-    'CPU usage of this process'
-)
+process_cpu_percent = Gauge("atacama_process_cpu_percent", "CPU usage of this process")
 
 process_memory_bytes = Gauge(
-    'atacama_process_memory_bytes',
-    'Memory usage of this process in bytes'
+    "atacama_process_memory_bytes", "Memory usage of this process in bytes"
 )
 
-process_threads = Gauge(
-    'atacama_process_threads',
-    'Number of threads in this process'
-)
+process_threads = Gauge("atacama_process_threads", "Number of threads in this process")
 
-process_open_fds = Gauge(
-    'atacama_process_open_fds',
-    'Number of open file descriptors'
-)
+process_open_fds = Gauge("atacama_process_open_fds", "Number of open file descriptors")
 
 # Application metrics
-uptime_seconds = Gauge(
-    'atacama_uptime_seconds',
-    'Server uptime in seconds'
-)
+uptime_seconds = Gauge("atacama_uptime_seconds", "Server uptime in seconds")
 
 # Content metrics (will be updated on each /metrics request)
-content_count = Gauge(
-    'atacama_content_count',
-    'Count of content items by type',
-    ['content_type']
-)
+content_count = Gauge("atacama_content_count", "Count of content items by type", ["content_type"])
 
 # Database metrics
 db_connection_status = Gauge(
-    'atacama_database_connected',
-    'Database connection status (1=connected, 0=disconnected)'
+    "atacama_database_connected", "Database connection status (1=connected, 0=disconnected)"
 )
 
 # HTTP request metrics
 http_requests_total = Counter(
-    'atacama_http_requests_total',
-    'Total number of HTTP requests',
-    ['method', 'endpoint', 'status']
+    "atacama_http_requests_total", "Total number of HTTP requests", ["method", "endpoint", "status"]
 )
 
 http_request_duration_seconds = Histogram(
-    'atacama_http_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['method', 'endpoint'],
-    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+    "atacama_http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "endpoint"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
 )
 
 # Error tracking
 http_errors_total = Counter(
-    'atacama_http_errors_total',
-    'Total number of HTTP errors (4xx and 5xx)',
-    ['status_class']
+    "atacama_http_errors_total", "Total number of HTTP errors (4xx and 5xx)", ["status_class"]
 )
 
 # Authentication metrics
 auth_logins_total = Counter(
-    'atacama_auth_logins_total',
-    'Total number of login attempts',
-    ['provider', 'status']  # provider: google, debug; status: success, failure
+    "atacama_auth_logins_total",
+    "Total number of login attempts",
+    ["provider", "status"],  # provider: google, debug; status: success, failure
 )
 
-auth_logouts_total = Counter(
-    'atacama_auth_logouts_total',
-    'Total number of logouts'
-)
+auth_logouts_total = Counter("atacama_auth_logouts_total", "Total number of logouts")
 
 # Database latency metrics
 db_session_duration_seconds = Histogram(
-    'atacama_db_session_duration_seconds',
-    'Database session duration in seconds',
-    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)
+    "atacama_db_session_duration_seconds",
+    "Database session duration in seconds",
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
 )
 
 db_query_errors_total = Counter(
-    'atacama_db_query_errors_total',
-    'Total number of database query errors'
+    "atacama_db_query_errors_total", "Total number of database query errors"
 )
 
 
@@ -225,7 +178,7 @@ def record_login(provider: str, success: bool):
     :param provider: Authentication provider (e.g., 'google', 'debug')
     :param success: Whether the login was successful
     """
-    status = 'success' if success else 'failure'
+    status = "success" if success else "failure"
     auth_logins_total.labels(provider=provider, status=status).inc()
 
 
@@ -260,7 +213,7 @@ def update_system_metrics():
         memory_used_bytes.set(memory.used)
         memory_total_bytes.set(memory.total)
 
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         disk_usage_gauge.set(disk.percent)
         disk_used_bytes.set(disk.used)
         disk_total_bytes.set(disk.total)
@@ -302,7 +255,7 @@ def update_database_metrics():
         from sqlalchemy import text
 
         with db.session() as db_session:
-            db_session.execute(text('SELECT 1'))
+            db_session.execute(text("SELECT 1"))
             db_connection_status.set(1)
     except Exception as e:
         logger.warning(f"Database connection check failed: {e}")
@@ -316,23 +269,15 @@ def update_content_metrics():
         from models.models import Article, ReactWidget, Email, Quote
 
         with db.session() as db_session:
-            content_count.labels(content_type='emails').set(
-                db_session.query(Email).count()
-            )
-            content_count.labels(content_type='articles').set(
-                db_session.query(Article).count()
-            )
-            content_count.labels(content_type='widgets').set(
-                db_session.query(ReactWidget).count()
-            )
-            content_count.labels(content_type='quotes').set(
-                db_session.query(Quote).count()
-            )
+            content_count.labels(content_type="emails").set(db_session.query(Email).count())
+            content_count.labels(content_type="articles").set(db_session.query(Article).count())
+            content_count.labels(content_type="widgets").set(db_session.query(ReactWidget).count())
+            content_count.labels(content_type="quotes").set(db_session.query(Quote).count())
     except Exception as e:
         logger.warning(f"Error updating content metrics: {e}")
 
 
-@metrics_bp.route('/metrics')
+@metrics_bp.route("/metrics")
 def metrics():
     """
     Prometheus metrics endpoint.
@@ -346,7 +291,7 @@ def metrics():
         return Response(
             "# Prometheus metrics unavailable: prometheus_client not installed\n",
             status=503,
-            mimetype="text/plain"
+            mimetype="text/plain",
         )
 
     # Update all metrics before generating output
@@ -356,13 +301,10 @@ def metrics():
     update_database_metrics()
 
     # Only update content metrics for BLOG blueprint set to avoid errors in TRAKAIDO mode
-    if current_app.config.get('BLUEPRINT_SET') == 'BLOG':
+    if current_app.config.get("BLUEPRINT_SET") == "BLOG":
         update_content_metrics()
 
-    return Response(
-        generate_latest(REGISTRY),
-        mimetype=CONTENT_TYPE_LATEST
-    )
+    return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 
 def setup_request_metrics(app):
@@ -383,6 +325,7 @@ def setup_request_metrics(app):
     @app.before_request
     def before_request():
         from flask import g
+
         g.start_time = time.time()
 
     @app.after_request
@@ -390,11 +333,11 @@ def setup_request_metrics(app):
         from flask import g, request
 
         # Skip metrics endpoint to avoid recursion
-        if request.endpoint == 'metrics.metrics':
+        if request.endpoint == "metrics.metrics":
             return response
 
         # Calculate request duration
-        if hasattr(g, 'start_time'):
+        if hasattr(g, "start_time"):
             duration = time.time() - g.start_time
 
             # Skip 404 responses to avoid polluting metrics with
@@ -407,19 +350,16 @@ def setup_request_metrics(app):
 
             # Record metrics
             http_requests_total.labels(
-                method=request.method,
-                endpoint=endpoint,
-                status=response.status_code
+                method=request.method, endpoint=endpoint, status=response.status_code
             ).inc()
 
-            http_request_duration_seconds.labels(
-                method=request.method,
-                endpoint=endpoint
-            ).observe(duration)
+            http_request_duration_seconds.labels(method=request.method, endpoint=endpoint).observe(
+                duration
+            )
 
             # Track errors by class (4xx, 5xx)
             if response.status_code >= 400:
-                status_class = '4xx' if response.status_code < 500 else '5xx'
+                status_class = "4xx" if response.status_code < 500 else "5xx"
                 http_errors_total.labels(status_class=status_class).inc()
 
         return response

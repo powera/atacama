@@ -40,7 +40,11 @@ def _recursive_clean_for_openai(schema_part: Dict[str, Any]) -> None:
         _recursive_clean_for_openai(schema_part["items"])
 
     # Check for nested 'items' with 'properties' (array of objects)
-    if "items" in schema_part and isinstance(schema_part["items"], dict) and "properties" in schema_part["items"]:
+    if (
+        "items" in schema_part
+        and isinstance(schema_part["items"], dict)
+        and "properties" in schema_part["items"]
+    ):
         for prop in schema_part["items"]["properties"].values():
             if isinstance(prop, dict):
                 _recursive_clean_for_openai(prop)
@@ -59,25 +63,25 @@ def to_openai_schema(schema: Schema) -> Dict[str, Any]:
         "required": schema.all_properties(),
         "additionalProperties": False,
     }
-    
+
     for name, prop in schema.properties.items():
         property_schema: Dict[str, Any] = {
             "type": prop.type,
         }
-        
+
         if prop.description:
             property_schema["description"] = prop.description
-        
+
         if prop.enum:
             property_schema["enum"] = prop.enum
-            
+
         # Add minimum/maximum constraints for numeric types
         if prop.type in ["integer", "number"]:
             if prop.minimum is not None:
                 property_schema["minimum"] = prop.minimum
             if prop.maximum is not None:
                 property_schema["maximum"] = prop.maximum
-        
+
         # Handle nested objects
         if prop.type == "object" and prop.object_schema:
             # Convert nested schema
@@ -86,40 +90,42 @@ def to_openai_schema(schema: Schema) -> Dict[str, Any]:
             property_schema["properties"] = nested_schema["properties"]
             if "required" in nested_schema and nested_schema["required"]:
                 property_schema["required"] = nested_schema["required"]
-            property_schema["additionalProperties"] = nested_schema.get("additionalProperties", False)
+            property_schema["additionalProperties"] = nested_schema.get(
+                "additionalProperties", False
+            )
         elif prop.type == "object" and prop.properties:
             # Handle inline object definition
             property_schema["properties"] = {}
             required_props = []
-            
+
             for sub_name, sub_prop in prop.properties.items():
                 sub_schema: Dict[str, Any] = {"type": sub_prop.type}
-                
+
                 if sub_prop.description:
                     sub_schema["description"] = sub_prop.description
-                
+
                 if sub_prop.enum:
                     sub_schema["enum"] = sub_prop.enum
-                
+
                 if sub_prop.type in ["integer", "number"]:
                     if sub_prop.minimum is not None:
                         sub_schema["minimum"] = sub_prop.minimum
                     if sub_prop.maximum is not None:
                         sub_schema["maximum"] = sub_prop.maximum
-                
+
                 if sub_prop.type == "array" and sub_prop.items:
                     sub_schema["items"] = sub_prop.items
-                
+
                 if sub_prop.required:
                     required_props.append(sub_name)
-                
+
                 property_schema["properties"][sub_name] = sub_schema
-            
+
             if required_props:
                 property_schema["required"] = required_props
-            
+
             property_schema["additionalProperties"] = False
-                
+
         # Handle array items
         elif prop.type == "array" and prop.array_items_schema:
             # Handle array of objects with a full schema
@@ -127,9 +133,9 @@ def to_openai_schema(schema: Schema) -> Dict[str, Any]:
         elif prop.type == "array" and prop.items:
             # Handle simple array items or array of objects with inline schema
             property_schema["items"] = prop.items
-            
+
         result["properties"][name] = property_schema
-    
+
     _recursive_clean_for_openai(result)
     return result
 
@@ -143,27 +149,27 @@ def to_anthropic_schema(schema: Schema) -> Dict[str, Any]:
     result: Dict[str, Any] = {
         "type": "object",
         "properties": {},
-        "required": schema.required_properties()
+        "required": schema.required_properties(),
     }
-    
+
     for name, prop in schema.properties.items():
         property_schema: Dict[str, Any] = {
             "type": prop.type,
         }
-        
+
         if prop.description:
             property_schema["description"] = prop.description
-        
+
         if prop.enum:
             property_schema["enum"] = prop.enum
-            
+
         # Add minimum/maximum constraints for numeric types
         if prop.type in ["integer", "number"]:
             if prop.minimum is not None:
                 property_schema["minimum"] = prop.minimum
             if prop.maximum is not None:
                 property_schema["maximum"] = prop.maximum
-        
+
         # Handle nested objects
         if prop.type == "object" and prop.object_schema:
             # Convert nested schema
@@ -172,40 +178,42 @@ def to_anthropic_schema(schema: Schema) -> Dict[str, Any]:
             property_schema["properties"] = nested_schema["properties"]
             if "required" in nested_schema and nested_schema["required"]:
                 property_schema["required"] = nested_schema["required"]
-            property_schema["additionalProperties"] = nested_schema.get("additionalProperties", False)
+            property_schema["additionalProperties"] = nested_schema.get(
+                "additionalProperties", False
+            )
         elif prop.type == "object" and prop.properties:
             # Handle inline object definition
             property_schema["properties"] = {}
             required_props = []
-            
+
             for sub_name, sub_prop in prop.properties.items():
                 sub_schema: Dict[str, Any] = {"type": sub_prop.type}
-                
+
                 if sub_prop.description:
                     sub_schema["description"] = sub_prop.description
-                
+
                 if sub_prop.enum:
                     sub_schema["enum"] = sub_prop.enum
-                
+
                 if sub_prop.type in ["integer", "number"]:
                     if sub_prop.minimum is not None:
                         sub_schema["minimum"] = sub_prop.minimum
                     if sub_prop.maximum is not None:
                         sub_schema["maximum"] = sub_prop.maximum
-                
+
                 if sub_prop.type == "array" and sub_prop.items:
                     sub_schema["items"] = sub_prop.items
-                
+
                 if sub_prop.required:
                     required_props.append(sub_name)
-                
+
                 property_schema["properties"][sub_name] = sub_schema
-            
+
             if required_props:
                 property_schema["required"] = required_props
-            
+
             property_schema["additionalProperties"] = False
-                
+
         # Handle array items
         elif prop.type == "array" and prop.array_items_schema:
             # Handle array of objects with a full schema
@@ -213,13 +221,13 @@ def to_anthropic_schema(schema: Schema) -> Dict[str, Any]:
         elif prop.type == "array" and prop.items:
             # Handle simple array items or array of objects with inline schema
             property_schema["items"] = prop.items
-            
+
         # Add default value if specified
         if prop.default is not None:
             property_schema["default"] = prop.default
-            
+
         result["properties"][name] = property_schema
-    
+
     return result
 
 
@@ -235,25 +243,25 @@ def to_gemini_schema(schema: Schema) -> Dict[str, Any]:
         "properties": {},
         "required": schema.required_properties(),
     }
-    
+
     for name, prop in schema.properties.items():
         property_schema: Dict[str, Any] = {
             "type": prop.type,
         }
-        
+
         if prop.description:
             property_schema["description"] = prop.description
-        
+
         if prop.enum:
             property_schema["enum"] = prop.enum
-            
+
         # Add minimum/maximum constraints for numeric types
         if prop.type in ["integer", "number"]:
             if prop.minimum is not None:
                 property_schema["minimum"] = prop.minimum
             if prop.maximum is not None:
                 property_schema["maximum"] = prop.maximum
-        
+
         # Handle nested objects
         if prop.type == "object" and prop.object_schema:
             # Convert nested schema
@@ -262,7 +270,9 @@ def to_gemini_schema(schema: Schema) -> Dict[str, Any]:
             property_schema["properties"] = nested_schema["properties"]
             if "required" in nested_schema and nested_schema["required"]:
                 property_schema["required"] = nested_schema["required"]
-            property_schema["additionalProperties"] = nested_schema.get("additionalProperties", False)
+            property_schema["additionalProperties"] = nested_schema.get(
+                "additionalProperties", False
+            )
             if "propertyOrdering" in nested_schema:
                 property_schema["propertyOrdering"] = nested_schema["propertyOrdering"]
         elif prop.type == "object" and prop.properties:
@@ -270,38 +280,38 @@ def to_gemini_schema(schema: Schema) -> Dict[str, Any]:
             property_schema["properties"] = {}
             required_props = []
             sub_property_names = []
-            
+
             for sub_name, sub_prop in prop.properties.items():
                 sub_schema: Dict[str, Any] = {"type": sub_prop.type}
                 sub_property_names.append(sub_name)
-                
+
                 if sub_prop.description:
                     sub_schema["description"] = sub_prop.description
-                
+
                 if sub_prop.enum:
                     sub_schema["enum"] = sub_prop.enum
-                
+
                 if sub_prop.type in ["integer", "number"]:
                     if sub_prop.minimum is not None:
                         sub_schema["minimum"] = sub_prop.minimum
                     if sub_prop.maximum is not None:
                         sub_schema["maximum"] = sub_prop.maximum
-                
+
                 if sub_prop.type == "array" and sub_prop.items:
                     sub_schema["items"] = sub_prop.items
-                
+
                 if sub_prop.required:
                     required_props.append(sub_name)
-                
+
                 property_schema["properties"][sub_name] = sub_schema
-            
+
             if required_props:
                 property_schema["required"] = required_props
-            
+
             # Include propertyOrdering for nested objects too
             property_schema["propertyOrdering"] = sub_property_names
             property_schema["additionalProperties"] = prop.additional_properties
-                
+
         # Handle array items
         elif prop.type == "array" and prop.array_items_schema:
             # Handle array of objects with a full schema
@@ -309,16 +319,16 @@ def to_gemini_schema(schema: Schema) -> Dict[str, Any]:
         elif prop.type == "array" and prop.items:
             # Handle simple array items or array of objects with inline schema
             property_schema["items"] = prop.items
-            
+
         # Add default value if specified
         if prop.default is not None:
             property_schema["default"] = prop.default
-            
+
         result["properties"][name] = property_schema
-    
+
     # Add propertyOrdering required by Gemini
     result["propertyOrdering"] = list(schema.properties.keys())
-    
+
     return result
 
 
@@ -334,25 +344,25 @@ def to_ollama_schema(schema: Schema) -> Dict[str, Any]:
         "required": schema.required_properties(),
         "additionalProperties": False,
     }
-    
+
     for name, prop in schema.properties.items():
         property_schema: Dict[str, Any] = {
             "type": prop.type,
         }
-        
+
         if prop.description:
             property_schema["description"] = prop.description
-        
+
         if prop.enum:
             property_schema["enum"] = prop.enum
-            
+
         # Add minimum/maximum constraints for numeric types
         if prop.type in ["integer", "number"]:
             if prop.minimum is not None:
                 property_schema["minimum"] = prop.minimum
             if prop.maximum is not None:
                 property_schema["maximum"] = prop.maximum
-        
+
         # Handle nested objects
         if prop.type == "object" and prop.object_schema:
             # Convert nested schema
@@ -361,40 +371,42 @@ def to_ollama_schema(schema: Schema) -> Dict[str, Any]:
             property_schema["properties"] = nested_schema["properties"]
             if "required" in nested_schema and nested_schema["required"]:
                 property_schema["required"] = nested_schema["required"]
-            property_schema["additionalProperties"] = nested_schema.get("additionalProperties", False)
+            property_schema["additionalProperties"] = nested_schema.get(
+                "additionalProperties", False
+            )
         elif prop.type == "object" and prop.properties:
             # Handle inline object definition
             property_schema["properties"] = {}
             required_props = []
-            
+
             for sub_name, sub_prop in prop.properties.items():
                 sub_schema: Dict[str, Any] = {"type": sub_prop.type}
-                
+
                 if sub_prop.description:
                     sub_schema["description"] = sub_prop.description
-                
+
                 if sub_prop.enum:
                     sub_schema["enum"] = sub_prop.enum
-                
+
                 if sub_prop.type in ["integer", "number"]:
                     if sub_prop.minimum is not None:
                         sub_schema["minimum"] = sub_prop.minimum
                     if sub_prop.maximum is not None:
                         sub_schema["maximum"] = sub_prop.maximum
-                
+
                 if sub_prop.type == "array" and sub_prop.items:
                     sub_schema["items"] = sub_prop.items
-                
+
                 if sub_prop.required:
                     required_props.append(sub_name)
-                
+
                 property_schema["properties"][sub_name] = sub_schema
-            
+
             if required_props:
                 property_schema["required"] = required_props
-            
+
             property_schema["additionalProperties"] = prop.additional_properties
-                
+
         # Handle array items
         elif prop.type == "array" and prop.array_items_schema:
             # Handle array of objects with a full schema
@@ -402,25 +414,25 @@ def to_ollama_schema(schema: Schema) -> Dict[str, Any]:
         elif prop.type == "array" and prop.items:
             # Handle simple array items or array of objects with inline schema
             property_schema["items"] = prop.items
-            
+
         # Add default value if specified
         if prop.default is not None:
             property_schema["default"] = prop.default
-            
+
         result["properties"][name] = property_schema
-    
+
     return result
 
 
 def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
     """
     Convert a standard JSON schema dictionary to a Schema object.
-    
+
     This is useful for converting existing schema dictionaries to our unified format.
-    
+
     Args:
         schema_dict: A JSON schema dictionary
-        
+
     Returns:
         Schema object
     """
@@ -428,40 +440,36 @@ def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
     name = schema_dict.get("title", schema_dict.get("name", "Schema"))
     description = schema_dict.get("description", "")
     additional_properties = schema_dict.get("additionalProperties", False)
-    
+
     # Extract property definitions
     properties = {}
     required_props = schema_dict.get("required", [])
-    
+
     if "properties" in schema_dict:
         for prop_name, prop_def in schema_dict["properties"].items():
             # Is property required?
             is_required = prop_name in required_props
-            
+
             # Basic property attributes
             prop_type = prop_def.get("type", "string")
             prop_desc = prop_def.get("description", "")
-            
+
             # Create property object
-            prop = SchemaProperty(
-                type=prop_type,
-                description=prop_desc,
-                required=is_required
-            )
-            
+            prop = SchemaProperty(type=prop_type, description=prop_desc, required=is_required)
+
             # Handle constraints for numeric types
             if prop_type in ["integer", "number"]:
                 prop.minimum = prop_def.get("minimum")
                 prop.maximum = prop_def.get("maximum")
-            
+
             # Handle enum values
             if "enum" in prop_def:
                 prop.enum = prop_def["enum"]
-            
+
             # Handle default values
             if "default" in prop_def:
                 prop.default = prop_def["default"]
-            
+
             # Handle nested objects
             if prop_type == "object" and "properties" in prop_def:
                 # Create a sub-schema for nested object
@@ -470,16 +478,16 @@ def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
                     "description": prop_desc,
                     "properties": prop_def["properties"],
                     "required": prop_def.get("required", []),
-                    "additionalProperties": prop_def.get("additionalProperties", False)
+                    "additionalProperties": prop_def.get("additionalProperties", False),
                 }
-                
+
                 prop.object_schema = schema_from_dict(sub_schema_dict)
                 prop.additional_properties = prop_def.get("additionalProperties", False)
-            
+
             # Handle array items
             if prop_type == "array" and "items" in prop_def:
                 items = prop_def["items"]
-                
+
                 # If items is an object schema
                 if isinstance(items, dict):
                     if items.get("type") == "object" and "properties" in items:
@@ -489,9 +497,9 @@ def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
                             "description": items.get("description", "Array item"),
                             "properties": items["properties"],
                             "required": items.get("required", []),
-                            "additionalProperties": items.get("additionalProperties", False)
+                            "additionalProperties": items.get("additionalProperties", False),
                         }
-                        
+
                         prop.array_items_schema = schema_from_dict(items_schema_dict)
                     else:
                         # For simple items or non-object schemas
@@ -499,11 +507,7 @@ def schema_from_dict(schema_dict: Dict[str, Any]) -> Schema:
                 else:
                     # Handle non-dict items (should be rare)
                     prop.items = {"type": "string"}
-            
+
             properties[prop_name] = prop
-    
-    return Schema(
-        name=name,
-        description=description,
-        properties=properties
-    )
+
+    return Schema(name=name, description=description, properties=properties)

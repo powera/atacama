@@ -6,17 +6,18 @@ from models.messages import get_message_by_id
 from common.llm import openai_client
 from common.llm.telemetry import LLMUsage
 
+
 def analyze_email(email_id: int, model: str = "gpt-4o-mini-2024-07-18") -> Tuple[str, LLMUsage]:
     """
     Retrieve and analyze an email using the specified LLM model.
-    
+
     Args:
         email_id: ID of the email to analyze
         model: Model identifier to use for analysis
-        
+
     Returns:
         Tuple containing (analysis_text, usage_metrics)
-        
+
     Raises:
         ValueError: If email not found or inaccessible
     """
@@ -24,7 +25,7 @@ def analyze_email(email_id: int, model: str = "gpt-4o-mini-2024-07-18") -> Tuple
     message = get_message_by_id(email_id)
     if not message:
         raise ValueError(f"Email with ID {email_id} not found or not accessible")
-    
+
     # Set up analysis prompting
     context = """You are analyzing an email message. Please provide:
 1. A one-paragraph summary of the main content
@@ -55,10 +56,6 @@ Subject: {message.subject}
 {message.content}"""
 
     # Request analysis from the model
-    response = openai_client.generate_chat(
-        prompt=prompt,
-        model=model,
-        context=context
-    )
+    response = openai_client.generate_chat(prompt=prompt, model=model, context=context)
 
     return response.response_text.strip(), response.usage

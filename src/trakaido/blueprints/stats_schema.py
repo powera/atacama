@@ -37,30 +37,35 @@ CONTEXTUAL_EXPOSURE_TYPES = {"sentences", "flashcards", "categoryChoice"}
 ALL_STAT_TYPES = DIRECT_PRACTICE_TYPES | CONTEXTUAL_EXPOSURE_TYPES
 
 # Top-level fields
-TOP_LEVEL_FIELDS = {"exposed", "markedAsKnown", "directPractice", "contextualExposure", "practiceHistory"}
+TOP_LEVEL_FIELDS = {
+    "exposed",
+    "markedAsKnown",
+    "directPractice",
+    "contextualExposure",
+    "practiceHistory",
+}
 
 
 ##############################################################################
 # Schema Creation and Validation
 ##############################################################################
 
+
 def create_empty_word_stats() -> Dict[str, Any]:
     """Create an empty word stats object with the new schema structure."""
     return {
         "exposed": False,
         "directPractice": {
-            activity: {"correct": 0, "incorrect": 0}
-            for activity in DIRECT_PRACTICE_TYPES
+            activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES
         },
         "contextualExposure": {
-            activity: {"correct": 0, "incorrect": 0}
-            for activity in CONTEXTUAL_EXPOSURE_TYPES
+            activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES
         },
         "practiceHistory": {
             "lastSeen": None,
             "lastCorrectAnswer": None,
-            "lastIncorrectAnswer": None
-        }
+            "lastIncorrectAnswer": None,
+        },
     }
 
 
@@ -90,10 +95,15 @@ def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, A
                 if isinstance(activity_stats, dict):
                     correct = activity_stats.get("correct", 0)
                     incorrect = activity_stats.get("incorrect", 0)
-                    if isinstance(correct, int) and isinstance(incorrect, int) and correct >= 0 and incorrect >= 0:
+                    if (
+                        isinstance(correct, int)
+                        and isinstance(incorrect, int)
+                        and correct >= 0
+                        and incorrect >= 0
+                    ):
                         normalized["directPractice"][activity_type] = {
                             "correct": correct,
-                            "incorrect": incorrect
+                            "incorrect": incorrect,
                         }
 
     # Copy contextualExposure stats
@@ -104,10 +114,15 @@ def validate_and_normalize_word_stats(word_stats: Dict[str, Any]) -> Dict[str, A
                 if isinstance(activity_stats, dict):
                     correct = activity_stats.get("correct", 0)
                     incorrect = activity_stats.get("incorrect", 0)
-                    if isinstance(correct, int) and isinstance(incorrect, int) and correct >= 0 and incorrect >= 0:
+                    if (
+                        isinstance(correct, int)
+                        and isinstance(incorrect, int)
+                        and correct >= 0
+                        and incorrect >= 0
+                    ):
                         normalized["contextualExposure"][activity_type] = {
                             "correct": correct,
-                            "incorrect": incorrect
+                            "incorrect": incorrect,
                         }
 
     # Copy practiceHistory timestamps
@@ -140,15 +155,25 @@ def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) 
         Merged word stats dictionary (normalized to current schema)
     """
     # Normalize both inputs to ensure consistent structure
-    server_normalized = validate_and_normalize_word_stats(server_stats) if server_stats else create_empty_word_stats()
-    local_normalized = validate_and_normalize_word_stats(local_stats) if local_stats else create_empty_word_stats()
+    server_normalized = (
+        validate_and_normalize_word_stats(server_stats)
+        if server_stats
+        else create_empty_word_stats()
+    )
+    local_normalized = (
+        validate_and_normalize_word_stats(local_stats) if local_stats else create_empty_word_stats()
+    )
 
     # Start with server stats as base
     merged = create_empty_word_stats()
 
     # Merge boolean flags with OR
-    merged["exposed"] = server_normalized.get("exposed", False) or local_normalized.get("exposed", False)
-    if server_normalized.get("markedAsKnown", False) or local_normalized.get("markedAsKnown", False):
+    merged["exposed"] = server_normalized.get("exposed", False) or local_normalized.get(
+        "exposed", False
+    )
+    if server_normalized.get("markedAsKnown", False) or local_normalized.get(
+        "markedAsKnown", False
+    ):
         merged["markedAsKnown"] = True
 
     # Merge directPractice counters by taking max
@@ -158,7 +183,9 @@ def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) 
 
         merged["directPractice"][activity] = {
             "correct": max(server_activity.get("correct", 0), local_activity.get("correct", 0)),
-            "incorrect": max(server_activity.get("incorrect", 0), local_activity.get("incorrect", 0))
+            "incorrect": max(
+                server_activity.get("incorrect", 0), local_activity.get("incorrect", 0)
+            ),
         }
 
     # Merge contextualExposure counters by taking max
@@ -168,7 +195,9 @@ def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) 
 
         merged["contextualExposure"][activity] = {
             "correct": max(server_activity.get("correct", 0), local_activity.get("correct", 0)),
-            "incorrect": max(server_activity.get("incorrect", 0), local_activity.get("incorrect", 0))
+            "incorrect": max(
+                server_activity.get("incorrect", 0), local_activity.get("incorrect", 0)
+            ),
         }
 
     # Merge timestamps by taking max (most recent)
@@ -196,6 +225,7 @@ def merge_word_stats(server_stats: Dict[str, Any], local_stats: Dict[str, Any]) 
 # JSON Formatting Helper
 ##############################################################################
 
+
 def format_stats_json(stats: Dict[str, Any]) -> str:
     """Format stats JSON with each word entry on one line.
 
@@ -214,25 +244,26 @@ def format_stats_json(stats: Dict[str, Any]) -> str:
     if not stats or "stats" not in stats:
         return json.dumps(stats, ensure_ascii=False)
 
-    lines = ['{']
+    lines = ["{"]
     lines.append('  "stats": {')
 
     word_items = list(stats["stats"].items())
     for i, (word_key, word_stats) in enumerate(word_items):
         # Serialize the entire word stats dict on one line
-        word_json = json.dumps(word_stats, ensure_ascii=False, separators=(',', ': '))
-        comma = ',' if i < len(word_items) - 1 else ''
+        word_json = json.dumps(word_stats, ensure_ascii=False, separators=(",", ": "))
+        comma = "," if i < len(word_items) - 1 else ""
         lines.append(f'    "{word_key}": {word_json}{comma}')
 
-    lines.append('  }')
-    lines.append('}')
+    lines.append("  }")
+    lines.append("}")
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 ##############################################################################
 # Base Storage Classes
 ##############################################################################
+
 
 class BaseStats:
     """Base class for stats management with common functionality."""
@@ -293,7 +324,7 @@ class BaseStats:
             if os.path.exists(file_path):
                 try:
                     old_size = os.path.getsize(file_path)
-                    new_size = len(formatted_json.encode('utf-8'))
+                    new_size = len(formatted_json.encode("utf-8"))
 
                     # If new size is more than 90% smaller, reject the update
                     if old_size > 10000 and new_size < (old_size * 0.1):
@@ -319,7 +350,7 @@ class BaseStats:
                 data=stats,
                 formatter=format_stats_json,
                 backup=True,
-                use_lock=True
+                use_lock=True,
             )
 
             if not success:
@@ -434,12 +465,15 @@ class JourneyStats(BaseStats):
         # Import here to avoid circular dependency and forward reference
         from trakaido.blueprints.stats_snapshots import ensure_daily_snapshots
         from trakaido.blueprints.date_utils import get_current_day_key
+
         # Late-bind DailyStats reference (defined later in this file)
-        DailyStats = globals()['DailyStats']
+        DailyStats = globals()["DailyStats"]
 
         try:
             if not ensure_daily_snapshots(self.user_id, self.language):
-                logger.warning(f"Failed to ensure daily snapshots for user {self.user_id} language {self.language}")
+                logger.warning(
+                    f"Failed to ensure daily snapshots for user {self.user_id} language {self.language}"
+                )
 
             if not self.save():
                 return False
@@ -453,14 +487,18 @@ class JourneyStats(BaseStats):
 
             return True
         except Exception as e:
-            logger.error(f"Error saving journey stats with daily update for user {self.user_id}: {str(e)}")
+            logger.error(
+                f"Error saving journey stats with daily update for user {self.user_id}: {str(e)}"
+            )
             return False
 
 
 class DailyStats(BaseStats):
     """Manages access to a single daily stats file for a specific user and date."""
 
-    def __init__(self, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian"):
+    def __init__(
+        self, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian"
+    ):
         super().__init__(user_id, language)
         self.date = date
         self.stats_type = stats_type
@@ -469,14 +507,18 @@ class DailyStats(BaseStats):
     @property
     def file_path(self) -> str:
         """Get the file path for this daily stats file."""
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily")
+        daily_dir = os.path.join(
+            constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily"
+        )
         os.makedirs(daily_dir, exist_ok=True)
         return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json")
 
     @property
     def gzip_file_path(self) -> str:
         """Get the GZIP file path for this daily stats file."""
-        daily_dir = os.path.join(constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily")
+        daily_dir = os.path.join(
+            constants.DATA_DIR, "trakaido", self.user_id, self.language, "daily"
+        )
         os.makedirs(daily_dir, exist_ok=True)
         return os.path.join(daily_dir, f"{self.date}_{self.stats_type}.json.gz")
 
@@ -488,7 +530,7 @@ class DailyStats(BaseStats):
     def _load_from_gzip(self, file_path: str) -> Dict[str, Any]:
         """Load stats from a GZIP file."""
         try:
-            with gzip.open(file_path, 'rt', encoding='utf-8') as f:
+            with gzip.open(file_path, "rt", encoding="utf-8") as f:
                 data = json.load(f)
             return data if isinstance(data, dict) and "stats" in data else {"stats": {}}
         except Exception as e:
@@ -513,13 +555,17 @@ class DailyStats(BaseStats):
                 return True
 
             # No file found
-            logger.debug(f"No stats file found for {self.date}_{self.stats_type}, returning empty stats")
+            logger.debug(
+                f"No stats file found for {self.date}_{self.stats_type}, returning empty stats"
+            )
             self._stats = {"stats": {}}
             self._loaded = True
             self._loaded_from_gzip = False
             return False
         except Exception as e:
-            logger.error(f"Error loading daily stats for user {self.user_id} date {self.date}: {str(e)}")
+            logger.error(
+                f"Error loading daily stats for user {self.user_id} date {self.date}: {str(e)}"
+            )
             self._stats = {"stats": {}}
             self._loaded = True
             self._loaded_from_gzip = False
@@ -533,23 +579,33 @@ class DailyStats(BaseStats):
 
         # Check if this was loaded from GZIP - if so, we cannot modify it
         if self._loaded_from_gzip:
-            logger.warning(f"Cannot save daily stats for user {self.user_id} date {self.date} - loaded from GZIP file (read-only)")
+            logger.warning(
+                f"Cannot save daily stats for user {self.user_id} date {self.date} - loaded from GZIP file (read-only)"
+            )
             return False
 
         # Save to regular JSON file
         return self._save_to_file(self.file_path, self._stats)
 
     @classmethod
-    def exists(cls, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian") -> bool:
+    def exists(
+        cls, user_id: str, date: str, stats_type: str = "current", language: str = "lithuanian"
+    ) -> bool:
         """Check if a daily stats file exists (either regular or GZIP)."""
         temp_instance = cls(user_id, date, stats_type, language)
-        return os.path.exists(temp_instance.gzip_file_path) or os.path.exists(temp_instance.file_path)
+        return os.path.exists(temp_instance.gzip_file_path) or os.path.exists(
+            temp_instance.file_path
+        )
 
     @staticmethod
-    def get_available_dates(user_id: str, stats_type: str = "current", language: str = "lithuanian") -> List[str]:
+    def get_available_dates(
+        user_id: str, stats_type: str = "current", language: str = "lithuanian"
+    ) -> List[str]:
         """Get all available dates for a user's daily stats files (including GZIP)."""
         try:
-            daily_dir = os.path.join(constants.DATA_DIR, "trakaido", str(user_id), language, "daily")
+            daily_dir = os.path.join(
+                constants.DATA_DIR, "trakaido", str(user_id), language, "daily"
+            )
             if not os.path.exists(daily_dir):
                 return []
 
@@ -562,12 +618,12 @@ class DailyStats(BaseStats):
 
                 # Check for regular JSON files
                 if filename.endswith(json_suffix):
-                    date_part = filename[:-len(json_suffix)]
+                    date_part = filename[: -len(json_suffix)]
                 # Check for GZIP files
                 elif filename.endswith(gzip_suffix):
-                    date_part = filename[:-len(gzip_suffix)]
+                    date_part = filename[: -len(gzip_suffix)]
 
-                if date_part and len(date_part) == 10 and date_part.count('-') == 2:
+                if date_part and len(date_part) == 10 and date_part.count("-") == 2:
                     dates.add(date_part)
 
             return sorted(list(dates))
@@ -588,7 +644,9 @@ class DailyStats(BaseStats):
             category, activity = stat_type.split(".", 1)
             for word_stats in self.stats["stats"].values():
                 if category in word_stats and isinstance(word_stats[category], dict):
-                    if activity in word_stats[category] and isinstance(word_stats[category][activity], dict):
+                    if activity in word_stats[category] and isinstance(
+                        word_stats[category][activity], dict
+                    ):
                         totals["correct"] += word_stats[category][activity].get("correct", 0)
                         totals["incorrect"] += word_stats[category][activity].get("incorrect", 0)
         else:
@@ -630,8 +688,8 @@ class DailyStats(BaseStats):
                 return False
 
             # Read the regular file and write to GZIP
-            with open(self.file_path, 'r', encoding='utf-8') as f_in:
-                with gzip.open(self.gzip_file_path, 'wt', encoding='utf-8') as f_out:
+            with open(self.file_path, "r", encoding="utf-8") as f_in:
+                with gzip.open(self.gzip_file_path, "wt", encoding="utf-8") as f_out:
                     f_out.write(f_in.read())
 
             # Remove the original file
@@ -648,10 +706,12 @@ class DailyStats(BaseStats):
 # Helper Functions (defined after classes to avoid forward references)
 ##############################################################################
 
+
 def user_has_activity_stats(user_id: str, language: str = "lithuanian") -> bool:
     """Check if a user has any activity stats."""
     try:
         from trakaido.blueprints.stats_backend import get_journey_stats
+
         journey_stats = get_journey_stats(user_id, language)
         return not journey_stats.is_empty()
     except Exception as e:

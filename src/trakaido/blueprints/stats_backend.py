@@ -74,9 +74,11 @@ def get_journey_stats(
 
     if backend == BACKEND_SQLITE:
         from trakaido.blueprints.stats_sqlite import SqliteJourneyStats
+
         return SqliteJourneyStats(user_id, language)
 
     from trakaido.blueprints.stats_schema import JourneyStats
+
     return JourneyStats(user_id, language)
 
 
@@ -86,65 +88,68 @@ def ensure_daily_snapshots(user_id: str, language: str = "lithuanian") -> bool:
 
     if backend == BACKEND_SQLITE:
         from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
         db = SqliteStatsDB(user_id, language)
         result = db.ensure_daily_snapshots()
         # Still clean up flat file nonces (shared with grammar stats)
         from trakaido.blueprints.nonce_utils import cleanup_old_nonce_files
+
         cleanup_old_nonce_files(user_id, language)
         return result
 
     from trakaido.blueprints.stats_snapshots import (
         ensure_daily_snapshots as flatfile_ensure,
     )
+
     return flatfile_ensure(user_id, language)
 
 
-def calculate_daily_progress(
-    user_id: str, language: str = "lithuanian"
-) -> Dict[str, Any]:
+def calculate_daily_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """Calculate daily progress, dispatching to the appropriate backend."""
     backend = get_storage_backend(user_id, language)
 
     if backend == BACKEND_SQLITE:
         from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
         db = SqliteStatsDB(user_id, language)
         return db.calculate_daily_progress()
 
     from trakaido.blueprints.stats_snapshots import (
         calculate_daily_progress as flatfile_calc,
     )
+
     return flatfile_calc(user_id, language)
 
 
-def calculate_weekly_progress(
-    user_id: str, language: str = "lithuanian"
-) -> Dict[str, Any]:
+def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """Calculate weekly progress, dispatching to the appropriate backend."""
     backend = get_storage_backend(user_id, language)
 
     if backend == BACKEND_SQLITE:
         from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
         db = SqliteStatsDB(user_id, language)
         return db.calculate_weekly_progress()
 
     from trakaido.blueprints.stats_snapshots import (
         calculate_weekly_progress as flatfile_calc,
     )
+
     return flatfile_calc(user_id, language)
 
 
-def calculate_monthly_progress(
-    user_id: str, language: str = "lithuanian"
-) -> Dict[str, Any]:
+def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Dict[str, Any]:
     """Calculate monthly progress, dispatching to the appropriate backend."""
     backend = get_storage_backend(user_id, language)
 
     if backend == BACKEND_SQLITE:
         from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
         db = SqliteStatsDB(user_id, language)
         return db.calculate_monthly_progress()
 
     from trakaido.blueprints.stats_snapshots import (
         calculate_monthly_progress as flatfile_calc,
     )
+
     return flatfile_calc(user_id, language)

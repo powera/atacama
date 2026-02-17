@@ -7,13 +7,18 @@ from typing import Any, Dict
 
 # Local application imports
 from trakaido.blueprints.shared import logger
-from trakaido.blueprints.stats_schema import JourneyStats, DailyStats, DIRECT_PRACTICE_TYPES, CONTEXTUAL_EXPOSURE_TYPES
+from trakaido.blueprints.stats_schema import (
+    JourneyStats,
+    DailyStats,
+    DIRECT_PRACTICE_TYPES,
+    CONTEXTUAL_EXPOSURE_TYPES,
+)
 from trakaido.blueprints.stats_metrics import compute_member_summary, empty_activity_summary
 from trakaido.blueprints.date_utils import (
     get_current_day_key,
     get_week_ago_day_key,
     get_30_days_ago_day_key,
-    get_30_day_date_range
+    get_30_day_date_range,
 )
 from trakaido.blueprints.nonce_utils import cleanup_old_nonce_files
 
@@ -21,6 +26,7 @@ from trakaido.blueprints.nonce_utils import cleanup_old_nonce_files
 ##############################################################################
 # Daily Snapshot Management Functions
 ##############################################################################
+
 
 def compress_previous_day_files(user_id: str, language: str = "lithuanian") -> bool:
     """Compress previous day files to GZIP during daily rotation."""
@@ -45,23 +51,30 @@ def compress_previous_day_files(user_id: str, language: str = "lithuanian") -> b
                         daily_stats = DailyStats(user_id, date_str, stats_type, language)
 
                         # Only compress if regular file exists and GZIP doesn't
-                        if (os.path.exists(daily_stats.file_path) and
-                            not os.path.exists(daily_stats.gzip_file_path)):
+                        if os.path.exists(daily_stats.file_path) and not os.path.exists(
+                            daily_stats.gzip_file_path
+                        ):
 
                             if daily_stats.compress_to_gzip():
                                 compressed_count += 1
-                                logger.debug(f"Compressed {date_str}_{stats_type}.json for user {user_id} language {language}")
+                                logger.debug(
+                                    f"Compressed {date_str}_{stats_type}.json for user {user_id} language {language}"
+                                )
 
             except ValueError:
                 # Skip invalid date formats
                 continue
 
         if compressed_count > 0:
-            logger.info(f"Compressed {compressed_count} previous day files for user {user_id} language {language}")
+            logger.info(
+                f"Compressed {compressed_count} previous day files for user {user_id} language {language}"
+            )
 
         return True
     except Exception as e:
-        logger.error(f"Error compressing previous day files for user {user_id} language {language}: {str(e)}")
+        logger.error(
+            f"Error compressing previous day files for user {user_id} language {language}: {str(e)}"
+        )
         return False
 
 
@@ -72,11 +85,16 @@ def ensure_daily_snapshots(user_id: str, language: str = "lithuanian") -> bool:
 
         # Check if we need to create yesterday's snapshot
         yesterday_daily_stats = DailyStats(user_id, current_day, "yesterday", language)
-        if not DailyStats.exists(user_id, current_day, "yesterday", language) or yesterday_daily_stats.is_empty():
+        if (
+            not DailyStats.exists(user_id, current_day, "yesterday", language)
+            or yesterday_daily_stats.is_empty()
+        ):
             journey_stats = JourneyStats(user_id, language)
             yesterday_daily_stats.stats = journey_stats.stats
             yesterday_daily_stats.save()
-            logger.debug(f"Created yesterday snapshot for user {user_id} day {current_day} language {language}")
+            logger.debug(
+                f"Created yesterday snapshot for user {user_id} day {current_day} language {language}"
+            )
 
         # Ensure current snapshot exists
         current_daily_stats = DailyStats(user_id, current_day, "current", language)
@@ -84,7 +102,9 @@ def ensure_daily_snapshots(user_id: str, language: str = "lithuanian") -> bool:
             journey_stats = JourneyStats(user_id, language)
             current_daily_stats.stats = journey_stats.stats
             current_daily_stats.save()
-            logger.debug(f"Created current snapshot for user {user_id} day {current_day} language {language}")
+            logger.debug(
+                f"Created current snapshot for user {user_id} day {current_day} language {language}"
+            )
 
         # Compress previous day files once current day is set up
         compress_previous_day_files(user_id, language)
@@ -94,11 +114,15 @@ def ensure_daily_snapshots(user_id: str, language: str = "lithuanian") -> bool:
 
         return True
     except Exception as e:
-        logger.error(f"Error ensuring daily snapshots for user {user_id} language {language}: {str(e)}")
+        logger.error(
+            f"Error ensuring daily snapshots for user {user_id} language {language}: {str(e)}"
+        )
         return False
 
 
-def find_best_baseline(user_id: str, target_day: str, max_days: int, language: str = "lithuanian") -> DailyStats:
+def find_best_baseline(
+    user_id: str, target_day: str, max_days: int, language: str = "lithuanian"
+) -> DailyStats:
     """Find the best available baseline stats for comparison over a given period.
 
     Args:
@@ -112,7 +136,10 @@ def find_best_baseline(user_id: str, target_day: str, max_days: int, language: s
     try:
         # Try exact target day first
         target_daily_stats = DailyStats(user_id, target_day, "current", language)
-        if DailyStats.exists(user_id, target_day, "current", language) and not target_daily_stats.is_empty():
+        if (
+            DailyStats.exists(user_id, target_day, "current", language)
+            and not target_daily_stats.is_empty()
+        ):
             return target_daily_stats
 
         # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
@@ -140,14 +167,18 @@ def find_best_baseline(user_id: str, target_day: str, max_days: int, language: s
             return best_daily_stats
         else:
             period_name = "weekly" if max_days <= 7 else "monthly"
-            logger.debug(f"No suitable {period_name} baseline found for user {user_id} language {language}, using empty baseline")
+            logger.debug(
+                f"No suitable {period_name} baseline found for user {user_id} language {language}, using empty baseline"
+            )
             empty_stats = DailyStats(user_id, target_day, "current", language)
             empty_stats.stats = {"stats": {}}
             return empty_stats
 
     except Exception as e:
         period_name = "weekly" if max_days <= 7 else "monthly"
-        logger.error(f"Error finding {period_name} baseline for user {user_id} language {language}: {str(e)}")
+        logger.error(
+            f"Error finding {period_name} baseline for user {user_id} language {language}: {str(e)}"
+        )
         empty_stats = DailyStats(user_id, target_day, "current", language)
         empty_stats.stats = {"stats": {}}
         return empty_stats
@@ -157,7 +188,10 @@ def find_best_baseline(user_id: str, target_day: str, max_days: int, language: s
 # Progress Calculation Functions
 ##############################################################################
 
-def calculate_progress_delta(current_stats: DailyStats, baseline_stats: DailyStats) -> Dict[str, Any]:
+
+def calculate_progress_delta(
+    current_stats: DailyStats, baseline_stats: DailyStats
+) -> Dict[str, Any]:
     """Calculate the delta between current stats and baseline stats.
 
     Returns a progress structure with deltas for:
@@ -166,9 +200,13 @@ def calculate_progress_delta(current_stats: DailyStats, baseline_stats: DailySta
     - exposed words (new and total)
     """
     progress: Dict[str, Any] = {
-        "directPractice": {activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES},
-        "contextualExposure": {activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES},
-        "exposed": {"new": 0, "total": 0}
+        "directPractice": {
+            activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES
+        },
+        "contextualExposure": {
+            activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES
+        },
+        "exposed": {"new": 0, "total": 0},
     }
 
     # Calculate progress for each word
@@ -192,15 +230,22 @@ def calculate_progress_delta(current_stats: DailyStats, baseline_stats: DailySta
 
                     baseline_correct = 0
                     baseline_incorrect = 0
-                    if (baseline_word_stats and "directPractice" in baseline_word_stats and
-                        activity_type in baseline_word_stats["directPractice"]):
+                    if (
+                        baseline_word_stats
+                        and "directPractice" in baseline_word_stats
+                        and activity_type in baseline_word_stats["directPractice"]
+                    ):
                         baseline_activity = baseline_word_stats["directPractice"][activity_type]
                         baseline_correct = baseline_activity.get("correct", 0)
                         baseline_incorrect = baseline_activity.get("incorrect", 0)
 
                     # Calculate delta
-                    progress["directPractice"][activity_type]["correct"] += max(0, current_correct - baseline_correct)
-                    progress["directPractice"][activity_type]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
+                    progress["directPractice"][activity_type]["correct"] += max(
+                        0, current_correct - baseline_correct
+                    )
+                    progress["directPractice"][activity_type]["incorrect"] += max(
+                        0, current_incorrect - baseline_incorrect
+                    )
 
         # Calculate contextualExposure deltas
         if "contextualExposure" in current_word_stats:
@@ -212,14 +257,21 @@ def calculate_progress_delta(current_stats: DailyStats, baseline_stats: DailySta
 
                     baseline_correct = 0
                     baseline_incorrect = 0
-                    if (baseline_word_stats and "contextualExposure" in baseline_word_stats and
-                        activity_type in baseline_word_stats["contextualExposure"]):
+                    if (
+                        baseline_word_stats
+                        and "contextualExposure" in baseline_word_stats
+                        and activity_type in baseline_word_stats["contextualExposure"]
+                    ):
                         baseline_activity = baseline_word_stats["contextualExposure"][activity_type]
                         baseline_correct = baseline_activity.get("correct", 0)
                         baseline_incorrect = baseline_activity.get("incorrect", 0)
 
-                    progress["contextualExposure"][activity_type]["correct"] += max(0, current_correct - baseline_correct)
-                    progress["contextualExposure"][activity_type]["incorrect"] += max(0, current_incorrect - baseline_incorrect)
+                    progress["contextualExposure"][activity_type]["correct"] += max(
+                        0, current_correct - baseline_correct
+                    )
+                    progress["contextualExposure"][activity_type]["incorrect"] += max(
+                        0, current_incorrect - baseline_incorrect
+                    )
 
     return progress
 
@@ -259,13 +311,15 @@ def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dic
         # Calculate progress delta
         weekly_progress = calculate_progress_delta(current_daily_stats, week_ago_daily_stats)
 
-        actual_baseline_day = week_ago_daily_stats.date if not week_ago_daily_stats.is_empty() else None
+        actual_baseline_day = (
+            week_ago_daily_stats.date if not week_ago_daily_stats.is_empty() else None
+        )
 
         return {
             "currentDay": current_day,
             "targetBaselineDay": week_ago_day,
             "actualBaselineDay": actual_baseline_day,
-            "progress": weekly_progress
+            "progress": weekly_progress,
         }
     except Exception as e:
         logger.error(f"Error calculating weekly progress for user {user_id}: {str(e)}")
@@ -297,7 +351,9 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
         thirty_days_ago_daily_stats = find_best_baseline(user_id, thirty_days_ago_day, 30, language)
 
         # Calculate monthly aggregate stats using delta helper
-        monthly_aggregate = calculate_progress_delta(current_daily_stats, thirty_days_ago_daily_stats)
+        monthly_aggregate = calculate_progress_delta(
+            current_daily_stats, thirty_days_ago_daily_stats
+        )
 
         # Get daily breakdown for the past 30 days
         start_date_str, end_date_str = get_30_day_date_range()
@@ -328,16 +384,24 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                                 if activity_type in word_stats["directPractice"]:
                                     activity_stats = word_stats["directPractice"][activity_type]
                                     if isinstance(activity_stats, dict):
-                                        questions_answered_on_day += activity_stats.get("correct", 0)
-                                        questions_answered_on_day += activity_stats.get("incorrect", 0)
+                                        questions_answered_on_day += activity_stats.get(
+                                            "correct", 0
+                                        )
+                                        questions_answered_on_day += activity_stats.get(
+                                            "incorrect", 0
+                                        )
                         # Count contextualExposure activities
                         if "contextualExposure" in word_stats:
                             for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
                                 if activity_type in word_stats["contextualExposure"]:
                                     activity_stats = word_stats["contextualExposure"][activity_type]
                                     if isinstance(activity_stats, dict):
-                                        questions_answered_on_day += activity_stats.get("correct", 0)
-                                        questions_answered_on_day += activity_stats.get("incorrect", 0)
+                                        questions_answered_on_day += activity_stats.get(
+                                            "correct", 0
+                                        )
+                                        questions_answered_on_day += activity_stats.get(
+                                            "incorrect", 0
+                                        )
 
                     # Count exposed words on this day
                     for word_key, word_stats in daily_stats.stats["stats"].items():
@@ -355,7 +419,9 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                         while check_date >= start_date:
                             check_date_str = check_date.strftime("%Y-%m-%d")
                             if check_date_str in available_dates:
-                                prev_daily_stats = DailyStats(user_id, check_date_str, "current", language)
+                                prev_daily_stats = DailyStats(
+                                    user_id, check_date_str, "current", language
+                                )
                                 if not prev_daily_stats.is_empty():
                                     most_recent_prev_date = check_date_str
                                     most_recent_prev_stats = prev_daily_stats
@@ -366,27 +432,44 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                             # Count words that are exposed today but weren't exposed in the most recent previous day with data
                             for word_key, word_stats in daily_stats.stats["stats"].items():
                                 if word_stats.get("exposed", False):
-                                    prev_word_stats = most_recent_prev_stats.get_word_stats(word_key)
-                                    if not prev_word_stats or not prev_word_stats.get("exposed", False):
+                                    prev_word_stats = most_recent_prev_stats.get_word_stats(
+                                        word_key
+                                    )
+                                    if not prev_word_stats or not prev_word_stats.get(
+                                        "exposed", False
+                                    ):
                                         newly_exposed_words_on_day += 1
                         else:
                             # If no previous data within the period, try to find data from before the period
                             baseline_found = False
-                            all_available_dates = DailyStats.get_available_dates(user_id, "current", language)
-                            earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
+                            all_available_dates = DailyStats.get_available_dates(
+                                user_id, "current", language
+                            )
+                            earlier_dates = [
+                                d
+                                for d in all_available_dates
+                                if datetime.strptime(d, "%Y-%m-%d") < start_date
+                            ]
 
                             if earlier_dates:
                                 # Use the most recent date before our period as baseline
                                 baseline_date = max(earlier_dates)
-                                baseline_stats = DailyStats(user_id, baseline_date, "current", language)
+                                baseline_stats = DailyStats(
+                                    user_id, baseline_date, "current", language
+                                )
 
                                 if not baseline_stats.is_empty():
                                     baseline_found = True
                                     # Count words that are exposed on this day but weren't in baseline
                                     for word_key, word_stats in daily_stats.stats["stats"].items():
                                         if word_stats.get("exposed", False):
-                                            baseline_word_stats = baseline_stats.get_word_stats(word_key)
-                                            if not baseline_word_stats or not baseline_word_stats.get("exposed", False):
+                                            baseline_word_stats = baseline_stats.get_word_stats(
+                                                word_key
+                                            )
+                                            if (
+                                                not baseline_word_stats
+                                                or not baseline_word_stats.get("exposed", False)
+                                            ):
                                                 newly_exposed_words_on_day += 1
 
                             # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
@@ -398,8 +481,14 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                         baseline_found = False
 
                         # Look for snapshots before the start date
-                        all_available_dates = DailyStats.get_available_dates(user_id, "current", language)
-                        earlier_dates = [d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date]
+                        all_available_dates = DailyStats.get_available_dates(
+                            user_id, "current", language
+                        )
+                        earlier_dates = [
+                            d
+                            for d in all_available_dates
+                            if datetime.strptime(d, "%Y-%m-%d") < start_date
+                        ]
 
                         if earlier_dates:
                             # Use the most recent date before our period as baseline
@@ -411,31 +500,43 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                                 # Count words that are exposed on first day but weren't in baseline
                                 for word_key, word_stats in daily_stats.stats["stats"].items():
                                     if word_stats.get("exposed", False):
-                                        baseline_word_stats = baseline_stats.get_word_stats(word_key)
-                                        if not baseline_word_stats or not baseline_word_stats.get("exposed", False):
+                                        baseline_word_stats = baseline_stats.get_word_stats(
+                                            word_key
+                                        )
+                                        if not baseline_word_stats or not baseline_word_stats.get(
+                                            "exposed", False
+                                        ):
                                             newly_exposed_words_on_day += 1
 
                         # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
                         if not baseline_found:
                             newly_exposed_words_on_day = 0
 
-            day_summary = compute_member_summary(user_id, language, journey_stats=daily_stats.stats) if date_str in available_dates and not daily_stats.is_empty() else {
-                "wordsKnown": 0,
-                "activitySummary": empty_activity_summary(),
-            }
+            day_summary = (
+                compute_member_summary(user_id, language, journey_stats=daily_stats.stats)
+                if date_str in available_dates and not daily_stats.is_empty()
+                else {
+                    "wordsKnown": 0,
+                    "activitySummary": empty_activity_summary(),
+                }
+            )
 
-            daily_data.append({
-                "date": date_str,
-                "questionsAnswered": questions_answered_on_day,
-                "exposedWordsCount": exposed_words_count_on_day,
-                "newlyExposedWords": newly_exposed_words_on_day,
-                "wordsKnown": day_summary["wordsKnown"],
-                "activitySummary": day_summary["activitySummary"],
-            })
+            daily_data.append(
+                {
+                    "date": date_str,
+                    "questionsAnswered": questions_answered_on_day,
+                    "exposedWordsCount": exposed_words_count_on_day,
+                    "newlyExposedWords": newly_exposed_words_on_day,
+                    "wordsKnown": day_summary["wordsKnown"],
+                    "activitySummary": day_summary["activitySummary"],
+                }
+            )
 
             current_date += timedelta(days=1)
 
-        actual_baseline_day = thirty_days_ago_daily_stats.date if not thirty_days_ago_daily_stats.is_empty() else None
+        actual_baseline_day = (
+            thirty_days_ago_daily_stats.date if not thirty_days_ago_daily_stats.is_empty() else None
+        )
 
         # Format the period description
         period_description = f"Past 30 Days ({start_date_str} to {end_date_str})"
@@ -446,7 +547,7 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
             "targetBaselineDay": thirty_days_ago_day,
             "actualBaselineDay": actual_baseline_day,
             "monthlyAggregate": monthly_aggregate,
-            "dailyData": daily_data
+            "dailyData": daily_data,
         }
     except Exception as e:
         logger.error(f"Error calculating monthly progress for user {user_id}: {str(e)}")

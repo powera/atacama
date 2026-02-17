@@ -11,19 +11,20 @@ from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-static_bp = Blueprint('static', __name__)
+static_bp = Blueprint("static", __name__)
 
-@static_bp.route('/js/<path:filename>')
+
+@static_bp.route("/js/<path:filename>")
 def serve_js(filename: str) -> ResponseReturnValue:
     """
     Serve JavaScript files from the js directory.
-    
+
     :param filename: Name of the JS file to serve
     :return: JS file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        js_dir = os.path.join(constants.WEB_DIR, 'js')
+        js_dir = os.path.join(constants.WEB_DIR, "js")
         response = send_from_directory(js_dir, filename)
         # Set cache headers for 1 hour (3600 seconds)
         response.cache_control.max_age = 3600
@@ -33,17 +34,18 @@ def serve_js(filename: str) -> ResponseReturnValue:
         logger.error(f"Error serving JS file {filename}: {str(e)}")
         raise
 
-@static_bp.route('/css/<path:filename>')
+
+@static_bp.route("/css/<path:filename>")
 def serve_css(filename: str) -> ResponseReturnValue:
     """
     Serve CSS files from the css directory.
-    
+
     :param filename: Name of the CSS file to serve
     :return: CSS file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        css_dir = os.path.join(constants.WEB_DIR, 'css')
+        css_dir = os.path.join(constants.WEB_DIR, "css")
         response = send_from_directory(css_dir, filename)
         # Set cache headers for 1 hour (3600 seconds)
         response.cache_control.max_age = 3600
@@ -53,16 +55,17 @@ def serve_css(filename: str) -> ResponseReturnValue:
         logger.error(f"Error serving CSS file {filename}: {str(e)}")
         raise
 
-@static_bp.route('/favicon.ico')
+
+@static_bp.route("/favicon.ico")
 def serve_favicon() -> ResponseReturnValue:
     """
     Serve the favicon.ico file from the static directory.
-    
+
     :return: Favicon file response with 1-hour cache headers
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        response = send_from_directory(constants.STATIC_DIR, 'favicon_multisize.ico')
+        response = send_from_directory(constants.STATIC_DIR, "favicon_multisize.ico")
         # Set cache headers for 1 hour (3600 seconds)
         response.cache_control.max_age = 3600
         response.cache_control.public = True
@@ -71,17 +74,18 @@ def serve_favicon() -> ResponseReturnValue:
         logger.error(f"Error serving favicon: {str(e)}")
         raise
 
-@static_bp.route('/apple-touch-icon.png')
-@static_bp.route('/apple-touch-icon-precomposed.png')
+
+@static_bp.route("/apple-touch-icon.png")
+@static_bp.route("/apple-touch-icon-precomposed.png")
 def serve_touch_icon() -> ResponseReturnValue:
     """
     Serve the apple-touch-icon.png file from the static directory.
-    
+
     :return: Apple touch icon file response
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        response = send_from_directory(constants.STATIC_DIR, 'apple-touch-icon.png')
+        response = send_from_directory(constants.STATIC_DIR, "apple-touch-icon.png")
         # Set cache headers for 1 hour (3600 seconds)
         response.cache_control.max_age = 3600
         response.cache_control.public = True
@@ -90,16 +94,17 @@ def serve_touch_icon() -> ResponseReturnValue:
         logger.error(f"Error serving touch icon: {str(e)}")
         raise
 
-@static_bp.route('/robots.txt')
+
+@static_bp.route("/robots.txt")
 def serve_robots_txt() -> ResponseReturnValue:
     """
     Serve the robots.txt file from the static directory.
-    
-    :return: Robots.txt file response 
+
+    :return: Robots.txt file response
     :raises: werkzeug.exceptions.NotFound if file doesn't exist
     """
     try:
-        return send_from_directory(constants.STATIC_DIR, 'robots.txt')
+        return send_from_directory(constants.STATIC_DIR, "robots.txt")
     except Exception as e:
         logger.error(f"Error serving robots.txt: {str(e)}")
         raise

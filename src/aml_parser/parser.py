@@ -10,50 +10,67 @@ from typing import List, Optional, Iterator
 from enum import Enum, auto
 from aml_parser.lexer import Token, TokenType
 
+
 class NodeType(Enum):
     """Types of nodes in the Abstract Syntax Tree."""
-    DOCUMENT = auto()    # Root node containing all content
-    TEXT = auto()        # Plain text content
-    NEWLINE = auto()     # Line break
-    MORE_TAG = auto()    # More tag (section break)
-    HR = auto()          # Horizontal rule (section break)
-    MLQ = auto()         # Multi-line quote block
-    COLOR_BLOCK = auto() # Color-formatted content
-    LIST_ITEM = auto()   # List item with marker
-    CHINESE = auto()     # Chinese text requiring annotation
-    URL = auto()         # URL link
-    WIKILINK = auto()    # Wiki-style link ( [[ foo ]] )
-    LITERAL = auto()     # Literal text block ( << foo >> )
-    EMPHASIS = auto()    # Emphasized text ( *foo* )
-    TITLE = auto()       # In-line title text [# Foo #]
-    TEMPLATE = auto()    # Template blocks (pgn, isbn, etc)
+
+    DOCUMENT = auto()  # Root node containing all content
+    TEXT = auto()  # Plain text content
+    NEWLINE = auto()  # Line break
+    MORE_TAG = auto()  # More tag (section break)
+    HR = auto()  # Horizontal rule (section break)
+    MLQ = auto()  # Multi-line quote block
+    COLOR_BLOCK = auto()  # Color-formatted content
+    LIST_ITEM = auto()  # List item with marker
+    CHINESE = auto()  # Chinese text requiring annotation
+    URL = auto()  # URL link
+    WIKILINK = auto()  # Wiki-style link ( [[ foo ]] )
+    LITERAL = auto()  # Literal text block ( << foo >> )
+    EMPHASIS = auto()  # Emphasized text ( *foo* )
+    TITLE = auto()  # In-line title text [# Foo #]
+    TEMPLATE = auto()  # Template blocks (pgn, isbn, etc)
+
 
 class Node:
     """Base class for all AST nodes with position tracking."""
-    def __init__(self, type: NodeType, token: Optional[Token] = None, children: Optional[List['Node']] = None):
+
+    def __init__(
+        self, type: NodeType, token: Optional[Token] = None, children: Optional[List["Node"]] = None
+    ):
         self.type = type
         self.token = token
         self.children = children or []
 
+
 class ColorNode(Node):
     """Node for color-formatted content."""
-    def __init__(self, color: str, is_line: bool, token: Token, children: Optional[List[Node]] = None):
+
+    def __init__(
+        self, color: str, is_line: bool, token: Token, children: Optional[List[Node]] = None
+    ):
         super().__init__(NodeType.COLOR_BLOCK, token, children)
         self.color = color
         self.is_line = is_line
 
+
 class ListItemNode(Node):
     """Node for list items with marker type."""
+
     def __init__(self, marker_type: str, token: Token, children: Optional[List[Node]] = None):
         super().__init__(NodeType.LIST_ITEM, token, children)
         self.marker_type = marker_type
 
+
 class ParseError(Exception):
     """Exception raised for parsing errors. Used internally for control flow."""
+
     def __init__(self, message: str, token: Optional[Token] = None):
         self.message = message
         self.token = token
-        super().__init__(f"{message} at line {token.line}, column {token.column}" if token else message)
+        super().__init__(
+            f"{message} at line {token.line}, column {token.column}" if token else message
+        )
+
 
 class AtacamaParser:
     """Parser for Atacama message formatting that creates an AST."""
@@ -122,12 +139,7 @@ class AtacamaParser:
         Returns:
             A TEXT node containing the delimiter text, with children attached
         """
-        fallback_token = Token(
-            TokenType.TEXT,
-            token.value,
-            token.line,
-            token.column
-        )
+        fallback_token = Token(TokenType.TEXT, token.value, token.line, token.column)
         fallback_node = Node(type=NodeType.TEXT, token=fallback_token)
         if children:
             fallback_node.children.extend(children)
@@ -136,7 +148,7 @@ class AtacamaParser:
     def parse(self) -> Node:
         """Parse tokens into an AST."""
         document = Node(type=NodeType.DOCUMENT)
-        
+
         while token := self.peek():
             if token.type == TokenType.SECTION_BREAK:
                 document.children.append(Node(type=NodeType.HR, token=self.consume()))
@@ -155,14 +167,16 @@ class AtacamaParser:
                 if mlq := self.parse_mlq():
                     document.children.append(mlq)
                 continue
-                
-            if token.type in {TokenType.BULLET_LIST_MARKER, 
-                            TokenType.NUMBER_LIST_MARKER,
-                            TokenType.ARROW_LIST_MARKER}:
+
+            if token.type in {
+                TokenType.BULLET_LIST_MARKER,
+                TokenType.NUMBER_LIST_MARKER,
+                TokenType.ARROW_LIST_MARKER,
+            }:
                 if list_item := self.parse_list_item():
                     document.children.append(list_item)
                 continue
-                
+
             # Handle all other content types through unified inline parsing
             if node := self.parse_inline_content():
                 document.children.append(node)
@@ -171,7 +185,9 @@ class AtacamaParser:
                 # Consume it and add as a TEXT node to the document for robustness.
                 unhandled_token_at_doc_level = self.consume()
                 if unhandled_token_at_doc_level:
-                    document.children.append(Node(type=NodeType.TEXT, token=unhandled_token_at_doc_level))
+                    document.children.append(
+                        Node(type=NodeType.TEXT, token=unhandled_token_at_doc_level)
+                    )
         return document
 
     def parse_inline_content(self) -> Optional[Node]:
@@ -186,7 +202,7 @@ class AtacamaParser:
         # Handle basic text content
         if token.type == TokenType.TEXT:
             return Node(type=NodeType.TEXT, token=self.consume())
-            
+
         # Handle newlines
         if token.type == TokenType.NEWLINE:
             return Node(type=NodeType.NEWLINE, token=self.consume())
@@ -212,7 +228,8 @@ class AtacamaParser:
             return self.parse_bracketed_content(
                 start_type=TokenType.TITLE_START,
                 end_type=TokenType.TITLE_END,
-                node_type=NodeType.TITLE)
+                node_type=NodeType.TITLE,
+            )
 
         # Handle templates
         if token.type == TokenType.TEMPLATE:
@@ -230,7 +247,7 @@ class AtacamaParser:
         if token.type == TokenType.PARENTHESIS_START:
             return self.parse_paren_content()
 
-        return None # Token type not recognized for inline content by this dispatcher
+        return None  # Token type not recognized for inline content by this dispatcher
 
     def parse_mlq(self) -> Optional[Node]:
         """Parse a multi-line quote block."""
@@ -275,10 +292,14 @@ class AtacamaParser:
         with self._save_position() as restore:
             color_token = self.consume()
             assert color_token is not None  # Checked by peek() above
-            color = color_token.value.strip('<>')
+            color = color_token.value.strip("<>")
 
             # Skip whitespace between color tag and MLQ start
-            while (peeked := self.peek()) is not None and peeked.type == TokenType.TEXT and peeked.value.isspace():
+            while (
+                (peeked := self.peek()) is not None
+                and peeked.type == TokenType.TEXT
+                and peeked.value.isspace()
+            ):
                 self.consume()
 
             peeked = self.peek()
@@ -293,7 +314,7 @@ class AtacamaParser:
 
             # If parse_mlq returned a valid MLQ node (not its text fallback)
             if mlq.type == NodeType.MLQ:
-                setattr(mlq, 'color', color)  # Add color attribute to the MLQ node
+                setattr(mlq, "color", color)  # Add color attribute to the MLQ node
                 return mlq
             else:
                 # parse_mlq returned a text fallback, meaning the MLQ wasn't properly closed.
@@ -301,29 +322,31 @@ class AtacamaParser:
                 restore()
                 return None
 
-
     def parse_list_item(self) -> Optional[ListItemNode]:
         """Parse a list item with its marker."""
         marker_token = self.peek()
-        if not marker_token: # Should not happen if called correctly
+        if not marker_token:  # Should not happen if called correctly
             return None
-            
+
         marker_types = {
-            TokenType.BULLET_LIST_MARKER: 'bullet',
-            TokenType.NUMBER_LIST_MARKER: 'number',
-            TokenType.ARROW_LIST_MARKER: 'arrow'
+            TokenType.BULLET_LIST_MARKER: "bullet",
+            TokenType.NUMBER_LIST_MARKER: "number",
+            TokenType.ARROW_LIST_MARKER: "arrow",
         }
-        
+
         # Ensure the token type is a valid list marker before consuming
         if marker_token.type not in marker_types:
-            return None # Should not happen based on call site in parse()
+            return None  # Should not happen based on call site in parse()
 
         self.consume()  # Consume marker
         children = []
 
         while (peeked := self.peek()) is not None and peeked.type not in {
-            TokenType.NEWLINE, TokenType.SECTION_BREAK,
-            TokenType.BULLET_LIST_MARKER, TokenType.NUMBER_LIST_MARKER, TokenType.ARROW_LIST_MARKER
+            TokenType.NEWLINE,
+            TokenType.SECTION_BREAK,
+            TokenType.BULLET_LIST_MARKER,
+            TokenType.NUMBER_LIST_MARKER,
+            TokenType.ARROW_LIST_MARKER,
         }:
             if node := self.parse_inline_content():
                 children.append(node)
@@ -334,25 +357,28 @@ class AtacamaParser:
 
         peeked = self.peek()
         if peeked is not None and peeked.type == TokenType.NEWLINE:
-            self.consume() # Consume trailing newline for the list item
+            self.consume()  # Consume trailing newline for the list item
 
-        return ListItemNode(marker_type=marker_types[marker_token.type], 
-                          token=marker_token,
-                          children=children)
+        return ListItemNode(
+            marker_type=marker_types[marker_token.type], token=marker_token, children=children
+        )
 
     def parse_color_block(self) -> Optional[ColorNode]:
         """Parse a color-formatted block."""
         token = self.expect(TokenType.COLOR_TAG)
         if not token:
-            return None # Should not happen if called from parse_inline_content correctly
-            
-        color = token.value.strip('<>')
+            return None  # Should not happen if called from parse_inline_content correctly
+
+        color = token.value.strip("<>")
         children = []
         is_line = not self.current_paren_depth  # Line-level if not in parentheses
-        
+
         # For line-level color blocks, parse until newline or section break
         if is_line:
-            while (peeked := self.peek()) is not None and peeked.type not in {TokenType.NEWLINE, TokenType.SECTION_BREAK}:
+            while (peeked := self.peek()) is not None and peeked.type not in {
+                TokenType.NEWLINE,
+                TokenType.SECTION_BREAK,
+            }:
                 if node := self.parse_inline_content():
                     children.append(node)
                 else:
@@ -362,7 +388,7 @@ class AtacamaParser:
         # If not is_line (i.e., parenthesized like '(<red> content )'),
         # this function only creates the ColorNode. The content *within* the parentheses
         # (after the color tag) is parsed by parse_paren_content's loop.
-        
+
         return ColorNode(color=color, is_line=is_line, token=token, children=children)
 
     def parse_paren_content(self) -> Optional[Node]:
@@ -395,8 +421,13 @@ class AtacamaParser:
         if end_token:
             if color_token_for_paren:
                 # Case: (<color> child1 child2 )
-                color = color_token_for_paren.value.strip('<>')
-                return ColorNode(color=color, is_line=False, token=color_token_for_paren, children=children_within_paren)
+                color = color_token_for_paren.value.strip("<>")
+                return ColorNode(
+                    color=color,
+                    is_line=False,
+                    token=color_token_for_paren,
+                    children=children_within_paren,
+                )
             else:
                 # Case: ( child1 child2 )
                 # Represent as: TEXT(token='(') with children: [child1, child2, ..., TEXT(token=')')]
@@ -418,7 +449,7 @@ class AtacamaParser:
         return self.parse_bracketed_content(
             start_type=TokenType.WIKILINK_START,
             end_type=TokenType.WIKILINK_END,
-            node_type=NodeType.WIKILINK
+            node_type=NodeType.WIKILINK,
         )
 
     def parse_literal(self) -> Optional[Node]:
@@ -426,10 +457,12 @@ class AtacamaParser:
         return self.parse_bracketed_content(
             start_type=TokenType.LITERAL_START,
             end_type=TokenType.LITERAL_END,
-            node_type=NodeType.LITERAL
+            node_type=NodeType.LITERAL,
         )
 
-    def parse_bracketed_content(self, start_type: TokenType, end_type: TokenType, node_type: NodeType) -> Optional[Node]:
+    def parse_bracketed_content(
+        self, start_type: TokenType, end_type: TokenType, node_type: NodeType
+    ) -> Optional[Node]:
         """
         Parse content between matching bracket-style markers.
         Used for wikilinks, literal blocks, and title text.
@@ -448,7 +481,11 @@ class AtacamaParser:
 
         while (current_token := self.peek()) is not None:
             # Stop parsing on newline, or if we hit structural elements
-            if current_token.type in {TokenType.NEWLINE, TokenType.SECTION_BREAK, TokenType.MORE_TAG}:
+            if current_token.type in {
+                TokenType.NEWLINE,
+                TokenType.SECTION_BREAK,
+                TokenType.MORE_TAG,
+            }:
                 break
 
             # Handle nested start tokens
@@ -494,7 +531,7 @@ def parse(tokens: Iterator[Token]) -> Node:
 def display_ast(node: Node, return_string: bool = False, indent: int = 0) -> Optional[str]:
     """
     Display or return a text representation of an AST node and its children.
-    
+
     :param node: Root node of the AST to display
     :param return_string: If True, return the display string instead of printing
     :param indent: Current indentation level (used recursively)
@@ -502,40 +539,41 @@ def display_ast(node: Node, return_string: bool = False, indent: int = 0) -> Opt
     """
     if not node:
         return "" if return_string else None
-        
+
     prefix = "  " * indent
     parts = [f"{prefix}{node.type.name}"]
-    
+
     if isinstance(node, ColorNode):
         parts[-1] += f" (color={node.color}, line={node.is_line})"
     elif isinstance(node, ListItemNode):
         parts[-1] += f" (marker={node.marker_type})"
-    elif node.token and node.token.value is not None: # Check if value is not None
+    elif node.token and node.token.value is not None:  # Check if value is not None
         # For template nodes, include the template name if available
         if node.type == NodeType.TEMPLATE and node.token.template_name:
             parts[-1] += f" (template_name='{node.token.template_name}')"
         parts[-1] += f": {repr(node.token.value)}"
-        
+
     if node.token:
         parts[-1] += f" @ L{node.token.line}:C{node.token.column}"
-        
+
     for child in node.children:
         child_str = display_ast(child, return_string=True, indent=indent + 1)
-        if child_str: # Ensure child_str is not empty or None
+        if child_str:  # Ensure child_str is not empty or None
             parts.append(child_str)
-            
+
     result = "\n".join(parts)
-    
+
     if return_string:
         return result
     else:
         print(result)
         return None
 
+
 def print_ast(node: Node) -> None:
     """
     Convenience function to print an AST.
-    
+
     :param node: Root node of the AST to display
     """
     display_ast(node, return_string=False)

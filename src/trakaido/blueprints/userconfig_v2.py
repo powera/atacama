@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 
 USERCONFIG_API_DOCS = {
     "GET /api/trakaido/userconfig/": "Get complete user configuration including learning, audio, display preferences",
-    "PATCH /api/trakaido/userconfig/": "Update user configuration (partial updates supported)"
+    "PATCH /api/trakaido/userconfig/": "Update user configuration (partial updates supported)",
 }
 
 ##############################################################################
@@ -45,26 +45,17 @@ DEFAULT_CONFIG = {
         "currentLevel": 1,
         "userProficiency": "beginner",
         "journeyAutoAdvance": True,
-        "showMotivationalBreaks": True
+        "showMotivationalBreaks": True,
     },
-    "audio": {
-        "enabled": True,
-        "selectedVoice": "random",
-        "downloadOnWiFiOnly": True
-    },
-    "display": {
-        "colorScheme": "system",
-        "showGrammarInterstitials": True
-    },
-    "metadata": {
-        "hasCompletedOnboarding": False,
-        "lastModified": None
-    }
+    "audio": {"enabled": True, "selectedVoice": "random", "downloadOnWiFiOnly": True},
+    "display": {"colorScheme": "system", "showGrammarInterstitials": True},
+    "metadata": {"hasCompletedOnboarding": False, "lastModified": None},
 }
 
 ##############################################################################
 # Helper Functions (defined early to avoid forward references)
 ##############################################################################
+
 
 def _deep_copy_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Deep copy configuration dictionary."""
@@ -86,28 +77,24 @@ def _merge_with_defaults(config: Dict[str, Any]) -> Dict[str, Any]:
     return merged
 
 
-def _validation_error(field: str, value: Any, message: str, extra_details: Optional[Dict] = None) -> Dict[str, Any]:
+def _validation_error(
+    field: str, value: Any, message: str, extra_details: Optional[Dict] = None
+) -> Dict[str, Any]:
     """Create a validation error response."""
-    details = {
-        "field": field,
-        "value": value
-    }
+    details = {"field": field, "value": value}
     if extra_details:
         details.update(extra_details)
 
     return {
         "success": False,
-        "error": {
-            "code": "VALIDATION_ERROR",
-            "message": message,
-            "details": details
-        }
+        "error": {"code": "VALIDATION_ERROR", "message": message, "details": details},
     }
 
 
 ##############################################################################
 # File I/O Functions
 ##############################################################################
+
 
 def get_userconfig_file_path(user_id: str, language: str) -> str:
     """Get the file path for a user's configuration file."""
@@ -121,17 +108,21 @@ def load_user_config(user_id: str, language: str) -> Dict[str, Any]:
         config_file = get_userconfig_file_path(user_id, language)
 
         if not os.path.exists(config_file):
-            logger.info(f"No config file found for user {user_id} language {language}, returning defaults")
+            logger.info(
+                f"No config file found for user {user_id} language {language}, returning defaults"
+            )
             return _deep_copy_config(DEFAULT_CONFIG)
 
-        with open(config_file, 'r', encoding='utf-8') as f:
+        with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
 
         # Merge with defaults to ensure all fields exist
         return _merge_with_defaults(config)
 
     except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in config file for user {user_id} language {language}: {str(e)}")
+        logger.error(
+            f"Invalid JSON in config file for user {user_id} language {language}: {str(e)}"
+        )
         return _deep_copy_config(DEFAULT_CONFIG)
     except Exception as e:
         logger.error(f"Error loading config for user {user_id} language {language}: {str(e)}")
@@ -153,7 +144,7 @@ def save_user_config(user_id: str, config: Dict[str, Any], language: str) -> boo
 
         # Write to file with atomic operation
         temp_file = config_file + ".tmp"
-        with open(temp_file, 'w', encoding='utf-8') as f:
+        with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
         # Atomic rename
@@ -171,7 +162,10 @@ def save_user_config(user_id: str, config: Dict[str, Any], language: str) -> boo
 # Validation Functions
 ##############################################################################
 
-def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict[str, Any]], List[str]]:
+
+def validate_config_update(
+    updates: Dict[str, Any]
+) -> tuple[bool, Optional[Dict[str, Any]], List[str]]:
     """Validate configuration update data.
 
     Returns:
@@ -199,23 +193,29 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
                 if field == "hasCompletedOnboarding":
                     # This field is writable
                     if not isinstance(metadata[field], bool):
-                        return False, _validation_error(
-                            "metadata.hasCompletedOnboarding",
-                            metadata[field],
-                            "Must be a boolean"
-                        ), []
+                        return (
+                            False,
+                            _validation_error(
+                                "metadata.hasCompletedOnboarding",
+                                metadata[field],
+                                "Must be a boolean",
+                            ),
+                            [],
+                        )
                 elif field == "lastModified":
                     # This field is read-only
-                    return False, {
-                        "success": False,
-                        "error": {
-                            "code": "READ_ONLY_FIELD",
-                            "message": "The lastModified field is read-only and cannot be directly modified",
-                            "details": {
-                                "field": "metadata.lastModified"
-                            }
-                        }
-                    }, []
+                    return (
+                        False,
+                        {
+                            "success": False,
+                            "error": {
+                                "code": "READ_ONLY_FIELD",
+                                "message": "The lastModified field is read-only and cannot be directly modified",
+                                "details": {"field": "metadata.lastModified"},
+                            },
+                        },
+                        [],
+                    )
                 else:
                     # Unknown metadata field
                     unknown_fields.append(f"metadata.{field}")
@@ -227,7 +227,12 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
                 return False, _validation_error("learning", learning, "Must be an object"), []
 
             # Check for unknown fields in learning section
-            known_learning_fields = ["currentLevel", "userProficiency", "journeyAutoAdvance", "showMotivationalBreaks"]
+            known_learning_fields = [
+                "currentLevel",
+                "userProficiency",
+                "journeyAutoAdvance",
+                "showMotivationalBreaks",
+            ]
             for field in learning:
                 if field not in known_learning_fields:
                     unknown_fields.append(f"learning.{field}")
@@ -235,37 +240,51 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
             if "currentLevel" in learning:
                 level = learning["currentLevel"]
                 if not isinstance(level, int) or level < 1 or level > 20:
-                    return False, _validation_error(
-                        "learning.currentLevel",
-                        level,
-                        "Must be an integer between 1 and 20"
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "learning.currentLevel", level, "Must be an integer between 1 and 20"
+                        ),
+                        [],
+                    )
 
             if "userProficiency" in learning:
                 prof = learning["userProficiency"]
                 if prof not in VALID_PROFICIENCY_LEVELS:
-                    return False, _validation_error(
-                        "learning.userProficiency",
-                        prof,
-                        f"Must be one of: {', '.join(VALID_PROFICIENCY_LEVELS)}",
-                        {"allowedValues": VALID_PROFICIENCY_LEVELS}
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "learning.userProficiency",
+                            prof,
+                            f"Must be one of: {', '.join(VALID_PROFICIENCY_LEVELS)}",
+                            {"allowedValues": VALID_PROFICIENCY_LEVELS},
+                        ),
+                        [],
+                    )
 
             if "journeyAutoAdvance" in learning:
                 if not isinstance(learning["journeyAutoAdvance"], bool):
-                    return False, _validation_error(
-                        "learning.journeyAutoAdvance",
-                        learning["journeyAutoAdvance"],
-                        "Must be a boolean"
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "learning.journeyAutoAdvance",
+                            learning["journeyAutoAdvance"],
+                            "Must be a boolean",
+                        ),
+                        [],
+                    )
 
             if "showMotivationalBreaks" in learning:
                 if not isinstance(learning["showMotivationalBreaks"], bool):
-                    return False, _validation_error(
-                        "learning.showMotivationalBreaks",
-                        learning["showMotivationalBreaks"],
-                        "Must be a boolean"
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "learning.showMotivationalBreaks",
+                            learning["showMotivationalBreaks"],
+                            "Must be a boolean",
+                        ),
+                        [],
+                    )
 
         # Validate audio section
         if "audio" in updates:
@@ -281,31 +300,35 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
 
             if "enabled" in audio:
                 if not isinstance(audio["enabled"], bool):
-                    return False, _validation_error(
-                        "audio.enabled",
-                        audio["enabled"],
-                        "Must be a boolean"
-                    ), []
+                    return (
+                        False,
+                        _validation_error("audio.enabled", audio["enabled"], "Must be a boolean"),
+                        [],
+                    )
 
             if "selectedVoice" in audio:
                 voice = audio["selectedVoice"]
                 if voice is not None and not isinstance(voice, str):
-                    return False, _validation_error(
-                        "audio.selectedVoice",
-                        voice,
-                        "Must be a string or null"
-                    ), []
+                    return (
+                        False,
+                        _validation_error("audio.selectedVoice", voice, "Must be a string or null"),
+                        [],
+                    )
                 # Convert null to "random"
                 if voice is None:
                     audio["selectedVoice"] = "random"
 
             if "downloadOnWiFiOnly" in audio:
                 if not isinstance(audio["downloadOnWiFiOnly"], bool):
-                    return False, _validation_error(
-                        "audio.downloadOnWiFiOnly",
-                        audio["downloadOnWiFiOnly"],
-                        "Must be a boolean"
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "audio.downloadOnWiFiOnly",
+                            audio["downloadOnWiFiOnly"],
+                            "Must be a boolean",
+                        ),
+                        [],
+                    )
 
         # Validate display section
         if "display" in updates:
@@ -322,32 +345,41 @@ def validate_config_update(updates: Dict[str, Any]) -> tuple[bool, Optional[Dict
             if "colorScheme" in display:
                 scheme = display["colorScheme"]
                 if scheme not in VALID_COLOR_SCHEMES:
-                    return False, _validation_error(
-                        "display.colorScheme",
-                        scheme,
-                        f"Must be one of: {', '.join(VALID_COLOR_SCHEMES)}",
-                        {"allowedValues": VALID_COLOR_SCHEMES}
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "display.colorScheme",
+                            scheme,
+                            f"Must be one of: {', '.join(VALID_COLOR_SCHEMES)}",
+                            {"allowedValues": VALID_COLOR_SCHEMES},
+                        ),
+                        [],
+                    )
 
             if "showGrammarInterstitials" in display:
                 if not isinstance(display["showGrammarInterstitials"], bool):
-                    return False, _validation_error(
-                        "display.showGrammarInterstitials",
-                        display["showGrammarInterstitials"],
-                        "Must be a boolean"
-                    ), []
+                    return (
+                        False,
+                        _validation_error(
+                            "display.showGrammarInterstitials",
+                            display["showGrammarInterstitials"],
+                            "Must be a boolean",
+                        ),
+                        [],
+                    )
 
         return True, None, unknown_fields
 
     except Exception as e:
         logger.error(f"Error during validation: {str(e)}")
-        return False, {
-            "success": False,
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": f"Validation error: {str(e)}"
-            }
-        }, []
+        return (
+            False,
+            {
+                "success": False,
+                "error": {"code": "VALIDATION_ERROR", "message": f"Validation error: {str(e)}"},
+            },
+            [],
+        )
 
 
 def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -356,10 +388,15 @@ def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> D
 
     # Define known fields for each section
     known_fields = {
-        "learning": ["currentLevel", "userProficiency", "journeyAutoAdvance", "showMotivationalBreaks"],
+        "learning": [
+            "currentLevel",
+            "userProficiency",
+            "journeyAutoAdvance",
+            "showMotivationalBreaks",
+        ],
         "audio": ["enabled", "selectedVoice", "downloadOnWiFiOnly"],
         "display": ["colorScheme", "showGrammarInterstitials"],
-        "metadata": ["hasCompletedOnboarding"]  # Only writable metadata fields
+        "metadata": ["hasCompletedOnboarding"],  # Only writable metadata fields
     }
 
     # Apply updates to each section, filtering unknown fields
@@ -380,6 +417,7 @@ def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> D
 # API Endpoints
 ##############################################################################
 
+
 @trakaido_bp.route("/api/trakaido/userconfig/", methods=["GET"])
 @require_auth
 def get_user_config() -> ResponseReturnValue:
@@ -390,7 +428,7 @@ def get_user_config() -> ResponseReturnValue:
     """
     try:
         user = g.user
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
 
         config = load_user_config(str(user.id), language)
 
@@ -398,13 +436,15 @@ def get_user_config() -> ResponseReturnValue:
 
     except Exception as e:
         logger.error(f"Error getting user config: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "SERVER_ERROR",
-                "message": "Internal server error"
-            }
-        }), 500
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": {"code": "SERVER_ERROR", "message": "Internal server error"},
+                }
+            ),
+            500,
+        )
 
 
 @trakaido_bp.route("/api/trakaido/userconfig/", methods=["PATCH"])
@@ -418,17 +458,19 @@ def update_user_config() -> ResponseReturnValue:
     """
     try:
         user = g.user
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
 
         # Get request data
         if not request.is_json:
-            return jsonify({
-                "success": False,
-                "error": {
-                    "code": "INVALID_REQUEST",
-                    "message": "Request must be JSON"
-                }
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {"code": "INVALID_REQUEST", "message": "Request must be JSON"},
+                    }
+                ),
+                400,
+            )
 
         updates = request.get_json()
 
@@ -445,19 +487,21 @@ def update_user_config() -> ResponseReturnValue:
 
         # Save updated config
         if not save_user_config(str(user.id), updated_config, language):
-            return jsonify({
-                "success": False,
-                "error": {
-                    "code": "SAVE_FAILED",
-                    "message": "Failed to save configuration"
-                }
-            }), 500
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {"code": "SAVE_FAILED", "message": "Failed to save configuration"},
+                    }
+                ),
+                500,
+            )
 
         # Build response
         response = {
             "success": True,
             "message": "User configuration updated successfully",
-            "config": updated_config
+            "config": updated_config,
         }
 
         # Add warning if unknown fields were present
@@ -465,17 +509,19 @@ def update_user_config() -> ResponseReturnValue:
             response["warning"] = {
                 "code": "UNKNOWN_FIELDS_IGNORED",
                 "message": "Some fields were not recognized and have been ignored",
-                "ignoredFields": unknown_fields
+                "ignoredFields": unknown_fields,
             }
 
         return jsonify(response), 200
 
     except Exception as e:
         logger.error(f"Error updating user config: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": {
-                "code": "SERVER_ERROR",
-                "message": "Internal server error"
-            }
-        }), 500
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": {"code": "SERVER_ERROR", "message": "Internal server error"},
+                }
+            ),
+            500,
+        )

@@ -8,10 +8,17 @@ maintaining separation between parsing and output generation.
 from typing import Any, Optional, List
 from aml_parser.parser import Node, NodeType, ColorNode, ListItemNode
 from aml_parser.colorblocks import (
-    create_color_block, create_chinese_annotation, create_list_item,
-    create_list_container, create_multiline_block, create_literal_text,
-    create_url_link, create_wiki_link, create_emphasis, create_inline_title,
-    create_template_html
+    create_color_block,
+    create_chinese_annotation,
+    create_list_item,
+    create_list_container,
+    create_multiline_block,
+    create_literal_text,
+    create_url_link,
+    create_wiki_link,
+    create_emphasis,
+    create_inline_title,
+    create_template_html,
 )
 
 from aml_parser.chess import fen_to_board
@@ -72,6 +79,7 @@ class ListAggregator:
         self._marker_type = None
         return html
 
+
 class HTMLGenerator:
     """
     Converts an Atacama AST into formatted HTML following the formal grammar.
@@ -83,10 +91,12 @@ class HTMLGenerator:
     text, emphasized text, and templates.
     """
 
-    def __init__(self,
-                 db_session: Optional[Any] = None,
-                 message: Optional[Any] = None,
-                 truncated: Optional[bool] = False):
+    def __init__(
+        self,
+        db_session: Optional[Any] = None,
+        message: Optional[Any] = None,
+        truncated: Optional[bool] = False,
+    ):
         """Initialize the HTML generator.
 
         Args:
@@ -102,9 +112,11 @@ class HTMLGenerator:
         """Generate HTML from an AST node."""
         if not node:
             return ""
-            
-        method_name = f'_generate_{node.type.name.lower()}'
-        method = getattr(self, method_name, self._generate_unknown) # Added fallback for unknown types
+
+        method_name = f"_generate_{node.type.name.lower()}"
+        method = getattr(
+            self, method_name, self._generate_unknown
+        )  # Added fallback for unknown types
         return method(node)
 
     def _generate_unknown(self, node: Node) -> str:
@@ -151,14 +163,16 @@ class HTMLGenerator:
                     segments.append('<p class="readmore">Click title to read full message...</p>')
                     break
                 else:
-                    segments.append('<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>')
+                    segments.append(
+                        '<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>'
+                    )
 
             elif child_node.type == NodeType.LIST_ITEM and isinstance(child_node, ListItemNode):
                 flush_paragraph_only()
                 item_content_html = "".join(self.generate(c) for c in child_node.children)
                 flushed = list_items.add(
                     create_list_item(item_content_html, child_node.marker_type),
-                    child_node.marker_type
+                    child_node.marker_type,
                 )
                 if flushed:
                     segments.append(flushed)
@@ -184,39 +198,39 @@ class HTMLGenerator:
         flush_all()
 
         return "\n".join(segments)
-    
+
     def _wrap_section(self, contents: List[str]) -> str:
         """Wrap a section's contents in a section tag (currently a no-op for the tag itself)."""
         if not contents:
             return ""
-        content = '\n'.join(contents)
-        #return f'<section class="content-section">\n{content}\n</section>' # Original was commented out
+        content = "\n".join(contents)
+        # return f'<section class="content-section">\n{content}\n</section>' # Original was commented out
         return content
-    
+
     def sanitize_html(self, text: str):
-        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     def _generate_text(self, node: Node) -> str:
         """Generate HTML for plain text content."""
         if not node.token:
-            return ''
+            return ""
         # If a TEXT node has children, it's likely from constructs like resolved parentheses
         # e.g. TEXT(token='(', children=[Node(TEXT, token='content'), Node(TEXT, token=')')])
         if node.children:
             content_parts = []
-            if node.token.value: # Ensure token value itself is added if present
-                 content_parts.append(self.sanitize_html(node.token.value))
+            if node.token.value:  # Ensure token value itself is added if present
+                content_parts.append(self.sanitize_html(node.token.value))
             for child in node.children:
                 child_html = self.generate(child)
                 if child_html:
                     content_parts.append(child_html)
-            return ''.join(content_parts)
+            return "".join(content_parts)
         return self.sanitize_html(node.token.value)
-    
+
     def _generate_newline(self, node: Node) -> str:
         """Generate HTML for a line break."""
-        return '<br />'
-    
+        return "<br />"
+
     def _generate_hr(self, node: Node) -> str:
         """Generate HTML for a horizontal rule (section break)."""
         return '<hr class="section-break" />'
@@ -224,7 +238,7 @@ class HTMLGenerator:
     def _generate_more_tag(self, node: Node) -> str:
         """
         Generate HTML for a MORE_TAG node.
-        
+
         This is primarily handled in _generate_document for structural flow control,
         but this method can be called directly if needed.
         """
@@ -232,49 +246,52 @@ class HTMLGenerator:
             return '<p class="readmore">Click title to read full message...</p>'
         else:
             return '<div class="content-sigil" aria-label="Extended content begins here">&#9135;&#9135;&#9135;&#9135;&#9135;</div>'
-    
+
     def _generate_mlq(self, node: Node) -> str:
         """Generate HTML for a multi-line quote block."""
         paragraphs: List[str] = []
         current_paragraph_parts: List[str] = []
-        
+
         for child in node.children:
             # Check if child is a NEWLINE separating paragraphs within MLQ
             if child.type == NodeType.NEWLINE:
-                if current_paragraph_parts: # Finalize current paragraph
+                if current_paragraph_parts:  # Finalize current paragraph
                     paragraphs.append("".join(current_paragraph_parts))
                     current_paragraph_parts = []
             else:
                 content = self.generate(child)
                 if content:
                     current_paragraph_parts.append(content)
-        
-        if current_paragraph_parts: # Add last paragraph
+
+        if current_paragraph_parts:  # Add last paragraph
             paragraphs.append("".join(current_paragraph_parts))
-            
-        if not paragraphs: # Handle empty MLQ, e.g. "<<< >>>"
+
+        if not paragraphs:  # Handle empty MLQ, e.g. "<<< >>>"
             # Check if node has a color attribute (for "<<< <red> >>>" which is unusual but to consider)
             # For an empty MLQ, create_multiline_block might still produce the structure.
             # If the parser ensures non-empty content for MLQ children or handles empty MLQs,
             # this 'if not paragraphs' might be less critical.
-             pass # create_multiline_block will handle an empty list of paragraphs if needed
-            
+            pass  # create_multiline_block will handle an empty list of paragraphs if needed
+
         return create_multiline_block(paragraphs, getattr(node, "color", None))
 
     def _generate_color_block(self, node: ColorNode) -> str:
         """Generate HTML for a color-formatted block."""
-        content = ''.join(self.generate(child) for child in node.children)
+        content = "".join(self.generate(child) for child in node.children)
 
         # Quote saving feature - imports are local to avoid requiring SQLAlchemy
         # for basic parsing functionality
-        if node.color in ('yellow', 'quote') and content and self.db_session and self.message:
+        if node.color in ("yellow", "quote") and content and self.db_session and self.message:
             from models.quotes import save_quotes
+
             save_quotes(
-                [{'text': content.strip(), 'quote_type': 'reference'}],
-                self.message, self.db_session)
+                [{"text": content.strip(), "quote_type": "reference"}],
+                self.message,
+                self.db_session,
+            )
 
         return create_color_block(node.color, content, node.is_line)
-    
+
     def _generate_list_item(self, node: ListItemNode) -> str:
         """
         Generate HTML for a list item's content.
@@ -286,14 +303,14 @@ class HTMLGenerator:
         # This method is somewhat redundant if _generate_document handles LIST_ITEM nodes
         # by directly processing their children and marker_type.
         # For robustness, if called, it should generate the content of the list item.
-        return ''.join(self.generate(child) for child in node.children)
-    
+        return "".join(self.generate(child) for child in node.children)
+
     def _generate_chinese(self, node: Node) -> str:
         """Generate HTML for Chinese text with annotations."""
         if not node.token or not node.token.value:
             return ""
         return create_chinese_annotation(hanzi=node.token.value)
-    
+
     def _generate_url(self, node: Node) -> str:
         """Generate HTML for a URL with proper attributes."""
         if not node.token or not node.token.value:
@@ -302,14 +319,14 @@ class HTMLGenerator:
 
     def _generate_wikilink(self, node: Node) -> str:
         """Generate HTML for a wiki-style link."""
-        title = ''.join(self.generate(child) for child in node.children)
+        title = "".join(self.generate(child) for child in node.children)
         return create_wiki_link(title)
-    
+
     def _generate_literal(self, node: Node) -> str:
         """Generate HTML for literal text blocks."""
-        content = ''.join(self.generate(child) for child in node.children)
+        content = "".join(self.generate(child) for child in node.children)
         return create_literal_text(content)
-    
+
     def _generate_emphasis(self, node: Node) -> str:
         """Generate HTML for emphasized text."""
         if not node.token or not node.token.value:
@@ -318,8 +335,8 @@ class HTMLGenerator:
 
     def _generate_title(self, node: Node) -> str:
         """Generate HTML for an inline title tag."""
-        content = ''.join(self.generate(child) for child in node.children)
-        return create_inline_title(content) # Uses function from colorblocks
+        content = "".join(self.generate(child) for child in node.children)
+        return create_inline_title(content)  # Uses function from colorblocks
 
     def _generate_template(self, node: Node) -> str:
         """Generate HTML for template blocks."""
@@ -327,7 +344,7 @@ class HTMLGenerator:
             return ""
         content = node.token.value
         template_name = node.token.template_name
-        
+
         if template_name == "pgn":
             return fen_to_board(content)
         # Delegate other known templates to colorblocks
@@ -339,11 +356,11 @@ class HTMLGenerator:
 def generate_html(ast: Node, **kwargs) -> str:
     """
     Convenience function to generate HTML from an AST.
-    
+
     Args:
         ast: Root node of the AST
         **kwargs: Arguments to pass to HTMLGenerator constructor (db_session, message, truncated)
-        
+
     Returns:
         Generated HTML string
     """

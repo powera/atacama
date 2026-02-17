@@ -87,14 +87,12 @@ def create_editor_append_schema() -> Schema:
             "new_text": SchemaProperty(
                 type="string",
                 description="The new text to append (NOT the full post, just the addition)",
-                required=True
+                required=True,
             ),
             "summary": SchemaProperty(
-                type="string",
-                description="Brief description of what was added",
-                required=True
-            )
-        }
+                type="string", description="Brief description of what was added", required=True
+            ),
+        },
     )
 
 
@@ -105,16 +103,12 @@ def create_editor_command_schema() -> Schema:
         description="The modified blog post content",
         properties={
             "new_content": SchemaProperty(
-                type="string",
-                description="The complete updated blog post content",
-                required=True
+                type="string", description="The complete updated blog post content", required=True
             ),
             "summary": SchemaProperty(
-                type="string",
-                description="Brief description of what was changed",
-                required=True
-            )
-        }
+                type="string", description="Brief description of what was changed", required=True
+            ),
+        },
     )
 
 
@@ -133,11 +127,7 @@ class EditorAssistant:
         self.command_schema = create_editor_command_schema()
 
     def ai_append(
-        self,
-        user_input: str,
-        current_content: str,
-        target_version: str = "both",
-        model: str = None
+        self, user_input: str, current_content: str, target_version: str = "both", model: str = None
     ) -> Dict[str, Any]:
         """
         AI generates new content based on user input, we concatenate it.
@@ -169,49 +159,45 @@ class EditorAssistant:
 
             if not response.structured_data:
                 return {
-                    'success': False,
-                    'error': 'No response from AI model',
-                    'new_content': current_content,
-                    'usage_stats': response.usage.to_dict() if response.usage else {}
+                    "success": False,
+                    "error": "No response from AI model",
+                    "new_content": current_content,
+                    "usage_stats": response.usage.to_dict() if response.usage else {},
                 }
 
             data = response.structured_data
-            new_text = data.get('new_text', '')
+            new_text = data.get("new_text", "")
 
             # Concatenate preserving existing content exactly
-            if current_content and not current_content.endswith('\n'):
-                separator = '\n\n'
+            if current_content and not current_content.endswith("\n"):
+                separator = "\n\n"
             elif current_content:
-                separator = '\n'
+                separator = "\n"
             else:
-                separator = ''
+                separator = ""
 
             new_content = current_content + separator + new_text
 
             return {
-                'success': True,
-                'new_content': new_content,
-                'new_text': new_text,
-                'summary': data.get('summary', ''),
-                'error': None,
-                'usage_stats': response.usage.to_dict() if response.usage else {}
+                "success": True,
+                "new_content": new_content,
+                "new_text": new_text,
+                "summary": data.get("summary", ""),
+                "error": None,
+                "usage_stats": response.usage.to_dict() if response.usage else {},
             }
 
         except Exception as e:
             logger.error(f"Error in AI append: {str(e)}")
             return {
-                'success': False,
-                'error': str(e),
-                'new_content': current_content,
-                'usage_stats': {}
+                "success": False,
+                "error": str(e),
+                "new_content": current_content,
+                "usage_stats": {},
             }
 
     def ai_command(
-        self,
-        user_input: str,
-        current_content: str,
-        target_version: str = "both",
-        model: str = None
+        self, user_input: str, current_content: str, target_version: str = "both", model: str = None
     ) -> Dict[str, Any]:
         """
         AI executes a command that may modify/delete/restructure content.
@@ -242,32 +228,34 @@ class EditorAssistant:
 
             if not response.structured_data:
                 return {
-                    'success': False,
-                    'error': 'No response from AI model',
-                    'new_content': current_content,
-                    'usage_stats': response.usage.to_dict() if response.usage else {}
+                    "success": False,
+                    "error": "No response from AI model",
+                    "new_content": current_content,
+                    "usage_stats": response.usage.to_dict() if response.usage else {},
                 }
 
             data = response.structured_data
 
             return {
-                'success': True,
-                'new_content': data.get('new_content', current_content),
-                'summary': data.get('summary', ''),
-                'error': None,
-                'usage_stats': response.usage.to_dict() if response.usage else {}
+                "success": True,
+                "new_content": data.get("new_content", current_content),
+                "summary": data.get("summary", ""),
+                "error": None,
+                "usage_stats": response.usage.to_dict() if response.usage else {},
             }
 
         except Exception as e:
             logger.error(f"Error in AI command: {str(e)}")
             return {
-                'success': False,
-                'error': str(e),
-                'new_content': current_content,
-                'usage_stats': {}
+                "success": False,
+                "error": str(e),
+                "new_content": current_content,
+                "usage_stats": {},
             }
 
-    def _build_append_prompt(self, user_input: str, current_content: str, target_version: str) -> str:
+    def _build_append_prompt(
+        self, user_input: str, current_content: str, target_version: str
+    ) -> str:
         """Build prompt for AI append (generate new text only)."""
         version_note = ""
         if target_version == "private":
@@ -276,9 +264,9 @@ class EditorAssistant:
         # Show last few lines for context
         context = ""
         if current_content:
-            lines = current_content.split('\n')
+            lines = current_content.split("\n")
             last_lines = lines[-10:] if len(lines) > 10 else lines
-            context = "Recent content (for context):\n" + '\n'.join(last_lines)
+            context = "Recent content (for context):\n" + "\n".join(last_lines)
 
         return f"""Write new blog content based on the user's request.
 
@@ -300,7 +288,9 @@ RULES:
 - Just write the actual content the reader would see
 - Use the color tags above to convey semantic meaning when appropriate"""
 
-    def _build_command_prompt(self, user_input: str, current_content: str, target_version: str) -> str:
+    def _build_command_prompt(
+        self, user_input: str, current_content: str, target_version: str
+    ) -> str:
         """Build prompt for AI command (full rewrite)."""
         version_note = ""
         if target_version == "private":
@@ -331,10 +321,7 @@ RULES:
 - Use the color tags above to convey semantic meaning when appropriate"""
 
     def quick_append(
-        self,
-        user_input: str,
-        current_content: str,
-        target_version: str = "both"
+        self, user_input: str, current_content: str, target_version: str = "both"
     ) -> Dict[str, Any]:
         """
         Quick append without LLM processing - for simple text additions.
@@ -352,7 +339,7 @@ RULES:
         """
         if target_version == "private":
             # Wrap in private markers
-            if '\n' in user_input:
+            if "\n" in user_input:
                 formatted_input = f"<<<PRIVATE: {user_input} >>>"
             else:
                 formatted_input = f"<<PRIVATE: {user_input} >>"
@@ -360,23 +347,25 @@ RULES:
             formatted_input = user_input
 
         # Add spacing if needed
-        if current_content and not current_content.endswith('\n'):
-            separator = '\n\n'
+        if current_content and not current_content.endswith("\n"):
+            separator = "\n\n"
         elif current_content:
-            separator = '\n'
+            separator = "\n"
         else:
-            separator = ''
+            separator = ""
 
         new_content = current_content + separator + formatted_input
 
         return {
-            'success': True,
-            'action': 'append',
-            'new_content': new_content,
-            'reasoning': 'Quick append without LLM processing',
-            'changes_summary': f'Added: {user_input[:50]}...' if len(user_input) > 50 else f'Added: {user_input}',
-            'error': None,
-            'usage_stats': {}
+            "success": True,
+            "action": "append",
+            "new_content": new_content,
+            "reasoning": "Quick append without LLM processing",
+            "changes_summary": (
+                f"Added: {user_input[:50]}..." if len(user_input) > 50 else f"Added: {user_input}"
+            ),
+            "error": None,
+            "usage_stats": {},
         }
 
 

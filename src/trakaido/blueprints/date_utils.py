@@ -50,6 +50,8 @@ def get_30_day_date_range() -> tuple[str, str]:
         now = now - timedelta(days=1)
 
     end_date = now.strftime("%Y-%m-%d")
-    start_date = (now - timedelta(days=29)).strftime("%Y-%m-%d")  # 29 days back + today = 30 days total
+    start_date = (now - timedelta(days=29)).strftime(
+        "%Y-%m-%d"
+    )  # 29 days back + today = 30 days total
 
     return start_date, end_date

@@ -69,7 +69,6 @@ class TestClassroomHelpers(unittest.TestCase):
         self.assertEqual(len(classrooms), 1)
         self.assertEqual(classrooms[0].name, "Lithuanian A1")
 
-
     def test_get_user_classroom_capabilities(self):
         capabilities = get_user_classroom_capabilities(self.manager_id)
 

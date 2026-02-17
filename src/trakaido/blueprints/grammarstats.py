@@ -20,11 +20,7 @@ import constants
 from atacama.decorators.auth import require_auth
 from trakaido.blueprints.shared import trakaido_bp, logger, ensure_user_data_dir
 from trakaido.blueprints.date_utils import get_current_day_key
-from trakaido.blueprints.nonce_utils import (
-    load_nonces,
-    save_nonces,
-    check_nonce_duplicates
-)
+from trakaido.blueprints.nonce_utils import load_nonces, save_nonces, check_nonce_duplicates
 
 ##############################################################################
 # Constants and Validation
@@ -33,7 +29,7 @@ from trakaido.blueprints.nonce_utils import (
 # Concept ID validation pattern: lowercase letters and hyphens only
 # Must start and end with a letter, max 100 chars
 # Single letter concepts are also valid
-CONCEPT_ID_PATTERN = re.compile(r'^[a-z]([a-z\-]*[a-z])?$')
+CONCEPT_ID_PATTERN = re.compile(r"^[a-z]([a-z\-]*[a-z])?$")
 MAX_CONCEPT_ID_LENGTH = 100
 
 
@@ -89,6 +85,7 @@ def validate_concept_stats(stats: Dict[str, Any]) -> bool:
 # Storage Class
 ##############################################################################
 
+
 class GrammarStats:
     """Manages access to a user's grammar statistics file.
 
@@ -118,12 +115,14 @@ class GrammarStats:
         """
         try:
             if not os.path.exists(self.file_path):
-                logger.debug(f"No grammar stats file found at {self.file_path}, returning empty stats")
+                logger.debug(
+                    f"No grammar stats file found at {self.file_path}, returning empty stats"
+                )
                 self._stats = {"stats": {}}
                 self._loaded = True
                 return True
 
-            with open(self.file_path, 'r', encoding='utf-8') as f:
+            with open(self.file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             if isinstance(data, dict) and "stats" in data:
@@ -152,7 +151,7 @@ class GrammarStats:
         try:
             ensure_user_data_dir(self.user_id, self.language)
 
-            with open(self.file_path, 'w', encoding='utf-8') as f:
+            with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(self._stats, f, ensure_ascii=False, indent=2)
 
             return True
@@ -210,10 +209,7 @@ class GrammarStats:
             self._stats["stats"][concept_id]["viewCount"] += 1
             self._stats["stats"][concept_id]["lastViewedAt"] = current_timestamp
         else:
-            self._stats["stats"][concept_id] = {
-                "viewCount": 1,
-                "lastViewedAt": current_timestamp
-            }
+            self._stats["stats"][concept_id] = {"viewCount": 1, "lastViewedAt": current_timestamp}
 
         return self._stats["stats"][concept_id]
 
@@ -222,7 +218,8 @@ class GrammarStats:
 # API Routes
 ##############################################################################
 
-@trakaido_bp.route('/api/trakaido/grammarstats/', methods=['GET'])
+
+@trakaido_bp.route("/api/trakaido/grammarstats/", methods=["GET"])
 @require_auth
 def get_grammar_stats() -> ResponseReturnValue:
     """Get all grammar stats for the authenticated user.
@@ -232,7 +229,7 @@ def get_grammar_stats() -> ResponseReturnValue:
     """
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
 
         grammar_stats = GrammarStats(user_id, language)
         return jsonify(grammar_stats.stats)
@@ -241,7 +238,7 @@ def get_grammar_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/grammarstats/view', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/grammarstats/view", methods=["POST"])
 @require_auth
 def record_grammar_view() -> ResponseReturnValue:
     """Record a grammar lesson view with nonce protection.
@@ -275,19 +272,26 @@ def record_grammar_view() -> ResponseReturnValue:
             return jsonify({"error": "Field 'nonce' must be a non-empty string"}), 400
 
         if not validate_concept_id(concept_id):
-            return jsonify({
-                "error": f"Invalid concept ID: '{concept_id}'. Must be lowercase letters and hyphens only, max {MAX_CONCEPT_ID_LENGTH} chars."
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "error": f"Invalid concept ID: '{concept_id}'. Must be lowercase letters and hyphens only, max {MAX_CONCEPT_ID_LENGTH} chars."
+                    }
+                ),
+                400,
+            )
 
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         current_day = get_current_day_key()
 
         # Check if nonce has already been used (today or yesterday)
         if check_nonce_duplicates(user_id, nonce, language):
-            return jsonify({
-                "error": "duplicate_nonce",
-                "message": "This view has already been recorded"
-            }), 409
+            return (
+                jsonify(
+                    {"error": "duplicate_nonce", "message": "This view has already been recorded"}
+                ),
+                409,
+            )
 
         # Load and update grammar stats
         grammar_stats = GrammarStats(user_id, language)
@@ -301,19 +305,18 @@ def record_grammar_view() -> ResponseReturnValue:
         used_nonces = load_nonces(user_id, current_day, language)
         used_nonces.add(nonce)
         if not save_nonces(user_id, current_day, used_nonces, language):
-            logger.warning(f"Failed to save nonce for user {user_id} day {current_day} language {language}")
+            logger.warning(
+                f"Failed to save nonce for user {user_id} day {current_day} language {language}"
+            )
 
-        return jsonify({
-            "success": True,
-            "stats": concept_stats
-        })
+        return jsonify({"success": True, "stats": concept_stats})
 
     except Exception as e:
         logger.error(f"Error recording grammar view: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/grammarstats/', methods=['PUT'])
+@trakaido_bp.route("/api/trakaido/grammarstats/", methods=["PUT"])
 @require_auth
 def replace_grammar_stats() -> ResponseReturnValue:
     """Replace all grammar stats for the user (used for sync/restore).
@@ -341,21 +344,31 @@ def replace_grammar_stats() -> ResponseReturnValue:
         validated_stats: Dict[str, Any] = {}
         for concept_id, concept_stats in incoming_stats.items():
             if not validate_concept_id(concept_id):
-                return jsonify({
-                    "error": f"Invalid concept ID: '{concept_id}'. Must be lowercase letters and hyphens only."
-                }), 400
+                return (
+                    jsonify(
+                        {
+                            "error": f"Invalid concept ID: '{concept_id}'. Must be lowercase letters and hyphens only."
+                        }
+                    ),
+                    400,
+                )
 
             if not validate_concept_stats(concept_stats):
-                return jsonify({
-                    "error": f"Invalid stats for concept '{concept_id}'. Expected viewCount (non-negative int) and lastViewedAt (positive number or null)."
-                }), 400
+                return (
+                    jsonify(
+                        {
+                            "error": f"Invalid stats for concept '{concept_id}'. Expected viewCount (non-negative int) and lastViewedAt (positive number or null)."
+                        }
+                    ),
+                    400,
+                )
 
             validated_stats[concept_id] = {
                 "viewCount": concept_stats["viewCount"],
-                "lastViewedAt": concept_stats.get("lastViewedAt")
+                "lastViewedAt": concept_stats.get("lastViewedAt"),
             }
 
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
 
         # Replace stats
         grammar_stats = GrammarStats(user_id, language)

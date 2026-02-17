@@ -29,6 +29,7 @@ class TestAtomicWriteText(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_write_new_file(self):
@@ -38,7 +39,7 @@ class TestAtomicWriteText(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.test_file))
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             self.assertEqual(f.read(), content)
 
     def test_write_overwrites_existing(self):
@@ -51,7 +52,7 @@ class TestAtomicWriteText(unittest.TestCase):
         result = atomic_write_text(self.test_file, new_content)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             self.assertEqual(f.read(), new_content)
 
     def test_creates_backup(self):
@@ -64,7 +65,7 @@ class TestAtomicWriteText(unittest.TestCase):
 
         backup_path = self.test_file + ".bak"
         self.assertTrue(os.path.exists(backup_path))
-        with open(backup_path, 'r') as f:
+        with open(backup_path, "r") as f:
             self.assertEqual(f.read(), "Initial content")
 
     def test_no_backup_when_disabled(self):
@@ -90,7 +91,7 @@ class TestAtomicWriteText(unittest.TestCase):
         result = atomic_write_text(self.test_file, content)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r', encoding='utf-8') as f:
+        with open(self.test_file, "r", encoding="utf-8") as f:
             self.assertEqual(f.read(), content)
 
     def test_write_without_lock(self):
@@ -112,6 +113,7 @@ class TestAtomicWriteJson(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_write_json(self):
@@ -120,7 +122,7 @@ class TestAtomicWriteJson(unittest.TestCase):
         result = atomic_write_json(self.test_file, data)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             loaded = json.load(f)
         self.assertEqual(loaded, data)
 
@@ -130,13 +132,14 @@ class TestAtomicWriteJson(unittest.TestCase):
         result = atomic_write_json(self.test_file, data, indent=2)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             content = f.read()
         # Indented JSON should have newlines
         self.assertIn("\n", content)
 
     def test_write_json_with_custom_formatter(self):
         """Test writing JSON with custom formatter."""
+
         def custom_formatter(data):
             return "CUSTOM: " + json.dumps(data)
 
@@ -144,7 +147,7 @@ class TestAtomicWriteJson(unittest.TestCase):
         result = atomic_write_json(self.test_file, data, formatter=custom_formatter)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             content = f.read()
         self.assertTrue(content.startswith("CUSTOM: "))
 
@@ -155,7 +158,7 @@ class TestAtomicWriteJson(unittest.TestCase):
         result = atomic_write_json(self.test_file, data)
 
         self.assertTrue(result)
-        with open(self.test_file, 'r', encoding='utf-8') as f:
+        with open(self.test_file, "r", encoding="utf-8") as f:
             loaded = json.load(f)
         self.assertEqual(loaded, data)
 
@@ -171,12 +174,13 @@ class TestReadWithLock(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_read_existing_file(self):
         """Test reading an existing file."""
         content = "Test content"
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write(content)
 
         result = read_with_lock(self.test_file)
@@ -199,12 +203,13 @@ class TestReadJsonWithLock(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_read_valid_json(self):
         """Test reading valid JSON."""
         data = {"key": "value", "number": 42}
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             json.dump(data, f)
 
         result = read_json_with_lock(self.test_file)
@@ -212,7 +217,7 @@ class TestReadJsonWithLock(unittest.TestCase):
 
     def test_read_invalid_json(self):
         """Test reading invalid JSON returns None."""
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write("not valid json {{{")
 
         result = read_json_with_lock(self.test_file)
@@ -236,24 +241,25 @@ class TestRecoverFromBackup(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_recover_from_valid_backup(self):
         """Test recovery from valid backup."""
         # Create corrupted main file
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write("corrupted {{{")
 
         # Create valid backup
         valid_data = {"stats": {}}
-        with open(self.backup_file, 'w') as f:
+        with open(self.backup_file, "w") as f:
             json.dump(valid_data, f)
 
         result = recover_from_backup(self.test_file)
         self.assertTrue(result)
 
         # Main file should now be the backup content
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             recovered = json.load(f)
         self.assertEqual(recovered, valid_data)
 
@@ -263,7 +269,7 @@ class TestRecoverFromBackup(unittest.TestCase):
 
     def test_recover_no_backup_exists(self):
         """Test recovery when no backup exists."""
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write("corrupted")
 
         result = recover_from_backup(self.test_file)
@@ -272,11 +278,11 @@ class TestRecoverFromBackup(unittest.TestCase):
     def test_recover_backup_also_corrupted(self):
         """Test recovery when backup is also corrupted."""
         # Create corrupted main file
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write("corrupted {{{")
 
         # Create corrupted backup
-        with open(self.backup_file, 'w') as f:
+        with open(self.backup_file, "w") as f:
             f.write("also corrupted {{{")
 
         result = recover_from_backup(self.test_file)
@@ -291,12 +297,13 @@ class TestFileLock(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.test_file = os.path.join(self.temp_dir, "test.txt")
         # Create the file
-        with open(self.test_file, 'w') as f:
+        with open(self.test_file, "w") as f:
             f.write("test")
 
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_exclusive_lock(self):
@@ -351,6 +358,7 @@ class TestConcurrentAccess(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_sequential_writes(self):
@@ -361,7 +369,7 @@ class TestConcurrentAccess(unittest.TestCase):
             self.assertTrue(result)
 
             # Verify content is valid after each write
-            with open(self.test_file, 'r') as f:
+            with open(self.test_file, "r") as f:
                 loaded = json.load(f)
             self.assertEqual(loaded["iteration"], i)
 
@@ -393,11 +401,11 @@ class TestConcurrentAccess(unittest.TestCase):
         self.assertTrue(all(results))
 
         # Final file should be valid JSON
-        with open(self.test_file, 'r') as f:
+        with open(self.test_file, "r") as f:
             data = json.load(f)
         self.assertIn("thread", data)
         self.assertIn("iteration", data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

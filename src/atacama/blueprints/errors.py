@@ -12,7 +12,7 @@ from models import get_or_create_user
 
 logger = get_logger(__name__)
 
-errors_bp = Blueprint('errors', __name__)
+errors_bp = Blueprint("errors", __name__)
 
 
 def _ensure_domain_context() -> None:
@@ -24,7 +24,7 @@ def _ensure_domain_context() -> None:
     from the request host so error pages use the correct layout.
     """
     # Skip if already set (e.g., from before_request handler for non-404 errors)
-    if hasattr(g, 'theme_layout') and g.theme_layout:
+    if hasattr(g, "theme_layout") and g.theme_layout:
         return
 
     try:
@@ -50,7 +50,9 @@ def _ensure_domain_context() -> None:
         # Fall back to defaults - context processor will handle missing values
 
 
-def handle_error(error_code: str, error_title: str, error_message: str, details: str | None = None) -> ResponseReturnValue:
+def handle_error(
+    error_code: str, error_title: str, error_message: str, details: str | None = None
+) -> ResponseReturnValue:
     """
     Unified error handler that returns HTML or JSON based on Accept header.
 
@@ -66,52 +68,52 @@ def handle_error(error_code: str, error_title: str, error_message: str, details:
     _ensure_domain_context()
 
     # Ensure user session is populated if available
-    if 'user' in session and not hasattr(g, 'user'):
+    if "user" in session and not hasattr(g, "user"):
         try:
             with db.session() as db_session:
                 db_session.expire_on_commit = False
-                g.user = get_or_create_user(db_session, session['user'])
+                g.user = get_or_create_user(db_session, session["user"])
         except SQLAlchemyError as e:
             logger.error(f"Database error during error handling: {str(e)}")
             g.user = None
-    
+
     # Get channel info for error page context
     channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
-    current_domain = getattr(g, 'current_domain', 'default')
+    current_domain = getattr(g, "current_domain", "default")
 
     try:
         public_channels = channel_manager.get_public_channels()
         # Filter channels by domain restrictions
         domain_allowed_channels = [
-            ch for ch in public_channels
-            if domain_manager.is_channel_allowed(current_domain, ch)
+            ch for ch in public_channels if domain_manager.is_channel_allowed(current_domain, ch)
         ]
     except Exception as e:
         logger.error(f"Error fetching channels during error handling: {str(e)}")
         domain_allowed_channels = []
 
-    if request.headers.get('Accept', '').startswith('text/html'):
-        return render_template(
-            'error.html',
-            error_code=error_code,
-            error_title=error_title,
-            error_message=error_message,
-            technical_details=details if current_app.debug else None,
-            public_channels=domain_allowed_channels,
-            channel_manager=channel_manager,
-            available_channels=domain_allowed_channels,
-            current_channel=None
-        ), status_code
-    
-    response = {
-        'error': error_title.lower().replace(' ', '_'),
-        'message': error_message
-    }
+    if request.headers.get("Accept", "").startswith("text/html"):
+        return (
+            render_template(
+                "error.html",
+                error_code=error_code,
+                error_title=error_title,
+                error_message=error_message,
+                technical_details=details if current_app.debug else None,
+                public_channels=domain_allowed_channels,
+                channel_manager=channel_manager,
+                available_channels=domain_allowed_channels,
+                current_channel=None,
+            ),
+            status_code,
+        )
+
+    response = {"error": error_title.lower().replace(" ", "_"), "message": error_message}
     if current_app.debug and details:
-        response['details'] = details
-    
+        response["details"] = details
+
     return jsonify(response), status_code
+
 
 @errors_bp.app_errorhandler(400)
 def bad_request(e: Exception) -> ResponseReturnValue:
@@ -121,30 +123,27 @@ def bad_request(e: Exception) -> ResponseReturnValue:
         "400",
         "Bad Request",
         "The request could not be understood by the server due to malformed syntax.",
-        str(e)
+        str(e),
     )
+
 
 @errors_bp.app_errorhandler(401)
 def unauthorized(e: Exception) -> ResponseReturnValue:
     """Handle 401 Unauthorized errors."""
     logger.info(f"Unauthorized access attempt: {str(e)}")
     return handle_error(
-        "401",
-        "Unauthorized",
-        "Authentication is required to access this resource.",
-        str(e)
+        "401", "Unauthorized", "Authentication is required to access this resource.", str(e)
     )
+
 
 @errors_bp.app_errorhandler(403)
 def forbidden(e: Exception) -> ResponseReturnValue:
     """Handle 403 Forbidden errors."""
     logger.warning(f"Forbidden access attempt: {str(e)}")
     return handle_error(
-        "403",
-        "Forbidden",
-        "You don't have permission to access this resource.",
-        str(e)
+        "403", "Forbidden", "You don't have permission to access this resource.", str(e)
     )
+
 
 @errors_bp.app_errorhandler(404)
 def page_not_found(e: Exception) -> ResponseReturnValue:
@@ -154,8 +153,9 @@ def page_not_found(e: Exception) -> ResponseReturnValue:
         "404",
         "Page Not Found",
         "The page you are looking for could not be found. It might have been removed, renamed, or does not exist.",
-        str(e)
+        str(e),
     )
+
 
 @errors_bp.app_errorhandler(405)
 def method_not_allowed(e: Exception) -> ResponseReturnValue:
@@ -165,8 +165,9 @@ def method_not_allowed(e: Exception) -> ResponseReturnValue:
         "405",
         "Method Not Allowed",
         f"The {request.method} method is not allowed for this endpoint.",
-        str(e)
+        str(e),
     )
+
 
 @errors_bp.app_errorhandler(500)
 def internal_server_error(e: Exception) -> ResponseReturnValue:
@@ -176,8 +177,9 @@ def internal_server_error(e: Exception) -> ResponseReturnValue:
         "500",
         "Internal Server Error",
         "An unexpected error occurred. Our team has been notified and is working to resolve the issue.",
-        str(e)
+        str(e),
     )
+
 
 @errors_bp.app_errorhandler(SQLAlchemyError)
 def handle_database_error(e: SQLAlchemyError) -> ResponseReturnValue:
@@ -187,5 +189,5 @@ def handle_database_error(e: SQLAlchemyError) -> ResponseReturnValue:
         "500",
         "Database Error",
         "A database error occurred. Our team has been notified and is working to resolve the issue.",
-        str(e)
+        str(e),
     )

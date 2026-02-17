@@ -35,11 +35,13 @@ DEFAULT_LOCK_TIMEOUT = 30
 
 class AtomicWriteError(Exception):
     """Raised when atomic write operation fails."""
+
     pass
 
 
 class FileLockError(Exception):
     """Raised when file lock cannot be acquired."""
+
     pass
 
 
@@ -71,7 +73,7 @@ def file_lock(file_path: str, timeout: int = DEFAULT_LOCK_TIMEOUT, shared: bool 
     lock_file = None
     try:
         # Create/open lock file
-        lock_file = open(lock_path, 'w')
+        lock_file = open(lock_path, "w")
 
         # Determine lock type
         lock_type = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
@@ -82,6 +84,7 @@ def file_lock(file_path: str, timeout: int = DEFAULT_LOCK_TIMEOUT, shared: bool 
         else:
             # Blocking with timeout - we simulate timeout by trying non-blocking in a loop
             import time
+
             start_time = time.time()
             while True:
                 try:
@@ -97,7 +100,9 @@ def file_lock(file_path: str, timeout: int = DEFAULT_LOCK_TIMEOUT, shared: bool 
         yield lock_file
 
     except BlockingIOError:
-        raise FileLockError(f"Could not acquire lock on {file_path} (file is locked by another process)")
+        raise FileLockError(
+            f"Could not acquire lock on {file_path} (file is locked by another process)"
+        )
     finally:
         if lock_file:
             try:
@@ -110,10 +115,10 @@ def file_lock(file_path: str, timeout: int = DEFAULT_LOCK_TIMEOUT, shared: bool 
 def atomic_write_text(
     file_path: str,
     content: str,
-    encoding: str = 'utf-8',
+    encoding: str = "utf-8",
     backup: bool = True,
     use_lock: bool = True,
-    lock_timeout: int = DEFAULT_LOCK_TIMEOUT
+    lock_timeout: int = DEFAULT_LOCK_TIMEOUT,
 ) -> bool:
     """Atomically write text content to a file.
 
@@ -139,7 +144,7 @@ def atomic_write_text(
     Raises:
         AtomicWriteError: On write failure (only if backup restoration fails)
     """
-    file_dir = os.path.dirname(file_path) or '.'
+    file_dir = os.path.dirname(file_path) or "."
     backup_path = file_path + ".bak"
     temp_fd = None
     temp_path = None
@@ -149,14 +154,12 @@ def atomic_write_text(
 
         # Create temp file in same directory (ensures same filesystem for atomic rename)
         temp_fd, temp_path = tempfile.mkstemp(
-            dir=file_dir,
-            prefix='.tmp_',
-            suffix=os.path.basename(file_path)
+            dir=file_dir, prefix=".tmp_", suffix=os.path.basename(file_path)
         )
 
         try:
             # Write content to temp file
-            with os.fdopen(temp_fd, 'w', encoding=encoding) as f:
+            with os.fdopen(temp_fd, "w", encoding=encoding) as f:
                 temp_fd = None  # os.fdopen takes ownership
                 f.write(content)
                 f.flush()
@@ -196,7 +199,9 @@ def atomic_write_text(
                     os.rename(backup_path, file_path)
                     logger.info(f"Restored {file_path} from backup after failed write")
                 except Exception as restore_error:
-                    logger.error(f"CRITICAL: Failed to restore {file_path} from backup: {restore_error}")
+                    logger.error(
+                        f"CRITICAL: Failed to restore {file_path} from backup: {restore_error}"
+                    )
                     raise AtomicWriteError(
                         f"Write failed and could not restore from backup: {e}"
                     ) from e
@@ -228,13 +233,13 @@ def atomic_write_text(
 def atomic_write_json(
     file_path: str,
     data: Dict[str, Any],
-    encoding: str = 'utf-8',
+    encoding: str = "utf-8",
     backup: bool = True,
     use_lock: bool = True,
     lock_timeout: int = DEFAULT_LOCK_TIMEOUT,
     formatter: Optional[Callable[[Dict[str, Any]], str]] = None,
     indent: Optional[int] = None,
-    ensure_ascii: bool = False
+    ensure_ascii: bool = False,
 ) -> bool:
     """Atomically write JSON data to a file.
 
@@ -268,14 +273,12 @@ def atomic_write_json(
         encoding=encoding,
         backup=backup,
         use_lock=use_lock,
-        lock_timeout=lock_timeout
+        lock_timeout=lock_timeout,
     )
 
 
 def read_with_lock(
-    file_path: str,
-    encoding: str = 'utf-8',
-    lock_timeout: int = DEFAULT_LOCK_TIMEOUT
+    file_path: str, encoding: str = "utf-8", lock_timeout: int = DEFAULT_LOCK_TIMEOUT
 ) -> Optional[str]:
     """Read a file with a shared lock.
 
@@ -294,7 +297,7 @@ def read_with_lock(
 
     try:
         with file_lock(file_path, timeout=lock_timeout, shared=True):
-            with open(file_path, 'r', encoding=encoding) as f:
+            with open(file_path, "r", encoding=encoding) as f:
                 return f.read()
     except FileLockError as e:
         logger.error(f"Could not acquire read lock for {file_path}: {e}")
@@ -305,9 +308,7 @@ def read_with_lock(
 
 
 def read_json_with_lock(
-    file_path: str,
-    encoding: str = 'utf-8',
-    lock_timeout: int = DEFAULT_LOCK_TIMEOUT
+    file_path: str, encoding: str = "utf-8", lock_timeout: int = DEFAULT_LOCK_TIMEOUT
 ) -> Optional[Dict[str, Any]]:
     """Read and parse a JSON file with a shared lock.
 
@@ -347,8 +348,8 @@ def recover_from_backup(file_path: str) -> bool:
 
     try:
         # Validate backup is valid JSON (for JSON files)
-        if file_path.endswith('.json'):
-            with open(backup_path, 'r', encoding='utf-8') as f:
+        if file_path.endswith(".json"):
+            with open(backup_path, "r", encoding="utf-8") as f:
                 json.load(f)  # Will raise if invalid
 
         # Move corrupted file aside
@@ -359,7 +360,9 @@ def recover_from_backup(file_path: str) -> bool:
         # Restore from backup
         os.rename(backup_path, file_path)
 
-        logger.info(f"Successfully recovered {file_path} from backup. Corrupted version saved as {corrupted_path}")
+        logger.info(
+            f"Successfully recovered {file_path} from backup. Corrupted version saved as {corrupted_path}"
+        )
         return True
 
     except json.JSONDecodeError as e:

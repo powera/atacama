@@ -18,11 +18,10 @@ from trakaido.blueprints.userconfig_v2 import get_userconfig_file_path, USERCONF
 
 ##############################################################################
 
-USERINFO_API_DOCS = {
-    "GET /api/trakaido/userinfo/": "Get user authentication status and basic info"
-}
+USERINFO_API_DOCS = {"GET /api/trakaido/userinfo/": "Get user authentication status and basic info"}
 
-@trakaido_bp.route('/api/lithuanian')
+
+@trakaido_bp.route("/api/lithuanian")
 def lithuanian_api_index() -> Response:
     """
     Provide an overview of the Lithuanian API endpoints.
@@ -36,84 +35,96 @@ def lithuanian_api_index() -> Response:
             "userstats": USERSTATS_API_DOCS,
             "userconfig": USERCONFIG_API_DOCS,
             "userinfo": USERINFO_API_DOCS,
-            "classroom_stats": CLASSROOM_STATS_API_DOCS
-        }
+            "classroom_stats": CLASSROOM_STATS_API_DOCS,
+        },
     }
     return jsonify(api_info)
 
 
-@trakaido_bp.route('/api/trakaido/userinfo/')
+@trakaido_bp.route("/api/trakaido/userinfo/")
 @optional_auth
 def get_user_info() -> Response:
     """
     Get user authentication status and basic information.
-    
+
     This endpoint returns whether the user is logged in and can save
     journey stats and corpus choices. Used for app customization.
-    
+
     :return: JSON response with user authentication status
     """
     try:
         # Check if user is authenticated by looking at the global context
         # The specific implementation depends on how authentication is handled
-        is_authenticated = hasattr(g, 'user') and g.user is not None
-        
+        is_authenticated = hasattr(g, "user") and g.user is not None
+
         response_data: Dict[str, Any] = {
             "authenticated": is_authenticated,
             "can_save_journey_stats": is_authenticated,
             "can_save_corpus_choices": is_authenticated,
             "has_journey_stats_file": False,
-            "has_corpus_choice_file": False
+            "has_corpus_choice_file": False,
         }
-        
+
         # If user is authenticated, add basic user info and check for existing files
         if is_authenticated:
-            user_id = getattr(g.user, 'id', None) if hasattr(g.user, 'id') else None
+            user_id = getattr(g.user, "id", None) if hasattr(g.user, "id") else None
 
             response_data["user"] = {
                 "id": user_id,
-                "username": getattr(g.user, 'username', None) if hasattr(g.user, 'username') else None,
-                "email": getattr(g.user, 'email', None) if hasattr(g.user, 'email') else None
+                "username": (
+                    getattr(g.user, "username", None) if hasattr(g.user, "username") else None
+                ),
+                "email": getattr(g.user, "email", None) if hasattr(g.user, "email") else None,
             }
 
             # Check classroom capabilities and existing files
             if user_id:
                 try:
-                    response_data["classroom_capabilities"] = get_user_classroom_capabilities(int(user_id))
+                    response_data["classroom_capabilities"] = get_user_classroom_capabilities(
+                        int(user_id)
+                    )
                 except Exception as classroom_error:
-                    logger.warning(f"Error checking classroom capabilities for user {user_id}: {str(classroom_error)}")
+                    logger.warning(
+                        f"Error checking classroom capabilities for user {user_id}: {str(classroom_error)}"
+                    )
 
                 try:
-                    language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+                    language = (
+                        g.current_language if hasattr(g, "current_language") else "lithuanian"
+                    )
                     has_journey_stats = user_has_activity_stats(str(user_id), language)
                     userconfig_path = get_userconfig_file_path(str(user_id), language)
 
                     response_data["has_journey_stats_file"] = has_journey_stats
                     response_data["has_corpus_choice_file"] = os.path.exists(userconfig_path)
                 except Exception as file_check_error:
-                    logger.warning(f"Error checking user files for user {user_id}: {str(file_check_error)}")
+                    logger.warning(
+                        f"Error checking user files for user {user_id}: {str(file_check_error)}"
+                    )
                     # Keep defaults (False) if file check fails
 
         if "classroom_capabilities" not in response_data:
             response_data["classroom_capabilities"] = {
                 "is_class_manager": False,
                 "managed_classrooms": [],
-                "member_classrooms": []
+                "member_classrooms": [],
             }
-        
+
         return jsonify(response_data)
     except Exception as e:
         logger.error(f"Error getting user info: {str(e)}")
-        return jsonify({
-            "authenticated": False,
-            "can_save_journey_stats": False,
-            "can_save_corpus_choices": False,
-            "has_journey_stats_file": False,
-            "has_corpus_choice_file": False,
-            "classroom_capabilities": {
-                "is_class_manager": False,
-                "managed_classrooms": [],
-                "member_classrooms": []
-            },
-            "error": "Unable to determine authentication status"
-        })
+        return jsonify(
+            {
+                "authenticated": False,
+                "can_save_journey_stats": False,
+                "can_save_corpus_choices": False,
+                "has_journey_stats_file": False,
+                "has_corpus_choice_file": False,
+                "classroom_capabilities": {
+                    "is_class_manager": False,
+                    "managed_classrooms": [],
+                    "member_classrooms": [],
+                },
+                "error": "Unable to determine authentication status",
+            }
+        )

@@ -1,11 +1,7 @@
 """LLM functionality for Atacama - OpenAI client and widget tools."""
 
 # Core types
-from .types import (
-    SchemaProperty,
-    Schema,
-    Response
-)
+from .types import SchemaProperty, Schema, Response
 
 # OpenAI client
 from .openai_client import (
@@ -14,7 +10,7 @@ from .openai_client import (
     generate_chat,
     TEST_MODEL,
     PROD_MODEL,
-    DEFAULT_MODEL
+    DEFAULT_MODEL,
 )
 
 # Schema conversion utilities
@@ -23,7 +19,7 @@ from .lib import (
     to_anthropic_schema,
     to_gemini_schema,
     to_ollama_schema,
-    schema_from_dict
+    schema_from_dict,
 )
 
 # Widget tools
@@ -35,17 +31,25 @@ from .editor_assistant import EditorAssistant
 
 __all__ = [
     # Types
-    'SchemaProperty', 'Schema', 'Response',
-    
+    "SchemaProperty",
+    "Schema",
+    "Response",
     # OpenAI client
-    'OpenAIClient', 'warm_model', 'generate_chat', 'TEST_MODEL', 'PROD_MODEL', 'DEFAULT_MODEL',
-    
+    "OpenAIClient",
+    "warm_model",
+    "generate_chat",
+    "TEST_MODEL",
+    "PROD_MODEL",
+    "DEFAULT_MODEL",
     # Schema utilities
-    'to_openai_schema', 'to_anthropic_schema', 'to_gemini_schema', 'to_ollama_schema', 'schema_from_dict',
-    
+    "to_openai_schema",
+    "to_anthropic_schema",
+    "to_gemini_schema",
+    "to_ollama_schema",
+    "schema_from_dict",
     # Widget tools
-    'WidgetInitiator', 'WidgetImprover',
-
+    "WidgetInitiator",
+    "WidgetImprover",
     # Editor assistant
-    'EditorAssistant'
+    "EditorAssistant",
 ]

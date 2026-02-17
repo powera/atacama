@@ -82,9 +82,9 @@ class UserStatsSchemaTests(unittest.TestCase):
             "exposed": True,
             "directPractice": {
                 "multipleChoice_englishToTarget": {"correct": 5, "incorrect": 2},
-                "invalid_activity": {"correct": 1, "incorrect": 1}  # Should be filtered
+                "invalid_activity": {"correct": 1, "incorrect": 1},  # Should be filtered
             },
-            "invalidKey": "should be removed"
+            "invalidKey": "should be removed",
         }
 
         normalized = validate_and_normalize_word_stats(invalid_stats)
@@ -93,7 +93,7 @@ class UserStatsSchemaTests(unittest.TestCase):
         self.assertTrue(normalized["exposed"])
         self.assertEqual(
             normalized["directPractice"]["multipleChoice_englishToTarget"],
-            {"correct": 5, "incorrect": 2}
+            {"correct": 5, "incorrect": 2},
         )
 
         # Check invalid data is removed
@@ -104,9 +104,7 @@ class UserStatsSchemaTests(unittest.TestCase):
         """Test validate_and_normalize_word_stats filters negative values."""
         invalid_stats = {
             "exposed": True,
-            "directPractice": {
-                "multipleChoice_englishToTarget": {"correct": -5, "incorrect": 2}
-            }
+            "directPractice": {"multipleChoice_englishToTarget": {"correct": -5, "incorrect": 2}},
         }
 
         normalized = validate_and_normalize_word_stats(invalid_stats)
@@ -114,7 +112,7 @@ class UserStatsSchemaTests(unittest.TestCase):
         # Negative values should be reset to 0
         self.assertEqual(
             normalized["directPractice"]["multipleChoice_englishToTarget"],
-            {"correct": 0, "incorrect": 0}
+            {"correct": 0, "incorrect": 0},
         )
 
 
@@ -123,7 +121,9 @@ class ParseStatTypeTests(unittest.TestCase):
 
     def test_parse_stat_type_new_format_direct_practice(self):
         """Test parse_stat_type with new format direct practice."""
-        category, activity, is_contextual = parse_stat_type("directPractice.multipleChoice_englishToTarget")
+        category, activity, is_contextual = parse_stat_type(
+            "directPractice.multipleChoice_englishToTarget"
+        )
 
         self.assertEqual(category, "directPractice")
         self.assertEqual(activity, "multipleChoice_englishToTarget")
@@ -208,7 +208,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_creates_new_word(self):
         """Test increment_word_stat creates new word stats if they don't exist."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -224,19 +224,23 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 True,  # correct
                 False,  # not contextual
-                current_timestamp
+                current_timestamp,
             )
 
             # Verify word was created and incremented
             self.assertTrue(word_stats["exposed"])
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 1)
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 0)
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 1
+            )
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 0
+            )
             self.assertEqual(word_stats["practiceHistory"]["lastSeen"], current_timestamp)
             self.assertEqual(word_stats["practiceHistory"]["lastCorrectAnswer"], current_timestamp)
 
     def test_increment_word_stat_increments_correct(self):
         """Test increment_word_stat increments correct counter."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -252,7 +256,7 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 True,
                 False,
-                current_timestamp
+                current_timestamp,
             )
             word_stats = increment_word_stat(
                 journey_stats,
@@ -261,16 +265,20 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 True,
                 False,
-                current_timestamp + 1000
+                current_timestamp + 1000,
             )
 
             # Verify correct counter is incremented
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 2)
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 0)
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 2
+            )
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 0
+            )
 
     def test_increment_word_stat_increments_incorrect(self):
         """Test increment_word_stat increments incorrect counter."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -286,17 +294,23 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 False,  # incorrect
                 False,
-                current_timestamp
+                current_timestamp,
             )
 
             # Verify incorrect counter is incremented
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 0)
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 1)
-            self.assertEqual(word_stats["practiceHistory"]["lastIncorrectAnswer"], current_timestamp)
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 0
+            )
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 1
+            )
+            self.assertEqual(
+                word_stats["practiceHistory"]["lastIncorrectAnswer"], current_timestamp
+            )
 
     def test_increment_word_stat_contextual_exposure(self):
         """Test increment_word_stat handles contextual exposure correctly."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -312,7 +326,7 @@ class IncrementWordStatTests(unittest.TestCase):
                 "sentences",
                 True,
                 True,  # is_contextual
-                current_timestamp
+                current_timestamp,
             )
 
             # Verify contextual exposure is incremented
@@ -323,7 +337,7 @@ class IncrementWordStatTests(unittest.TestCase):
 
     def test_increment_word_stat_updates_timestamps(self):
         """Test increment_word_stat updates timestamps correctly."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -340,7 +354,7 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 True,
                 False,
-                timestamp1
+                timestamp1,
             )
 
             # Second increment (incorrect)
@@ -351,7 +365,7 @@ class IncrementWordStatTests(unittest.TestCase):
                 "multipleChoice_englishToTarget",
                 False,
                 False,
-                timestamp2
+                timestamp2,
             )
 
             # Verify timestamps are updated
@@ -376,22 +390,18 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_file_path(self):
         """Test JourneyStats generates correct file path."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
 
             expected_path = os.path.join(
-                self.test_data_dir,
-                "trakaido",
-                self.test_user_id,
-                self.test_language,
-                "stats.json"
+                self.test_data_dir, "trakaido", self.test_user_id, self.test_language, "stats.json"
             )
             self.assertEqual(journey_stats.file_path, expected_path)
 
     def test_journey_stats_save_and_load(self):
         """Test JourneyStats can save and load data."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create and save journey stats
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -410,11 +420,13 @@ class JourneyStatsTests(unittest.TestCase):
 
             loaded_word_stats = journey_stats2.get_word_stats("test_word")
             self.assertTrue(loaded_word_stats["exposed"])
-            self.assertEqual(loaded_word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+            self.assertEqual(
+                loaded_word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5
+            )
 
     def test_journey_stats_is_empty(self):
         """Test JourneyStats.is_empty returns correct value."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -430,15 +442,11 @@ class JourneyStatsTests(unittest.TestCase):
 
     def test_journey_stats_filters_invalid_on_load(self):
         """Test JourneyStats filters invalid data on load."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create a file with invalid data
             file_path = os.path.join(
-                self.test_data_dir,
-                "trakaido",
-                self.test_user_id,
-                self.test_language,
-                "stats.json"
+                self.test_data_dir, "trakaido", self.test_user_id, self.test_language, "stats.json"
             )
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
@@ -447,12 +455,12 @@ class JourneyStatsTests(unittest.TestCase):
                     "word1": {
                         "exposed": True,
                         "multipleChoice": {"correct": 5, "incorrect": 2},  # Old schema
-                        "invalidKey": "should be removed"
+                        "invalidKey": "should be removed",
                     }
                 }
             }
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(invalid_data, f)
 
             # Load journey stats
@@ -483,9 +491,11 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_file_path(self):
         """Test DailyStats generates correct file path."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
 
             expected_path = os.path.join(
                 self.test_data_dir,
@@ -493,16 +503,18 @@ class DailyStatsTests(unittest.TestCase):
                 self.test_user_id,
                 self.test_language,
                 "daily",
-                f"{self.test_date}_current.json"
+                f"{self.test_date}_current.json",
             )
             self.assertEqual(daily_stats.file_path, expected_path)
 
     def test_daily_stats_save_and_load(self):
         """Test DailyStats can save and load data."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create and save daily stats
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats.load()
 
             test_word_stats = create_empty_word_stats()
@@ -511,7 +523,9 @@ class DailyStatsTests(unittest.TestCase):
             self.assertTrue(daily_stats.save())
 
             # Load in new instance
-            daily_stats2 = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats2 = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats2.load()
 
             loaded_word_stats = daily_stats2.get_word_stats("test_word")
@@ -519,22 +533,28 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_exists(self):
         """Test DailyStats.exists class method."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Should not exist initially
-            self.assertFalse(DailyStats.exists(self.test_user_id, self.test_date, "current", self.test_language))
+            self.assertFalse(
+                DailyStats.exists(self.test_user_id, self.test_date, "current", self.test_language)
+            )
 
             # Create and save
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats.load()
             daily_stats.save()
 
             # Should exist now
-            self.assertTrue(DailyStats.exists(self.test_user_id, self.test_date, "current", self.test_language))
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, self.test_date, "current", self.test_language)
+            )
 
     def test_daily_stats_get_available_dates(self):
         """Test DailyStats.get_available_dates returns correct dates."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create multiple daily stats
             dates = ["2025-10-26", "2025-10-27", "2025-10-28"]
@@ -544,17 +564,21 @@ class DailyStatsTests(unittest.TestCase):
                 daily_stats.save()
 
             # Get available dates
-            available_dates = DailyStats.get_available_dates(self.test_user_id, "current", self.test_language)
+            available_dates = DailyStats.get_available_dates(
+                self.test_user_id, "current", self.test_language
+            )
 
             # Verify all dates are returned in sorted order
             self.assertEqual(available_dates, dates)
 
     def test_daily_stats_compress_to_gzip(self):
         """Test DailyStats can compress to gzip."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create and save daily stats
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats.load()
             daily_stats.set_word_stats("test_word", create_empty_word_stats())
             daily_stats.save()
@@ -569,10 +593,12 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_load_from_gzip(self):
         """Test DailyStats can load from gzip."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create, save, and compress daily stats
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats.load()
             test_stats = create_empty_word_stats()
             test_stats["exposed"] = True
@@ -581,7 +607,9 @@ class DailyStatsTests(unittest.TestCase):
             daily_stats.compress_to_gzip()
 
             # Load in new instance
-            daily_stats2 = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats2 = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats2.load()
 
             # Verify data was loaded from gzip
@@ -591,17 +619,21 @@ class DailyStatsTests(unittest.TestCase):
 
     def test_daily_stats_cannot_save_gzip_loaded(self):
         """Test DailyStats cannot save if loaded from gzip."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create, save, and compress
-            daily_stats = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats.load()
             daily_stats.set_word_stats("test_word", create_empty_word_stats())
             daily_stats.save()
             daily_stats.compress_to_gzip()
 
             # Load from gzip
-            daily_stats2 = DailyStats(self.test_user_id, self.test_date, "current", self.test_language)
+            daily_stats2 = DailyStats(
+                self.test_user_id, self.test_date, "current", self.test_language
+            )
             daily_stats2.load()
 
             # Try to save (should fail)
@@ -753,5 +785,5 @@ class MergeWordStatsTests(unittest.TestCase):
         self.assertEqual(result1, result2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

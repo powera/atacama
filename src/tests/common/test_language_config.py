@@ -11,7 +11,7 @@ from common.config.language_config import (
     LanguageConfig,
     LanguageManager,
     init_language_manager,
-    get_language_manager
+    get_language_manager,
 )
 
 
@@ -21,10 +21,7 @@ class TestLanguageConfig(unittest.TestCase):
     def test_language_config_initialization(self):
         """Test basic initialization of LanguageConfig."""
         lang = LanguageConfig(
-            name="Lithuanian",
-            code="lt",
-            subdomains=["lt"],
-            audio_dir_name="lithuanian"
+            name="Lithuanian", code="lt", subdomains=["lt"], audio_dir_name="lithuanian"
         )
 
         self.assertEqual(lang.name, "Lithuanian")
@@ -40,7 +37,7 @@ class TestLanguageConfig(unittest.TestCase):
             code="lt",
             subdomains=["lt"],
             audio_dir_name="lithuanian",
-            character_set="aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
+            character_set="aąbcčdeęėfghiįyjklmnoprsštuųūvzž",
         )
 
         self.assertEqual(lang.character_set, "aąbcčdeęėfghiįyjklmnoprsštuųūvzž")
@@ -48,10 +45,7 @@ class TestLanguageConfig(unittest.TestCase):
     def test_language_config_multiple_subdomains(self):
         """Test initialization with multiple subdomains."""
         lang = LanguageConfig(
-            name="Chinese",
-            code="zh",
-            subdomains=["zh", "cn"],
-            audio_dir_name="chinese"
+            name="Chinese", code="zh", subdomains=["zh", "cn"], audio_dir_name="chinese"
         )
 
         self.assertEqual(lang.subdomains, ["zh", "cn"])
@@ -74,26 +68,24 @@ class LanguageManagerTestBase(unittest.TestCase):
                     "code": "lt",
                     "subdomains": ["lt"],
                     "audio_dir_name": "lithuanian",
-                    "character_set": "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
+                    "character_set": "aąbcčdeęėfghiįyjklmnoprsštuųūvzž",
                 },
                 "chinese": {
                     "name": "Chinese",
                     "code": "zh",
                     "subdomains": ["zh", "cn"],
                     "audio_dir_name": "chinese",
-                    "character_set": ""
+                    "character_set": "",
                 },
                 "french": {
                     "name": "French",
                     "code": "fr",
                     "subdomains": ["fr"],
                     "audio_dir_name": "french",
-                    "character_set": "aàâäbcçdeéèêëfghiîïjklmnoôöpqrstuùûüvwxyz"
-                }
+                    "character_set": "aàâäbcçdeéèêëfghiîïjklmnoôöpqrstuùûüvwxyz",
+                },
             },
-            "defaults": {
-                "default_language": "lithuanian"
-            }
+            "defaults": {"default_language": "lithuanian"},
         }
 
         # Write valid config
@@ -155,14 +147,18 @@ class TestLanguageManager(LanguageManagerTestBase):
         self.assertEqual(manager.get_language_from_host("fr-staging.trakaido.com"), "french")
 
         # Staging with port
-        self.assertEqual(manager.get_language_from_host("lt-staging.trakaido.com:8080"), "lithuanian")
+        self.assertEqual(
+            manager.get_language_from_host("lt-staging.trakaido.com:8080"), "lithuanian"
+        )
 
     def test_get_language_from_host_staging_not_for_unknown(self):
         """Test that staging suffix doesn't match unknown base subdomains."""
         manager = LanguageManager(self.config_path)
 
         # Unknown-staging should fall back to default, not match anything
-        self.assertEqual(manager.get_language_from_host("unknown-staging.trakaido.com"), "lithuanian")
+        self.assertEqual(
+            manager.get_language_from_host("unknown-staging.trakaido.com"), "lithuanian"
+        )
 
     def test_get_language_from_host_default_fallback(self):
         """Test get_language_from_host falls back to default language."""
@@ -203,12 +199,9 @@ class TestLanguageManager(LanguageManagerTestBase):
 
     def test_validate_config_no_languages(self):
         """Test validation fails when no languages are defined."""
-        invalid_config = {
-            "languages": {},
-            "defaults": {"default_language": "lithuanian"}
-        }
+        invalid_config = {"languages": {}, "defaults": {"default_language": "lithuanian"}}
 
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.toml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".toml", delete=False) as f:
             tomli_w.dump(invalid_config, f)
             invalid_path = f.name
 
@@ -227,13 +220,13 @@ class TestLanguageManager(LanguageManagerTestBase):
                     "name": "Chinese",
                     "code": "zh",
                     "subdomains": ["zh"],
-                    "audio_dir_name": "chinese"
+                    "audio_dir_name": "chinese",
                 }
             },
-            "defaults": {"default_language": "lithuanian"}  # Not in languages list
+            "defaults": {"default_language": "lithuanian"},  # Not in languages list
         }
 
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.toml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".toml", delete=False) as f:
             tomli_w.dump(invalid_config, f)
             invalid_path = f.name
 
@@ -252,19 +245,19 @@ class TestLanguageManager(LanguageManagerTestBase):
                     "name": "Language 1",
                     "code": "l1",
                     "subdomains": ["duplicate"],
-                    "audio_dir_name": "lang1"
+                    "audio_dir_name": "lang1",
                 },
                 "language2": {
                     "name": "Language 2",
                     "code": "l2",
                     "subdomains": ["duplicate"],  # Duplicate subdomain
-                    "audio_dir_name": "lang2"
-                }
+                    "audio_dir_name": "lang2",
+                },
             },
-            "defaults": {"default_language": "language1"}
+            "defaults": {"default_language": "language1"},
         }
 
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.toml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".toml", delete=False) as f:
             tomli_w.dump(invalid_config, f)
             invalid_path = f.name
 
@@ -283,6 +276,7 @@ class TestLanguageManagerSingleton(LanguageManagerTestBase):
         """Test initialization of global language manager instance."""
         # Clear any existing instance
         import common.config.language_config
+
         common.config.language_config._language_manager = None
 
         # Initialize with config
@@ -297,10 +291,11 @@ class TestLanguageManagerSingleton(LanguageManagerTestBase):
         """Test get_language_manager auto-initializes if needed."""
         # Clear any existing instance
         import common.config.language_config
+
         common.config.language_config._language_manager = None
 
         # Mock DEFAULT_CONFIG_PATH to use our test config
-        with patch('common.config.language_config.DEFAULT_CONFIG_PATH', Path(self.config_path)):
+        with patch("common.config.language_config.DEFAULT_CONFIG_PATH", Path(self.config_path)):
             # Should auto-initialize
             manager = get_language_manager()
             self.assertIsNotNone(manager)
@@ -311,5 +306,5 @@ class TestLanguageManagerSingleton(LanguageManagerTestBase):
             self.assertIs(manager, manager2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,11 @@ class StatsMetricsTests(unittest.TestCase):
             "stats": {
                 "w1": {"markedAsKnown": True, "directPractice": {}},
                 "w2": {"markedAsKnown": False, "directPractice": {}},
-                "w3": {"directPractice": {"multipleChoice_targetToEnglish": {"correct": 4, "incorrect": 0}}},
+                "w3": {
+                    "directPractice": {
+                        "multipleChoice_targetToEnglish": {"correct": 4, "incorrect": 0}
+                    }
+                },
             }
         }
 
@@ -50,7 +54,9 @@ class StatsMetricsTests(unittest.TestCase):
                 "w1": {
                     "exposed": True,
                     "markedAsKnown": True,
-                    "directPractice": {"multipleChoice_targetToEnglish": {"correct": 1, "incorrect": 0}},
+                    "directPractice": {
+                        "multipleChoice_targetToEnglish": {"correct": 1, "incorrect": 0}
+                    },
                     "contextualExposure": {},
                 },
                 "w2": {

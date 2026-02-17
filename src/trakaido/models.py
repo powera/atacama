@@ -37,9 +37,7 @@ class Classroom(Base):
     created_by_user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     memberships = relationship(
@@ -77,9 +75,7 @@ class ClassroomMembership(Base):
         nullable=False,
         default=ClassroomRole.MEMBER,
     )
-    joined_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     classroom = relationship("Classroom", back_populates="memberships")
 
@@ -97,12 +93,8 @@ class ClassroomInviteToken(Base):
         Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True
     )
     token: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
-    created_by_user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
+    created_by_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     max_uses: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     current_uses: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

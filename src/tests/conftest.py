@@ -4,7 +4,8 @@ import sys
 from unittest.mock import MagicMock
 
 # Mock tiktoken before any imports to avoid network calls
-sys.modules['tiktoken'] = MagicMock()
+sys.modules["tiktoken"] = MagicMock()
+
 
 # Mock the OpenAI client to avoid initialization issues
 def mock_openai_client():
@@ -13,5 +14,6 @@ def mock_openai_client():
     mock_client.OpenAIClient = MagicMock
     return mock_client
 
+
 # This will prevent the OpenAI client from initializing during import
-sys.modules['common.llm.openai_client'] = mock_openai_client()
+sys.modules["common.llm.openai_client"] = mock_openai_client()

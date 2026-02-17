@@ -10,13 +10,16 @@ from common.base.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 @dataclass
 class LanguageConfig:
     """Language configuration data structure."""
+
     name: str
     code: str
     subdomains: List[str]
     character_set: str = ""
+
 
 class LanguageManager:
     """Manages language configuration and validation."""
@@ -37,39 +40,47 @@ class LanguageManager:
         """Load and validate language configuration from TOML file."""
         try:
             logger.info(f"Loading language configuration from {self.config_path}")
-            with open(self.config_path, 'rb') as f:
+            with open(self.config_path, "rb") as f:
                 config = tomli.load(f)
 
             # Load default language
-            defaults = config.get('defaults', {})
-            self.default_language = defaults.get('default_language', 'lithuanian')
+            defaults = config.get("defaults", {})
+            self.default_language = defaults.get("default_language", "lithuanian")
 
             # Load language configurations
-            languages_config = config.get('languages', {})
+            languages_config = config.get("languages", {})
             for language_key, settings in languages_config.items():
                 self.languages[language_key] = LanguageConfig(
-                    name=settings.get('name', language_key),
-                    code=settings.get('code', language_key),
-                    subdomains=settings.get('subdomains', []),
-                    character_set=settings.get('character_set', '')
+                    name=settings.get("name", language_key),
+                    code=settings.get("code", language_key),
+                    subdomains=settings.get("subdomains", []),
+                    character_set=settings.get("character_set", ""),
                 )
 
                 # Map each subdomain to this language
-                for subdomain in settings.get('subdomains', []):
+                for subdomain in settings.get("subdomains", []):
                     if subdomain in self.subdomain_to_language:
                         # Found duplicate subdomain
                         existing_language = self.subdomain_to_language[subdomain]
-                        logger.error(f"Duplicate subdomain '{subdomain}' found in languages '{language_key}' and '{existing_language}'")
-                        raise ValueError(f"Duplicate subdomain '{subdomain}' in multiple language configurations")
+                        logger.error(
+                            f"Duplicate subdomain '{subdomain}' found in languages '{language_key}' and '{existing_language}'"
+                        )
+                        raise ValueError(
+                            f"Duplicate subdomain '{subdomain}' in multiple language configurations"
+                        )
                     self.subdomain_to_language[subdomain] = language_key
 
             # Validate configuration
             self._validate_config()
 
             # Log successful initialization
-            logger.info(f"Language configuration loaded successfully: {len(self.languages)} languages")
+            logger.info(
+                f"Language configuration loaded successfully: {len(self.languages)} languages"
+            )
             for language_key, config in self.languages.items():
-                logger.info(f"  Language '{language_key}': {config.name} ({config.code}), subdomains: {', '.join(config.subdomains)}")
+                logger.info(
+                    f"  Language '{language_key}': {config.name} ({config.code}), subdomains: {', '.join(config.subdomains)}"
+                )
 
         except Exception as e:
             logger.error(f"Error loading language configuration: {str(e)}")
@@ -81,7 +92,9 @@ class LanguageManager:
             raise ValueError("No languages defined in configuration")
 
         if self.default_language not in self.languages:
-            raise ValueError(f"Default language '{self.default_language}' not found in language list")
+            raise ValueError(
+                f"Default language '{self.default_language}' not found in language list"
+            )
 
     def get_language_from_host(self, host: str) -> str:
         """
@@ -94,12 +107,12 @@ class LanguageManager:
         :return: Language key from config, or default if not found
         """
         # Strip port from host if present
-        if ':' in host:
-            host = host.split(':', 1)[0]
+        if ":" in host:
+            host = host.split(":", 1)[0]
 
         # Extract subdomain
         # Expected format: zh.example.com, fr.example.com, etc.
-        parts = host.split('.')
+        parts = host.split(".")
         if len(parts) > 2:  # Has subdomain
             potential_subdomain = parts[0]
 
@@ -110,11 +123,13 @@ class LanguageManager:
                 return language_key
 
             # Check for staging subdomain (e.g., 'lt-staging' -> 'lt')
-            if potential_subdomain.endswith('-staging'):
+            if potential_subdomain.endswith("-staging"):
                 base_subdomain = potential_subdomain[:-8]  # Remove '-staging' suffix
                 if base_subdomain in self.subdomain_to_language:
                     language_key = self.subdomain_to_language[base_subdomain]
-                    logger.debug(f"Staging subdomain match found: {potential_subdomain} -> {base_subdomain} -> {language_key}")
+                    logger.debug(
+                        f"Staging subdomain match found: {potential_subdomain} -> {base_subdomain} -> {language_key}"
+                    )
                     return language_key
 
         # Fall back to default
@@ -150,11 +165,13 @@ class LanguageManager:
         """
         return self.languages
 
+
 # Default configuration file path
 DEFAULT_CONFIG_PATH = Path(constants.CONFIG_DIR) / "languages.toml"
 
 # Global language manager instance
 _language_manager = None
+
 
 def init_language_manager(config_path: Optional[Union[str, Path]] = None) -> LanguageManager:
     """
@@ -168,6 +185,7 @@ def init_language_manager(config_path: Optional[Union[str, Path]] = None) -> Lan
     logger.info(f"Initializing language manager with config path: {config_path}")
     _language_manager = LanguageManager(config_path)
     return _language_manager
+
 
 def get_language_manager() -> LanguageManager:
     """

@@ -57,12 +57,8 @@ class User(Base):
 
     # DEPRECATED: Old single-token authentication columns (can be removed after migration)
     # Use UserToken model instead for multi-device support
-    auth_token: Mapped[Optional[str]] = mapped_column(
-        String, unique=True, nullable=True
-    )
-    auth_token_created_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    auth_token: Mapped[Optional[str]] = mapped_column(String, unique=True, nullable=True)
+    auth_token_created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # One-to-many relationship with messages
     messages: Mapped[List["Message"]] = relationship("Message", back_populates="author")
@@ -79,16 +75,10 @@ class UserToken(Base):
     __tablename__ = "user_tokens"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
-    )
-    device_info: Mapped[Optional[str]] = mapped_column(
-        String
-    )  # e.g., "iPhone 13", "Android Pixel"
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    device_info: Mapped[Optional[str]] = mapped_column(String)  # e.g., "iPhone 13", "Android Pixel"
 
     # Relationship back to user
     user: Mapped["User"] = relationship("User", back_populates="auth_tokens")
@@ -118,9 +108,7 @@ class Message(Base):
     channel: Mapped[str] = mapped_column(String, default="private", nullable=False)
 
     # Author/owner relationship
-    author_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
-    )
+    author_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     author: Mapped["User"] = relationship("User", back_populates="messages")
 
     # Common validation
@@ -166,15 +154,11 @@ class Quote(Message):
 
     __tablename__ = "quotes"
 
-    id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("messages.id"), primary_key=True
-    )
+    id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id"), primary_key=True)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     quote_type: Mapped[str] = mapped_column(String, nullable=False)
     original_author: Mapped[Optional[str]] = mapped_column(String)
-    date: Mapped[Optional[str]] = mapped_column(
-        String
-    )  # Flexible format for historical dates
+    date: Mapped[Optional[str]] = mapped_column(String)  # Flexible format for historical dates
     source: Mapped[Optional[str]] = mapped_column(Text)
     commentary: Mapped[Optional[str]] = mapped_column(
         Text
@@ -193,15 +177,11 @@ class Email(Message):
 
     __tablename__ = "emails"
 
-    id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("messages.id"), primary_key=True
-    )
+    id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id"), primary_key=True)
 
     subject: Mapped[Optional[str]] = mapped_column(String)
     content: Mapped[str] = mapped_column(Text)
-    preview_content: Mapped[str] = mapped_column(
-        Text, nullable=True
-    )  # Truncated at --MORE--
+    preview_content: Mapped[str] = mapped_column(Text, nullable=True)  # Truncated at --MORE--
     processed_content: Mapped[str] = mapped_column(Text)
 
     # Public version fields (for dual public/private visibility)
@@ -253,9 +233,7 @@ email_quotes = Table(
 class Article(Message):
     __tablename__ = "articles"
 
-    id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("messages.id"), primary_key=True
-    )
+    id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id"), primary_key=True)
 
     # Article-specific fields
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
@@ -285,22 +263,16 @@ class ReactWidget(Message):
 
     __tablename__ = "react_widgets"
 
-    id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("messages.id"), primary_key=True
-    )
+    id: Mapped[int] = mapped_column(Integer, ForeignKey("messages.id"), primary_key=True)
 
     slug: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
 
     code: Mapped[str] = mapped_column(Text)  # The React component code
-    compiled_code: Mapped[Optional[str]] = mapped_column(
-        Text
-    )  # Compiled code for browser use
+    compiled_code: Mapped[Optional[str]] = mapped_column(Text)  # Compiled code for browser use
     dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
-    data_file: Mapped[Optional[str]] = mapped_column(
-        Text
-    )  # The data file for the widget
+    data_file: Mapped[Optional[str]] = mapped_column(Text)  # The data file for the widget
 
     published: Mapped[Optional[bool]] = mapped_column(Boolean, default=False)
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
@@ -379,9 +351,7 @@ class WidgetVersion(Base):
     __tablename__ = "widget_versions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    widget_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("react_widgets.id"), nullable=False
-    )
+    widget_id: Mapped[int] = mapped_column(Integer, ForeignKey("react_widgets.id"), nullable=False)
 
     # Version metadata
     version_number: Mapped[int] = mapped_column(
@@ -391,14 +361,10 @@ class WidgetVersion(Base):
 
     # Code and compilation
     code: Mapped[str] = mapped_column(Text, nullable=False)
-    code_hash: Mapped[Optional[str]] = mapped_column(
-        String(32)
-    )  # MD5 hash for de-duplication
+    code_hash: Mapped[Optional[str]] = mapped_column(String(32))  # MD5 hash for de-duplication
     compiled_code: Mapped[Optional[str]] = mapped_column(Text)
     dependencies: Mapped[Optional[str]] = mapped_column(Text)  # Comma-separated list
-    data_file: Mapped[Optional[str]] = mapped_column(
-        Text
-    )  # The data file for the widget version
+    data_file: Mapped[Optional[str]] = mapped_column(Text)  # The data file for the widget version
 
     # AI improvement tracking
     prompt_used: Mapped[Optional[str]] = mapped_column(
@@ -407,20 +373,12 @@ class WidgetVersion(Base):
     previous_version_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("widget_versions.id")
     )
-    improvement_type: Mapped[Optional[str]] = mapped_column(
-        String
-    )  # 'canned', 'custom', 'manual'
-    dev_comments: Mapped[Optional[str]] = mapped_column(
-        Text
-    )  # Developer notes about this version
+    improvement_type: Mapped[Optional[str]] = mapped_column(String)  # 'canned', 'custom', 'manual'
+    dev_comments: Mapped[Optional[str]] = mapped_column(Text)  # Developer notes about this version
 
     # AI generation metadata
-    ai_model_used: Mapped[Optional[str]] = mapped_column(
-        String
-    )  # Which AI model was used
-    ai_usage_stats: Mapped[Optional[Dict]] = mapped_column(
-        Text
-    )  # Token usage, cost, etc.
+    ai_model_used: Mapped[Optional[str]] = mapped_column(String)  # Which AI model was used
+    ai_usage_stats: Mapped[Optional[Dict]] = mapped_column(Text)  # Token usage, cost, etc.
 
     # Status
     is_working: Mapped[Optional[bool]] = mapped_column(

@@ -17,28 +17,35 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def assertHtmlEqual(self, actual, expected):
         """Compare HTML strings ignoring whitespace differences."""
+
         def normalize(html):
-            return ' '.join(html.split())
+            return " ".join(html.split())
+
         self.assertEqual(normalize(actual), normalize(expected))
 
     def test_document_structure(self):
         """Test basic document structure with sections."""
-        text = dedent("""
+        text = dedent(
+            """
             First section
             ----
             Second section
             ----
             Third section
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        self.assertHtmlEqual(html, """
+        self.assertHtmlEqual(
+            html,
+            """
             <p>First section</p>
             <hr class="section-break" />
             <p>Second section</p>
             <hr class="section-break" />
             <p>Third section</p>
-        """)
+        """,
+        )
 
     def test_empty_document(self):
         """Test handling of empty document."""
@@ -47,59 +54,65 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_multi_quote_blocks(self):
         """Test multi-paragraph quote block formatting."""
-        text = dedent("""
+        text = dedent(
+            """
             Before quote
             <<<
             First quoted paragraph
             Second quoted paragraph
             >>>
             After quote
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        self.assertHtmlEqual(html, 
-            '<p>Before quote</p> '
+        self.assertHtmlEqual(
+            html,
+            "<p>Before quote</p> "
             '<div class="mlq">'
             '<button type="button" class="mlq-collapse" aria-label="Toggle visibility">'
             '<span class="mlq-collapse-icon">-</span>'
-            '</button>'
+            "</button>"
             '<div class="mlq-content">'
-            '<p>First quoted paragraph</p> '
-            '<p>Second quoted paragraph</p>'
-            '</div>'
-            '</div> '
-            '<p>After quote</p>'
+            "<p>First quoted paragraph</p> "
+            "<p>Second quoted paragraph</p>"
+            "</div>"
+            "</div> "
+            "<p>After quote</p>",
         )
 
     def test_colored_multi_quote_blocks(self):
         """Test colored multi-paragraph quote block formatting."""
-        text = dedent("""
+        text = dedent(
+            """
             Before quote
             <red> <<<
             First quoted paragraph
             Second quoted paragraph
             >>>
             After quote
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        
+
         # Check for both color and MLQ elements
         self.assertIn('class="mlq color-red"', html)
         self.assertIn('class="mlq-content"', html)
         self.assertIn('class="mlq-collapse"', html)
-        
+
         # Check content is present
-        self.assertIn('First quoted paragraph', html)
-        self.assertIn('Second quoted paragraph', html)
-        
+        self.assertIn("First quoted paragraph", html)
+        self.assertIn("Second quoted paragraph", html)
+
         # The surrounding structure should be correct
-        self.assertIn('<p>Before quote</p>', html)
-        self.assertIn('<p>After quote</p>', html)
+        self.assertIn("<p>Before quote</p>", html)
+        self.assertIn("<p>After quote</p>", html)
 
     def test_nested_multi_quote(self):
         """Test handling of nested multi-quote blocks."""
-        text = dedent("""
+        text = dedent(
+            """
             <<<
             Outer quote
             <<<
@@ -107,25 +120,27 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             >>>
             Still outer
             >>>
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
         self.assertIn('class="mlq"', html)
         self.assertIn('class="mlq-content"', html)
-        self.assertIn('Outer quote', html)
-        self.assertIn('Inner quote', html)
-        self.assertIn('Still outer', html)
+        self.assertIn("Outer quote", html)
+        self.assertIn("Inner quote", html)
+        self.assertIn("Still outer", html)
 
     def test_line_color_tags(self):
         """Test line-level color tag formatting."""
         text = "<red>Important warning"
         html = self.generate_html(text)
-        
-        self.assertHtmlEqual(html, 
+
+        self.assertHtmlEqual(
+            html,
             '<p><span class="colorblock color-red">'
             '<span class="sigil">💡</span>'
             '<span class="colortext-content">Important warning</span>'
-            '</span></p>'
+            "</span></p>",
         )
 
     def test_nested_color_tags(self):
@@ -139,31 +154,35 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_lists(self):
         """Test list formatting with different marker types."""
-        text = dedent("""
+        text = dedent(
+            """
             * First item
             * Second item
             # Number item
             > Arrow item
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        self.assertIn('<ul>', html)
+        self.assertIn("<ul>", html)
         self.assertIn('<li class="bullet-list">', html)
         self.assertIn('<li class="number-list">', html)
         self.assertIn('<li class="arrow-list">', html)
 
     def test_nested_lists(self):
         """Test nested list structures."""
-        text = dedent("""
+        text = dedent(
+            """
             * Parent item
             * Parent with nested
             # Nested number
             > Nested arrow
             * Back to parent
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        self.assertIn('<ul>', html)
+        self.assertIn("<ul>", html)
         self.assertIn('<li class="bullet-list">', html)
         self.assertIn('<li class="number-list">', html)
         self.assertIn('<li class="arrow-list">', html)
@@ -177,13 +196,15 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         text = "Hello 世界 World"
         html = self.generate_html(text)
         self.assertIn('<span class="annotated-chinese"', html)
-        self.assertIn('世界</span>', html)
+        self.assertIn("世界</span>", html)
         # Pinyin data is only present if dependencies are installed
         # Either we have pinyin data, or we have error fallback
-        has_pinyin = 'data-pinyin' in html
-        has_error = 'data-error=' in html
-        self.assertTrue(has_pinyin or has_error,
-            "Chinese annotation should have either pinyin data or error fallback")
+        has_pinyin = "data-pinyin" in html
+        has_error = "data-error=" in html
+        self.assertTrue(
+            has_pinyin or has_error,
+            "Chinese annotation should have either pinyin data or error fallback",
+        )
 
     def test_url_formatting(self):
         """Test URL formatting and attributes."""
@@ -200,7 +221,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         self.assertIn('class="wikilink"', html)
         self.assertIn('href="https://en.wikipedia.org/wiki/Article_Name"', html)
         self.assertIn('target="_blank"', html)
-        self.assertIn('Article Name', html)
+        self.assertIn("Article Name", html)
 
     def test_literal_text(self):
         """Test literal text blocks."""
@@ -213,19 +234,19 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
         """Test emphasized text."""
         text = "This is *emphasized* text"
         html = self.generate_html(text)
-        self.assertIn('<em>', html)
-        self.assertIn('emphasized', html)
-        self.assertIn('</em>', html)
+        self.assertIn("<em>", html)
+        self.assertIn("emphasized", html)
+        self.assertIn("</em>", html)
 
     def test_templates(self):
         """Test template formatting."""
         cases = [
             # Chess formatting using React currently
             # ('{{pgn|rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2}}', 'chess-board'),
-            ('{{isbn|1234567890}}', 'isbn'),
-            ('{{wikidata|Q12345}}', 'wikidata')
+            ("{{isbn|1234567890}}", "isbn"),
+            ("{{wikidata|Q12345}}", "wikidata"),
         ]
-        
+
         for input_text, expected_class in cases:
             html = self.generate_html(input_text)
             self.assertIn(f'class="{expected_class}"', html)
@@ -233,20 +254,21 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
     def test_html_escaping(self):
         """Test proper HTML escaping."""
         cases = [
-            ('Text & more', '&amp;'),
-            ('Text < text', '&lt;'),
-            ('Text > text', '&gt;'),
+            ("Text & more", "&amp;"),
+            ("Text < text", "&lt;"),
+            ("Text > text", "&gt;"),
             ('Text "quoted"', '"quoted"'),
-            ('<script>alert("xss")</script>', '&lt;script&gt;')
+            ('<script>alert("xss")</script>', "&lt;script&gt;"),
         ]
-        
+
         for input_text, expected in cases:
             html = self.generate_html(input_text)
             self.assertIn(expected, html)
 
     def test_complex_document(self):
         """Test a complete document with multiple features."""
-        text = dedent("""
+        text = dedent(
+            """
             Welcome to our guide
             ----
             <red>Important notice:
@@ -261,24 +283,26 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             Check https://example.com for *more* details
             
             {{isbn|1234567890}}
-        """).strip()
-        
+        """
+        ).strip()
+
         html = self.generate_html(text)
-        
+
         # Verify structural elements
         self.assertIn('<hr class="section-break"', html)
         self.assertIn('class="mlq"', html)
-        
+
         # Verify color formatting
         self.assertIn('class="colorblock color-red"', html)
         self.assertIn('<span class="sigil">💡</span>', html)
-        
+
         # Verify other elements
         self.assertIn('class="wikilink"', html)
         self.assertIn('class="annotated-chinese"', html)
         self.assertIn('target="_blank"', html)
         self.assertIn('class="isbn"', html)
-        self.assertIn('<em>', html)
+        self.assertIn("<em>", html)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

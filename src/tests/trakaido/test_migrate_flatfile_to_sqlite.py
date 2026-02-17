@@ -17,8 +17,12 @@ from trakaido.blueprints.stats_schema import (
 
 # Import the migration module (lives under tools/, added to sys.path below)
 import sys
+
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "tools")
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "tools"
+    ),
 )
 
 from migrate_flatfile_to_sqlite import (
@@ -55,12 +59,8 @@ class ComputeSnapshotAggregatesTests(unittest.TestCase):
         exposed, total_q, totals = compute_snapshot_aggregates(stats)
         self.assertEqual(exposed, 1)
         self.assertEqual(total_q, 7)
-        self.assertEqual(
-            totals["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5
-        )
-        self.assertEqual(
-            totals["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 2
-        )
+        self.assertEqual(totals["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+        self.assertEqual(totals["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 2)
 
     def test_multiple_words(self):
         stats = {
@@ -143,9 +143,7 @@ class DiscoverSnapshotDatesTests(unittest.TestCase):
 
     def test_finds_json_and_gzip_snapshots(self):
         with patch("constants.DATA_DIR", self.test_data_dir):
-            daily_dir = os.path.join(
-                self.test_data_dir, "trakaido", "user1", "lithuanian", "daily"
-            )
+            daily_dir = os.path.join(self.test_data_dir, "trakaido", "user1", "lithuanian", "daily")
             os.makedirs(daily_dir)
 
             # Create a plain JSON snapshot
@@ -175,9 +173,7 @@ class LoadSnapshotTests(unittest.TestCase):
 
     def test_load_json_snapshot(self):
         with patch("constants.DATA_DIR", self.test_data_dir):
-            daily_dir = os.path.join(
-                self.test_data_dir, "trakaido", "user1", "lithuanian", "daily"
-            )
+            daily_dir = os.path.join(self.test_data_dir, "trakaido", "user1", "lithuanian", "daily")
             os.makedirs(daily_dir)
 
             data = {"stats": {"w1": _make_word(mc_correct=5)}}
@@ -190,15 +186,11 @@ class LoadSnapshotTests(unittest.TestCase):
 
     def test_load_gzip_snapshot(self):
         with patch("constants.DATA_DIR", self.test_data_dir):
-            daily_dir = os.path.join(
-                self.test_data_dir, "trakaido", "user1", "lithuanian", "daily"
-            )
+            daily_dir = os.path.join(self.test_data_dir, "trakaido", "user1", "lithuanian", "daily")
             os.makedirs(daily_dir)
 
             data = {"stats": {"w1": _make_word(mc_correct=3)}}
-            with gzip.open(
-                os.path.join(daily_dir, "2025-01-14_current.json.gz"), "wt"
-            ) as f:
+            with gzip.open(os.path.join(daily_dir, "2025-01-14_current.json.gz"), "wt") as f:
                 json.dump(data, f)
 
             loaded = load_snapshot("user1", "lithuanian", "2025-01-14")
@@ -207,9 +199,7 @@ class LoadSnapshotTests(unittest.TestCase):
 
     def test_gzip_preferred_over_json(self):
         with patch("constants.DATA_DIR", self.test_data_dir):
-            daily_dir = os.path.join(
-                self.test_data_dir, "trakaido", "user1", "lithuanian", "daily"
-            )
+            daily_dir = os.path.join(self.test_data_dir, "trakaido", "user1", "lithuanian", "daily")
             os.makedirs(daily_dir)
 
             # Write different data to json and gzip
@@ -218,9 +208,7 @@ class LoadSnapshotTests(unittest.TestCase):
 
             with open(os.path.join(daily_dir, "2025-01-15_current.json"), "w") as f:
                 json.dump(json_data, f)
-            with gzip.open(
-                os.path.join(daily_dir, "2025-01-15_current.json.gz"), "wt"
-            ) as f:
+            with gzip.open(os.path.join(daily_dir, "2025-01-15_current.json.gz"), "wt") as f:
                 json.dump(gz_data, f)
 
             loaded = load_snapshot("user1", "lithuanian", "2025-01-15")
@@ -275,13 +263,16 @@ class MigrateUserTests(unittest.TestCase):
 
             # Verify via SqliteStatsDB
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
             loaded = db.get_all_stats()
 
             self.assertEqual(len(loaded["stats"]), 3)
             self.assertTrue(loaded["stats"]["w1"]["exposed"])
             self.assertEqual(
-                loaded["stats"]["w1"]["directPractice"]["multipleChoice_englishToTarget"]["correct"],
+                loaded["stats"]["w1"]["directPractice"]["multipleChoice_englishToTarget"][
+                    "correct"
+                ],
                 10,
             )
             self.assertEqual(
@@ -309,6 +300,7 @@ class MigrateUserTests(unittest.TestCase):
 
             # Check snapshots in SQLite
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
 
             self.assertTrue(db.snapshot_exists("2025-01-14"))
@@ -330,15 +322,14 @@ class MigrateUserTests(unittest.TestCase):
             )
             os.makedirs(daily_dir, exist_ok=True)
             gz_data = {"stats": {"w1": _make_word(exposed=True, mc_correct=3)}}
-            with gzip.open(
-                os.path.join(daily_dir, "2025-01-13_current.json.gz"), "wt"
-            ) as f:
+            with gzip.open(os.path.join(daily_dir, "2025-01-13_current.json.gz"), "wt") as f:
                 json.dump(gz_data, f)
 
             result = migrate_user("test_user", "lithuanian")
             self.assertTrue(result)
 
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
             self.assertTrue(db.snapshot_exists("2025-01-13"))
 
@@ -370,9 +361,7 @@ class MigrateUserTests(unittest.TestCase):
                     "w2": _make_word(mc_correct=10),
                 }
             }
-            user_dir = os.path.join(
-                self.test_data_dir, "trakaido", "test_user", "lithuanian"
-            )
+            user_dir = os.path.join(self.test_data_dir, "trakaido", "test_user", "lithuanian")
             with open(os.path.join(user_dir, "stats.json"), "w") as f:
                 json.dump(updated_stats, f)
 
@@ -380,6 +369,7 @@ class MigrateUserTests(unittest.TestCase):
             self.assertTrue(migrate_user("test_user", "lithuanian", force=True))
 
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
             loaded = db.get_all_stats()
             self.assertEqual(len(loaded["stats"]), 2)
@@ -402,9 +392,7 @@ class MigrateUserTests(unittest.TestCase):
         """Test that a user with no stats.json is skipped."""
         with patch("constants.DATA_DIR", self.test_data_dir):
             # Create user dir without stats.json
-            user_dir = os.path.join(
-                self.test_data_dir, "trakaido", "test_user", "lithuanian"
-            )
+            user_dir = os.path.join(self.test_data_dir, "trakaido", "test_user", "lithuanian")
             os.makedirs(user_dir)
 
             result = migrate_user("test_user", "lithuanian")
@@ -422,6 +410,7 @@ class MigrateUserTests(unittest.TestCase):
             self.assertTrue(migrate_user("test_user", "lithuanian"))
 
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
             loaded = db.get_all_stats()
             self.assertTrue(loaded["stats"]["w1"].get("markedAsKnown", False))
@@ -452,6 +441,7 @@ class MigrateUserTests(unittest.TestCase):
             self.assertTrue(migrate_user("test_user", "lithuanian"))
 
             from trakaido.blueprints.stats_sqlite import SqliteStatsDB
+
             db = SqliteStatsDB("test_user", "lithuanian")
 
             snap1 = db._get_snapshot("2025-01-13")

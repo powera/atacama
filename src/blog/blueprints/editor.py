@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 editor_assistant = EditorAssistant()
 
 
-@content_bp.route('/editor/new', methods=['GET'])
+@content_bp.route("/editor/new", methods=["GET"])
 @require_auth
 @navigable(name="Three-Stage Editor", category="main")
 def editor_new() -> ResponseReturnValue:
@@ -43,10 +43,10 @@ def editor_new() -> ResponseReturnValue:
     :return: Redirect to editor page
     """
     draft_id = str(uuid.uuid4())
-    return redirect(url_for('content.editor_draft', draft_id=draft_id))
+    return redirect(url_for("content.editor_draft", draft_id=draft_id))
 
 
-@content_bp.route('/editor/<draft_id>', methods=['GET'])
+@content_bp.route("/editor/<draft_id>", methods=["GET"])
 @require_auth
 def editor_draft(draft_id: str) -> ResponseReturnValue:
     """
@@ -61,23 +61,25 @@ def editor_draft(draft_id: str) -> ResponseReturnValue:
     channel_manager = get_channel_manager()
 
     with db.session() as db_session:
-        recent_messages = db_session.query(Email).options(
-            joinedload(Email.author)
-        ).order_by(
-            Email.created_at.desc()
-        ).limit(50).all()
+        recent_messages = (
+            db_session.query(Email)
+            .options(joinedload(Email.author))
+            .order_by(Email.created_at.desc())
+            .limit(50)
+            .all()
+        )
 
         return render_template(
-            'editor/three_stage.html',
+            "editor/three_stage.html",
             draft_id=draft_id,
             channels=channel_manager.channels,
             default_channel=channel_manager.default_channel,
             recent_messages=recent_messages,
-            colors=aml_parser.colorblocks.COLORS
+            colors=aml_parser.colorblocks.COLORS,
         )
 
 
-@content_bp.route('/api/editor/<draft_id>/ai-append', methods=['POST'])
+@content_bp.route("/api/editor/<draft_id>/ai-append", methods=["POST"])
 @require_auth
 def editor_ai_append(draft_id: str) -> ResponseReturnValue:
     """
@@ -97,41 +99,37 @@ def editor_ai_append(draft_id: str) -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    if not data or 'input' not in data:
+    if not data or "input" not in data:
         return handle_error("400", "Bad Request", "Input required")
 
-    user_input = data.get('input', '').strip()
-    current_content = data.get('current_content', '')
-    target_version = data.get('target_version', 'both')
-    model = data.get('model', 'gpt-5-nano')
+    user_input = data.get("input", "").strip()
+    current_content = data.get("current_content", "")
+    target_version = data.get("target_version", "both")
+    model = data.get("model", "gpt-5-nano")
 
     if not user_input:
         return handle_error("400", "Bad Request", "Input cannot be empty")
 
-    if target_version not in ('both', 'private'):
-        target_version = 'both'
-    if model not in ('gpt-5-nano', 'gpt-5-mini'):
-        model = 'gpt-5-nano'
+    if target_version not in ("both", "private"):
+        target_version = "both"
+    if model not in ("gpt-5-nano", "gpt-5-mini"):
+        model = "gpt-5-nano"
 
     try:
         result = editor_assistant.ai_append(
             user_input=user_input,
             current_content=current_content,
             target_version=target_version,
-            model=model
+            model=model,
         )
         return jsonify(result)
 
     except Exception as e:
         logger.error(f"Error in AI append: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'new_content': current_content
-        })
+        return jsonify({"success": False, "error": str(e), "new_content": current_content})
 
 
-@content_bp.route('/api/editor/<draft_id>/ai-command', methods=['POST'])
+@content_bp.route("/api/editor/<draft_id>/ai-command", methods=["POST"])
 @require_auth
 def editor_ai_command(draft_id: str) -> ResponseReturnValue:
     """
@@ -151,41 +149,37 @@ def editor_ai_command(draft_id: str) -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    if not data or 'input' not in data:
+    if not data or "input" not in data:
         return handle_error("400", "Bad Request", "Input required")
 
-    user_input = data.get('input', '').strip()
-    current_content = data.get('current_content', '')
-    target_version = data.get('target_version', 'both')
-    model = data.get('model', 'gpt-5-nano')
+    user_input = data.get("input", "").strip()
+    current_content = data.get("current_content", "")
+    target_version = data.get("target_version", "both")
+    model = data.get("model", "gpt-5-nano")
 
     if not user_input:
         return handle_error("400", "Bad Request", "Input cannot be empty")
 
-    if target_version not in ('both', 'private'):
-        target_version = 'both'
-    if model not in ('gpt-5-nano', 'gpt-5-mini'):
-        model = 'gpt-5-nano'
+    if target_version not in ("both", "private"):
+        target_version = "both"
+    if model not in ("gpt-5-nano", "gpt-5-mini"):
+        model = "gpt-5-nano"
 
     try:
         result = editor_assistant.ai_command(
             user_input=user_input,
             current_content=current_content,
             target_version=target_version,
-            model=model
+            model=model,
         )
         return jsonify(result)
 
     except Exception as e:
         logger.error(f"Error in AI command: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'new_content': current_content
-        })
+        return jsonify({"success": False, "error": str(e), "new_content": current_content})
 
 
-@content_bp.route('/api/editor/<draft_id>/quick-append', methods=['POST'])
+@content_bp.route("/api/editor/<draft_id>/quick-append", methods=["POST"])
 @require_auth
 def editor_quick_append(draft_id: str) -> ResponseReturnValue:
     """
@@ -206,34 +200,28 @@ def editor_quick_append(draft_id: str) -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    if not data or 'input' not in data:
+    if not data or "input" not in data:
         return handle_error("400", "Bad Request", "Input required")
 
-    user_input = data.get('input', '').strip()
-    current_content = data.get('current_content', '')
-    target_version = data.get('target_version', 'both')
+    user_input = data.get("input", "").strip()
+    current_content = data.get("current_content", "")
+    target_version = data.get("target_version", "both")
 
     if not user_input:
         return handle_error("400", "Bad Request", "Input cannot be empty")
 
     try:
         result = editor_assistant.quick_append(
-            user_input=user_input,
-            current_content=current_content,
-            target_version=target_version
+            user_input=user_input, current_content=current_content, target_version=target_version
         )
         return jsonify(result)
 
     except Exception as e:
         logger.error(f"Error in quick append: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'new_content': current_content
-        })
+        return jsonify({"success": False, "error": str(e), "new_content": current_content})
 
 
-@content_bp.route('/api/editor/<draft_id>/preview', methods=['POST'])
+@content_bp.route("/api/editor/<draft_id>/preview", methods=["POST"])
 @require_auth
 def editor_preview(draft_id: str) -> ResponseReturnValue:
     """
@@ -255,12 +243,12 @@ def editor_preview(draft_id: str) -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    content = data.get('content', '')
-    version = data.get('version', 'private')
+    content = data.get("content", "")
+    version = data.get("version", "private")
 
     try:
         # Extract public content if requested
-        if version == 'public':
+        if version == "public":
             content = aml_parser.extract_public_content(content)
 
         # Process the AML content
@@ -269,22 +257,20 @@ def editor_preview(draft_id: str) -> ResponseReturnValue:
         else:
             html = '<p class="empty-content">No content yet</p>'
 
-        return jsonify({
-            'success': True,
-            'html': html,
-            'error': None
-        })
+        return jsonify({"success": True, "html": html, "error": None})
 
     except Exception as e:
         logger.error(f"Error generating preview: {str(e)}")
-        return jsonify({
-            'success': False,
-            'html': f'<p class="error">Error generating preview: {str(e)}</p>',
-            'error': str(e)
-        })
+        return jsonify(
+            {
+                "success": False,
+                "html": f'<p class="error">Error generating preview: {str(e)}</p>',
+                "error": str(e),
+            }
+        )
 
 
-@content_bp.route('/api/editor/<draft_id>/publish', methods=['POST'])
+@content_bp.route("/api/editor/<draft_id>/publish", methods=["POST"])
 @require_auth
 def editor_publish(draft_id: str) -> ResponseReturnValue:
     """
@@ -311,35 +297,24 @@ def editor_publish(draft_id: str) -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    subject = data.get('subject', '').strip()
-    content = data.get('content', '').strip()
-    channel = data.get('channel', get_channel_manager().default_channel).strip()
-    parent_id = data.get('parent_id')
+    subject = data.get("subject", "").strip()
+    content = data.get("content", "").strip()
+    channel = data.get("channel", get_channel_manager().default_channel).strip()
+    parent_id = data.get("parent_id")
 
     if not subject:
-        return jsonify({
-            'success': False,
-            'error': 'Subject is required'
-        })
+        return jsonify({"success": False, "error": "Subject is required"})
 
     if not content:
-        return jsonify({
-            'success': False,
-            'error': 'Content is required'
-        })
+        return jsonify({"success": False, "error": "Content is required"})
 
     try:
         with db.session() as db_session:
             # Get fresh user object within transaction
-            db_user = get_or_create_user(db_session, session['user'])
+            db_user = get_or_create_user(db_session, session["user"])
 
             # Create message with full (private) content
-            message = Email(
-                subject=subject,
-                content=content,
-                author=db_user,
-                channel=channel
-            )
+            message = Email(subject=subject, content=content, author=db_user, channel=channel)
 
             # Handle message chain if parent_id is provided
             if parent_id:
@@ -360,17 +335,10 @@ def editor_publish(draft_id: str) -> ResponseReturnValue:
             tokens = list(tokenize(content))
             ast = parse(iter(tokens))
 
-            message.processed_content = generate_html(
-                ast,
-                message=message,
-                db_session=db_session
-            )
+            message.processed_content = generate_html(ast, message=message, db_session=db_session)
 
             message.preview_content = generate_html(
-                ast,
-                message=message,
-                db_session=db_session,
-                truncated=True
+                ast, message=message, db_session=db_session, truncated=True
             )
 
             # Generate public version (with private markers stripped)
@@ -382,9 +350,7 @@ def editor_publish(draft_id: str) -> ResponseReturnValue:
                 public_tokens = list(tokenize(public_content))
                 public_ast = parse(iter(public_tokens))
                 message.public_processed_content = generate_html(
-                    public_ast,
-                    message=message,
-                    db_session=db_session
+                    public_ast, message=message, db_session=db_session
                 )
             else:
                 # No private content, public version is same as private
@@ -394,24 +360,21 @@ def editor_publish(draft_id: str) -> ResponseReturnValue:
             db_session.commit()
             message_id = message.id
 
-        return jsonify({
-            'success': True,
-            'message_id': message_id,
-            'message_url': url_for('content.get_message', message_id=message_id),
-            'error': None
-        })
+        return jsonify(
+            {
+                "success": True,
+                "message_id": message_id,
+                "message_url": url_for("content.get_message", message_id=message_id),
+                "error": None,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error publishing draft: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'message_id': None,
-            'message_url': None
-        })
+        return jsonify({"success": False, "error": str(e), "message_id": None, "message_url": None})
 
 
-@content_bp.route('/api/editor/check-private', methods=['POST'])
+@content_bp.route("/api/editor/check-private", methods=["POST"])
 @require_auth
 def editor_check_private() -> ResponseReturnValue:
     """
@@ -429,8 +392,6 @@ def editor_check_private() -> ResponseReturnValue:
         return handle_error("400", "Bad Request", "Request must be JSON")
 
     data = request.get_json()
-    content = data.get('content', '')
+    content = data.get("content", "")
 
-    return jsonify({
-        'has_private': aml_parser.has_private_content(content)
-    })
+    return jsonify({"has_private": aml_parser.has_private_content(content)})

@@ -13,19 +13,7 @@ from . import widgets
 from . import editor  # Three-stage blog post editor
 
 # Export all blueprints for easy importing
-__all__ = [
-    'content_bp',
-    'quotes_bp', 
-    'feeds_bp',
-    'statistics_bp',
-    'widgets_bp'
-]
+__all__ = ["content_bp", "quotes_bp", "feeds_bp", "statistics_bp", "widgets_bp"]
 
 # Convenience list for bulk registration
-BLOG_BLUEPRINTS = [
-    content_bp,
-    quotes_bp,
-    feeds_bp,
-    statistics_bp,
-    widgets_bp
-]
+BLOG_BLUEPRINTS = [content_bp, quotes_bp, feeds_bp, statistics_bp, widgets_bp]

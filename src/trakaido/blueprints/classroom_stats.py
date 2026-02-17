@@ -140,7 +140,9 @@ def _get_classroom_membership_role(user_id: int, classroom_id: int) -> Optional[
     return role.value if hasattr(role, "value") else str(role)
 
 
-def _require_classroom_manager(user_id: int, classroom_id: int) -> Tuple[Optional[ResponseReturnValue], Optional[Dict[str, Any]]]:
+def _require_classroom_manager(
+    user_id: int, classroom_id: int
+) -> Tuple[Optional[ResponseReturnValue], Optional[Dict[str, Any]]]:
     role = _get_classroom_membership_role(user_id, classroom_id)
     if role is None:
         return (jsonify({"error": "Classroom not found for current user"}), 404), None
@@ -210,7 +212,9 @@ def _extract_progress(progress_payload: Dict[str, Any], period: str) -> Dict[str
     return progress_payload.get("progress", {})
 
 
-def _aggregate_classroom_period_stats(members: List[Dict[str, Any]], language: str, period: str) -> Dict[str, Any]:
+def _aggregate_classroom_period_stats(
+    members: List[Dict[str, Any]], language: str, period: str
+) -> Dict[str, Any]:
     period_calc = {
         "daily": calculate_daily_progress,
         "weekly": calculate_weekly_progress,
@@ -290,22 +294,22 @@ def _aggregate_classroom_period_stats(members: List[Dict[str, Any]], language: s
     }
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/classrooms/", methods=["GET"])
 @require_auth
 def get_user_classrooms_html() -> ResponseReturnValue:
     """Render classrooms list for the authenticated user."""
     user_id = int(g.user.id)
     classrooms = _get_user_classrooms_with_role(user_id)
-    language = getattr(g, 'current_language', 'lithuanian')
+    language = getattr(g, "current_language", "lithuanian")
     return render_template(
-        'trakaido/classrooms_list.html',
-        page_title='My Classrooms',
+        "trakaido/classrooms_list.html",
+        page_title="My Classrooms",
         classrooms=classrooms,
         language=language,
     )
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/members', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/classrooms/<int:classroom_id>/members", methods=["GET"])
 @require_auth
 def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
     """Render classroom member list (manager only)."""
@@ -314,15 +318,17 @@ def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
         return auth_error
 
     members = _get_classroom_member_rows(classroom_id)
-    language = getattr(g, 'current_language', 'lithuanian')
+    language = getattr(g, "current_language", "lithuanian")
 
     manager = get_language_manager()
-    language_names = {k: manager.get_language_config(k).name for k in manager.get_all_language_keys()}
+    language_names = {
+        k: manager.get_language_config(k).name for k in manager.get_all_language_keys()
+    }
     for member in members:
-        member['activeLanguages'] = _get_user_active_languages(str(member['userId']))
+        member["activeLanguages"] = _get_user_active_languages(str(member["userId"]))
 
     return render_template(
-        'trakaido/classroom_members.html',
+        "trakaido/classroom_members.html",
         page_title=f"{classroom['name']} · Members",
         classroom=classroom,
         members=members,
@@ -331,7 +337,9 @@ def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
     )
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/stats/<language>/<period>', methods=['GET'])
+@trakaido_bp.route(
+    "/api/trakaido/classrooms/<int:classroom_id>/stats/<language>/<period>", methods=["GET"]
+)
 @require_auth
 def get_classroom_stats_html(classroom_id: int, language: str, period: str) -> ResponseReturnValue:
     """Render classroom aggregate period stats (manager only)."""
@@ -339,7 +347,7 @@ def get_classroom_stats_html(classroom_id: int, language: str, period: str) -> R
     if lang_error:
         return lang_error
 
-    if period not in {'daily', 'weekly', 'monthly'}:
+    if period not in {"daily", "weekly", "monthly"}:
         return jsonify({"error": "Invalid period. Use daily, weekly, or monthly."}), 400
 
     auth_error, classroom = _require_classroom_manager(int(g.user.id), classroom_id)
@@ -350,19 +358,24 @@ def get_classroom_stats_html(classroom_id: int, language: str, period: str) -> R
     stats_payload = _aggregate_classroom_period_stats(members, language, period)
 
     return render_template(
-        'trakaido/classroom_period_stats.html',
+        "trakaido/classroom_period_stats.html",
         page_title=f"{classroom['name']} · {period.capitalize()} stats",
         classroom=classroom,
         language=language,
         period=period,
-        aggregate=stats_payload['aggregate'],
-        members=stats_payload['members'],
+        aggregate=stats_payload["aggregate"],
+        members=stats_payload["members"],
     )
 
 
-@trakaido_bp.route('/api/trakaido/classrooms/<int:classroom_id>/members/<int:user_id>/stats/<language>', methods=['GET'])
+@trakaido_bp.route(
+    "/api/trakaido/classrooms/<int:classroom_id>/members/<int:user_id>/stats/<language>",
+    methods=["GET"],
+)
 @require_auth
-def get_classroom_member_stats_html(classroom_id: int, user_id: int, language: str) -> ResponseReturnValue:
+def get_classroom_member_stats_html(
+    classroom_id: int, user_id: int, language: str
+) -> ResponseReturnValue:
     """Render one member detail stats page (manager only)."""
     lang_error = _validate_language(language)
     if lang_error:
@@ -373,7 +386,7 @@ def get_classroom_member_stats_html(classroom_id: int, user_id: int, language: s
         return auth_error
 
     members = _get_classroom_member_rows(classroom_id)
-    member = next((m for m in members if int(m['userId']) == user_id), None)
+    member = next((m for m in members if int(m["userId"]) == user_id), None)
     if member is None:
         return jsonify({"error": "User is not a member of this classroom"}), 404
 
@@ -383,7 +396,7 @@ def get_classroom_member_stats_html(classroom_id: int, user_id: int, language: s
     monthly = calculate_monthly_progress(str(user_id), language)
 
     return render_template(
-        'trakaido/classroom_member_stats.html',
+        "trakaido/classroom_member_stats.html",
         page_title=f"{classroom['name']} · {member['name']} stats",
         classroom=classroom,
         language=language,
@@ -395,7 +408,7 @@ def get_classroom_member_stats_html(classroom_id: int, user_id: int, language: s
     )
 
 
-@trakaido_bp.route('/api/trakaido/classroom_stats/<language>/member/<user_id>', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/classroom_stats/<language>/member/<user_id>", methods=["GET"])
 @require_admin
 def get_classroom_member_summary(language: str, user_id: str) -> ResponseReturnValue:
     """Get normalized summary for one member."""
@@ -409,7 +422,7 @@ def get_classroom_member_summary(language: str, user_id: str) -> ResponseReturnV
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/classroom_stats/<language>/members', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/classroom_stats/<language>/members", methods=["POST"])
 @require_admin
 def get_classroom_members_summary(language: str) -> ResponseReturnValue:
     """Get normalized summaries for multiple members in one request.
@@ -438,18 +451,20 @@ def get_classroom_members_summary(language: str) -> ResponseReturnValue:
             except Exception as member_error:
                 errors.append({"userId": str(user_id), "error": str(member_error)})
 
-        return jsonify({
-            "language": language,
-            "memberCount": len(summaries),
-            "members": summaries,
-            "errors": errors,
-        })
+        return jsonify(
+            {
+                "language": language,
+                "memberCount": len(summaries),
+                "members": summaries,
+                "errors": errors,
+            }
+        )
     except Exception as e:
         logger.error(f"Error getting classroom member summaries: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/admin/classrooms', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/admin/classrooms", methods=["GET"])
 @require_admin
 def admin_list_classrooms_html() -> ResponseReturnValue:
     """Admin HTML page: list all classrooms and create new ones."""
@@ -459,13 +474,13 @@ def admin_list_classrooms_html() -> ResponseReturnValue:
         classroom_list = [_classroom_payload(c) for c in classrooms]
 
     return render_template(
-        'trakaido/admin_classrooms.html',
-        page_title='Admin · Classrooms',
+        "trakaido/admin_classrooms.html",
+        page_title="Admin · Classrooms",
         classrooms=classroom_list,
     )
 
 
-@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/admin/classrooms/<int:classroom_id>", methods=["GET"])
 @require_admin
 def admin_classroom_detail_html(classroom_id: int) -> ResponseReturnValue:
     """Admin HTML page: view and manage classroom members."""
@@ -477,14 +492,14 @@ def admin_classroom_detail_html(classroom_id: int) -> ResponseReturnValue:
 
     members = _get_classroom_member_rows(classroom_id)
     return render_template(
-        'trakaido/admin_classroom_detail.html',
+        "trakaido/admin_classroom_detail.html",
         page_title=f"Admin · {classroom_data['name']}",
         classroom=classroom_data,
         members=members,
     )
 
 
-@trakaido_bp.route('/api/trakaido/admin/users/search', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/admin/users/search", methods=["GET"])
 @require_admin
 def admin_search_users_by_email() -> ResponseReturnValue:
     """Admin lookup endpoint for users by partial email match."""
@@ -507,20 +522,22 @@ def admin_search_users_by_email() -> ResponseReturnValue:
         )
         users = db_session.execute(stmt).scalars().all()
 
-    return jsonify({
-        "count": len(users),
-        "users": [
-            {
-                "id": user.id,
-                "email": user.email,
-                "name": user.name,
-            }
-            for user in users
-        ],
-    })
+    return jsonify(
+        {
+            "count": len(users),
+            "users": [
+                {
+                    "id": user.id,
+                    "email": user.email,
+                    "name": user.name,
+                }
+                for user in users
+            ],
+        }
+    )
 
 
-@trakaido_bp.route('/api/trakaido/admin/classrooms', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/admin/classrooms", methods=["POST"])
 @require_admin
 def admin_create_classroom() -> ResponseReturnValue:
     """Admin endpoint to create a student group (classroom)."""
@@ -566,12 +583,17 @@ def admin_create_classroom() -> ResponseReturnValue:
 
         classroom_payload = _classroom_payload(classroom)
 
-    return jsonify({
-        "classroom": classroom_payload,
-    }), 201
+    return (
+        jsonify(
+            {
+                "classroom": classroom_payload,
+            }
+        ),
+        201,
+    )
 
 
-@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>/members', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/admin/classrooms/<int:classroom_id>/members", methods=["POST"])
 @require_admin
 def admin_add_classroom_member(classroom_id: int) -> ResponseReturnValue:
     """Admin endpoint to add a member/manager to a classroom by email."""
@@ -617,13 +639,20 @@ def admin_add_classroom_member(classroom_id: int) -> ResponseReturnValue:
         classroom_payload = _classroom_payload(classroom)
         member_payload = _membership_payload(user, existing_membership)
 
-    return jsonify({
-        "classroom": classroom_payload,
-        "member": member_payload,
-    }), status_code
+    return (
+        jsonify(
+            {
+                "classroom": classroom_payload,
+                "member": member_payload,
+            }
+        ),
+        status_code,
+    )
 
 
-@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>/members/remove', methods=['POST'])
+@trakaido_bp.route(
+    "/api/trakaido/admin/classrooms/<int:classroom_id>/members/remove", methods=["POST"]
+)
 @require_admin
 def admin_remove_classroom_member(classroom_id: int) -> ResponseReturnValue:
     """Admin endpoint to remove a classroom member by email."""
@@ -662,7 +691,9 @@ def admin_remove_classroom_member(classroom_id: int) -> ResponseReturnValue:
         db_session.delete(membership)
         classroom_payload = _classroom_payload(classroom)
 
-    return jsonify({
-        "classroom": classroom_payload,
-        "removed": removed_member_payload,
-    })
+    return jsonify(
+        {
+            "classroom": classroom_payload,
+            "removed": removed_member_payload,
+        }
+    )

@@ -6,6 +6,7 @@ from .lexer import tokenize
 from .parser import parse
 from .html_generator import generate_html
 
+
 def process_message(text, **kwargs):
     """Main entry point for message processing."""
     tokens = tokenize(text)
@@ -17,8 +18,8 @@ def process_message(text, **kwargs):
 # Handles:
 #   - <<PRIVATE: inline content >>
 #   - <<<PRIVATE: multi-line content >>>
-_PRIVATE_INLINE_PATTERN = re.compile(r'<<PRIVATE:\s*(.*?)\s*>>', re.DOTALL)
-_PRIVATE_MULTILINE_PATTERN = re.compile(r'<<<PRIVATE:\s*(.*?)\s*>>>', re.DOTALL)
+_PRIVATE_INLINE_PATTERN = re.compile(r"<<PRIVATE:\s*(.*?)\s*>>", re.DOTALL)
+_PRIVATE_MULTILINE_PATTERN = re.compile(r"<<<PRIVATE:\s*(.*?)\s*>>>", re.DOTALL)
 
 
 def extract_public_content(text: str) -> str:
@@ -39,19 +40,19 @@ def extract_public_content(text: str) -> str:
         return text
 
     # First remove multi-line private blocks (<<< >>>)
-    result = _PRIVATE_MULTILINE_PATTERN.sub('', text)
+    result = _PRIVATE_MULTILINE_PATTERN.sub("", text)
 
     # Then remove inline private markers (<< >>)
-    result = _PRIVATE_INLINE_PATTERN.sub('', result)
+    result = _PRIVATE_INLINE_PATTERN.sub("", result)
 
     # Clean up any resulting double whitespace or blank lines
     # Replace multiple consecutive blank lines with single blank line
-    result = re.sub(r'\n\s*\n\s*\n', '\n\n', result)
+    result = re.sub(r"\n\s*\n\s*\n", "\n\n", result)
 
     # Remove trailing whitespace from lines (but preserve structure)
-    lines = result.split('\n')
+    lines = result.split("\n")
     cleaned_lines = [line.rstrip() for line in lines]
-    result = '\n'.join(cleaned_lines)
+    result = "\n".join(cleaned_lines)
 
     return result.strip()
 
@@ -72,4 +73,11 @@ def has_private_content(text: str) -> bool:
     return bool(_PRIVATE_INLINE_PATTERN.search(text) or _PRIVATE_MULTILINE_PATTERN.search(text))
 
 
-__all__ = ['tokenize', 'parse', 'generate_html', 'process_message', 'extract_public_content', 'has_private_content']
+__all__ = [
+    "tokenize",
+    "parse",
+    "generate_html",
+    "process_message",
+    "extract_public_content",
+    "has_private_content",
+]

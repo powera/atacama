@@ -17,9 +17,12 @@ from common.base.logging_config import get_logger
 trakaido_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Create the blueprint that will be used by all trakaido modules
-trakaido_bp = Blueprint('trakaido', __name__,
-                       static_folder=os.path.join(trakaido_dir, 'static'),
-                       template_folder=os.path.join(trakaido_dir, 'templates'))
+trakaido_bp = Blueprint(
+    "trakaido",
+    __name__,
+    static_folder=os.path.join(trakaido_dir, "static"),
+    template_folder=os.path.join(trakaido_dir, "templates"),
+)
 
 # Lithuanian character set for validation and sanitization
 LITHUANIAN_CHARS = "aąbcčdeęėfghiįyjklmnoprsštuųūvzž"
@@ -29,6 +32,7 @@ TRAKAIDO_PATH_PROD = "/home/trakaido/trakaido/build/index.html"
 
 # Shared logger
 logger = get_logger(__name__)
+
 
 # Serve the Trakaido app from "/"
 @trakaido_bp.route("/")
@@ -40,7 +44,9 @@ def trakaido_index() -> ResponseReturnValue:
         return send_file(TRAKAIDO_PATH_PROD)
     else:
         logger.error(f"Trakaido index.html not found at: {TRAKAIDO_PATH_PROD}")
-        return Response("Trakaido app not found. Please ensure the build directory exists.", status=404)
+        return Response(
+            "Trakaido app not found. Please ensure the build directory exists.", status=404
+        )
 
 
 # Serve images from the Trakaido build directory
@@ -49,18 +55,18 @@ def trakaido_images(filename: str) -> ResponseReturnValue:
     """Serve images from the Trakaido build directory."""
     images_dir = "/home/trakaido/trakaido/build/images"
     image_path = os.path.join(images_dir, filename)
-    
+
     # Security check: ensure the path is within the images directory
     if not os.path.abspath(image_path).startswith(os.path.abspath(images_dir)):
         logger.warning(f"Attempted path traversal attack: {filename}")
         return Response("Forbidden", status=403)
-    
+
     if os.path.exists(image_path) and os.path.isfile(image_path):
         return send_file(image_path)
     else:
         logger.warning(f"Image not found: {image_path}")
         return Response("Image not found", status=404)
-    
+
 
 # Serve JSON from the Trakaido build directory
 @trakaido_bp.route("/<path:filename>.json")
@@ -68,14 +74,14 @@ def trakaido_json(filename: str) -> ResponseReturnValue:
     """Serve JSON files from the Trakaido build directory."""
     json_dir = "/home/trakaido/trakaido/build"
     json_path = os.path.join(json_dir, f"{filename}.json")
-    
+
     # Security check: ensure the path is within the JSON directory
     if not os.path.abspath(json_path).startswith(os.path.abspath(json_dir)):
         logger.warning(f"Attempted path traversal attack: {filename}")
         return Response("Forbidden", status=403)
-    
+
     if os.path.exists(json_path) and os.path.isfile(json_path):
-        return send_file(json_path, mimetype='application/json; charset=utf-8')
+        return send_file(json_path, mimetype="application/json; charset=utf-8")
     else:
         logger.warning(f"JSON file not found: {json_path}")
         return Response("File not found", status=404)
@@ -95,13 +101,13 @@ def sanitize_lithuanian_word(word: str, character_set: Optional[str] = None) -> 
     word = word.strip().lower()
 
     # Replace spaces with underscores for multi-word phrases
-    word_with_underscores = word.replace(' ', '_')
+    word_with_underscores = word.replace(" ", "_")
 
     # Use provided character set or default to Lithuanian
     chars = character_set if character_set is not None else LITHUANIAN_CHARS
 
     # Allow specified letters, basic Latin letters, digits, and safe characters
-    sanitized = re.sub(r'[^a-z0-9' + chars + r'\-_]', '', word_with_underscores)
+    sanitized = re.sub(r"[^a-z0-9" + chars + r"\-_]", "", word_with_underscores)
 
     if not sanitized or len(sanitized) > 100:
         return ""

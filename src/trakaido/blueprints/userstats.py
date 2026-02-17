@@ -12,24 +12,20 @@ from flask.typing import ResponseReturnValue
 from atacama.decorators.auth import require_auth
 from trakaido.blueprints.shared import trakaido_bp, logger
 from trakaido.blueprints.date_utils import get_current_day_key
-from trakaido.blueprints.nonce_utils import (
-    load_nonces,
-    save_nonces,
-    check_nonce_duplicates
-)
+from trakaido.blueprints.nonce_utils import load_nonces, save_nonces, check_nonce_duplicates
 from trakaido.blueprints.stats_schema import (
     DIRECT_PRACTICE_TYPES,
     CONTEXTUAL_EXPOSURE_TYPES,
     create_empty_word_stats,
     validate_and_normalize_word_stats,
-    merge_word_stats
+    merge_word_stats,
 )
 from trakaido.blueprints.stats_backend import (
     get_journey_stats,
     ensure_daily_snapshots,
     calculate_daily_progress,
     calculate_weekly_progress,
-    calculate_monthly_progress
+    calculate_monthly_progress,
 )
 from trakaido.blueprints.stats_metrics import compute_member_summary
 
@@ -47,12 +43,13 @@ USERSTATS_API_DOCS = {
     "GET /api/trakaido/journeystats/daily": "Get daily stats (today's progress)",
     "GET /api/trakaido/journeystats/weekly": "Get weekly stats (7-day progress)",
     "GET /api/trakaido/journeystats/monthly": "Get monthly stats with daily breakdown (questions answered, exposed words count, newly exposed words) and monthly aggregate",
-    "POST /api/trakaido/journeystats/merge": "Merge local (demo mode) stats with server stats - for mobile clients syncing after first login"
+    "POST /api/trakaido/journeystats/merge": "Merge local (demo mode) stats with server stats - for mobile clients syncing after first login",
 }
 
 ##############################################################################
 # Increment Helper Functions
 ##############################################################################
+
 
 def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
     """Parse stat type and return (category, activity, is_contextual).
@@ -66,7 +63,9 @@ def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
         ValueError: If stat_type is invalid
     """
     if "." not in stat_type:
-        raise ValueError(f"Invalid stat type format: {stat_type}. Expected format: 'category.activity'")
+        raise ValueError(
+            f"Invalid stat type format: {stat_type}. Expected format: 'category.activity'"
+        )
 
     parts = stat_type.split(".", 1)
     category = parts[0]
@@ -81,7 +80,9 @@ def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
         if activity not in DIRECT_PRACTICE_TYPES:
             raise ValueError(f"Invalid direct practice type: {activity}")
     else:
-        raise ValueError(f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'")
+        raise ValueError(
+            f"Invalid category: {category}. Must be 'directPractice' or 'contextualExposure'"
+        )
 
     return category, activity, is_contextual
 
@@ -93,7 +94,7 @@ def increment_word_stat(
     activity: str,
     correct: bool,
     is_contextual: bool,
-    current_timestamp: int
+    current_timestamp: int,
 ) -> Dict[str, Any]:
     """Increment stats for a single word and update timestamps.
 
@@ -116,7 +117,11 @@ def increment_word_stat(
     word_stats = journey_stats.stats["stats"][word_key]
 
     # Ensure the word stats have the new schema structure
-    if "directPractice" not in word_stats or "contextualExposure" not in word_stats or "practiceHistory" not in word_stats:
+    if (
+        "directPractice" not in word_stats
+        or "contextualExposure" not in word_stats
+        or "practiceHistory" not in word_stats
+    ):
         # Migrate to new schema if needed
         word_stats = validate_and_normalize_word_stats(word_stats)
         journey_stats.stats["stats"][word_key] = word_stats
@@ -124,9 +129,13 @@ def increment_word_stat(
     # Increment the appropriate counter
     if category not in word_stats:
         if category == "directPractice":
-            word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES}
+            word_stats[category] = {
+                act: {"correct": 0, "incorrect": 0} for act in DIRECT_PRACTICE_TYPES
+            }
         else:
-            word_stats[category] = {act: {"correct": 0, "incorrect": 0} for act in CONTEXTUAL_EXPOSURE_TYPES}
+            word_stats[category] = {
+                act: {"correct": 0, "incorrect": 0} for act in CONTEXTUAL_EXPOSURE_TYPES
+            }
 
     if activity not in word_stats[category]:
         word_stats[category][activity] = {"correct": 0, "incorrect": 0}
@@ -141,7 +150,7 @@ def increment_word_stat(
         word_stats["practiceHistory"] = {
             "lastSeen": None,
             "lastCorrectAnswer": None,
-            "lastIncorrectAnswer": None
+            "lastIncorrectAnswer": None,
         }
 
     # Always update lastSeen
@@ -164,13 +173,13 @@ def increment_word_stat(
 ##############################################################################
 # Journey Stats API Routes
 ##############################################################################
-@trakaido_bp.route('/api/trakaido/journeystats/', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/", methods=["GET"])
 @require_auth
 def get_all_journey_stats() -> ResponseReturnValue:
     """Get all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         journey_stats = get_journey_stats(user_id, language)
 
         # Optional shape extension used by dashboard surfaces that need
@@ -187,26 +196,26 @@ def get_all_journey_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/summary', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/summary", methods=["GET"])
 @require_auth
 def get_member_stats_summary() -> ResponseReturnValue:
     """Get normalized summary metrics for the authenticated user dashboard."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         return jsonify(compute_member_summary(user_id, language))
     except Exception as e:
         logger.error(f"Error getting journey stats summary: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/', methods=['PUT'])
+@trakaido_bp.route("/api/trakaido/journeystats/", methods=["PUT"])
 @require_auth
 def save_all_journey_stats() -> ResponseReturnValue:
     """Save all journey stats for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         data = request.get_json()
 
         if not data or "stats" not in data:
@@ -223,24 +232,29 @@ def save_all_journey_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/word', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/journeystats/word", methods=["POST"])
 @require_auth
 def update_word_stats() -> ResponseReturnValue:
     """Update stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         data = request.get_json()
 
         if not data or "wordKey" not in data or "wordStats" not in data:
-            return jsonify({"error": "Invalid request body. Expected 'wordKey' and 'wordStats' fields."}), 400
+            return (
+                jsonify(
+                    {"error": "Invalid request body. Expected 'wordKey' and 'wordStats' fields."}
+                ),
+                400,
+            )
 
         word_key = data["wordKey"]
         word_stats = data["wordStats"]
 
         journey_stats = get_journey_stats(user_id, language)
         journey_stats.set_word_stats(word_key, word_stats)
-        
+
         if journey_stats.save_with_daily_update():
             return jsonify({"success": True})
         else:
@@ -250,13 +264,13 @@ def update_word_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/word/<word_key>', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/word/<word_key>", methods=["GET"])
 @require_auth
 def get_word_stats(word_key: str) -> ResponseReturnValue:
     """Get stats for a specific word for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         journey_stats = get_journey_stats(user_id, language)
         word_stats = journey_stats.get_word_stats(word_key)
         return jsonify({"wordStats": word_stats})
@@ -265,23 +279,23 @@ def get_word_stats(word_key: str) -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/increment', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/journeystats/increment", methods=["POST"])
 @require_auth
 def increment_word_stats() -> ResponseReturnValue:
     """Increment stats for a single question with nonce protection."""
     try:
         user_id = str(g.user.id)
         data = request.get_json()
-        
+
         # Validate request body
         if not data:
             return jsonify({"error": "Invalid request body"}), 400
-        
+
         required_fields = ["wordKey", "statType", "correct", "nonce"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
-        
+
         word_key = data["wordKey"]
         stat_type = data["statType"]
         correct = data["correct"]
@@ -299,7 +313,7 @@ def increment_word_stats() -> ResponseReturnValue:
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
 
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         current_day = get_current_day_key()
 
         # Check if nonce has already been used (today or yesterday)
@@ -318,7 +332,7 @@ def increment_word_stats() -> ResponseReturnValue:
         word_stats = increment_word_stat(
             journey_stats, word_key, category, activity, correct, is_contextual, current_timestamp
         )
-        
+
         # Save updated stats
         if not journey_stats.save_with_daily_update():
             return jsonify({"error": "Failed to save stats"}), 500
@@ -327,22 +341,26 @@ def increment_word_stats() -> ResponseReturnValue:
         used_nonces = load_nonces(user_id, current_day, language)
         used_nonces.add(nonce)
         if not save_nonces(user_id, current_day, used_nonces, language):
-            logger.warning(f"Failed to save nonce for user {user_id} day {current_day} language {language}")
+            logger.warning(
+                f"Failed to save nonce for user {user_id} day {current_day} language {language}"
+            )
 
-        return jsonify({
-            "success": True,
-            "wordKey": word_key,
-            "statType": stat_type,
-            "correct": correct,
-            "newStats": word_stats[category][activity]
-        })
-        
+        return jsonify(
+            {
+                "success": True,
+                "wordKey": word_key,
+                "statType": stat_type,
+                "correct": correct,
+                "newStats": word_stats[category][activity],
+            }
+        )
+
     except Exception as e:
         logger.error(f"Error incrementing word stats: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/bulk_increment', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/journeystats/bulk_increment", methods=["POST"])
 @require_auth
 def bulk_increment_word_stats() -> ResponseReturnValue:
     """Bulk increment stats for multiple questions with nonce protection.
@@ -378,7 +396,12 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
 
         # Validate request body
         if not data or "increments" not in data or "nonce" not in data:
-            return jsonify({"error": "Invalid request body. Expected 'nonce' and 'increments' fields."}), 400
+            return (
+                jsonify(
+                    {"error": "Invalid request body. Expected 'nonce' and 'increments' fields."}
+                ),
+                400,
+            )
 
         nonce = data["nonce"]
         increments = data["increments"]
@@ -396,7 +419,7 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
         if len(increments) > 1000:
             return jsonify({"error": "Maximum 1000 increments per request"}), 400
 
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         current_day = get_current_day_key()
 
         # Check if this batch nonce has already been used
@@ -424,11 +447,13 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
 
                 if missing_fields:
                     failed_count += 1
-                    results.append({
-                        "index": idx,
-                        "status": "failed",
-                        "reason": f"Missing fields: {', '.join(missing_fields)}"
-                    })
+                    results.append(
+                        {
+                            "index": idx,
+                            "status": "failed",
+                            "reason": f"Missing fields: {', '.join(missing_fields)}",
+                        }
+                    )
                     continue
 
                 word_key = increment["wordKey"]
@@ -438,11 +463,9 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
                 # Validate correct field
                 if not isinstance(correct, bool):
                     failed_count += 1
-                    results.append({
-                        "index": idx,
-                        "status": "failed",
-                        "reason": "'correct' must be a boolean"
-                    })
+                    results.append(
+                        {"index": idx, "status": "failed", "reason": "'correct' must be a boolean"}
+                    )
                     continue
 
                 # Parse stat type using helper function
@@ -450,31 +473,26 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
                     category, activity, is_contextual = parse_stat_type(stat_type)
                 except ValueError as e:
                     failed_count += 1
-                    results.append({
-                        "index": idx,
-                        "status": "failed",
-                        "reason": str(e)
-                    })
+                    results.append({"index": idx, "status": "failed", "reason": str(e)})
                     continue
 
                 # Increment the word stats using helper function
                 increment_word_stat(
-                    journey_stats, word_key, category, activity, correct, is_contextual, current_timestamp
+                    journey_stats,
+                    word_key,
+                    category,
+                    activity,
+                    correct,
+                    is_contextual,
+                    current_timestamp,
                 )
 
                 processed_count += 1
-                results.append({
-                    "index": idx,
-                    "status": "success"
-                })
+                results.append({"index": idx, "status": "success"})
 
             except Exception as e:
                 failed_count += 1
-                results.append({
-                    "index": idx,
-                    "status": "failed",
-                    "reason": str(e)
-                })
+                results.append({"index": idx, "status": "failed", "reason": str(e)})
                 logger.error(f"Error processing increment {idx}: {str(e)}")
 
         # Save updated stats if any were processed
@@ -483,31 +501,35 @@ def bulk_increment_word_stats() -> ResponseReturnValue:
                 return jsonify({"error": "Failed to save stats after processing"}), 500
 
             # Save the batch nonce
-            language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+            language = g.current_language if hasattr(g, "current_language") else "lithuanian"
             used_nonces = load_nonces(user_id, current_day, language)
             used_nonces.add(nonce)
             if not save_nonces(user_id, current_day, used_nonces, language):
-                logger.warning(f"Failed to save nonce for user {user_id} day {current_day} language {language}")
+                logger.warning(
+                    f"Failed to save nonce for user {user_id} day {current_day} language {language}"
+                )
 
-        return jsonify({
-            "success": True,
-            "processed": processed_count,
-            "failed": failed_count,
-            "results": results
-        })
+        return jsonify(
+            {
+                "success": True,
+                "processed": processed_count,
+                "failed": failed_count,
+                "results": results,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error in bulk increment: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/daily', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/daily", methods=["GET"])
 @require_auth
 def get_daily_stats() -> ResponseReturnValue:
     """Get daily stats (today's progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         daily_progress = calculate_daily_progress(user_id, language)
 
         if "error" in daily_progress:
@@ -519,13 +541,13 @@ def get_daily_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/weekly', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/weekly", methods=["GET"])
 @require_auth
 def get_weekly_stats() -> ResponseReturnValue:
     """Get weekly stats (7-day progress) for the authenticated user."""
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         weekly_progress = calculate_weekly_progress(user_id, language)
 
         if "error" in weekly_progress:
@@ -537,7 +559,7 @@ def get_weekly_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/monthly', methods=['GET'])
+@trakaido_bp.route("/api/trakaido/journeystats/monthly", methods=["GET"])
 @require_auth
 def get_monthly_stats() -> ResponseReturnValue:
     """
@@ -549,7 +571,7 @@ def get_monthly_stats() -> ResponseReturnValue:
     """
     try:
         user_id = str(g.user.id)
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         monthly_progress = calculate_monthly_progress(user_id, language)
 
         if "error" in monthly_progress:
@@ -561,7 +583,7 @@ def get_monthly_stats() -> ResponseReturnValue:
         return jsonify({"error": str(e)}), 500
 
 
-@trakaido_bp.route('/api/trakaido/journeystats/merge', methods=['POST'])
+@trakaido_bp.route("/api/trakaido/journeystats/merge", methods=["POST"])
 @require_auth
 def merge_local_stats() -> ResponseReturnValue:
     """Merge local (demo mode) stats with server stats.
@@ -629,7 +651,7 @@ def merge_local_stats() -> ResponseReturnValue:
         if not isinstance(local_word_stats, dict):
             return jsonify({"error": "Field 'localStats.stats' must be an object"}), 400
 
-        language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
+        language = g.current_language if hasattr(g, "current_language") else "lithuanian"
         current_day = get_current_day_key()
 
         # Check if this merge nonce has already been used
@@ -681,7 +703,9 @@ def merge_local_stats() -> ResponseReturnValue:
         used_nonces = load_nonces(user_id, current_day, language)
         used_nonces.add(nonce)
         if not save_nonces(user_id, current_day, used_nonces, language):
-            logger.warning(f"Failed to save merge nonce for user {user_id} day {current_day} language {language}")
+            logger.warning(
+                f"Failed to save merge nonce for user {user_id} day {current_day} language {language}"
+            )
 
         logger.info(
             f"Stats merge completed for user {user_id} language {language}: "
@@ -689,17 +713,19 @@ def merge_local_stats() -> ResponseReturnValue:
             f"new={new_words_from_local}, updated={updated_words}"
         )
 
-        return jsonify({
-            "success": True,
-            "merged": merged_stats,
-            "summary": {
-                "localWordCount": local_word_count,
-                "serverWordCount": server_word_count,
-                "mergedWordCount": merged_word_count,
-                "newWordsFromLocal": new_words_from_local,
-                "updatedWords": updated_words
+        return jsonify(
+            {
+                "success": True,
+                "merged": merged_stats,
+                "summary": {
+                    "localWordCount": local_word_count,
+                    "serverWordCount": server_word_count,
+                    "mergedWordCount": merged_word_count,
+                    "newWordsFromLocal": new_words_from_local,
+                    "updatedWords": updated_words,
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error merging local stats: {str(e)}")

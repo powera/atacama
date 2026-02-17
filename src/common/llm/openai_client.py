@@ -16,7 +16,7 @@ from common.llm.types import Response, Schema
 from common.llm.lib import schema_from_dict, to_openai_schema
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Model identifiers
@@ -26,24 +26,28 @@ DEFAULT_MODEL = TEST_MODEL
 DEFAULT_TIMEOUT = 240
 API_BASE = "https://api.openai.com/v1"
 
+
 def measure_completion(func):
     """Decorator to measure completion API call duration."""
+
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         duration_ms = (time.time() - start_time) * 1000
         return result, duration_ms
+
     return wrapper
+
 
 class OpenAIClient:
     """Client for making direct HTTP requests to OpenAI Responses API."""
-    
+
     def __init__(self, timeout: int = DEFAULT_TIMEOUT, debug: bool = False):
         """Initialize OpenAI client with API key."""
         self.timeout = timeout
         self.debug = debug
         # Check for HTTP debug environment variable
-        self.http_debug = os.getenv('ATACAMA_HTTP_DEBUG') == '1'
+        self.http_debug = os.getenv("ATACAMA_HTTP_DEBUG") == "1"
         if debug:
             logger.setLevel(logging.DEBUG)
             logger.debug("Initialized OpenAIClient in debug mode")
@@ -52,7 +56,7 @@ class OpenAIClient:
         self.api_key = self._load_key()
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         self.encoder = tiktoken.get_encoding("cl100k_base")
 
@@ -66,42 +70,42 @@ class OpenAIClient:
         """Truncate content for logging while preserving UTF-8 encoding."""
         if not content:
             return content
-            
+
         original_length = len(content)
-        content_bytes = content.encode('utf-8')
-        
+        content_bytes = content.encode("utf-8")
+
         if len(content_bytes) <= max_bytes:
             return content
-            
+
         # Truncate at byte boundary and decode back to string
         truncated_bytes = content_bytes[:max_bytes]
-        
+
         # Handle potential UTF-8 character boundary issues
         try:
-            truncated_content = truncated_bytes.decode('utf-8')
+            truncated_content = truncated_bytes.decode("utf-8")
         except UnicodeDecodeError:
             # If we cut in the middle of a UTF-8 character, back up until we find a valid boundary
             for i in range(1, 5):  # UTF-8 characters are at most 4 bytes
                 try:
-                    truncated_content = truncated_bytes[:-i].decode('utf-8')
+                    truncated_content = truncated_bytes[:-i].decode("utf-8")
                     break
                 except UnicodeDecodeError:
                     continue
             else:
                 # Fallback: just use the first max_bytes-4 bytes to be safe
-                truncated_content = truncated_bytes[:-4].decode('utf-8', errors='ignore')
-        
+                truncated_content = truncated_bytes[:-4].decode("utf-8", errors="ignore")
+
         return f"{truncated_content}... [truncated from {original_length} chars]"
 
     @measure_completion
     def _create_response(self, **kwargs) -> Dict:
         """Make direct HTTP request to OpenAI responses endpoint."""
         url = f"{API_BASE}/responses"
-        
+
         if self.debug:
             logger.debug("Making request to %s", url)
             logger.debug("Request data: %s", json.dumps(kwargs, indent=2))
-        
+
         # HTTP debug logging
         if self.http_debug:
             logger.info("=" * 80)
@@ -109,25 +113,20 @@ class OpenAIClient:
             logger.info("=" * 80)
             logger.info("URL: %s", url)
             logger.info("Method: POST")
-            
+
             # Log headers (redact Authorization)
             debug_headers = self.headers.copy()
-            if 'Authorization' in debug_headers:
-                debug_headers['Authorization'] = '[REDACTED]'
+            if "Authorization" in debug_headers:
+                debug_headers["Authorization"] = "[REDACTED]"
             logger.info("Headers: %s", json.dumps(debug_headers, indent=2))
-            
+
             # Log request body (truncated)
             request_body = json.dumps(kwargs, indent=2)
             truncated_request = self._truncate_for_logging(request_body)
             logger.info("Request Body: %s", truncated_request)
-            
-        response = requests.post(
-            url,
-            headers=self.headers,
-            json=kwargs,
-            timeout=self.timeout
-        )
-        
+
+        response = requests.post(url, headers=self.headers, json=kwargs, timeout=self.timeout)
+
         # HTTP debug logging for response
         if self.http_debug:
             logger.info("-" * 80)
@@ -135,18 +134,18 @@ class OpenAIClient:
             logger.info("-" * 80)
             logger.info("Status Code: %d", response.status_code)
             logger.info("Response Headers: %s", dict(response.headers))
-            
+
             # Log response body (truncated)
             response_text = response.text
             truncated_response = self._truncate_for_logging(response_text)
             logger.info("Response Body: %s", truncated_response)
             logger.info("=" * 80)
-        
+
         if response.status_code != 200:
             error_msg = f"Error {response.status_code}: {response.text}"
             logger.error(error_msg)
             raise Exception(error_msg)
-            
+
         return response.json()
 
     def warm_model(self, model: str) -> bool:
@@ -163,11 +162,11 @@ class OpenAIClient:
         json_schema: Optional[Any] = None,
         context: Optional[str] = None,
         max_tokens: Optional[int] = None,
-        reasoning_effort: Optional[str] = None
+        reasoning_effort: Optional[str] = None,
     ) -> Response:
         """
         Generate chat response using OpenAI Responses API.
-        
+
         Args:
             prompt: The main prompt/question
             model: Model to use for generation
@@ -176,7 +175,7 @@ class OpenAIClient:
             context: Optional context to include before the prompt
             max_tokens: Maximum number of tokens to generate (overrides brief setting)
             reasoning_effort: Reasoning effort level for reasoning models ('minimal', 'low', 'medium', 'high', or None to disable)
-        
+
         Returns:
             Response containing response_text, structured_data, and usage
             For text responses, structured_data will be empty dict
@@ -188,16 +187,16 @@ class OpenAIClient:
             logger.debug("Brief mode: %s", brief)
             logger.debug("Context: %s", context)
             logger.debug("JSON schema: %s", json_schema)
-        
+
         # Determine which token limit parameter to use based on model
         # Newer reasoning models (o1, gpt-5, o3) require max_output_tokens
-        reasoning_models = ['o1-', 'gpt-5-', 'o3-']
+        reasoning_models = ["o1-", "gpt-5-", "o3-"]
         uses_output_tokens = any(model.startswith(prefix) for prefix in reasoning_models)
-        
+
         # gpt-5 models don't support custom temperature (only default value of 1)
-        is_gpt5_model = model.startswith('gpt-5-')
-        is_gpt5_nano_or_mini = model.startswith('gpt-5-nano') or model.startswith('gpt-5-mini')
-        
+        is_gpt5_model = model.startswith("gpt-5-")
+        is_gpt5_nano_or_mini = model.startswith("gpt-5-nano") or model.startswith("gpt-5-mini")
+
         # Determine token limit: max_tokens takes precedence, then brief flag, then default
         if max_tokens is not None:
             token_limit = max_tokens
@@ -207,50 +206,50 @@ class OpenAIClient:
             "model": model,
             "input": prompt,
         }
-        
+
         # Add instructions (system message) if context provided
         if context:
             kwargs["instructions"] = context
-        
+
         # Only set temperature for models that support it
         if not is_gpt5_model:
             kwargs["temperature"] = 0.35
-        
+
         # Set token limit parameter
         if uses_output_tokens:
             kwargs["max_output_tokens"] = token_limit
         else:
             # For non-reasoning models, we still use max_output_tokens in Responses API
             kwargs["max_output_tokens"] = token_limit
-        
+
         # Set reasoning and text parameters for gpt-5-nano and gpt-5-mini
         if is_gpt5_nano_or_mini:
             # Set reasoning effort based on parameter, default to "minimal" if not specified
             if reasoning_effort is not None:
-                if reasoning_effort.lower() in ['minimal', 'low', 'medium', 'high']:
+                if reasoning_effort.lower() in ["minimal", "low", "medium", "high"]:
                     kwargs["reasoning"] = {"effort": reasoning_effort.lower()}
                 # If reasoning_effort is explicitly set to something else (like "none" or "disable"), don't set reasoning
             else:
                 # Default behavior: use minimal reasoning
                 kwargs["reasoning"] = {"effort": "minimal"}
-            
+
             # Only set text verbosity if not overridden by JSON schema below
             if not json_schema:
                 kwargs["text"] = {"verbosity": "low"}
-        
+
         # If JSON schema provided, configure for structured response
         if json_schema:
             if isinstance(json_schema, Schema):
                 schema_obj = json_schema
             else:
                 schema_obj = schema_from_dict(json_schema)
-            
+
             clean_schema = to_openai_schema(schema_obj)
-            
+
             # Lower temperature for structured output (only for models that support it)
             if not is_gpt5_model:
                 kwargs["temperature"] = 0.15
-            
+
             # Use text.format for structured outputs in Responses API
             text_config: Dict[str, Any] = {
                 "format": {
@@ -258,18 +257,18 @@ class OpenAIClient:
                     "name": "Details",
                     "description": "N/A",
                     "strict": True,
-                    "schema": clean_schema
+                    "schema": clean_schema,
                 }
             }
-            
+
             # For gpt-5-nano and gpt-5-mini, also include verbosity
             if is_gpt5_nano_or_mini:
                 text_config["verbosity"] = "low"
-            
+
             kwargs["text"] = text_config
-        
+
         response_data, duration_ms = self._create_response(**kwargs)
-        
+
         # Extract response content from Responses API structure
         response_content = ""
         if response_data.get("output"):
@@ -283,15 +282,19 @@ class OpenAIClient:
                             break
                     if response_content:
                         break
-            
+
             # If no message content found, log the response structure for debugging
             if not response_content:
-                logger.warning("No message content found in response. Available output types: %s", 
-                             [item.get("type") for item in response_data.get("output", [])])
+                logger.warning(
+                    "No message content found in response. Available output types: %s",
+                    [item.get("type") for item in response_data.get("output", [])],
+                )
                 if self.debug:
-                    logger.debug("Full output structure: %s", 
-                               json.dumps(response_data.get("output", []), indent=2))
-        
+                    logger.debug(
+                        "Full output structure: %s",
+                        json.dumps(response_data.get("output", []), indent=2),
+                    )
+
         if self.debug:
             logger.debug("Response content: %s", response_content)
 
@@ -301,11 +304,11 @@ class OpenAIClient:
             {
                 "prompt_tokens": usage_data.get("input_tokens", 0),
                 "completion_tokens": usage_data.get("output_tokens", 0),
-                "total_duration": duration_ms
+                "total_duration": duration_ms,
             },
-            model=model
+            model=model,
         )
-        
+
         # Parse JSON response if schema was provided
         if json_schema:
             try:
@@ -319,7 +322,7 @@ class OpenAIClient:
         else:
             response_text = response_content
             structured_data = {}
-        
+
         if self.debug:
             if response_text:
                 logger.debug("Response text: %s", response_text)
@@ -328,15 +331,13 @@ class OpenAIClient:
             else:
                 logger.debug("No response text or structured data")
             logger.debug("Usage metrics: %s", usage.to_dict())
-        
-        return Response(
-            response_text=response_text,
-            structured_data=structured_data,
-            usage=usage
-        )
+
+        return Response(response_text=response_text, structured_data=structured_data, usage=usage)
+
 
 # Lazy client initialization to avoid errors at import time
 _client = None
+
 
 def _get_client() -> OpenAIClient:
     """Get or create the default client instance (lazy initialization)."""
@@ -345,9 +346,11 @@ def _get_client() -> OpenAIClient:
         _client = OpenAIClient(debug=False)  # Set to True to enable debug logging
     return _client
 
+
 # Expose key functions at module level for API compatibility
 def warm_model(model: str) -> bool:
     return _get_client().warm_model(model)
+
 
 def generate_chat(
     prompt: str,
@@ -356,7 +359,7 @@ def generate_chat(
     json_schema: Optional[Any] = None,
     context: Optional[str] = None,
     max_tokens: Optional[int] = None,
-    reasoning_effort: Optional[str] = None
+    reasoning_effort: Optional[str] = None,
 ) -> Response:
     """
     Generate a chat response using OpenAI Responses API.
@@ -366,4 +369,6 @@ def generate_chat(
         For text responses, structured_data will be empty dict
         For JSON responses, response_text will be empty string
     """
-    return _get_client().generate_chat(prompt, model, brief, json_schema, context, max_tokens, reasoning_effort)
+    return _get_client().generate_chat(
+        prompt, model, brief, json_schema, context, max_tokens, reasoning_effort
+    )

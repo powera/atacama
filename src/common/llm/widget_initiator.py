@@ -14,7 +14,10 @@ from react_compiler.lib import sanitize_widget_title_for_component_name
 
 logger = get_logger(__name__)
 
-def initiate_widget(prompt: str, model: str = "gpt-5-mini", dual_file: bool = True) -> Tuple[bool, Dict, str]:
+
+def initiate_widget(
+    prompt: str, model: str = "gpt-5-mini", dual_file: bool = True
+) -> Tuple[bool, Dict, str]:
     """
     Generate a React widget based on a natural language prompt.
 
@@ -101,7 +104,7 @@ The widget should be self-contained and production-ready."""
 
         # For JSON schema responses, check structured_data instead of response_text
         if not response.structured_data:
-            return False, {'error': 'No response from AI model'}, ''
+            return False, {"error": "No response from AI model"}, ""
 
         # Parse the response based on the schema
         widget_data = {}
@@ -113,24 +116,24 @@ The widget should be self-contained and production-ready."""
                 if dual_file:
                     if "code_file" not in widget_data or "data_file" not in widget_data:
                         error_message = "Model response did not conform to dual-file schema."
-                        return False, {'error': error_message}, response.response_text
+                        return False, {"error": error_message}, response.response_text
                 else:
                     if "code" not in widget_data:
                         error_message = "Model response did not conform to single-file schema."
-                        return False, {'error': error_message}, response.response_text
+                        return False, {"error": error_message}, response.response_text
             else:
                 error_message = "Failed to parse AI response according to schema."
-                return False, {'error': error_message}, response.response_text
+                return False, {"error": error_message}, response.response_text
 
         except Exception as e:
             error_message = f"Error parsing AI response: {str(e)}"
-            return False, {'error': error_message}, response.response_text
+            return False, {"error": error_message}, response.response_text
 
         return True, widget_data, error_message
 
     except Exception as e:
         logger.error(f"Error initiating widget: {str(e)}")
-        return False, {'error': str(e)}, ''
+        return False, {"error": str(e)}, ""
 
 
 class WidgetInitiator:
@@ -138,24 +141,24 @@ class WidgetInitiator:
 
     # Look and feel options with descriptions
     LOOK_AND_FEEL_OPTIONS = {
-        'tone': {
-            'playful': 'The widget should have a fun and lighthearted tone with casual language and engaging interactions',
-            'serious': 'The widget should maintain a professional and focused tone with formal language and clear purpose',
-            'educational': 'The widget should take a learning-focused approach with explanations and guided discovery',
-            'professional': 'The widget should emphasize business efficiency and reliability with a polished presentation'
+        "tone": {
+            "playful": "The widget should have a fun and lighthearted tone with casual language and engaging interactions",
+            "serious": "The widget should maintain a professional and focused tone with formal language and clear purpose",
+            "educational": "The widget should take a learning-focused approach with explanations and guided discovery",
+            "professional": "The widget should emphasize business efficiency and reliability with a polished presentation",
         },
-        'visual': {
-            'clean': 'Use a minimalist design with plenty of whitespace and subtle, understated styling',
-            'colorful': 'Create a vibrant design with rich colors, visual variety, and eye-catching elements',
-            'themed': 'Follow a cohesive visual theme or style that creates a unified aesthetic experience',
-            'data-focused': 'Optimize the design for displaying information with clear data presentation and metrics'
+        "visual": {
+            "clean": "Use a minimalist design with plenty of whitespace and subtle, understated styling",
+            "colorful": "Create a vibrant design with rich colors, visual variety, and eye-catching elements",
+            "themed": "Follow a cohesive visual theme or style that creates a unified aesthetic experience",
+            "data-focused": "Optimize the design for displaying information with clear data presentation and metrics",
         },
-        'feedback': {
-            'immediate': 'Provide instant responses and real-time updates to keep users informed of their actions',
-            'subtle': 'Use gentle and unobtrusive feedback that guides without interrupting the user flow',
-            'celebratory': 'Give enthusiastic and rewarding feedback that celebrates achievements and progress',
-            'informative': 'Offer detailed and educational feedback that explains what happened and why'
-        }
+        "feedback": {
+            "immediate": "Provide instant responses and real-time updates to keep users informed of their actions",
+            "subtle": "Use gentle and unobtrusive feedback that guides without interrupting the user flow",
+            "celebratory": "Give enthusiastic and rewarding feedback that celebrates achievements and progress",
+            "informative": "Offer detailed and educational feedback that explains what happened and why",
+        },
     }
 
     def __init__(self, model: str = DEFAULT_MODEL):
@@ -167,15 +170,15 @@ class WidgetInitiator:
     def _load_common_css(self) -> str:
         """Load common CSS for context."""
         css_files = [
-            os.path.join(constants.WEB_DIR, 'css', 'common.css'),
-            os.path.join(constants.WEB_DIR, 'css', 'widgets', 'widget_tools.css'),
-            os.path.join(constants.WEB_DIR, 'css', 'widgets', 'widget.css')
+            os.path.join(constants.WEB_DIR, "css", "common.css"),
+            os.path.join(constants.WEB_DIR, "css", "widgets", "widget_tools.css"),
+            os.path.join(constants.WEB_DIR, "css", "widgets", "widget.css"),
         ]
 
         css_content = ""
         for css_file in css_files:
             try:
-                with open(css_file, 'r') as f:
+                with open(css_file, "r") as f:
                     css_content += f"\n/* {css_file} */\n"
                     css_content += f.read()
                     css_content += "\n"
@@ -188,8 +191,8 @@ class WidgetInitiator:
     def _load_fullscreen_hook(self) -> str:
         """Load fullscreen hook code for reference."""
         try:
-            fullscreen_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'useFullscreen.js')
-            with open(fullscreen_path, 'r') as f:
+            fullscreen_path = os.path.join(constants.REACT_COMPILER_JS_DIR, "useFullscreen.js")
+            with open(fullscreen_path, "r") as f:
                 return f.read()
         except FileNotFoundError:
             logger.warning("Fullscreen hook file not found")
@@ -198,8 +201,10 @@ class WidgetInitiator:
     def _load_global_settings_hook(self) -> str:
         """Load global settings hook code for reference."""
         try:
-            global_settings_path = os.path.join(constants.REACT_COMPILER_JS_DIR, 'useGlobalSettings.js')
-            with open(global_settings_path, 'r') as f:
+            global_settings_path = os.path.join(
+                constants.REACT_COMPILER_JS_DIR, "useGlobalSettings.js"
+            )
+            with open(global_settings_path, "r") as f:
                 return f.read()
         except FileNotFoundError:
             logger.warning("Global settings hook file not found")
@@ -212,7 +217,7 @@ class WidgetInitiator:
         widget_title: Optional[str] = None,
         use_advanced_model: bool = False,
         look_and_feel: Optional[Dict[str, str]] = None,
-        dual_file: bool = False
+        dual_file: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a new widget from a description.
@@ -232,21 +237,25 @@ class WidgetInitiator:
             # Select the appropriate model
             selected_model = PROD_MODEL if use_advanced_model else DEFAULT_MODEL
             if use_advanced_model:
-                selected_model = PROD_MODEL # Default to mini if advanced is requested
+                selected_model = PROD_MODEL  # Default to mini if advanced is requested
             else:
-                selected_model = TEST_MODEL # Default to nano for standard
+                selected_model = TEST_MODEL  # Default to nano for standard
 
             logger.info(f"Using model: {selected_model} for widget creation")
 
             # Generate widget title from slug if not provided
             if not widget_title:
-                widget_title = ' '.join(word.capitalize() for word in slug.replace('-', ' ').replace('_', ' ').split())
+                widget_title = " ".join(
+                    word.capitalize() for word in slug.replace("-", " ").replace("_", " ").split()
+                )
 
             # Build the full prompt with context
             full_prompt = self._build_creation_prompt(
                 slug, description, widget_title, look_and_feel, dual_file
             )
-            logger.info(f"Creating widget '{widget_title}' with slug '{slug}' from description: {description[:100]}...")
+            logger.info(
+                f"Creating widget '{widget_title}' with slug '{slug}' from description: {description[:100]}..."
+            )
 
             # Calculate input tokens using tiktoken
             try:
@@ -273,42 +282,41 @@ class WidgetInitiator:
             # For JSON schema responses, check structured_data instead of response_text
             if not response.structured_data:
                 return {
-                    'success': False,
-                    'error': 'No response from AI model',
-                    'widget_code': '',
-                    'usage_stats': response.usage.to_dict() if response.usage else {}
+                    "success": False,
+                    "error": "No response from AI model",
+                    "widget_code": "",
+                    "usage_stats": response.usage.to_dict() if response.usage else {},
                 }
 
             # Extract code from response
             if dual_file:
                 widget_code_content = response.structured_data.get("code_file", "")
                 data_file_content = response.structured_data.get("data_file", "")
-                widget_code = {
-                    "code_file": widget_code_content,
-                    "data_file": data_file_content
-                }
+                widget_code = {"code_file": widget_code_content, "data_file": data_file_content}
             else:
                 widget_code = response.structured_data.get("code", "")
 
             logger.info(f"Finished creating widget code for '{widget_title}'.")
             return {
-                'success': True,
-                'widget_code': widget_code,
-                'error': None,
-                'usage_stats': response.usage.to_dict() if response.usage else {},
-                'full_response': response.response_text
+                "success": True,
+                "widget_code": widget_code,
+                "error": None,
+                "usage_stats": response.usage.to_dict() if response.usage else {},
+                "full_response": response.response_text,
             }
 
         except Exception as e:
             logger.error(f"Error creating widget: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'widget_code': '',
-                'usage_stats': {}
-            }
+            return {"success": False, "error": str(e), "widget_code": "", "usage_stats": {}}
 
-    def _build_creation_prompt(self, slug: str, description: str, widget_title: str, look_and_feel: Optional[Dict[str, str]] = None, dual_file: bool = False) -> str:
+    def _build_creation_prompt(
+        self,
+        slug: str,
+        description: str,
+        widget_title: str,
+        look_and_feel: Optional[Dict[str, str]] = None,
+        dual_file: bool = False,
+    ) -> str:
         """Build the full prompt for widget creation."""
 
         # Build look and feel guidance
@@ -316,7 +324,10 @@ class WidgetInitiator:
         if look_and_feel:
             guidance_parts = []
             for category, selected_value in look_and_feel.items():
-                if category in self.LOOK_AND_FEEL_OPTIONS and selected_value in self.LOOK_AND_FEEL_OPTIONS[category]:
+                if (
+                    category in self.LOOK_AND_FEEL_OPTIONS
+                    and selected_value in self.LOOK_AND_FEEL_OPTIONS[category]
+                ):
                     guidance_parts.append(self.LOOK_AND_FEEL_OPTIONS[category][selected_value])
 
             if guidance_parts:
@@ -461,7 +472,7 @@ Please create a complete, functional React widget based on the description: "{de
         import re
 
         # Look for ```javascript, ```jsx, or ```react code blocks
-        code_block_pattern = r'```(?:javascript|jsx|react|js)?\n(.*?)\n```'
+        code_block_pattern = r"```(?:javascript|jsx|react|js)?\n(.*?)\n```"
         matches = re.findall(code_block_pattern, response, re.DOTALL)
 
         if matches:
@@ -469,23 +480,29 @@ Please create a complete, functional React widget based on the description: "{de
             return matches[0].strip()
 
         # If no code blocks found, look for code that starts with typical React patterns
-        lines = response.split('\n')
+        lines = response.split("\n")
         code_lines = []
         in_code = False
 
         for line in lines:
             # Start collecting when we see React-like code
-            if not in_code and ('import React' in line or 'const ' in line or 'function ' in line or 'export default' in line):
+            if not in_code and (
+                "import React" in line
+                or "const " in line
+                or "function " in line
+                or "export default" in line
+            ):
                 in_code = True
 
             if in_code:
                 code_lines.append(line)
 
         if code_lines:
-            return '\n'.join(code_lines).strip()
+            return "\n".join(code_lines).strip()
 
         # Fallback: return the response as-is
         return response.strip()
+
 
 # Create default instance
 widget_initiator = WidgetInitiator()

@@ -23,14 +23,14 @@ class TestGetPieceMap(unittest.TestCase):
     def test_white_pieces_lowercase(self):
         """White pieces should use lowercase letters."""
         result = get_piece_map()
-        white_pieces = ['k', 'q', 'r', 'b', 'n', 'p']
+        white_pieces = ["k", "q", "r", "b", "n", "p"]
         for piece in white_pieces:
             self.assertIn(piece, result)
 
     def test_black_pieces_uppercase(self):
         """Black pieces should use uppercase letters."""
         result = get_piece_map()
-        black_pieces = ['K', 'Q', 'R', 'B', 'N', 'P']
+        black_pieces = ["K", "Q", "R", "B", "N", "P"]
         for piece in black_pieces:
             self.assertIn(piece, result)
 
@@ -38,19 +38,19 @@ class TestGetPieceMap(unittest.TestCase):
         """Piece symbols should be correct Unicode chess pieces."""
         result = get_piece_map()
         # White pieces (lowercase in FEN)
-        self.assertEqual(result['k'], '\u2654')  # White King
-        self.assertEqual(result['q'], '\u2655')  # White Queen
-        self.assertEqual(result['r'], '\u2656')  # White Rook
-        self.assertEqual(result['b'], '\u2657')  # White Bishop
-        self.assertEqual(result['n'], '\u2658')  # White Knight
-        self.assertEqual(result['p'], '\u2659')  # White Pawn
+        self.assertEqual(result["k"], "\u2654")  # White King
+        self.assertEqual(result["q"], "\u2655")  # White Queen
+        self.assertEqual(result["r"], "\u2656")  # White Rook
+        self.assertEqual(result["b"], "\u2657")  # White Bishop
+        self.assertEqual(result["n"], "\u2658")  # White Knight
+        self.assertEqual(result["p"], "\u2659")  # White Pawn
         # Black pieces (uppercase in FEN)
-        self.assertEqual(result['K'], '\u265a')  # Black King
-        self.assertEqual(result['Q'], '\u265b')  # Black Queen
-        self.assertEqual(result['R'], '\u265c')  # Black Rook
-        self.assertEqual(result['B'], '\u265d')  # Black Bishop
-        self.assertEqual(result['N'], '\u265e')  # Black Knight
-        self.assertEqual(result['P'], '\u265f')  # Black Pawn
+        self.assertEqual(result["K"], "\u265a")  # Black King
+        self.assertEqual(result["Q"], "\u265b")  # Black Queen
+        self.assertEqual(result["R"], "\u265c")  # Black Rook
+        self.assertEqual(result["B"], "\u265d")  # Black Bishop
+        self.assertEqual(result["N"], "\u265e")  # Black Knight
+        self.assertEqual(result["P"], "\u265f")  # Black Pawn
 
 
 class TestValidateFen(unittest.TestCase):
@@ -142,7 +142,7 @@ class TestFenToBoard(unittest.TestCase):
         fen = "invalid"
         result = fen_to_board(fen)
         self.assertIn('class="invalid-pgn"', result)
-        self.assertIn('Invalid chess position', result)
+        self.assertIn("Invalid chess position", result)
 
     def test_valid_fen_returns_board_html(self):
         """Valid FEN should return board HTML."""
@@ -160,29 +160,29 @@ class TestFenToBoard(unittest.TestCase):
         """Board should show white to move when 'w' in FEN."""
         fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         result = fen_to_board(fen)
-        self.assertIn('white-to-move', result)
-        self.assertIn('White to move', result)
+        self.assertIn("white-to-move", result)
+        self.assertIn("White to move", result)
 
     def test_black_to_move(self):
         """Board should show black to move when 'b' in FEN."""
         fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
         result = fen_to_board(fen)
-        self.assertIn('black-to-move', result)
-        self.assertIn('Black to move', result)
+        self.assertIn("black-to-move", result)
+        self.assertIn("Black to move", result)
 
     def test_board_contains_file_labels(self):
         """Board should contain file labels (a-h)."""
         fen = "8/8/8/8/8/8/8/8"
         result = fen_to_board(fen)
-        for file_label in 'abcdefgh':
-            self.assertIn(f'>{file_label}</div>', result)
+        for file_label in "abcdefgh":
+            self.assertIn(f">{file_label}</div>", result)
 
     def test_board_contains_rank_labels(self):
         """Board should contain rank labels (1-8)."""
         fen = "8/8/8/8/8/8/8/8"
         result = fen_to_board(fen)
         for rank_label in range(1, 9):
-            self.assertIn(f'>{rank_label}</div>', result)
+            self.assertIn(f">{rank_label}</div>", result)
 
     def test_board_contains_fen_display(self):
         """Board should contain FEN display button and text."""
@@ -191,7 +191,7 @@ class TestFenToBoard(unittest.TestCase):
         self.assertIn('class="chess-fen"', result)
         self.assertIn('class="fen-toggle"', result)
         self.assertIn('class="fen-text"', result)
-        self.assertIn('Show position (FEN)', result)
+        self.assertIn("Show position (FEN)", result)
 
     def test_board_contains_pieces(self):
         """Board should contain chess pieces."""
@@ -199,8 +199,8 @@ class TestFenToBoard(unittest.TestCase):
         result = fen_to_board(fen)
         pieces = get_piece_map()
         # Check that at least some pieces are in the HTML
-        self.assertIn(pieces['r'], result)  # White rook
-        self.assertIn(pieces['R'], result)  # Black rook
+        self.assertIn(pieces["r"], result)  # White rook
+        self.assertIn(pieces["R"], result)  # Black rook
 
     def test_board_cell_colors_alternate(self):
         """Board cells should alternate between light and dark."""
@@ -220,7 +220,7 @@ class TestFenToBoard(unittest.TestCase):
         """Position-only FEN should default to black to move."""
         fen = "8/8/8/8/8/8/8/8"  # No side to move specified
         result = fen_to_board(fen)
-        self.assertIn('black-to-move', result)
+        self.assertIn("black-to-move", result)
 
 
 class TestFenToBoardOld(unittest.TestCase):
@@ -246,5 +246,5 @@ class TestFenToBoardOld(unittest.TestCase):
         self.assertIn('class="invalid-pgn"', result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

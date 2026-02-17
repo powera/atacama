@@ -70,44 +70,32 @@ class GrammarStatsValidationTests(unittest.TestCase):
 
     def test_validate_concept_stats_valid(self):
         """Test validate_concept_stats accepts valid stats."""
-        self.assertTrue(validate_concept_stats({
-            "viewCount": 3,
-            "lastViewedAt": 1705000000000
-        }))
-        self.assertTrue(validate_concept_stats({
-            "viewCount": 0,
-            "lastViewedAt": None
-        }))
+        self.assertTrue(validate_concept_stats({"viewCount": 3, "lastViewedAt": 1705000000000}))
+        self.assertTrue(validate_concept_stats({"viewCount": 0, "lastViewedAt": None}))
 
     def test_validate_concept_stats_invalid_view_count(self):
         """Test validate_concept_stats rejects invalid viewCount."""
-        self.assertFalse(validate_concept_stats({
-            "viewCount": -1,  # negative
-            "lastViewedAt": 1705000000000
-        }))
-        self.assertFalse(validate_concept_stats({
-            "viewCount": "3",  # string instead of int
-            "lastViewedAt": 1705000000000
-        }))
-        self.assertFalse(validate_concept_stats({
-            "viewCount": 3.5,  # float instead of int
-            "lastViewedAt": 1705000000000
-        }))
+        self.assertFalse(
+            validate_concept_stats({"viewCount": -1, "lastViewedAt": 1705000000000})  # negative
+        )
+        self.assertFalse(
+            validate_concept_stats(
+                {"viewCount": "3", "lastViewedAt": 1705000000000}  # string instead of int
+            )
+        )
+        self.assertFalse(
+            validate_concept_stats(
+                {"viewCount": 3.5, "lastViewedAt": 1705000000000}  # float instead of int
+            )
+        )
 
     def test_validate_concept_stats_invalid_last_viewed(self):
         """Test validate_concept_stats rejects invalid lastViewedAt."""
-        self.assertFalse(validate_concept_stats({
-            "viewCount": 3,
-            "lastViewedAt": -1  # negative
-        }))
-        self.assertFalse(validate_concept_stats({
-            "viewCount": 3,
-            "lastViewedAt": 0  # zero
-        }))
-        self.assertFalse(validate_concept_stats({
-            "viewCount": 3,
-            "lastViewedAt": "1705000000000"  # string
-        }))
+        self.assertFalse(validate_concept_stats({"viewCount": 3, "lastViewedAt": -1}))  # negative
+        self.assertFalse(validate_concept_stats({"viewCount": 3, "lastViewedAt": 0}))  # zero
+        self.assertFalse(
+            validate_concept_stats({"viewCount": 3, "lastViewedAt": "1705000000000"})  # string
+        )
 
     def test_validate_concept_stats_invalid_not_dict(self):
         """Test validate_concept_stats rejects non-dict input."""
@@ -132,7 +120,7 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_file_path(self):
         """Test GrammarStats generates correct file path."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
 
             expected_path = os.path.join(
@@ -140,13 +128,13 @@ class GrammarStatsStorageTests(unittest.TestCase):
                 "trakaido",
                 self.test_user_id,
                 self.test_language,
-                "grammar_stats.json"
+                "grammar_stats.json",
             )
             self.assertEqual(grammar_stats.file_path, expected_path)
 
     def test_grammar_stats_load_empty(self):
         """Test GrammarStats.load returns empty stats for new users."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             result = grammar_stats.load()
 
@@ -155,17 +143,12 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_save_and_load(self):
         """Test GrammarStats can save and load data."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             # Create and save grammar stats
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.load()
             grammar_stats.stats = {
-                "stats": {
-                    "nominative-form": {
-                        "viewCount": 3,
-                        "lastViewedAt": 1705000000000
-                    }
-                }
+                "stats": {"nominative-form": {"viewCount": 3, "lastViewedAt": 1705000000000}}
             }
             self.assertTrue(grammar_stats.save())
 
@@ -173,26 +156,17 @@ class GrammarStatsStorageTests(unittest.TestCase):
             grammar_stats2 = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats2.load()
 
+            self.assertEqual(grammar_stats2.stats["stats"]["nominative-form"]["viewCount"], 3)
             self.assertEqual(
-                grammar_stats2.stats["stats"]["nominative-form"]["viewCount"],
-                3
-            )
-            self.assertEqual(
-                grammar_stats2.stats["stats"]["nominative-form"]["lastViewedAt"],
-                1705000000000
+                grammar_stats2.stats["stats"]["nominative-form"]["lastViewedAt"], 1705000000000
             )
 
     def test_grammar_stats_get_concept_stats(self):
         """Test GrammarStats.get_concept_stats returns correct data."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.stats = {
-                "stats": {
-                    "nominative-form": {
-                        "viewCount": 5,
-                        "lastViewedAt": 1705000000000
-                    }
-                }
+                "stats": {"nominative-form": {"viewCount": 5, "lastViewedAt": 1705000000000}}
             }
 
             # Existing concept
@@ -205,7 +179,7 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_record_view_new_concept(self):
         """Test GrammarStats.record_view creates new concept entry."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.load()
 
@@ -218,7 +192,7 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_record_view_increments(self):
         """Test GrammarStats.record_view increments existing concept."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.load()
 
@@ -231,13 +205,13 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_record_view_updates_timestamp(self):
         """Test GrammarStats.record_view updates lastViewedAt."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.stats = {
                 "stats": {
                     "nominative-form": {
                         "viewCount": 2,
-                        "lastViewedAt": 1000000000000  # old timestamp
+                        "lastViewedAt": 1000000000000,  # old timestamp
                     }
                 }
             }
@@ -249,7 +223,7 @@ class GrammarStatsStorageTests(unittest.TestCase):
 
     def test_grammar_stats_save_without_load_fails(self):
         """Test GrammarStats.save fails if not loaded."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             # Don't call load()
 
@@ -277,7 +251,7 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_get_grammar_stats_empty(self):
         """Test GET /api/trakaido/grammarstats/ returns empty stats for new user."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import get_grammar_stats
             from flask import Flask, g
 
@@ -298,16 +272,11 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_get_grammar_stats_with_data(self):
         """Test GET /api/trakaido/grammarstats/ returns existing stats."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             # Pre-populate stats
             grammar_stats = GrammarStats(self.test_user_id, self.test_language)
             grammar_stats.stats = {
-                "stats": {
-                    "nominative-form": {
-                        "viewCount": 3,
-                        "lastViewedAt": 1705000000000
-                    }
-                }
+                "stats": {"nominative-form": {"viewCount": 3, "lastViewedAt": 1705000000000}}
             }
             grammar_stats.save()
 
@@ -330,10 +299,12 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_record_grammar_view_success(self):
         """Test POST /api/trakaido/grammarstats/view records a view."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
-            with patch('trakaido.blueprints.grammarstats.check_nonce_duplicates', return_value=False):
-                with patch('trakaido.blueprints.grammarstats.load_nonces', return_value=set()):
-                    with patch('trakaido.blueprints.grammarstats.save_nonces', return_value=True):
+        with patch("constants.DATA_DIR", self.test_data_dir):
+            with patch(
+                "trakaido.blueprints.grammarstats.check_nonce_duplicates", return_value=False
+            ):
+                with patch("trakaido.blueprints.grammarstats.load_nonces", return_value=set()):
+                    with patch("trakaido.blueprints.grammarstats.save_nonces", return_value=True):
                         from trakaido.blueprints.grammarstats import record_grammar_view
                         from flask import Flask, g
 
@@ -359,8 +330,10 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_record_grammar_view_duplicate_nonce(self):
         """Test POST /api/trakaido/grammarstats/view returns 409 for duplicate nonce."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
-            with patch('trakaido.blueprints.grammarstats.check_nonce_duplicates', return_value=True):
+        with patch("constants.DATA_DIR", self.test_data_dir):
+            with patch(
+                "trakaido.blueprints.grammarstats.check_nonce_duplicates", return_value=True
+            ):
                 from trakaido.blueprints.grammarstats import record_grammar_view
                 from flask import Flask, g
 
@@ -385,14 +358,12 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_record_grammar_view_invalid_concept_id(self):
         """Test POST /api/trakaido/grammarstats/view returns 400 for invalid concept ID."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import record_grammar_view
             from flask import Flask, g
 
             app = Flask(__name__)
-            with app.test_request_context(
-                json={"conceptId": "INVALID_ID", "nonce": "test-nonce"}
-            ):
+            with app.test_request_context(json={"conceptId": "INVALID_ID", "nonce": "test-nonce"}):
                 g.user = self.mock_user
                 g.current_language = self.test_language
 
@@ -410,7 +381,7 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_record_grammar_view_missing_fields(self):
         """Test POST /api/trakaido/grammarstats/view returns 400 for missing fields."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import record_grammar_view
             from flask import Flask, g
 
@@ -442,7 +413,7 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_replace_grammar_stats_success(self):
         """Test PUT /api/trakaido/grammarstats/ replaces stats."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import replace_grammar_stats
             from flask import Flask, g
 
@@ -451,7 +422,7 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
                 json={
                     "stats": {
                         "nominative-form": {"viewCount": 5, "lastViewedAt": 1705000000000},
-                        "present-tense": {"viewCount": 2, "lastViewedAt": 1706000000000}
+                        "present-tense": {"viewCount": 2, "lastViewedAt": 1706000000000},
                     }
                 }
             ):
@@ -478,17 +449,13 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_replace_grammar_stats_invalid_concept_id(self):
         """Test PUT /api/trakaido/grammarstats/ returns 400 for invalid concept ID."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import replace_grammar_stats
             from flask import Flask, g
 
             app = Flask(__name__)
             with app.test_request_context(
-                json={
-                    "stats": {
-                        "INVALID_ID": {"viewCount": 5, "lastViewedAt": 1705000000000}
-                    }
-                }
+                json={"stats": {"INVALID_ID": {"viewCount": 5, "lastViewedAt": 1705000000000}}}
             ):
                 g.user = self.mock_user
                 g.current_language = self.test_language
@@ -504,16 +471,14 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
 
     def test_replace_grammar_stats_invalid_stats(self):
         """Test PUT /api/trakaido/grammarstats/ returns 400 for invalid stats values."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             from trakaido.blueprints.grammarstats import replace_grammar_stats
             from flask import Flask, g
 
             app = Flask(__name__)
             with app.test_request_context(
                 json={
-                    "stats": {
-                        "nominative-form": {"viewCount": -1, "lastViewedAt": 1705000000000}
-                    }
+                    "stats": {"nominative-form": {"viewCount": -1, "lastViewedAt": 1705000000000}}
                 }
             ):
                 g.user = self.mock_user
@@ -529,5 +494,5 @@ class GrammarStatsAPIEndpointsTests(unittest.TestCase):
                 self.assertEqual(status, 400)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

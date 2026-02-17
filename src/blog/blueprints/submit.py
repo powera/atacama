@@ -52,9 +52,7 @@ def preview_message() -> ResponseReturnValue:
 
     except Exception as e:
         logger.error(f"Error processing preview: {str(e)}")
-        return handle_error(
-            "500", "Processing Error", "Failed to process message preview", str(e)
-        )
+        return handle_error("500", "Processing Error", "Failed to process message preview", str(e))
 
 
 @content_bp.route("/submit", methods=["GET"])
@@ -103,9 +101,7 @@ def handle_submit() -> ResponseReturnValue:
     parent_id = request.form.get("parent_id")
 
     if not subject or not content:
-        return handle_error(
-            "422", "Validation Error", "Subject and content are required"
-        )
+        return handle_error("422", "Validation Error", "Subject and content are required")
 
     try:
         with db.session() as db_session:
@@ -113,9 +109,7 @@ def handle_submit() -> ResponseReturnValue:
             db_user = get_or_create_user(db_session, session["user"])
 
             # Create message
-            message = Email(
-                subject=subject, content=content, author=db_user, channel=channel
-            )
+            message = Email(subject=subject, content=content, author=db_user, channel=channel)
 
             # Handle message chain if parent_id is provided
             if parent_id and parent_id.strip():
@@ -143,9 +137,7 @@ def handle_submit() -> ResponseReturnValue:
                     extracted_urls.append(token.value)
 
             # Generate HTML content
-            message.processed_content = generate_html(
-                ast, message=message, db_session=db_session
-            )
+            message.processed_content = generate_html(ast, message=message, db_session=db_session)
 
             message.preview_content = generate_html(
                 ast, message=message, db_session=db_session, truncated=True
@@ -154,9 +146,7 @@ def handle_submit() -> ResponseReturnValue:
             # Annotate English words from raw AML content
             english_annotations = annotate_english(content)
             if english_annotations:
-                message.english_annotations = json.dumps(
-                    english_annotations, ensure_ascii=False
-                )
+                message.english_annotations = json.dumps(english_annotations, ensure_ascii=False)
 
             db_session.commit()
             message_id = message.id  # Get ID before session closes
@@ -215,23 +205,17 @@ def handle_submit() -> ResponseReturnValue:
                             )
 
                     except Exception as e:
-                        logger.error(
-                            f"Error archiving content for message {message_id}: {e}"
-                        )
+                        logger.error(f"Error archiving content for message {message_id}: {e}")
 
                 # Start archiving in background thread
                 archive_thread = threading.Thread(target=archive_content, daemon=True)
                 archive_thread.start()
             except Exception as e:
-                logger.error(
-                    f"Error starting archive thread for message {message_id}: {e}"
-                )
+                logger.error(f"Error starting archive thread for message {message_id}: {e}")
 
         flash("Message submitted successfully!", "success")
         return redirect(url_for("content.get_message", message_id=message_id))
 
     except Exception as e:
         logger.error(f"Error submitting message: {str(e)}")
-        return handle_error(
-            "500", "Submission Error", "Failed to submit message", str(e)
-        )
+        return handle_error("500", "Submission Error", "Failed to submit message", str(e))

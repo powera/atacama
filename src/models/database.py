@@ -8,6 +8,7 @@ from typing import Optional, Generator
 
 import constants
 from common.base.logging_config import get_logger
+
 logger = get_logger(__name__)
 
 
@@ -23,9 +24,9 @@ def upgrade_schema(engine) -> None:
     # Define columns that may need to be added to existing tables
     # Format: (table_name, column_name, column_type)
     schema_upgrades = [
-        ('emails', 'public_content', 'TEXT'),
-        ('emails', 'public_processed_content', 'TEXT'),
-        ('emails', 'english_annotations', 'TEXT'),
+        ("emails", "public_content", "TEXT"),
+        ("emails", "public_processed_content", "TEXT"),
+        ("emails", "english_annotations", "TEXT"),
     ]
 
     with engine.connect() as conn:
@@ -35,37 +36,43 @@ def upgrade_schema(engine) -> None:
                 continue
 
             # Check if column already exists
-            existing_columns = [col['name'] for col in inspector.get_columns(table_name)]
+            existing_columns = [col["name"] for col in inspector.get_columns(table_name)]
             if column_name in existing_columns:
                 continue
 
             # Add the missing column
             logger.info(f"Adding column {column_name} to table {table_name}")
             try:
-                conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
+                conn.execute(
+                    text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+                )
                 conn.commit()
             except Exception as e:
                 logger.warning(f"Could not add column {column_name} to {table_name}: {e}")
 
-        if constants.SERVICE == 'trakaido':
+        if constants.SERVICE == "trakaido":
             # Migration support for early classroom deployments without archived flag
-            if 'classrooms' in inspector.get_table_names():
-                classroom_columns = [col['name'] for col in inspector.get_columns('classrooms')]
-                if 'archived' not in classroom_columns:
+            if "classrooms" in inspector.get_table_names():
+                classroom_columns = [col["name"] for col in inspector.get_columns("classrooms")]
+                if "archived" not in classroom_columns:
                     logger.info("Adding archived column to table classrooms")
                     try:
-                        conn.execute(text('ALTER TABLE classrooms ADD COLUMN archived BOOLEAN DEFAULT 0 NOT NULL'))
+                        conn.execute(
+                            text(
+                                "ALTER TABLE classrooms ADD COLUMN archived BOOLEAN DEFAULT 0 NOT NULL"
+                            )
+                        )
                         conn.commit()
                     except Exception as e:
                         logger.warning(f"Could not add archived column to classrooms: {e}")
 
             # Indexes for efficient classroom membership lookups
-            if 'classroom_memberships' in inspector.get_table_names():
+            if "classroom_memberships" in inspector.get_table_names():
                 index_statements = [
-                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id ON classroom_memberships (classroom_id)',
-                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id ON classroom_memberships (user_id)',
-                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id_role ON classroom_memberships (classroom_id, role)',
-                    'CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id_role ON classroom_memberships (user_id, role)',
+                    "CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id ON classroom_memberships (classroom_id)",
+                    "CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id ON classroom_memberships (user_id)",
+                    "CREATE INDEX IF NOT EXISTS ix_classroom_memberships_classroom_id_role ON classroom_memberships (classroom_id, role)",
+                    "CREATE INDEX IF NOT EXISTS ix_classroom_memberships_user_id_role ON classroom_memberships (user_id, role)",
                 ]
                 for stmt in index_statements:
                     try:
@@ -74,13 +81,16 @@ def upgrade_schema(engine) -> None:
                         logger.warning(f"Could not create classroom index with '{stmt}': {e}")
                 conn.commit()
 
+
 class DatabaseError(Exception):
     """Custom exception for database-related errors."""
+
     pass
+
 
 class Database:
     """Manages database connections and provides session management utilities."""
-    
+
     def __init__(self):
         """Initialize database connection state."""
         self._engine = None
@@ -114,14 +124,14 @@ class Database:
 
             # Configure engine based on database type
             engine_kwargs = {}
-            if db_url and db_url.startswith('postgresql'):
+            if db_url and db_url.startswith("postgresql"):
                 # PostgreSQL/Supabase connection pooling settings
                 engine_kwargs = {
-                    'pool_size': 5,
-                    'max_overflow': 10,
-                    'pool_timeout': 30,
-                    'pool_recycle': 1800,  # Recycle connections after 30 minutes
-                    'pool_pre_ping': True,  # Verify connections before use
+                    "pool_size": 5,
+                    "max_overflow": 10,
+                    "pool_timeout": 30,
+                    "pool_recycle": 1800,  # Recycle connections after 30 minutes
+                    "pool_pre_ping": True,  # Verify connections before use
                 }
                 logger.info("Using PostgreSQL database with connection pooling")
             else:
@@ -130,12 +140,14 @@ class Database:
             self._engine = create_engine(db_url, **engine_kwargs)
 
             # Register service-specific models only for enabled service.
-            if constants.SERVICE == 'trakaido':
+            if constants.SERVICE == "trakaido":
                 from importlib import import_module
+
                 import_module("trakaido.models")
 
             # Import here to avoid circular imports
             from models import Base
+
             Base.metadata.create_all(self._engine)
 
             # Apply any pending schema upgrades (new columns on existing tables)
@@ -182,6 +194,7 @@ class Database:
             # Record database error metric
             try:
                 from atacama.blueprints.metrics import record_db_error
+
                 record_db_error()
             except ImportError:
                 pass  # Metrics not available (e.g., during testing)
@@ -192,6 +205,7 @@ class Database:
             duration = time.time() - start_time
             try:
                 from atacama.blueprints.metrics import record_db_session_duration
+
                 record_db_session_duration(duration)
             except ImportError:
                 pass  # Metrics not available (e.g., during testing)
@@ -199,7 +213,7 @@ class Database:
     def get_session(self) -> Optional[sessionmaker]:
         """
         Get session factory for manual session management.
-        
+
         :return: SQLAlchemy sessionmaker if initialized, None otherwise
         :raises: DatabaseError if system not initialized
         """
@@ -208,7 +222,7 @@ class Database:
                 "Cannot get session factory before system initialization. "
                 "Call either constants.init_testing() or constants.init_production()"
             )
-            
+
         if not self.initialized and not self.initialize():
             return None
         return self._session_factory
@@ -220,6 +234,7 @@ class Database:
         self._engine = None
         self._session_factory = None
         self.initialized = False
+
 
 # Global database instance
 db = Database()

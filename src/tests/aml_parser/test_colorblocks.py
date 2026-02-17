@@ -29,9 +29,24 @@ class TestColorsConstant(unittest.TestCase):
 
     def test_colors_has_expected_keys(self):
         """COLORS should have expected color keys."""
-        expected_colors = ['xantham', 'red', 'orange', 'yellow', 'quote', 'green',
-                          'acronym', 'context', 'resource', 'teal', 'blue',
-                          'violet', 'music', 'mogue', 'gray', 'hazel']
+        expected_colors = [
+            "xantham",
+            "red",
+            "orange",
+            "yellow",
+            "quote",
+            "green",
+            "acronym",
+            "context",
+            "resource",
+            "teal",
+            "blue",
+            "violet",
+            "music",
+            "mogue",
+            "gray",
+            "hazel",
+        ]
         for color in expected_colors:
             self.assertIn(color, COLORS)
 
@@ -47,31 +62,31 @@ class TestCreateColorBlock(unittest.TestCase):
 
     def test_valid_color(self):
         """create_color_block should create proper HTML for valid color."""
-        result = create_color_block('red', 'test content')
+        result = create_color_block("red", "test content")
         self.assertIn('class="colorblock color-red"', result)
         self.assertIn('class="sigil"', result)
         self.assertIn('class="colortext-content"', result)
-        self.assertIn('test content', result)
+        self.assertIn("test content", result)
 
     def test_unknown_color_returns_content(self):
         """create_color_block should return content as-is for unknown color."""
-        result = create_color_block('unknown', 'test content')
-        self.assertEqual(result, 'test content')
+        result = create_color_block("unknown", "test content")
+        self.assertEqual(result, "test content")
 
     def test_includes_sigil(self):
         """create_color_block should include the correct sigil."""
-        result = create_color_block('red', 'content')
-        self.assertIn(COLORS['red'][0], result)  # Check sigil
+        result = create_color_block("red", "content")
+        self.assertIn(COLORS["red"][0], result)  # Check sigil
 
     def test_line_level_vs_inline(self):
         """create_color_block should handle is_line parameter."""
         # Line level
-        line_result = create_color_block('red', 'content', is_line=True)
+        line_result = create_color_block("red", "content", is_line=True)
         # Inline
-        inline_result = create_color_block('red', 'content', is_line=False)
+        inline_result = create_color_block("red", "content", is_line=False)
         # Both should produce valid HTML with the color
-        self.assertIn('color-red', line_result)
-        self.assertIn('color-red', inline_result)
+        self.assertIn("color-red", line_result)
+        self.assertIn("color-red", inline_result)
 
 
 class TestCreateChineseAnnotation(unittest.TestCase):
@@ -90,10 +105,10 @@ class TestCreateChineseAnnotation(unittest.TestCase):
             mock_pinyin.default_processor.get_annotation.return_value = mock_annotation
 
         # Create mock aml_parser package
-        mock_aml_parser = types.ModuleType('aml_parser')
+        mock_aml_parser = types.ModuleType("aml_parser")
         mock_aml_parser.pinyin = mock_pinyin
 
-        return {'aml_parser': mock_aml_parser, 'aml_parser.pinyin': mock_pinyin}
+        return {"aml_parser": mock_aml_parser, "aml_parser.pinyin": mock_pinyin}
 
     def test_creates_span_with_class(self):
         """create_chinese_annotation should create span with annotated-chinese class."""
@@ -101,10 +116,10 @@ class TestCreateChineseAnnotation(unittest.TestCase):
         mock_annotation.pinyin = "NǏ HǍO"
         mock_annotation.definition = "hello"
 
-        with patch.dict('sys.modules', self._setup_mock_module(mock_annotation)):
+        with patch.dict("sys.modules", self._setup_mock_module(mock_annotation)):
             result = create_chinese_annotation("你好")
         self.assertIn('class="annotated-chinese"', result)
-        self.assertIn('你好</span>', result)
+        self.assertIn("你好</span>", result)
 
     def test_includes_data_attributes(self):
         """create_chinese_annotation should include data-pinyin and data-definition."""
@@ -112,7 +127,7 @@ class TestCreateChineseAnnotation(unittest.TestCase):
         mock_annotation.pinyin = "HǍO"
         mock_annotation.definition = "good"
 
-        with patch.dict('sys.modules', self._setup_mock_module(mock_annotation)):
+        with patch.dict("sys.modules", self._setup_mock_module(mock_annotation)):
             result = create_chinese_annotation("好")
         self.assertIn('data-pinyin="HǍO"', result)
         self.assertIn('data-definition="good"', result)
@@ -123,9 +138,9 @@ class TestCreateChineseAnnotation(unittest.TestCase):
         mock_annotation.pinyin = None
         mock_annotation.definition = "test"
 
-        with patch.dict('sys.modules', self._setup_mock_module(mock_annotation)):
+        with patch.dict("sys.modules", self._setup_mock_module(mock_annotation)):
             result = create_chinese_annotation("好")
-        self.assertNotIn('data-pinyin', result)
+        self.assertNotIn("data-pinyin", result)
         self.assertIn('data-definition="test"', result)
 
     def test_handles_missing_definition(self):
@@ -134,10 +149,10 @@ class TestCreateChineseAnnotation(unittest.TestCase):
         mock_annotation.pinyin = "HǍO"
         mock_annotation.definition = None
 
-        with patch.dict('sys.modules', self._setup_mock_module(mock_annotation)):
+        with patch.dict("sys.modules", self._setup_mock_module(mock_annotation)):
             result = create_chinese_annotation("好")
         self.assertIn('data-pinyin="HǍO"', result)
-        self.assertNotIn('data-definition', result)
+        self.assertNotIn("data-definition", result)
 
     def test_handles_import_error(self):
         """create_chinese_annotation should handle import error gracefully."""
@@ -147,11 +162,13 @@ class TestCreateChineseAnnotation(unittest.TestCase):
         result = create_chinese_annotation("好")
         self.assertIn('class="annotated-chinese"', result)
         # Either pinyin-module-missing or annotation-failed is acceptable
-        self.assertTrue('data-error=' in result or 'data-pinyin' not in result)
+        self.assertTrue("data-error=" in result or "data-pinyin" not in result)
 
     def test_handles_annotation_exception(self):
         """create_chinese_annotation should handle annotation exceptions."""
-        with patch.dict('sys.modules', self._setup_mock_module(side_effect=RuntimeError("Test error"))):
+        with patch.dict(
+            "sys.modules", self._setup_mock_module(side_effect=RuntimeError("Test error"))
+        ):
             result = create_chinese_annotation("好")
         self.assertIn('class="annotated-chinese"', result)
         self.assertIn('data-error="annotation-failed"', result)
@@ -162,17 +179,17 @@ class TestCreateListItem(unittest.TestCase):
 
     def test_bullet_list(self):
         """create_list_item should create bullet list item."""
-        result = create_list_item('Item content', 'bullet')
+        result = create_list_item("Item content", "bullet")
         self.assertEqual(result, '<li class="bullet-list">Item content</li>')
 
     def test_number_list(self):
         """create_list_item should create number list item."""
-        result = create_list_item('Item content', 'number')
+        result = create_list_item("Item content", "number")
         self.assertEqual(result, '<li class="number-list">Item content</li>')
 
     def test_arrow_list(self):
         """create_list_item should create arrow list item."""
-        result = create_list_item('Item content', 'arrow')
+        result = create_list_item("Item content", "arrow")
         self.assertEqual(result, '<li class="arrow-list">Item content</li>')
 
 
@@ -181,12 +198,12 @@ class TestCreateListContainer(unittest.TestCase):
 
     def test_wraps_items_in_ul(self):
         """create_list_container should wrap items in ul tag."""
-        items = ['<li>Item 1</li>', '<li>Item 2</li>']
+        items = ["<li>Item 1</li>", "<li>Item 2</li>"]
         result = create_list_container(items)
-        self.assertTrue(result.startswith('<ul>'))
-        self.assertTrue(result.endswith('</ul>'))
-        self.assertIn('<li>Item 1</li>', result)
-        self.assertIn('<li>Item 2</li>', result)
+        self.assertTrue(result.startswith("<ul>"))
+        self.assertTrue(result.endswith("</ul>"))
+        self.assertIn("<li>Item 1</li>", result)
+        self.assertIn("<li>Item 2</li>", result)
 
     def test_empty_list_returns_empty(self):
         """create_list_container should return empty string for empty list."""
@@ -195,8 +212,8 @@ class TestCreateListContainer(unittest.TestCase):
 
     def test_single_item(self):
         """create_list_container should handle single item."""
-        result = create_list_container(['<li>Only item</li>'])
-        self.assertIn('<li>Only item</li>', result)
+        result = create_list_container(["<li>Only item</li>"])
+        self.assertIn("<li>Only item</li>", result)
 
 
 class TestCreateMultilineBlock(unittest.TestCase):
@@ -204,30 +221,30 @@ class TestCreateMultilineBlock(unittest.TestCase):
 
     def test_basic_mlq(self):
         """create_multiline_block should create basic MLQ HTML."""
-        result = create_multiline_block(['Para 1', 'Para 2'])
+        result = create_multiline_block(["Para 1", "Para 2"])
         self.assertIn('class="mlq"', result)
         self.assertIn('class="mlq-collapse"', result)
         self.assertIn('class="mlq-content"', result)
-        self.assertIn('<p>Para 1</p>', result)
-        self.assertIn('<p>Para 2</p>', result)
+        self.assertIn("<p>Para 1</p>", result)
+        self.assertIn("<p>Para 2</p>", result)
 
     def test_colored_mlq(self):
         """create_multiline_block should handle color parameter."""
-        result = create_multiline_block(['Content'], color='red')
+        result = create_multiline_block(["Content"], color="red")
         self.assertIn('class="mlq color-red"', result)
         # Should use color sigil
-        self.assertIn(COLORS['red'][0], result)
+        self.assertIn(COLORS["red"][0], result)
 
     def test_empty_paragraphs_filtered(self):
         """create_multiline_block should filter empty paragraphs."""
-        result = create_multiline_block(['Para', '', '   ', 'Another'])
+        result = create_multiline_block(["Para", "", "   ", "Another"])
         # Count <p> tags - should only be 2
-        self.assertEqual(result.count('<p>'), 2)
+        self.assertEqual(result.count("<p>"), 2)
 
     def test_default_sigil(self):
         """create_multiline_block should use '-' as default sigil."""
-        result = create_multiline_block(['Content'])
-        self.assertIn('>-</span>', result)
+        result = create_multiline_block(["Content"])
+        self.assertIn(">-</span>", result)
 
 
 class TestCreateLiteralText(unittest.TestCase):
@@ -235,12 +252,12 @@ class TestCreateLiteralText(unittest.TestCase):
 
     def test_creates_literal_span(self):
         """create_literal_text should create span with literal-text class."""
-        result = create_literal_text('code here')
+        result = create_literal_text("code here")
         self.assertEqual(result, '<span class="literal-text">code here</span>')
 
     def test_strips_whitespace(self):
         """create_literal_text should strip whitespace from content."""
-        result = create_literal_text('  code  ')
+        result = create_literal_text("  code  ")
         self.assertEqual(result, '<span class="literal-text">code</span>')
 
 
@@ -327,7 +344,7 @@ class TestCreateUrlLink(unittest.TestCase):
         """create_url_link should encode quotes in href."""
         url = 'https://example.com/path"test'
         result = create_url_link(url)
-        self.assertIn('%22', result)
+        self.assertIn("%22", result)
 
 
 class TestCreateWikiLink(unittest.TestCase):
@@ -339,18 +356,18 @@ class TestCreateWikiLink(unittest.TestCase):
         self.assertIn('href="https://en.wikipedia.org/wiki/Test_Article"', result)
         self.assertIn('class="wikilink"', result)
         self.assertIn('target="_blank"', result)
-        self.assertIn('Test Article', result)
+        self.assertIn("Test Article", result)
 
     def test_spaces_converted_to_underscores(self):
         """create_wiki_link should convert spaces to underscores in URL."""
         result = create_wiki_link("Multiple Word Title")
-        self.assertIn('Multiple_Word_Title', result)
+        self.assertIn("Multiple_Word_Title", result)
 
     def test_html_in_title_stripped_for_url(self):
         """create_wiki_link should strip HTML for URL but keep for display."""
         result = create_wiki_link("<em>Emphasized</em> Title")
         self.assertIn('href="https://en.wikipedia.org/wiki/Emphasized_Title"', result)
-        self.assertIn('<em>Emphasized</em> Title</a>', result)
+        self.assertIn("<em>Emphasized</em> Title</a>", result)
 
 
 class TestCreateEmphasis(unittest.TestCase):
@@ -379,7 +396,7 @@ class TestCreateInlineTitle(unittest.TestCase):
     def test_preserves_html_content(self):
         """create_inline_title should preserve HTML content."""
         result = create_inline_title("<em>Styled</em> Title")
-        self.assertIn('<em>Styled</em>', result)
+        self.assertIn("<em>Styled</em>", result)
 
 
 class TestCreateTemplateHtml(unittest.TestCase):
@@ -414,5 +431,5 @@ class TestCreateTemplateHtml(unittest.TestCase):
         self.assertNotIn("<script>", result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

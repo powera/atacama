@@ -11,7 +11,7 @@ from trakaido.blueprints.date_utils import (
     get_30_days_ago_day_key,
     get_30_day_date_range,
     DAILY_CUTOFF_HOUR,
-    DAILY_CUTOFF_TIMEZONE
+    DAILY_CUTOFF_TIMEZONE,
 )
 
 
@@ -23,7 +23,7 @@ class DateUtilsTests(unittest.TestCase):
         # Create a fixed time after 7am GMT
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             # Configure the mock to return our test datetime
             mock_datetime_class.now.return_value = test_datetime
             # Import timedelta from the real datetime module
@@ -39,7 +39,7 @@ class DateUtilsTests(unittest.TestCase):
         # Create a fixed time before 7am GMT (5am)
         test_datetime = datetime(2025, 10, 28, 5, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -53,7 +53,7 @@ class DateUtilsTests(unittest.TestCase):
         # Create a fixed time exactly at 7am GMT
         test_datetime = datetime(2025, 10, 28, 7, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -66,7 +66,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_yesterday_day_key when current time is after 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -79,7 +79,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_yesterday_day_key when current time is before 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 5, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -92,7 +92,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_week_ago_day_key when current time is after 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -105,7 +105,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_week_ago_day_key when current time is before 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 5, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -118,7 +118,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_30_days_ago_day_key when current time is after 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -131,7 +131,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_30_days_ago_day_key when current time is before 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 5, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -144,7 +144,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_30_day_date_range when current time is after 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -159,7 +159,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test get_30_day_date_range when current time is before 7am GMT."""
         test_datetime = datetime(2025, 10, 28, 5, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
@@ -174,7 +174,7 @@ class DateUtilsTests(unittest.TestCase):
         """Test that get_30_day_date_range returns exactly 30 days."""
         test_datetime = datetime(2025, 10, 28, 10, 0, 0, tzinfo=timezone.utc)
 
-        with patch('trakaido.blueprints.date_utils.datetime') as mock_datetime_class:
+        with patch("trakaido.blueprints.date_utils.datetime") as mock_datetime_class:
             mock_datetime_class.now.return_value = test_datetime
             mock_datetime_class.side_effect = lambda *args, **kw: datetime(*args, **kw)
             mock_datetime_class.strptime = datetime.strptime
@@ -199,7 +199,7 @@ class DateUtilsTests(unittest.TestCase):
         result = get_current_day_key()
         self.assertIsInstance(result, str)
         self.assertEqual(len(result), 10)
-        self.assertEqual(result.count('-'), 2)
+        self.assertEqual(result.count("-"), 2)
         # Verify it's a valid date
         datetime.strptime(result, "%Y-%m-%d")
 
@@ -232,5 +232,5 @@ class DateUtilsTests(unittest.TestCase):
         self.assertLess(thirty_days_ago_dt, week_ago_dt)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

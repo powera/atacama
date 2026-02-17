@@ -48,7 +48,7 @@ class SaveWithDailyUpdateTests(unittest.TestCase):
 
     def test_save_with_daily_update_creates_snapshots(self):
         """Test save_with_daily_update creates daily snapshots."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create journey stats with some data
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -69,12 +69,16 @@ class SaveWithDailyUpdateTests(unittest.TestCase):
 
             # Verify daily snapshots were created
             current_day = get_current_day_key()
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "current", self.test_language))
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language))
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "current", self.test_language)
+            )
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language)
+            )
 
     def test_save_with_daily_update_updates_current_snapshot(self):
         """Test save_with_daily_update updates the current snapshot."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create journey stats and save with initial data
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -93,15 +97,20 @@ class SaveWithDailyUpdateTests(unittest.TestCase):
 
             # Verify current snapshot has updated data
             current_day = get_current_day_key()
-            current_snapshot = DailyStats(self.test_user_id, current_day, "current", self.test_language)
+            current_snapshot = DailyStats(
+                self.test_user_id, current_day, "current", self.test_language
+            )
             current_snapshot.load()
 
             snapshot_word_stats = current_snapshot.get_word_stats("test_word")
-            self.assertEqual(snapshot_word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 10)
+            self.assertEqual(
+                snapshot_word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"],
+                10,
+            )
 
     def test_save_with_daily_update_preserves_yesterday_snapshot(self):
         """Test save_with_daily_update doesn't overwrite yesterday snapshot."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create initial journey stats
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -115,7 +124,9 @@ class SaveWithDailyUpdateTests(unittest.TestCase):
 
             # Get yesterday snapshot stats
             current_day = get_current_day_key()
-            yesterday_snapshot = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot.load()
             initial_yesterday_stats = yesterday_snapshot.get_word_stats("test_word")
 
@@ -125,11 +136,18 @@ class SaveWithDailyUpdateTests(unittest.TestCase):
             journey_stats.save_with_daily_update()
 
             # Verify yesterday snapshot was NOT changed (should still be 5)
-            yesterday_snapshot2 = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot2 = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot2.load()
             final_yesterday_stats = yesterday_snapshot2.get_word_stats("test_word")
 
-            self.assertEqual(final_yesterday_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+            self.assertEqual(
+                final_yesterday_stats["directPractice"]["multipleChoice_englishToTarget"][
+                    "correct"
+                ],
+                5,
+            )
 
 
 class EnsureDailySnapshotsTests(unittest.TestCase):
@@ -148,8 +166,7 @@ class EnsureDailySnapshotsTests(unittest.TestCase):
 
     def test_ensure_daily_snapshots_creates_both_snapshots(self):
         """Test ensure_daily_snapshots creates both yesterday and current snapshots."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
-
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create some journey stats first
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -166,12 +183,16 @@ class EnsureDailySnapshotsTests(unittest.TestCase):
 
             # Verify both snapshots exist
             current_day = get_current_day_key()
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "current", self.test_language))
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language))
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "current", self.test_language)
+            )
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language)
+            )
 
     def test_ensure_daily_snapshots_with_empty_journey_stats(self):
         """Test ensure_daily_snapshots works with empty journey stats."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Don't create any journey stats, just call ensure
             result = ensure_daily_snapshots(self.test_user_id, self.test_language)
@@ -180,22 +201,28 @@ class EnsureDailySnapshotsTests(unittest.TestCase):
 
             # Snapshots should exist but be empty
             current_day = get_current_day_key()
-            yesterday_snapshot = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot.load()
             self.assertTrue(yesterday_snapshot.is_empty())
 
-            current_snapshot = DailyStats(self.test_user_id, current_day, "current", self.test_language)
+            current_snapshot = DailyStats(
+                self.test_user_id, current_day, "current", self.test_language
+            )
             current_snapshot.load()
             self.assertTrue(current_snapshot.is_empty())
 
     def test_ensure_daily_snapshots_doesnt_overwrite_existing(self):
         """Test ensure_daily_snapshots doesn't overwrite existing yesterday snapshot."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             current_day = get_current_day_key()
 
             # Create yesterday snapshot with specific data
-            yesterday_snapshot = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot.load()
             test_word_stats = create_empty_word_stats()
             test_word_stats["exposed"] = True
@@ -216,14 +243,18 @@ class EnsureDailySnapshotsTests(unittest.TestCase):
             ensure_daily_snapshots(self.test_user_id, self.test_language)
 
             # Yesterday snapshot should still have original value (5, not 10)
-            yesterday_snapshot2 = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot2 = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot2.load()
             word_stats = yesterday_snapshot2.get_word_stats("test_word")
-            self.assertEqual(word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+            self.assertEqual(
+                word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5
+            )
 
     def test_ensure_daily_snapshots_copies_journey_stats(self):
         """Test ensure_daily_snapshots copies data from journey stats."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create journey stats with specific data
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -240,18 +271,26 @@ class EnsureDailySnapshotsTests(unittest.TestCase):
             # Both snapshots should have the journey stats data
             current_day = get_current_day_key()
 
-            yesterday_snapshot = DailyStats(self.test_user_id, current_day, "yesterday", self.test_language)
+            yesterday_snapshot = DailyStats(
+                self.test_user_id, current_day, "yesterday", self.test_language
+            )
             yesterday_snapshot.load()
             self.assertEqual(
-                yesterday_snapshot.get_word_stats("test_word")["directPractice"]["multipleChoice_englishToTarget"]["correct"],
-                7
+                yesterday_snapshot.get_word_stats("test_word")["directPractice"][
+                    "multipleChoice_englishToTarget"
+                ]["correct"],
+                7,
             )
 
-            current_snapshot = DailyStats(self.test_user_id, current_day, "current", self.test_language)
+            current_snapshot = DailyStats(
+                self.test_user_id, current_day, "current", self.test_language
+            )
             current_snapshot.load()
             self.assertEqual(
-                current_snapshot.get_word_stats("test_word")["directPractice"]["multipleChoice_englishToTarget"]["correct"],
-                7
+                current_snapshot.get_word_stats("test_word")["directPractice"][
+                    "multipleChoice_englishToTarget"
+                ]["correct"],
+                7,
             )
 
 
@@ -271,14 +310,18 @@ class CalculateProgressDeltaTests(unittest.TestCase):
 
     def test_calculate_progress_delta_with_new_words(self):
         """Test calculate_progress_delta correctly counts new words."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create baseline (empty)
-            baseline_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
+            baseline_stats = DailyStats(
+                self.test_user_id, "2025-01-01", "current", self.test_language
+            )
             baseline_stats.load()
 
             # Create current with one exposed word
-            current_stats = DailyStats(self.test_user_id, "2025-01-02", "current", self.test_language)
+            current_stats = DailyStats(
+                self.test_user_id, "2025-01-02", "current", self.test_language
+            )
             current_stats.load()
             test_word = create_empty_word_stats()
             test_word["exposed"] = True
@@ -292,14 +335,18 @@ class CalculateProgressDeltaTests(unittest.TestCase):
             self.assertEqual(delta["exposed"]["new"], 1)
             self.assertEqual(delta["exposed"]["total"], 1)
             # Should have 5 correct answers
-            self.assertEqual(delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
+            self.assertEqual(
+                delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5
+            )
 
     def test_calculate_progress_delta_with_incremented_stats(self):
         """Test calculate_progress_delta correctly calculates increments."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create baseline with some stats
-            baseline_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
+            baseline_stats = DailyStats(
+                self.test_user_id, "2025-01-01", "current", self.test_language
+            )
             baseline_stats.load()
             baseline_word = create_empty_word_stats()
             baseline_word["exposed"] = True
@@ -308,7 +355,9 @@ class CalculateProgressDeltaTests(unittest.TestCase):
             baseline_stats.set_word_stats("word1", baseline_word)
 
             # Create current with incremented stats
-            current_stats = DailyStats(self.test_user_id, "2025-01-02", "current", self.test_language)
+            current_stats = DailyStats(
+                self.test_user_id, "2025-01-02", "current", self.test_language
+            )
             current_stats.load()
             current_word = create_empty_word_stats()
             current_word["exposed"] = True
@@ -323,19 +372,27 @@ class CalculateProgressDeltaTests(unittest.TestCase):
             self.assertEqual(delta["exposed"]["new"], 0)
             self.assertEqual(delta["exposed"]["total"], 1)
             # Should have delta of 5 correct, 3 incorrect
-            self.assertEqual(delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5)
-            self.assertEqual(delta["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 3)
+            self.assertEqual(
+                delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 5
+            )
+            self.assertEqual(
+                delta["directPractice"]["multipleChoice_englishToTarget"]["incorrect"], 3
+            )
 
     def test_calculate_progress_delta_multiple_words(self):
         """Test calculate_progress_delta aggregates across multiple words."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create baseline
-            baseline_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
+            baseline_stats = DailyStats(
+                self.test_user_id, "2025-01-01", "current", self.test_language
+            )
             baseline_stats.load()
 
             # Create current with multiple words
-            current_stats = DailyStats(self.test_user_id, "2025-01-02", "current", self.test_language)
+            current_stats = DailyStats(
+                self.test_user_id, "2025-01-02", "current", self.test_language
+            )
             current_stats.load()
 
             for i in range(3):
@@ -350,7 +407,9 @@ class CalculateProgressDeltaTests(unittest.TestCase):
             # Should aggregate across all 3 words
             self.assertEqual(delta["exposed"]["new"], 3)
             self.assertEqual(delta["exposed"]["total"], 3)
-            self.assertEqual(delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 15)
+            self.assertEqual(
+                delta["directPractice"]["multipleChoice_englishToTarget"]["correct"], 15
+            )
 
 
 class CalculateDailyProgressTests(unittest.TestCase):
@@ -369,7 +428,7 @@ class CalculateDailyProgressTests(unittest.TestCase):
 
     def test_calculate_daily_progress_successful(self):
         """Test calculate_daily_progress returns expected structure."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Create journey stats
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
@@ -397,7 +456,7 @@ class CalculateDailyProgressTests(unittest.TestCase):
 
     def test_calculate_daily_progress_with_empty_stats(self):
         """Test calculate_daily_progress with no activity."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             # Calculate without any stats
             result = calculate_daily_progress(self.test_user_id, self.test_language)
@@ -410,25 +469,34 @@ class CalculateDailyProgressTests(unittest.TestCase):
 
     def test_calculate_daily_progress_ensures_snapshots(self):
         """Test calculate_daily_progress creates snapshots if missing."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
 
             current_day = get_current_day_key()
 
             # Snapshots shouldn't exist yet
-            self.assertFalse(DailyStats.exists(self.test_user_id, current_day, "current", self.test_language))
-            self.assertFalse(DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language))
+            self.assertFalse(
+                DailyStats.exists(self.test_user_id, current_day, "current", self.test_language)
+            )
+            self.assertFalse(
+                DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language)
+            )
 
             # Calculate daily progress
             calculate_daily_progress(self.test_user_id, self.test_language)
 
             # Snapshots should now exist
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "current", self.test_language))
-            self.assertTrue(DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language))
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "current", self.test_language)
+            )
+            self.assertTrue(
+                DailyStats.exists(self.test_user_id, current_day, "yesterday", self.test_language)
+            )
 
 
 # ============================================================================
 # Priority 2 Tests
 # ============================================================================
+
 
 class GetStatTypeTotalTests(unittest.TestCase):
     """Test cases for DailyStats.get_stat_type_total() and get_all_stat_totals()."""
@@ -446,7 +514,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
 
     def test_get_stat_type_total_single_word(self):
         """Test get_stat_type_total with a single word."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
             daily_stats.load()
 
@@ -457,14 +525,16 @@ class GetStatTypeTotalTests(unittest.TestCase):
             daily_stats.set_word_stats("word1", word)
 
             # Get totals for this stat type
-            totals = daily_stats.get_stat_type_total("directPractice.multipleChoice_englishToTarget")
+            totals = daily_stats.get_stat_type_total(
+                "directPractice.multipleChoice_englishToTarget"
+            )
 
             self.assertEqual(totals["correct"], 10)
             self.assertEqual(totals["incorrect"], 3)
 
     def test_get_stat_type_total_multiple_words(self):
         """Test get_stat_type_total aggregates across multiple words."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
             daily_stats.load()
 
@@ -485,7 +555,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
 
     def test_get_stat_type_total_contextual_exposure(self):
         """Test get_stat_type_total with contextual exposure."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
             daily_stats.load()
 
@@ -502,7 +572,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
 
     def test_get_stat_type_total_category_choice(self):
         """Test get_stat_type_total with categoryChoice contextual exposure."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
             daily_stats.load()
 
@@ -519,7 +589,7 @@ class GetStatTypeTotalTests(unittest.TestCase):
 
     def test_get_all_stat_totals(self):
         """Test get_all_stat_totals returns all activity types."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             daily_stats = DailyStats(self.test_user_id, "2025-01-01", "current", self.test_language)
             daily_stats.load()
 
@@ -542,7 +612,9 @@ class GetStatTypeTotalTests(unittest.TestCase):
             self.assertIn("contextualExposure.categoryChoice", all_totals)
 
             # Check specific values
-            self.assertEqual(all_totals["directPractice.multipleChoice_englishToTarget"]["correct"], 5)
+            self.assertEqual(
+                all_totals["directPractice.multipleChoice_englishToTarget"]["correct"], 5
+            )
             self.assertEqual(all_totals["directPractice.typing_targetToEnglish"]["correct"], 3)
             self.assertEqual(all_totals["directPractice.spelling_englishToTarget"]["correct"], 6)
             self.assertEqual(all_totals["contextualExposure.sentences"]["correct"], 2)
@@ -565,7 +637,7 @@ class CalculateWeeklyProgressTests(unittest.TestCase):
 
     def test_calculate_weekly_progress_structure(self):
         """Test calculate_weekly_progress returns expected structure."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             # Create some journey stats
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -586,9 +658,11 @@ class CalculateWeeklyProgressTests(unittest.TestCase):
 
     def test_calculate_weekly_progress_with_baseline(self):
         """Test calculate_weekly_progress calculates delta correctly."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             current_day = get_current_day_key()
-            week_ago = (datetime.strptime(current_day, "%Y-%m-%d") - timedelta(days=7)).strftime("%Y-%m-%d")
+            week_ago = (datetime.strptime(current_day, "%Y-%m-%d") - timedelta(days=7)).strftime(
+                "%Y-%m-%d"
+            )
 
             # Create baseline from a week ago
             baseline_stats = DailyStats(self.test_user_id, week_ago, "current", self.test_language)
@@ -615,7 +689,9 @@ class CalculateWeeklyProgressTests(unittest.TestCase):
 
             # Should show progress of 10 (15 - 5)
             progress = result["progress"]
-            self.assertEqual(progress["directPractice"]["multipleChoice_englishToTarget"]["correct"], 10)
+            self.assertEqual(
+                progress["directPractice"]["multipleChoice_englishToTarget"]["correct"], 10
+            )
 
 
 class CalculateMonthlyProgressTests(unittest.TestCase):
@@ -634,7 +710,7 @@ class CalculateMonthlyProgressTests(unittest.TestCase):
 
     def test_calculate_monthly_progress_structure(self):
         """Test calculate_monthly_progress returns expected structure."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             # Create some journey stats
             journey_stats = JourneyStats(self.test_user_id, self.test_language)
             journey_stats.load()
@@ -666,7 +742,7 @@ class CalculateMonthlyProgressTests(unittest.TestCase):
 
     def test_calculate_monthly_progress_daily_data(self):
         """Test calculate_monthly_progress includes daily breakdown."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             current_day = get_current_day_key()
 
             # Create a daily snapshot with some data
@@ -704,6 +780,7 @@ class CalculateMonthlyProgressTests(unittest.TestCase):
 # Priority 3 Tests
 # ============================================================================
 
+
 class FindBestBaselineTests(unittest.TestCase):
     """Test cases for find_best_baseline() using mocks."""
 
@@ -717,7 +794,7 @@ class FindBestBaselineTests(unittest.TestCase):
         target_day = "2025-01-15"
 
         # Mock DailyStats to simulate existing data
-        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch("trakaido.blueprints.stats_snapshots.DailyStats") as MockDailyStats:
             mock_instance = MagicMock()
             mock_instance.is_empty.return_value = False
             mock_instance.date = target_day
@@ -735,7 +812,7 @@ class FindBestBaselineTests(unittest.TestCase):
         target_day = "2025-01-15"
         fallback_day = "2025-01-16"  # One day after target
 
-        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch("trakaido.blueprints.stats_snapshots.DailyStats") as MockDailyStats:
             # Target date doesn't exist
             def exists_side_effect(user_id, date, stats_type, language):
                 if date == target_day and stats_type == "current":
@@ -762,7 +839,7 @@ class FindBestBaselineTests(unittest.TestCase):
         """Test find_best_baseline returns empty stats when no baseline found."""
         target_day = "2025-01-15"
 
-        with patch('trakaido.blueprints.stats_snapshots.DailyStats') as MockDailyStats:
+        with patch("trakaido.blueprints.stats_snapshots.DailyStats") as MockDailyStats:
             MockDailyStats.exists.return_value = False
             MockDailyStats.get_available_dates.return_value = []
 
@@ -795,12 +872,16 @@ class CompressPreviousDayFilesTests(unittest.TestCase):
 
     def test_compress_previous_day_files_compresses_old_files(self):
         """Test compress_previous_day_files compresses files from previous days."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             current_day = get_current_day_key()
-            yesterday = (datetime.strptime(current_day, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+            yesterday = (datetime.strptime(current_day, "%Y-%m-%d") - timedelta(days=1)).strftime(
+                "%Y-%m-%d"
+            )
 
             # Create a daily stats file for yesterday
-            yesterday_stats = DailyStats(self.test_user_id, yesterday, "current", self.test_language)
+            yesterday_stats = DailyStats(
+                self.test_user_id, yesterday, "current", self.test_language
+            )
             yesterday_stats.load()
             word = create_empty_word_stats()
             word["exposed"] = True
@@ -822,7 +903,7 @@ class CompressPreviousDayFilesTests(unittest.TestCase):
 
     def test_compress_previous_day_files_skips_current_day(self):
         """Test compress_previous_day_files doesn't compress current day files."""
-        with patch('constants.DATA_DIR', self.test_data_dir):
+        with patch("constants.DATA_DIR", self.test_data_dir):
             current_day = get_current_day_key()
 
             # Create a daily stats file for today
@@ -853,29 +934,23 @@ class FormatStatsJsonTests(unittest.TestCase):
                     "directPractice": {
                         "multipleChoice_englishToTarget": {"correct": 5, "incorrect": 2}
                     },
-                    "contextualExposure": {
-                        "sentences": {"correct": 0, "incorrect": 0}
-                    },
+                    "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
                     "practiceHistory": {
                         "lastSeen": 1234567890,
                         "lastCorrectAnswer": None,
-                        "lastIncorrectAnswer": None
-                    }
+                        "lastIncorrectAnswer": None,
+                    },
                 },
                 "word2": {
                     "exposed": False,
-                    "directPractice": {
-                        "typing_targetToEnglish": {"correct": 3, "incorrect": 1}
-                    },
-                    "contextualExposure": {
-                        "sentences": {"correct": 0, "incorrect": 0}
-                    },
+                    "directPractice": {"typing_targetToEnglish": {"correct": 3, "incorrect": 1}},
+                    "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
                     "practiceHistory": {
                         "lastSeen": None,
                         "lastCorrectAnswer": None,
-                        "lastIncorrectAnswer": None
-                    }
-                }
+                        "lastIncorrectAnswer": None,
+                    },
+                },
             }
         }
 
@@ -887,18 +962,19 @@ class FormatStatsJsonTests(unittest.TestCase):
         self.assertIn('"word2":', result)
 
         # Each word's data should be on one line (count lines with "word")
-        word_lines = [line for line in result.split('\n') if '"word' in line]
+        word_lines = [line for line in result.split("\n") if '"word' in line]
         self.assertEqual(len(word_lines), 2)
 
         # Each word line should be valid JSON
         for line in word_lines:
             # Extract the word stats portion
-            word_stats_str = line.strip().rstrip(',')
-            if ':' in word_stats_str:
+            word_stats_str = line.strip().rstrip(",")
+            if ":" in word_stats_str:
                 # Parse just the value part
-                _, value_part = word_stats_str.split(':', 1)
+                _, value_part = word_stats_str.split(":", 1)
                 # This should be valid JSON
                 import json
+
                 parsed = json.loads(value_part.strip())
                 self.assertIn("exposed", parsed)
 
@@ -910,6 +986,7 @@ class FormatStatsJsonTests(unittest.TestCase):
 
         # Should produce valid JSON
         import json
+
         parsed = json.loads(result)
         self.assertEqual(parsed, stats)
 
@@ -922,14 +999,12 @@ class FormatStatsJsonTests(unittest.TestCase):
                     "directPractice": {
                         "multipleChoice_englishToTarget": {"correct": 1, "incorrect": 0}
                     },
-                    "contextualExposure": {
-                        "sentences": {"correct": 0, "incorrect": 0}
-                    },
+                    "contextualExposure": {"sentences": {"correct": 0, "incorrect": 0}},
                     "practiceHistory": {
                         "lastSeen": None,
                         "lastCorrectAnswer": None,
-                        "lastIncorrectAnswer": None
-                    }
+                        "lastIncorrectAnswer": None,
+                    },
                 }
             }
         }
@@ -941,5 +1016,5 @@ class FormatStatsJsonTests(unittest.TestCase):
         self.assertNotIn("\\u", result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

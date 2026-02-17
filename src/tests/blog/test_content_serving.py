@@ -16,17 +16,19 @@ class ContentServingTests(unittest.TestCase):
     def setUp(self):
         """Set up test application with in-memory database."""
         self.app = create_app(testing=True)
-        self.app.config.update({
-            'TESTING': True,
-            'SERVER_NAME': 'test.local',
-        })
+        self.app.config.update(
+            {
+                "TESTING": True,
+                "SERVER_NAME": "test.local",
+            }
+        )
         self.client = self.app.test_client()
 
     def tearDown(self):
         """Clean up after tests."""
         db.cleanup()
 
-    def create_test_user(self, email='test@example.com', name='Test User'):
+    def create_test_user(self, email="test@example.com", name="Test User"):
         """Helper to create a test user."""
         with self.app.app_context():
             with db.session() as db_session:
@@ -35,7 +37,9 @@ class ContentServingTests(unittest.TestCase):
                 db_session.commit()
                 return user.id
 
-    def create_test_message(self, author_id, channel='misc', subject='Test', content='Test content'):
+    def create_test_message(
+        self, author_id, channel="misc", subject="Test", content="Test content"
+    ):
         """Helper to create a test message."""
         with self.app.app_context():
             with db.session() as db_session:
@@ -44,7 +48,7 @@ class ContentServingTests(unittest.TestCase):
                     channel=channel,
                     subject=subject,
                     content=content,
-                    processed_content=content
+                    processed_content=content,
                 )
                 db_session.add(message)
                 db_session.commit()
@@ -53,20 +57,20 @@ class ContentServingTests(unittest.TestCase):
     def test_message_stream_public_channel(self):
         """Test accessing public channel message stream without auth."""
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='misc', subject='Public Message')
+        self.create_test_message(user_id, channel="misc", subject="Public Message")
 
-        response = self.client.get('/stream/channel/misc')
+        response = self.client.get("/stream/channel/misc")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Public Message', response.data)
+        self.assertIn(b"Public Message", response.data)
 
     def test_message_stream_private_channel_requires_auth(self):
         """Test that private channels require authentication."""
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='private', subject='Private Message')
+        self.create_test_message(user_id, channel="private", subject="Private Message")
 
         # Try to access without authentication
-        response = self.client.get('/stream/channel/private')
+        response = self.client.get("/stream/channel/private")
 
         # Should redirect to login or show error
         self.assertIn(response.status_code, [302, 401, 403])
@@ -76,34 +80,36 @@ class ContentServingTests(unittest.TestCase):
         user_id = self.create_test_user()
 
         # Create multiple messages
-        msg1_id = self.create_test_message(user_id, subject='Message 1')
-        msg2_id = self.create_test_message(user_id, subject='Message 2')
-        msg3_id = self.create_test_message(user_id, subject='Message 3')
+        msg1_id = self.create_test_message(user_id, subject="Message 1")
+        msg2_id = self.create_test_message(user_id, subject="Message 2")
+        msg3_id = self.create_test_message(user_id, subject="Message 3")
 
         # Get first page
-        response = self.client.get('/stream/channel/misc')
+        response = self.client.get("/stream/channel/misc")
         self.assertEqual(response.status_code, 200)
 
         # Get older messages
-        response = self.client.get(f'/stream/channel/misc/older/{msg3_id}')
+        response = self.client.get(f"/stream/channel/misc/older/{msg3_id}")
         self.assertEqual(response.status_code, 200)
 
     def test_get_message_by_id(self):
         """Test retrieving a specific message by ID."""
         user_id = self.create_test_user()
-        msg_id = self.create_test_message(user_id, subject='Specific Message', content='Specific content')
+        msg_id = self.create_test_message(
+            user_id, subject="Specific Message", content="Specific content"
+        )
 
-        response = self.client.get(f'/messages/{msg_id}')
+        response = self.client.get(f"/messages/{msg_id}")
 
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.assertIsNotNone(data)
-        self.assertEqual(data['id'], msg_id)
-        self.assertEqual(data['subject'], 'Specific Message')
+        self.assertEqual(data["id"], msg_id)
+        self.assertEqual(data["subject"], "Specific Message")
 
     def test_get_nonexistent_message(self):
         """Test accessing a message that doesn't exist."""
-        response = self.client.get('/messages/99999')
+        response = self.client.get("/messages/99999")
 
         self.assertIn(response.status_code, [404, 400])
 
@@ -112,24 +118,24 @@ class ContentServingTests(unittest.TestCase):
         user_id = self.create_test_user()
 
         # Create messages in different channels
-        self.create_test_message(user_id, channel='misc', subject='General Message')
-        self.create_test_message(user_id, channel='technology', subject='Tech Message')
+        self.create_test_message(user_id, channel="misc", subject="General Message")
+        self.create_test_message(user_id, channel="technology", subject="Tech Message")
 
         # Get general channel
-        response = self.client.get('/stream/channel/general')
+        response = self.client.get("/stream/channel/general")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'General Message', response.data)
-        self.assertNotIn(b'Tech Message', response.data)
+        self.assertIn(b"General Message", response.data)
+        self.assertNotIn(b"Tech Message", response.data)
 
         # Get technology channel
-        response = self.client.get('/stream/channel/technology')
+        response = self.client.get("/stream/channel/technology")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Tech Message', response.data)
-        self.assertNotIn(b'General Message', response.data)
+        self.assertIn(b"Tech Message", response.data)
+        self.assertNotIn(b"General Message", response.data)
 
     def test_channel_preferences_requires_auth(self):
         """Test that channel preferences page requires authentication."""
-        response = self.client.get('/channels')
+        response = self.client.get("/channels")
 
         # Should redirect to login or show error
         self.assertIn(response.status_code, [302, 401])
@@ -137,23 +143,22 @@ class ContentServingTests(unittest.TestCase):
     def test_channel_preferences_with_auth(self):
         """Test accessing channel preferences when authenticated."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
-        response = self.client.get('/channels')
+        response = self.client.get("/channels")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Channel Preferences', response.data)
+        self.assertIn(b"Channel Preferences", response.data)
 
     def test_update_channel_preferences(self):
         """Test updating channel preferences."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # Update preferences
-        response = self.client.post('/channels', data={
-            'channel_general': 'on',
-            'channel_technology': 'on'
-        })
+        response = self.client.post(
+            "/channels", data={"channel_general": "on", "channel_technology": "on"}
+        )
 
         # Should redirect back to preferences page
         self.assertIn(response.status_code, [200, 302])
@@ -167,40 +172,39 @@ class ContentServingTests(unittest.TestCase):
                 # Create message with article
                 message = Email(
                     author_id=user_id,
-                    channel='misc',
-                    subject='Article Message',
-                    content='Summary',
-                    processed_content='Summary'
+                    channel="misc",
+                    subject="Article Message",
+                    content="Summary",
+                    processed_content="Summary",
                 )
                 db_session.add(message)
                 db_session.flush()
 
                 article = Article(
-                    message_id=message.id,
-                    content='<green>Full article content</green>'
+                    message_id=message.id, content="<green>Full article content</green>"
                 )
                 db_session.add(article)
                 db_session.commit()
                 msg_id = message.id
 
-        response = self.client.get(f'/messages/{msg_id}')
+        response = self.client.get(f"/messages/{msg_id}")
 
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
-        self.assertIn('article', data)
+        self.assertIn("article", data)
 
     def test_timestamp_based_filtering(self):
         """Test filtering messages by timestamp."""
         user_id = self.create_test_user()
-        self.create_test_message(user_id, subject='Test Message')
+        self.create_test_message(user_id, subject="Test Message")
 
         # Test with date-based URL
-        response = self.client.get('/stream/channel/general/before/2099-12-31/')
+        response = self.client.get("/stream/channel/general/before/2099-12-31/")
         self.assertEqual(response.status_code, 200)
 
     def test_invalid_channel(self):
         """Test accessing an invalid or non-existent channel."""
-        response = self.client.get('/stream/channel/nonexistent_channel_xyz')
+        response = self.client.get("/stream/channel/nonexistent_channel_xyz")
 
         # Should return 404 or redirect
         self.assertIn(response.status_code, [404, 200])
@@ -209,9 +213,9 @@ class ContentServingTests(unittest.TestCase):
         """Test that channels are filtered based on domain configuration."""
         # This test verifies domain-based channel filtering
         user_id = self.create_test_user()
-        self.create_test_message(user_id, channel='misc')
+        self.create_test_message(user_id, channel="misc")
 
-        response = self.client.get('/stream/channel/general')
+        response = self.client.get("/stream/channel/general")
         self.assertEqual(response.status_code, 200)
 
 
@@ -221,10 +225,12 @@ class MessageAccessControlTests(unittest.TestCase):
     def setUp(self):
         """Set up test application."""
         self.app = create_app(testing=True)
-        self.app.config.update({
-            'TESTING': True,
-            'SERVER_NAME': 'test.local',
-        })
+        self.app.config.update(
+            {
+                "TESTING": True,
+                "SERVER_NAME": "test.local",
+            }
+        )
         self.client = self.app.test_client()
 
     def tearDown(self):
@@ -235,11 +241,11 @@ class MessageAccessControlTests(unittest.TestCase):
         """Test that restricted channels require admin privileges."""
         # This would need proper setup of restricted channels
         # For now, just verify the mechanism exists
-        response = self.client.get('/stream/channel/admin')
+        response = self.client.get("/stream/channel/admin")
 
         # Should require authentication or show forbidden
         self.assertIn(response.status_code, [302, 401, 403, 404, 200])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

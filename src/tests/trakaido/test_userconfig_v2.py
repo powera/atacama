@@ -38,15 +38,14 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         constants.DATA_DIR = self.original_data_dir
 
     def test_get_userconfig_file_path(self):
         """Test userconfig file path generation."""
         path = get_userconfig_file_path("123", "lithuanian")
-        expected = os.path.join(
-            self.temp_dir, "trakaido", "123", "lithuanian", "userconfig.json"
-        )
+        expected = os.path.join(self.temp_dir, "trakaido", "123", "lithuanian", "userconfig.json")
         self.assertEqual(path, expected)
 
     def test_load_user_config_returns_defaults_when_no_file(self):
@@ -73,20 +72,11 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
                 "currentLevel": 5,
                 "userProficiency": "intermediate",
                 "journeyAutoAdvance": False,
-                "showMotivationalBreaks": True
+                "showMotivationalBreaks": True,
             },
-            "audio": {
-                "enabled": False,
-                "selectedVoice": "ash",
-                "downloadOnWiFiOnly": True
-            },
-            "display": {
-                "colorScheme": "dark",
-                "showGrammarInterstitials": False
-            },
-            "metadata": {
-                "hasCompletedOnboarding": True
-            }
+            "audio": {"enabled": False, "selectedVoice": "ash", "downloadOnWiFiOnly": True},
+            "display": {"colorScheme": "dark", "showGrammarInterstitials": False},
+            "metadata": {"hasCompletedOnboarding": True},
         }
 
         # Save config
@@ -118,7 +108,7 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
 
         # Write invalid JSON
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             f.write("{ invalid json }")
 
         # Should return default config
@@ -127,14 +117,7 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
 
     def test_merge_with_defaults(self):
         """Test merging partial config with defaults."""
-        partial_config = {
-            "learning": {
-                "currentLevel": 10
-            },
-            "audio": {
-                "enabled": False
-            }
-        }
+        partial_config = {"learning": {"currentLevel": 10}, "audio": {"enabled": False}}
 
         merged = _merge_with_defaults(partial_config)
 
@@ -169,7 +152,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
                 "currentLevel": 5,
                 "userProficiency": "intermediate",
                 "journeyAutoAdvance": False,
-                "showMotivationalBreaks": True
+                "showMotivationalBreaks": True,
             }
         }
 
@@ -207,13 +190,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_valid_audio_config(self):
         """Test validation accepts valid audio configuration."""
-        updates = {
-            "audio": {
-                "enabled": True,
-                "selectedVoice": "ash",
-                "downloadOnWiFiOnly": False
-            }
-        }
+        updates = {"audio": {"enabled": True, "selectedVoice": "ash", "downloadOnWiFiOnly": False}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertTrue(is_valid)
@@ -237,12 +214,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_valid_display_config(self):
         """Test validation accepts valid display configuration."""
-        updates = {
-            "display": {
-                "colorScheme": "dark",
-                "showGrammarInterstitials": False
-            }
-        }
+        updates = {"display": {"colorScheme": "dark", "showGrammarInterstitials": False}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertTrue(is_valid)
@@ -250,11 +222,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_accepts_has_completed_onboarding_update(self):
         """Test validation accepts hasCompletedOnboarding updates."""
-        updates = {
-            "metadata": {
-                "hasCompletedOnboarding": True
-            }
-        }
+        updates = {"metadata": {"hasCompletedOnboarding": True}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertTrue(is_valid)
@@ -262,11 +230,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_rejects_last_modified_update(self):
         """Test validation rejects lastModified updates (read-only)."""
-        updates = {
-            "metadata": {
-                "lastModified": "2025-01-01T00:00:00Z"
-            }
-        }
+        updates = {"metadata": {"lastModified": "2025-01-01T00:00:00Z"}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertFalse(is_valid)
@@ -275,11 +239,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_rejects_invalid_has_completed_onboarding_type(self):
         """Test validation rejects non-boolean hasCompletedOnboarding."""
-        updates = {
-            "metadata": {
-                "hasCompletedOnboarding": "yes"
-            }
-        }
+        updates = {"metadata": {"hasCompletedOnboarding": "yes"}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertFalse(is_valid)
@@ -287,12 +247,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
 
     def test_validate_ignores_unknown_metadata_fields(self):
         """Test validation ignores unknown metadata fields."""
-        updates = {
-            "metadata": {
-                "hasCompletedOnboarding": True,
-                "customField": "value"
-            }
-        }
+        updates = {"metadata": {"hasCompletedOnboarding": True, "customField": "value"}}
 
         is_valid, error, unknown = validate_config_update(updates)
         self.assertTrue(is_valid)
@@ -311,7 +266,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
         updates = {
             "learning": {"currentLevel": 8},
             "audio": {"enabled": False},
-            "display": {"colorScheme": "light"}
+            "display": {"colorScheme": "light"},
         }
 
         is_valid, error, unknown = validate_config_update(updates)
@@ -342,7 +297,7 @@ class UserconfigV2UpdateTests(unittest.TestCase):
         updates = {
             "learning": {"currentLevel": 3},
             "audio": {"enabled": False},
-            "display": {"colorScheme": "dark"}
+            "display": {"colorScheme": "dark"},
         }
 
         result = _apply_updates(current, updates)
@@ -378,12 +333,7 @@ class UserconfigV2UpdateTests(unittest.TestCase):
     def test_apply_updates_filters_unknown_metadata_fields(self):
         """Test that unknown metadata fields are filtered out."""
         current = _deep_copy_config(DEFAULT_CONFIG)
-        updates = {
-            "metadata": {
-                "hasCompletedOnboarding": True,
-                "unknownField": "value"
-            }
-        }
+        updates = {"metadata": {"hasCompletedOnboarding": True, "unknownField": "value"}}
 
         result = _apply_updates(current, updates)
 
@@ -401,17 +351,14 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         constants.DATA_DIR = self.temp_dir
 
         # Create test app
-        self.app = create_app(testing=True, blueprint_set='TRAKAIDO')
+        self.app = create_app(testing=True, blueprint_set="TRAKAIDO")
         self.client = self.app.test_client()
         self.app_context = self.app.app_context()
         self.app_context.push()
 
         # Create test user (db automatically initializes on first session use)
         with db.session() as session:
-            self.test_user = User(
-                email="test@example.com",
-                name="Test User"
-            )
+            self.test_user = User(email="test@example.com", name="Test User")
             session.add(self.test_user)
             session.flush()
             self.user_id = self.test_user.id
@@ -421,6 +368,7 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         db.cleanup()  # Clean up database between tests
         self.app_context.pop()
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         constants.DATA_DIR = self.original_data_dir
 
@@ -428,9 +376,9 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         """Test GET endpoint returns default config for new user."""
         # Set up authenticated session
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
-        response = self.client.get('/api/trakaido/userconfig/')
+        response = self.client.get("/api/trakaido/userconfig/")
 
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
@@ -446,14 +394,12 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_updates_single_field(self):
         """Test PATCH endpoint updates single field."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {"learning": {"currentLevel": 5}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -467,22 +413,15 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_updates_multiple_fields(self):
         """Test PATCH endpoint updates multiple fields."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {
-            "learning": {
-                "currentLevel": 10,
-                "userProficiency": "advanced"
-            },
-            "audio": {
-                "selectedVoice": "nova"
-            }
+            "learning": {"currentLevel": 10, "userProficiency": "advanced"},
+            "audio": {"selectedVoice": "nova"},
         }
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -496,14 +435,12 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_rejects_invalid_data(self):
         """Test PATCH endpoint rejects invalid configuration."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {"learning": {"currentLevel": 25}}  # Invalid: > 20
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 422)
@@ -515,12 +452,10 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_rejects_non_json(self):
         """Test PATCH endpoint rejects non-JSON requests."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data="not json",
-            content_type='text/plain'
+            "/api/trakaido/userconfig/", data="not json", content_type="text/plain"
         )
 
         self.assertEqual(response.status_code, 400)
@@ -532,19 +467,17 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_persists_changes(self):
         """Test PATCH endpoint persists changes across requests."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # First update
         updates = {"learning": {"currentLevel": 7}}
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
 
         # Get config to verify persistence
-        response = self.client.get('/api/trakaido/userconfig/')
+        response = self.client.get("/api/trakaido/userconfig/")
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
 
@@ -553,14 +486,12 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_updates_last_modified(self):
         """Test PATCH endpoint updates lastModified timestamp."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {"audio": {"enabled": False}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -569,21 +500,22 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         self.assertIsNotNone(data["config"]["metadata"]["lastModified"])
         # Verify it's a valid ISO 8601 timestamp
         from datetime import datetime
+
         timestamp = data["config"]["metadata"]["lastModified"]
         # Should parse without error
-        datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+        datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
     def test_get_user_config_with_language_parameter(self):
         """Test GET endpoint accepts language parameter."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # Save config for specific language
         config = _deep_copy_config(DEFAULT_CONFIG)
         config["learning"]["currentLevel"] = 12
         save_user_config(str(self.user_id), config, "chinese")
 
-        response = self.client.get('/api/trakaido/userconfig/?language=chinese')
+        response = self.client.get("/api/trakaido/userconfig/?language=chinese")
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
 
@@ -592,14 +524,14 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_with_language_parameter(self):
         """Test PATCH endpoint accepts language parameter."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {"learning": {"currentLevel": 8}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/?language=french',
+            "/api/trakaido/userconfig/?language=french",
             data=json.dumps(updates),
-            content_type='application/json'
+            content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -611,26 +543,16 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_ignores_unknown_fields(self):
         """Test PATCH endpoint ignores unknown fields and returns warning."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {
-            "learning": {
-                "currentLevel": 5,
-                "experimentalFeature": True  # Unknown field
-            },
-            "audio": {
-                "enabled": False,
-                "unknownSetting": "value"  # Unknown field
-            },
-            "unknownSection": {  # Unknown section
-                "field": "value"
-            }
+            "learning": {"currentLevel": 5, "experimentalFeature": True},  # Unknown field
+            "audio": {"enabled": False, "unknownSetting": "value"},  # Unknown field
+            "unknownSection": {"field": "value"},  # Unknown section
         }
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -659,17 +581,12 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_no_warning_for_valid_fields(self):
         """Test PATCH endpoint does not include warning when all fields are valid."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
-        updates = {
-            "learning": {"currentLevel": 3},
-            "audio": {"enabled": True}
-        }
+        updates = {"learning": {"currentLevel": 3}, "audio": {"enabled": True}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -681,24 +598,18 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
     def test_patch_user_config_allows_onboarding_completion(self):
         """Test PATCH endpoint allows marking onboarding as completed."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # Initially should be False
-        response = self.client.get('/api/trakaido/userconfig/')
+        response = self.client.get("/api/trakaido/userconfig/")
         data = json.loads(response.data)
         self.assertFalse(data["metadata"]["hasCompletedOnboarding"])
 
         # Mark onboarding as completed
-        updates = {
-            "metadata": {
-                "hasCompletedOnboarding": True
-            }
-        }
+        updates = {"metadata": {"hasCompletedOnboarding": True}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 200)
@@ -708,25 +619,19 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         self.assertTrue(data["config"]["metadata"]["hasCompletedOnboarding"])
 
         # Verify persistence
-        response = self.client.get('/api/trakaido/userconfig/')
+        response = self.client.get("/api/trakaido/userconfig/")
         data = json.loads(response.data)
         self.assertTrue(data["metadata"]["hasCompletedOnboarding"])
 
     def test_patch_user_config_rejects_last_modified_update(self):
         """Test PATCH endpoint rejects attempts to set lastModified."""
         with self.client.session_transaction() as sess:
-            sess['user'] = {'email': 'test@example.com', 'name': 'Test User'}
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
-        updates = {
-            "metadata": {
-                "lastModified": "2025-01-01T00:00:00Z"
-            }
-        }
+        updates = {"metadata": {"lastModified": "2025-01-01T00:00:00Z"}}
 
         response = self.client.patch(
-            '/api/trakaido/userconfig/',
-            data=json.dumps(updates),
-            content_type='application/json'
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
         )
 
         self.assertEqual(response.status_code, 422)
@@ -736,5 +641,5 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "READ_ONLY_FIELD")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

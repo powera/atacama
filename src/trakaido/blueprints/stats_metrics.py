@@ -94,35 +94,45 @@ def compute_daily_activity_summary(journey_stats: Any) -> Dict[str, Any]:
             for activity in DIRECT_PRACTICE_TYPES:
                 activity_stats = direct_practice.get(activity, {})
                 if isinstance(activity_stats, dict):
-                    by_activity["directPractice"][activity]["correct"] += activity_stats.get("correct", 0)
-                    by_activity["directPractice"][activity]["incorrect"] += activity_stats.get("incorrect", 0)
+                    by_activity["directPractice"][activity]["correct"] += activity_stats.get(
+                        "correct", 0
+                    )
+                    by_activity["directPractice"][activity]["incorrect"] += activity_stats.get(
+                        "incorrect", 0
+                    )
 
         contextual_exposure = word_stats.get("contextualExposure", {})
         if isinstance(contextual_exposure, dict):
             for activity in CONTEXTUAL_EXPOSURE_TYPES:
                 activity_stats = contextual_exposure.get(activity, {})
                 if isinstance(activity_stats, dict):
-                    by_activity["contextualExposure"][activity]["correct"] += activity_stats.get("correct", 0)
-                    by_activity["contextualExposure"][activity]["incorrect"] += activity_stats.get("incorrect", 0)
+                    by_activity["contextualExposure"][activity]["correct"] += activity_stats.get(
+                        "correct", 0
+                    )
+                    by_activity["contextualExposure"][activity]["incorrect"] += activity_stats.get(
+                        "incorrect", 0
+                    )
 
     return build_activity_summary_from_totals(by_activity)
 
 
-
-
 def empty_activity_summary() -> Dict[str, Any]:
     """Return a zeroed activity summary with canonical shape."""
-    return build_activity_summary_from_totals({
-        "directPractice": {
-            activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES
-        },
-        "contextualExposure": {
-            activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES
-        },
-    })
+    return build_activity_summary_from_totals(
+        {
+            "directPractice": {
+                activity: {"correct": 0, "incorrect": 0} for activity in DIRECT_PRACTICE_TYPES
+            },
+            "contextualExposure": {
+                activity: {"correct": 0, "incorrect": 0} for activity in CONTEXTUAL_EXPOSURE_TYPES
+            },
+        }
+    )
 
 
-def build_activity_summary_from_totals(by_activity: Dict[str, Dict[str, Dict[str, int]]]) -> Dict[str, Any]:
+def build_activity_summary_from_totals(
+    by_activity: Dict[str, Dict[str, Dict[str, int]]]
+) -> Dict[str, Any]:
     """Build canonical activity summary from per-activity totals.
 
     Accepts an object shaped like:
@@ -158,7 +168,10 @@ def build_activity_summary_from_totals(by_activity: Dict[str, Dict[str, Dict[str
         "combined": {
             "totalCorrect": direct_correct + contextual_correct,
             "totalIncorrect": direct_incorrect + contextual_incorrect,
-            "totalAnswered": direct_correct + direct_incorrect + contextual_correct + contextual_incorrect,
+            "totalAnswered": direct_correct
+            + direct_incorrect
+            + contextual_correct
+            + contextual_incorrect,
         },
     }
 
@@ -182,7 +195,9 @@ def compute_member_summary(
         journey_stats: Optional preloaded stats object/dict. When omitted, this
             function reads from storage via `get_journey_stats`.
     """
-    source_stats = journey_stats if journey_stats is not None else get_journey_stats(str(user_id), language)
+    source_stats = (
+        journey_stats if journey_stats is not None else get_journey_stats(str(user_id), language)
+    )
     stats_map = _get_stats_map(source_stats)
 
     words_tracked = len(stats_map)

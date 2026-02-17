@@ -29,7 +29,10 @@ from trakaido.blueprints.stats_schema import (
     create_empty_word_stats,
     validate_and_normalize_word_stats,
 )
-from trakaido.blueprints.stats_metrics import build_activity_summary_from_totals, empty_activity_summary
+from trakaido.blueprints.stats_metrics import (
+    build_activity_summary_from_totals,
+    empty_activity_summary,
+)
 from trakaido.blueprints.date_utils import (
     get_current_day_key,
     get_yesterday_day_key,
@@ -76,7 +79,8 @@ class SqliteStatsDB:
         """Create database tables if they don't exist."""
         conn = self._get_connection()
         try:
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS word_stats (
                     word_key TEXT PRIMARY KEY,
                     exposed INTEGER NOT NULL DEFAULT 0,
@@ -110,8 +114,8 @@ class SqliteStatsDB:
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
-            """)
-
+            """
+            )
 
             # Forward-compatible migration: older DBs may not have
             # words_known_count in daily_snapshots.
@@ -123,9 +127,7 @@ class SqliteStatsDB:
                     "ALTER TABLE daily_snapshots ADD COLUMN words_known_count INTEGER NOT NULL DEFAULT 0"
                 )
 
-            cursor = conn.execute(
-                "SELECT value FROM schema_info WHERE key = 'version'"
-            )
+            cursor = conn.execute("SELECT value FROM schema_info WHERE key = 'version'")
             row = cursor.fetchone()
             if not row:
                 conn.execute(
@@ -202,39 +204,48 @@ class SqliteStatsDB:
                 normalized = validate_and_normalize_word_stats(word_data)
 
                 practice_history = normalized.get("practiceHistory", {})
-                conn.execute("""
+                conn.execute(
+                    """
                     INSERT INTO word_stats
                     (word_key, exposed, marked_as_known,
                      last_seen, last_correct_answer, last_incorrect_answer)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    word_key,
-                    1 if normalized.get("exposed", False) else 0,
-                    1 if normalized.get("markedAsKnown", False) else 0,
-                    practice_history.get("lastSeen"),
-                    practice_history.get("lastCorrectAnswer"),
-                    practice_history.get("lastIncorrectAnswer"),
-                ))
+                """,
+                    (
+                        word_key,
+                        1 if normalized.get("exposed", False) else 0,
+                        1 if normalized.get("markedAsKnown", False) else 0,
+                        practice_history.get("lastSeen"),
+                        practice_history.get("lastCorrectAnswer"),
+                        practice_history.get("lastIncorrectAnswer"),
+                    ),
+                )
 
                 for activity in DIRECT_PRACTICE_TYPES:
                     activity_data = normalized.get("directPractice", {}).get(activity, {})
                     correct = activity_data.get("correct", 0)
                     incorrect = activity_data.get("incorrect", 0)
-                    conn.execute("""
+                    conn.execute(
+                        """
                         INSERT INTO word_activity_stats
                         (word_key, category, activity, correct, incorrect)
                         VALUES (?, 'directPractice', ?, ?, ?)
-                    """, (word_key, activity, correct, incorrect))
+                    """,
+                        (word_key, activity, correct, incorrect),
+                    )
 
                 for activity in CONTEXTUAL_EXPOSURE_TYPES:
                     activity_data = normalized.get("contextualExposure", {}).get(activity, {})
                     correct = activity_data.get("correct", 0)
                     incorrect = activity_data.get("incorrect", 0)
-                    conn.execute("""
+                    conn.execute(
+                        """
                         INSERT INTO word_activity_stats
                         (word_key, category, activity, correct, incorrect)
                         VALUES (?, 'contextualExposure', ?, ?, ?)
-                    """, (word_key, activity, correct, incorrect))
+                    """,
+                        (word_key, activity, correct, incorrect),
+                    )
 
             conn.commit()
             return True
@@ -253,9 +264,7 @@ class SqliteStatsDB:
         """Check if a daily snapshot exists for the given date."""
         conn = self._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT 1 FROM daily_snapshots WHERE date = ?", (date,)
-            )
+            cursor = conn.execute("SELECT 1 FROM daily_snapshots WHERE date = ?", (date,))
             return cursor.fetchone() is not None
         finally:
             conn.close()
@@ -273,18 +282,18 @@ class SqliteStatsDB:
         )
         total_questions = cursor.fetchone()[0]
 
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT category, activity,
                    SUM(correct) as total_correct,
                    SUM(incorrect) as total_incorrect
             FROM word_activity_stats
             GROUP BY category, activity
-        """)
+        """
+        )
 
         activity_totals: Dict[str, Any] = {
-            "directPractice": {
-                a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES
-            },
+            "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
             "contextualExposure": {
                 a: {"correct": 0, "incorrect": 0} for a in CONTEXTUAL_EXPOSURE_TYPES
             },
@@ -314,36 +323,40 @@ class SqliteStatsDB:
 
             # Compute newly exposed words compared to previous snapshot
             newly_exposed = 0
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT exposed_words_count FROM daily_snapshots
                 WHERE date < ? ORDER BY date DESC LIMIT 1
-            """, (date,))
+            """,
+                (date,),
+            )
             prev_row = cursor.fetchone()
             if prev_row:
                 newly_exposed = max(
                     0, totals["exposed_words_count"] - prev_row["exposed_words_count"]
                 )
 
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO daily_snapshots
                 (date, exposed_words_count, words_known_count, total_questions_answered,
                  newly_exposed_words, activity_totals_json)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                date,
-                totals["exposed_words_count"],
-                totals["words_known_count"],
-                totals["total_questions_answered"],
-                newly_exposed,
-                json.dumps(totals["activity_totals"], separators=(",", ":")),
-            ))
+            """,
+                (
+                    date,
+                    totals["exposed_words_count"],
+                    totals["words_known_count"],
+                    totals["total_questions_answered"],
+                    newly_exposed,
+                    json.dumps(totals["activity_totals"], separators=(",", ":")),
+                ),
+            )
 
             conn.commit()
             return True
         except Exception as e:
-            logger.error(
-                f"Error saving snapshot for user {self.user_id} date {date}: {str(e)}"
-            )
+            logger.error(f"Error saving snapshot for user {self.user_id} date {date}: {str(e)}")
             return False
         finally:
             conn.close()
@@ -362,18 +375,14 @@ class SqliteStatsDB:
 
             return True
         except Exception as e:
-            logger.error(
-                f"Error ensuring snapshots for user {self.user_id}: {str(e)}"
-            )
+            logger.error(f"Error ensuring snapshots for user {self.user_id}: {str(e)}")
             return False
 
     def _get_snapshot(self, date: str) -> Optional[Dict[str, Any]]:
         """Get a daily snapshot for the given date."""
         conn = self._get_connection()
         try:
-            cursor = conn.execute(
-                "SELECT * FROM daily_snapshots WHERE date = ?", (date,)
-            )
+            cursor = conn.execute("SELECT * FROM daily_snapshots WHERE date = ?", (date,))
             row = cursor.fetchone()
             if row:
                 return {
@@ -388,16 +397,12 @@ class SqliteStatsDB:
         finally:
             conn.close()
 
-    def _find_best_baseline(
-        self, target_date: str, max_days: int
-    ) -> Optional[Dict[str, Any]]:
+    def _find_best_baseline(self, target_date: str, max_days: int) -> Optional[Dict[str, Any]]:
         """Find the best available baseline snapshot near the target date."""
         conn = self._get_connection()
         try:
             # Try exact date first
-            cursor = conn.execute(
-                "SELECT * FROM daily_snapshots WHERE date = ?", (target_date,)
-            )
+            cursor = conn.execute("SELECT * FROM daily_snapshots WHERE date = ?", (target_date,))
             row = cursor.fetchone()
             if row:
                 return dict(row)
@@ -407,12 +412,15 @@ class SqliteStatsDB:
             end_dt = target_dt + timedelta(days=max_days)
             end_date = end_dt.strftime("%Y-%m-%d")
 
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT * FROM daily_snapshots
                 WHERE date > ? AND date <= ?
                 ORDER BY date ASC
                 LIMIT 1
-            """, (target_date, end_date))
+            """,
+                (target_date, end_date),
+            )
 
             row = cursor.fetchone()
             if row:
@@ -422,17 +430,18 @@ class SqliteStatsDB:
         finally:
             conn.close()
 
-    def _get_snapshots_in_range(
-        self, start_date: str, end_date: str
-    ) -> List[Dict[str, Any]]:
+    def _get_snapshots_in_range(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
         """Get all daily snapshots within a date range."""
         conn = self._get_connection()
         try:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT * FROM daily_snapshots
                 WHERE date >= ? AND date <= ?
                 ORDER BY date ASC
-            """, (start_date, end_date))
+            """,
+                (start_date, end_date),
+            )
             return [dict(row) for row in cursor]
         finally:
             conn.close()
@@ -444,9 +453,7 @@ class SqliteStatsDB:
     def _empty_activity_totals(self) -> Dict[str, Any]:
         """Return an empty activity totals structure."""
         return {
-            "directPractice": {
-                a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES
-            },
+            "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
             "contextualExposure": {
                 a: {"correct": 0, "incorrect": 0} for a in CONTEXTUAL_EXPOSURE_TYPES
             },
@@ -461,9 +468,7 @@ class SqliteStatsDB:
     ) -> Dict[str, Any]:
         """Compute progress delta between current and baseline aggregate totals."""
         progress: Dict[str, Any] = {
-            "directPractice": {
-                a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES
-            },
+            "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
             "contextualExposure": {
                 a: {"correct": 0, "incorrect": 0} for a in CONTEXTUAL_EXPOSURE_TYPES
             },
@@ -477,9 +482,7 @@ class SqliteStatsDB:
             current_cat = current_totals.get(category, {})
             baseline_cat = baseline_totals.get(category, {})
             activities = (
-                DIRECT_PRACTICE_TYPES
-                if category == "directPractice"
-                else CONTEXTUAL_EXPOSURE_TYPES
+                DIRECT_PRACTICE_TYPES if category == "directPractice" else CONTEXTUAL_EXPOSURE_TYPES
             )
 
             for activity in activities:
@@ -487,12 +490,8 @@ class SqliteStatsDB:
                 base_act = baseline_cat.get(activity, {"correct": 0, "incorrect": 0})
 
                 progress[category][activity] = {
-                    "correct": max(
-                        0, cur_act.get("correct", 0) - base_act.get("correct", 0)
-                    ),
-                    "incorrect": max(
-                        0, cur_act.get("incorrect", 0) - base_act.get("incorrect", 0)
-                    ),
+                    "correct": max(0, cur_act.get("correct", 0) - base_act.get("correct", 0)),
+                    "incorrect": max(0, cur_act.get("incorrect", 0) - base_act.get("incorrect", 0)),
                 }
 
         return progress
@@ -511,9 +510,7 @@ class SqliteStatsDB:
 
             yesterday_snapshot = self._get_snapshot(get_yesterday_day_key())
             if yesterday_snapshot:
-                baseline_totals = json.loads(
-                    yesterday_snapshot["activity_totals_json"]
-                )
+                baseline_totals = json.loads(yesterday_snapshot["activity_totals_json"])
                 baseline_exposed = yesterday_snapshot["exposed_words_count"]
             else:
                 baseline_totals = self._empty_activity_totals()
@@ -528,9 +525,7 @@ class SqliteStatsDB:
 
             return {"currentDay": today, "progress": progress}
         except Exception as e:
-            logger.error(
-                f"Error calculating daily progress for user {self.user_id}: {str(e)}"
-            )
+            logger.error(f"Error calculating daily progress for user {self.user_id}: {str(e)}")
             return {"error": str(e)}
 
     def calculate_weekly_progress(self) -> Dict[str, Any]:
@@ -548,9 +543,7 @@ class SqliteStatsDB:
 
             baseline_snapshot = self._find_best_baseline(week_ago, 7)
             if baseline_snapshot:
-                baseline_totals = json.loads(
-                    baseline_snapshot["activity_totals_json"]
-                )
+                baseline_totals = json.loads(baseline_snapshot["activity_totals_json"])
                 baseline_exposed = baseline_snapshot["exposed_words_count"]
                 actual_baseline_day = baseline_snapshot["date"]
             else:
@@ -572,9 +565,7 @@ class SqliteStatsDB:
                 "progress": progress,
             }
         except Exception as e:
-            logger.error(
-                f"Error calculating weekly progress for user {self.user_id}: {str(e)}"
-            )
+            logger.error(f"Error calculating weekly progress for user {self.user_id}: {str(e)}")
             return {"error": str(e)}
 
     def calculate_monthly_progress(self) -> Dict[str, Any]:
@@ -593,9 +584,7 @@ class SqliteStatsDB:
             # Monthly aggregate
             baseline_snapshot = self._find_best_baseline(thirty_days_ago, 30)
             if baseline_snapshot:
-                baseline_totals = json.loads(
-                    baseline_snapshot["activity_totals_json"]
-                )
+                baseline_totals = json.loads(baseline_snapshot["activity_totals_json"])
                 baseline_exposed = baseline_snapshot["exposed_words_count"]
                 actual_baseline_day = baseline_snapshot["date"]
             else:
@@ -626,23 +615,27 @@ class SqliteStatsDB:
 
                 if snapshot:
                     activity_totals = json.loads(snapshot["activity_totals_json"])
-                    daily_data.append({
-                        "date": date_str,
-                        "questionsAnswered": snapshot["total_questions_answered"],
-                        "exposedWordsCount": snapshot["exposed_words_count"],
-                        "newlyExposedWords": snapshot["newly_exposed_words"],
-                        "wordsKnown": snapshot["words_known_count"],
-                        "activitySummary": build_activity_summary_from_totals(activity_totals),
-                    })
+                    daily_data.append(
+                        {
+                            "date": date_str,
+                            "questionsAnswered": snapshot["total_questions_answered"],
+                            "exposedWordsCount": snapshot["exposed_words_count"],
+                            "newlyExposedWords": snapshot["newly_exposed_words"],
+                            "wordsKnown": snapshot["words_known_count"],
+                            "activitySummary": build_activity_summary_from_totals(activity_totals),
+                        }
+                    )
                 else:
-                    daily_data.append({
-                        "date": date_str,
-                        "questionsAnswered": 0,
-                        "exposedWordsCount": 0,
-                        "newlyExposedWords": 0,
-                        "wordsKnown": 0,
-                        "activitySummary": empty_activity_summary(),
-                    })
+                    daily_data.append(
+                        {
+                            "date": date_str,
+                            "questionsAnswered": 0,
+                            "exposedWordsCount": 0,
+                            "newlyExposedWords": 0,
+                            "wordsKnown": 0,
+                            "activitySummary": empty_activity_summary(),
+                        }
+                    )
 
                 current_dt += timedelta(days=1)
 
@@ -657,15 +650,14 @@ class SqliteStatsDB:
                 "dailyData": daily_data,
             }
         except Exception as e:
-            logger.error(
-                f"Error calculating monthly progress for user {self.user_id}: {str(e)}"
-            )
+            logger.error(f"Error calculating monthly progress for user {self.user_id}: {str(e)}")
             return {"error": str(e)}
 
 
 ##############################################################################
 # High-Level JourneyStats Interface
 ##############################################################################
+
 
 class SqliteJourneyStats:
     """Drop-in replacement for JourneyStats using SQLite backend.
@@ -706,9 +698,7 @@ class SqliteJourneyStats:
             self._loaded = True
             return True
         except Exception as e:
-            logger.error(
-                f"Error loading SQLite stats for user {self.user_id}: {str(e)}"
-            )
+            logger.error(f"Error loading SQLite stats for user {self.user_id}: {str(e)}")
             self._stats = {"stats": {}}
             self._loaded = True
             return False
@@ -716,9 +706,7 @@ class SqliteJourneyStats:
     def save(self) -> bool:
         """Save current stats to SQLite database."""
         if not self._loaded or self._stats is None:
-            logger.warning(
-                f"Attempting to save unloaded SQLite stats for user {self.user_id}"
-            )
+            logger.warning(f"Attempting to save unloaded SQLite stats for user {self.user_id}")
             return False
         return self._db.save_all_stats(self._stats)
 
@@ -741,13 +729,13 @@ class SqliteJourneyStats:
 
             # Clean up flat file nonces (still stored as flat files)
             from trakaido.blueprints.nonce_utils import cleanup_old_nonce_files
+
             cleanup_old_nonce_files(self.user_id, self.language)
 
             return True
         except Exception as e:
             logger.error(
-                f"Error in SQLite save_with_daily_update for user {self.user_id}: "
-                f"{str(e)}"
+                f"Error in SQLite save_with_daily_update for user {self.user_id}: " f"{str(e)}"
             )
             return False
 

@@ -25,9 +25,11 @@ def _get_pinyin_for_chinese(text: str) -> Optional[str]:
     """Get formatted pinyin for Chinese text using the pinyin processor."""
     try:
         from aml_parser.pinyin import default_processor
+
         return default_processor._get_pinyin_for_text(text)
     except Exception:
         return None
+
 
 WORD_PATTERN = re.compile(r"[a-zA-Z']+(?:-[a-zA-Z']+)*")
 
@@ -93,9 +95,7 @@ class EnglishAnnotationProcessor:
         self._loaded = False
 
         if lookup_path is None:
-            lookup_path = os.path.join(
-                constants.DATA_DIR, "annotations", "atacama_lookup.json"
-            )
+            lookup_path = os.path.join(constants.DATA_DIR, "annotations", "atacama_lookup.json")
         self._lookup_path = lookup_path
         self._load()
 

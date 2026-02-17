@@ -2,4 +2,4 @@
 
 from .react_compiler import WidgetBuilder
 
-__all__ = ['WidgetBuilder']
+__all__ = ["WidgetBuilder"]
