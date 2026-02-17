@@ -147,10 +147,18 @@ def _get_wireword_dir(language: str) -> Optional[str]:
     return wireword_dir
 
 
-def _build_word_label(lithuanian: str, english: str) -> str:
-    if lithuanian and english:
-        return f"{lithuanian} — {english}"
-    return lithuanian or english
+def _build_word_label(target_word: str, english: str) -> str:
+    if target_word and english:
+        return f"{target_word} — {english}"
+    return target_word or english
+
+
+def _first_nonempty_str(entry: Dict[str, Any], keys: List[str]) -> str:
+    for key in keys:
+        value = str(entry.get(key, "")).strip()
+        if value:
+            return value
+    return ""
 
 
 @lru_cache(maxsize=32)
@@ -185,11 +193,21 @@ def _load_guid_word_labels(language: str) -> Dict[str, str]:
             if not guid:
                 continue
 
-            base_label = _build_word_label(
-                str(entry.get("base_lithuanian", "")).strip()
-                or str(entry.get("lithuanian", "")).strip(),
-                str(entry.get("base_english", "")).strip() or str(entry.get("english", "")).strip(),
+            base_target = _first_nonempty_str(
+                entry,
+                [
+                    "base_target",
+                    "target",
+                    "base_lithuanian",
+                    "lithuanian",
+                    "base_french",
+                    "french",
+                    "base_chinese",
+                    "chinese",
+                ],
             )
+            base_english = _first_nonempty_str(entry, ["base_english", "english"])
+            base_label = _build_word_label(base_target, base_english)
             if base_label:
                 labels.setdefault(guid, base_label)
 
@@ -200,8 +218,12 @@ def _load_guid_word_labels(language: str) -> Dict[str, str]:
             for form_key, form_data in grammatical_forms.items():
                 if not isinstance(form_data, dict):
                     continue
+                form_target = _first_nonempty_str(
+                    form_data,
+                    ["target", "lithuanian", "french", "chinese"],
+                )
                 form_label = _build_word_label(
-                    str(form_data.get("lithuanian", "")).strip(),
+                    form_target,
                     str(form_data.get("english", "")).strip(),
                 )
                 if not form_label:
