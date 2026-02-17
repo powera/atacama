@@ -431,6 +431,53 @@ class SqliteProgressTests(unittest.TestCase):
             result = db.calculate_monthly_progress()
             self.assertEqual(len(result["dailyData"]), 30)
 
+    def test_monthly_progress_falls_back_to_flatfile_daily_stats(self):
+        """Test monthly dailyData can be synthesized from legacy flat-file daily stats."""
+        with patch("constants.DATA_DIR", self.test_data_dir):
+            db = SqliteStatsDB(self.test_user_id, self.test_language)
+
+            # Remove snapshots so fallback path is used.
+            conn = db._get_connection()
+            try:
+                conn.execute("DELETE FROM daily_snapshots")
+                conn.commit()
+            finally:
+                conn.close()
+
+            today = get_current_day_key()
+            old_today = datetime.strptime(today, "%Y-%m-%d") - timedelta(days=5)
+            fallback_day = old_today.strftime("%Y-%m-%d")
+
+            daily_path = os.path.join(
+                self.test_data_dir,
+                "trakaido",
+                self.test_user_id,
+                self.test_language,
+                "daily",
+            )
+            os.makedirs(daily_path, exist_ok=True)
+
+            word_stats = create_empty_word_stats()
+            word_stats["exposed"] = True
+            word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 4
+            word_stats["directPractice"]["multipleChoice_englishToTarget"]["incorrect"] = 1
+
+            with open(
+                os.path.join(daily_path, f"{fallback_day}_current.json"),
+                "w",
+                encoding="utf-8",
+            ) as output_file:
+                json.dump({"stats": {"N01_001": word_stats}}, output_file)
+
+            result = db.calculate_monthly_progress()
+
+            fallback_row = next(
+                (row for row in result["dailyData"] if row["date"] == fallback_day), None
+            )
+            self.assertIsNotNone(fallback_row)
+            self.assertEqual(fallback_row["questionsAnswered"], 5)
+            self.assertEqual(fallback_row["exposedWordsCount"], 1)
+
 
 class SqliteJourneyStatsTests(unittest.TestCase):
     """Test the high-level SqliteJourneyStats interface."""

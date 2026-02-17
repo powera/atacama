@@ -26,11 +26,14 @@ from trakaido.blueprints.shared import logger
 from trakaido.blueprints.stats_schema import (
     DIRECT_PRACTICE_TYPES,
     CONTEXTUAL_EXPOSURE_TYPES,
+    DailyStats,
     create_empty_word_stats,
     validate_and_normalize_word_stats,
 )
 from trakaido.blueprints.stats_metrics import (
     build_activity_summary_from_totals,
+    compute_daily_activity_summary,
+    compute_words_known,
     empty_activity_summary,
 )
 from trakaido.blueprints.date_utils import (
@@ -624,6 +627,15 @@ class SqliteStatsDB:
             # Daily data from snapshots
             start_date, end_date = get_30_day_date_range()
             snapshots = self._get_snapshots_in_range(start_date, end_date)
+            flatfile_snapshots = self._build_snapshots_from_flatfile_daily_data(
+                start_date, end_date
+            )
+            snapshot_dates = {snapshot["date"] for snapshot in snapshots}
+            snapshots.extend(
+                snapshot
+                for snapshot in flatfile_snapshots
+                if snapshot["date"] not in snapshot_dates
+            )
             snapshot_by_date = {s["date"]: s for s in snapshots}
             baseline_snapshot = self._get_latest_snapshot_before(start_date)
             previous_total_questions = (
@@ -683,6 +695,59 @@ class SqliteStatsDB:
         except Exception as e:
             logger.error(f"Error calculating monthly progress for user {self.user_id}: {str(e)}")
             return {"error": str(e)}
+
+    def _build_snapshots_from_flatfile_daily_data(
+        self, start_date: str, end_date: str
+    ) -> List[Dict[str, Any]]:
+        """Fallback: synthesize snapshot-like rows from legacy daily flat files."""
+        available_dates = set(
+            DailyStats.get_available_dates(self.user_id, "current", self.language)
+        )
+        if not available_dates:
+            return []
+
+        snapshots: List[Dict[str, Any]] = []
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        current_dt = start_dt
+
+        while current_dt <= end_dt:
+            date_str = current_dt.strftime("%Y-%m-%d")
+            current_dt += timedelta(days=1)
+
+            if date_str not in available_dates:
+                continue
+
+            daily_stats = DailyStats(self.user_id, date_str, "current", self.language)
+            daily_stats.load()
+            stats_map = daily_stats.stats.get("stats", {})
+            if not stats_map:
+                continue
+
+            activity_summary = compute_daily_activity_summary(daily_stats)
+            snapshots.append(
+                {
+                    "date": date_str,
+                    "total_questions_answered": activity_summary["combined"]["totalAnswered"],
+                    "exposed_words_count": sum(
+                        1 for word_stats in stats_map.values() if word_stats.get("exposed", False)
+                    ),
+                    "newly_exposed_words": 0,
+                    "words_known_count": compute_words_known(daily_stats),
+                    "activity_totals_json": json.dumps(activity_summary["byActivity"]),
+                }
+            )
+
+        snapshots.sort(key=lambda row: row["date"])
+
+        previous_exposed = 0
+        for snapshot in snapshots:
+            snapshot["newly_exposed_words"] = max(
+                0, snapshot["exposed_words_count"] - previous_exposed
+            )
+            previous_exposed = snapshot["exposed_words_count"]
+
+        return snapshots
 
 
 ##############################################################################

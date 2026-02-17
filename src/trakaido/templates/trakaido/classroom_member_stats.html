@@ -45,10 +45,10 @@
   <h2>Ten most recent words</h2>
   {% if recent_words %}
     <table>
-      <thead><tr><th>Word</th><th>Last seen (UTC day)</th><th>Total answers</th></tr></thead>
+      <thead><tr><th>Word</th><th>GUID</th><th>Last seen (UTC day)</th><th>Total answers</th></tr></thead>
       <tbody>
       {% for row in recent_words %}
-        <tr><td><code>{{ row.wordKey }}</code></td><td>{{ row.lastSeenDay }}</td><td>{{ row.totalAnswered }}</td></tr>
+        <tr><td>{{ row.wordLabel }}</td><td><code>{{ row.wordKey }}</code></td><td>{{ row.lastSeenDay }}</td><td>{{ row.totalAnswered }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
