@@ -6,7 +6,7 @@ import re
 from typing import Optional
 
 # Third-party imports
-from flask import Blueprint, Response, send_file
+from flask import Blueprint, Response, send_file, send_from_directory
 from flask.typing import ResponseReturnValue
 
 # Local application imports
@@ -85,6 +85,13 @@ def trakaido_json(filename: str) -> ResponseReturnValue:
     else:
         logger.warning(f"JSON file not found: {json_path}")
         return Response("File not found", status=404)
+
+
+@trakaido_bp.route("/api/trakaido/js/<path:filename>")
+def trakaido_serve_js(filename: str) -> ResponseReturnValue:
+    """Serve JavaScript files from the atacama js directory under /api/trakaido/js/."""
+    js_dir = os.path.join(constants.WEB_DIR, "js")
+    return send_from_directory(js_dir, filename)
 
 
 def sanitize_lithuanian_word(word: str, character_set: Optional[str] = None) -> str:
