@@ -17,7 +17,9 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
         self.original_data_dir = constants.DATA_DIR
+        constants.init_testing(test_db_path="sqlite:///:memory:", service="trakaido")
         constants.DATA_DIR = self.temp_dir
+        db.cleanup()
 
         self.app = create_app(testing=True, blueprint_set='TRAKAIDO')
         self.client = self.app.test_client()
@@ -62,6 +64,7 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         constants.DATA_DIR = self.original_data_dir
+        constants.reset()
 
     def _auth_headers(self, token: str):
         return {"Authorization": f"Bearer {token}"}

@@ -9,6 +9,7 @@ from flask import Response, g, jsonify
 
 # Local application imports
 from atacama.decorators.auth import optional_auth
+from models.classrooms import get_user_classroom_capabilities
 from trakaido.blueprints.shared import trakaido_bp, logger
 from trakaido.blueprints.userstats import USERSTATS_API_DOCS
 from trakaido.blueprints.classroom_stats import CLASSROOM_STATS_API_DOCS
@@ -75,8 +76,13 @@ def get_user_info() -> Response:
                 "email": getattr(g.user, 'email', None) if hasattr(g.user, 'email') else None
             }
 
-            # Check if user has existing files
+            # Check classroom capabilities and existing files
             if user_id:
+                try:
+                    response_data["classroom_capabilities"] = get_user_classroom_capabilities(int(user_id))
+                except Exception as classroom_error:
+                    logger.warning(f"Error checking classroom capabilities for user {user_id}: {str(classroom_error)}")
+
                 try:
                     language = g.current_language if hasattr(g, 'current_language') else "lithuanian"
                     has_journey_stats = user_has_activity_stats(str(user_id), language)
@@ -87,6 +93,13 @@ def get_user_info() -> Response:
                 except Exception as file_check_error:
                     logger.warning(f"Error checking user files for user {user_id}: {str(file_check_error)}")
                     # Keep defaults (False) if file check fails
+
+        if "classroom_capabilities" not in response_data:
+            response_data["classroom_capabilities"] = {
+                "is_class_manager": False,
+                "managed_classrooms": [],
+                "member_classrooms": []
+            }
         
         return jsonify(response_data)
     except Exception as e:
@@ -97,5 +110,10 @@ def get_user_info() -> Response:
             "can_save_corpus_choices": False,
             "has_journey_stats_file": False,
             "has_corpus_choice_file": False,
+            "classroom_capabilities": {
+                "is_class_manager": False,
+                "managed_classrooms": [],
+                "member_classrooms": []
+            },
             "error": "Unable to determine authentication status"
         })
