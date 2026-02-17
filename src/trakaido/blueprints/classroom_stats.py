@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from flask import jsonify, render_template, request, g
 from flask.typing import ResponseReturnValue
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from atacama.decorators.auth import require_admin, require_auth
 from models.database import db
@@ -35,7 +35,36 @@ CLASSROOM_STATS_API_DOCS = {
     "GET /api/trakaido/classrooms/<classroom_id>/stats/weekly": "HTML classroom weekly aggregate stats (manager only)",
     "GET /api/trakaido/classrooms/<classroom_id>/stats/monthly": "HTML classroom monthly aggregate stats (manager only)",
     "GET /api/trakaido/classrooms/<classroom_id>/members/<user_id>/stats": "HTML member stats detail (manager only)",
+    "GET /api/trakaido/admin/users/search": "Admin user search by email",
+    "POST /api/trakaido/admin/classrooms": "Admin create student group (classroom)",
+    "POST /api/trakaido/admin/classrooms/<classroom_id>/members": "Admin add member by email",
+    "POST /api/trakaido/admin/classrooms/<classroom_id>/members/remove": "Admin remove member by email",
 }
+
+
+def _normalize_email(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+def _classroom_payload(classroom: Classroom) -> Dict[str, Any]:
+    return {
+        "id": classroom.id,
+        "name": classroom.name,
+        "archived": classroom.archived,
+        "createdByUserId": classroom.created_by_user_id,
+        "createdAt": classroom.created_at,
+    }
+
+
+def _membership_payload(user: User, membership: ClassroomMembership) -> Dict[str, Any]:
+    role = membership.role.value if hasattr(membership.role, "value") else str(membership.role)
+    return {
+        "userId": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": role,
+        "joinedAt": membership.joined_at,
+    }
 
 
 def _get_user_classrooms_with_role(user_id: int) -> List[Dict[str, Any]]:
@@ -132,6 +161,15 @@ def _get_classroom_member_rows(classroom_id: int) -> List[Dict[str, Any]]:
             }
         )
     return members
+
+
+def _get_user_by_email(db_session: Any, email: str) -> Optional[User]:
+    normalized_email = _normalize_email(email)
+    if not normalized_email:
+        return None
+
+    stmt = select(User).where(func.lower(User.email) == normalized_email)
+    return db_session.execute(stmt).scalar_one_or_none()
 
 
 def _extract_progress(progress_payload: Dict[str, Any], period: str) -> Dict[str, Any]:
@@ -361,3 +399,187 @@ def get_classroom_members_summary() -> ResponseReturnValue:
     except Exception as e:
         logger.error(f"Error getting classroom member summaries: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@trakaido_bp.route('/api/trakaido/admin/users/search', methods=['GET'])
+@require_admin
+def admin_search_users_by_email() -> ResponseReturnValue:
+    """Admin lookup endpoint for users by partial email match."""
+    email_query = _normalize_email(request.args.get("email"))
+    if len(email_query) < 2:
+        return jsonify({"error": "Query param 'email' must be at least 2 characters"}), 400
+
+    raw_limit = request.args.get("limit", "20")
+    try:
+        limit = max(1, min(int(raw_limit), 100))
+    except ValueError:
+        return jsonify({"error": "Query param 'limit' must be an integer"}), 400
+
+    with db.session() as db_session:
+        stmt = (
+            select(User)
+            .where(func.lower(User.email).contains(email_query))
+            .order_by(User.email.asc())
+            .limit(limit)
+        )
+        users = db_session.execute(stmt).scalars().all()
+
+    return jsonify({
+        "count": len(users),
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+            }
+            for user in users
+        ],
+    })
+
+
+@trakaido_bp.route('/api/trakaido/admin/classrooms', methods=['POST'])
+@require_admin
+def admin_create_classroom() -> ResponseReturnValue:
+    """Admin endpoint to create a student group (classroom)."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    manager_email = _normalize_email(data.get("managerEmail"))
+
+    if not name:
+        return jsonify({"error": "Field 'name' is required"}), 400
+
+    with db.session() as db_session:
+        manager_user = _get_user_by_email(db_session, manager_email) if manager_email else None
+        if manager_email and manager_user is None:
+            return jsonify({"error": f"No user found with email '{manager_email}'"}), 404
+
+        creator_user = _get_user_by_email(db_session, g.user.email)
+        if creator_user is None:
+            return jsonify({"error": "Authenticated admin user not found"}), 404
+
+        classroom = Classroom(
+            name=name,
+            created_by_user_id=creator_user.id,
+        )
+        db_session.add(classroom)
+        db_session.flush()
+
+        db_session.add(
+            ClassroomMembership(
+                classroom_id=classroom.id,
+                user_id=creator_user.id,
+                role=ClassroomRole.MANAGER,
+            )
+        )
+
+        if manager_user and manager_user.id != creator_user.id:
+            db_session.add(
+                ClassroomMembership(
+                    classroom_id=classroom.id,
+                    user_id=manager_user.id,
+                    role=ClassroomRole.MANAGER,
+                )
+            )
+
+        classroom_payload = _classroom_payload(classroom)
+
+    return jsonify({
+        "classroom": classroom_payload,
+    }), 201
+
+
+@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>/members', methods=['POST'])
+@require_admin
+def admin_add_classroom_member(classroom_id: int) -> ResponseReturnValue:
+    """Admin endpoint to add a member/manager to a classroom by email."""
+    data = request.get_json() or {}
+    email = _normalize_email(data.get("email"))
+    role_value = (data.get("role") or ClassroomRole.MEMBER.value).strip().lower()
+
+    if not email:
+        return jsonify({"error": "Field 'email' is required"}), 400
+    if role_value not in {ClassroomRole.MEMBER.value, ClassroomRole.MANAGER.value}:
+        return jsonify({"error": "Field 'role' must be either 'member' or 'manager'"}), 400
+
+    role = ClassroomRole(role_value)
+
+    with db.session() as db_session:
+        classroom = db_session.get(Classroom, classroom_id)
+        if classroom is None:
+            return jsonify({"error": "Classroom not found"}), 404
+
+        user = _get_user_by_email(db_session, email)
+        if user is None:
+            return jsonify({"error": f"No user found with email '{email}'"}), 404
+
+        stmt = select(ClassroomMembership).where(
+            ClassroomMembership.classroom_id == classroom_id,
+            ClassroomMembership.user_id == user.id,
+        )
+        existing_membership = db_session.execute(stmt).scalar_one_or_none()
+
+        if existing_membership is None:
+            existing_membership = ClassroomMembership(
+                classroom_id=classroom_id,
+                user_id=user.id,
+                role=role,
+            )
+            db_session.add(existing_membership)
+            db_session.flush()
+            status_code = 201
+        else:
+            existing_membership.role = role
+            status_code = 200
+
+        classroom_payload = _classroom_payload(classroom)
+        member_payload = _membership_payload(user, existing_membership)
+
+    return jsonify({
+        "classroom": classroom_payload,
+        "member": member_payload,
+    }), status_code
+
+
+@trakaido_bp.route('/api/trakaido/admin/classrooms/<int:classroom_id>/members/remove', methods=['POST'])
+@require_admin
+def admin_remove_classroom_member(classroom_id: int) -> ResponseReturnValue:
+    """Admin endpoint to remove a classroom member by email."""
+    data = request.get_json() or {}
+    email = _normalize_email(data.get("email"))
+    if not email:
+        return jsonify({"error": "Field 'email' is required"}), 400
+
+    with db.session() as db_session:
+        classroom = db_session.get(Classroom, classroom_id)
+        if classroom is None:
+            return jsonify({"error": "Classroom not found"}), 404
+
+        user = _get_user_by_email(db_session, email)
+        if user is None:
+            return jsonify({"error": f"No user found with email '{email}'"}), 404
+
+        stmt = select(ClassroomMembership).where(
+            ClassroomMembership.classroom_id == classroom_id,
+            ClassroomMembership.user_id == user.id,
+        )
+        membership = db_session.execute(stmt).scalar_one_or_none()
+        if membership is None:
+            return jsonify({"error": "User is not a member of this classroom"}), 404
+
+        if membership.role == ClassroomRole.MANAGER:
+            manager_count_stmt = select(func.count(ClassroomMembership.id)).where(
+                ClassroomMembership.classroom_id == classroom_id,
+                ClassroomMembership.role == ClassroomRole.MANAGER,
+            )
+            manager_count = db_session.execute(manager_count_stmt).scalar_one()
+            if manager_count <= 1:
+                return jsonify({"error": "Cannot remove the last classroom manager"}), 400
+
+        removed_member_payload = _membership_payload(user, membership)
+        db_session.delete(membership)
+        classroom_payload = _classroom_payload(classroom)
+
+    return jsonify({
+        "classroom": classroom_payload,
+        "removed": removed_member_payload,
+    })
