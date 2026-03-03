@@ -65,6 +65,16 @@ def show_submit_form() -> ResponseReturnValue:
     :return: Rendered submit form template
     """
     channel_manager = get_channel_manager()
+    domain_manager = get_domain_manager()
+
+    # Build mapping of channel name -> list of domain display names
+    channel_domains = {}
+    for channel_name in channel_manager.channels:
+        domains_for_channel = []
+        for domain_config in domain_manager.domains.values():
+            if domain_config.channel_allowed(channel_name):
+                domains_for_channel.append(domain_config.name)
+        channel_domains[channel_name] = domains_for_channel
 
     with db.session() as db_session:
         recent_messages = (
@@ -79,6 +89,8 @@ def show_submit_form() -> ResponseReturnValue:
             "messages/submit.html",
             recent_messages=recent_messages,
             channels=channel_manager.channels,
+            channel_groups=channel_manager.get_channel_groups(),
+            channel_domains=channel_domains,
             default_channel=channel_manager.default_channel,
             colors=aml_parser.colorblocks.COLORS,
         )
