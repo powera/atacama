@@ -22,15 +22,19 @@
             <input type="text" id="subject" name="subject" required>
         </div>
 
-        {% if channels %}
+        {% if channel_groups %}
         <div class="form-group">
             <label for="channel">Channel:</label>
             <select name="channel" id="channel" required>
-                {% for name, config in channels.items() %}
-                    <option value="{{ name }}"{% if name == default_channel %} selected{% endif %}>
-                        {{ config.get_display_name() }} - {{ config.description }}
-                        {% if config.requires_auth %}(Private){% endif %}
+                {% for group_name, group_channels in channel_groups.items() %}
+                <optgroup label="{{ group_name }}">
+                    {% for channel_name in group_channels %}
+                    {% set config = channels[channel_name] %}
+                    <option value="{{ channel_name }}"{% if channel_name == default_channel %} selected{% endif %}>
+                        {{ config.get_display_name() }}{% if config.requires_admin %} [Admin]{% elif config.requires_auth %} [Private]{% endif %} — {{ config.description }}{% if channel_domains[channel_name] %} ({{ channel_domains[channel_name]|join(', ') }}){% endif %}
                     </option>
+                    {% endfor %}
+                </optgroup>
                 {% endfor %}
             </select>
         </div>
