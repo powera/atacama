@@ -25,15 +25,13 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_document_structure(self):
         """Test basic document structure with sections."""
-        text = dedent(
-            """
+        text = dedent("""
             First section
             ----
             Second section
             ----
             Third section
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
         self.assertHtmlEqual(
@@ -54,16 +52,14 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_multi_quote_blocks(self):
         """Test multi-paragraph quote block formatting."""
-        text = dedent(
-            """
+        text = dedent("""
             Before quote
             <<<
             First quoted paragraph
             Second quoted paragraph
             >>>
             After quote
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
         self.assertHtmlEqual(
@@ -83,16 +79,14 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_colored_multi_quote_blocks(self):
         """Test colored multi-paragraph quote block formatting."""
-        text = dedent(
-            """
+        text = dedent("""
             Before quote
             <red> <<<
             First quoted paragraph
             Second quoted paragraph
             >>>
             After quote
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
 
@@ -111,8 +105,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_nested_multi_quote(self):
         """Test handling of nested multi-quote blocks."""
-        text = dedent(
-            """
+        text = dedent("""
             <<<
             Outer quote
             <<<
@@ -120,8 +113,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             >>>
             Still outer
             >>>
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
         self.assertIn('class="mlq"', html)
@@ -154,14 +146,12 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_lists(self):
         """Test list formatting with different marker types."""
-        text = dedent(
-            """
+        text = dedent("""
             * First item
             * Second item
             # Number item
             > Arrow item
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
         self.assertIn("<ul>", html)
@@ -171,15 +161,13 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_nested_lists(self):
         """Test nested list structures."""
-        text = dedent(
-            """
+        text = dedent("""
             * Parent item
             * Parent with nested
             # Nested number
             > Nested arrow
             * Back to parent
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
         self.assertIn("<ul>", html)
@@ -267,8 +255,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
 
     def test_complex_document(self):
         """Test a complete document with multiple features."""
-        text = dedent(
-            """
+        text = dedent("""
             Welcome to our guide
             ----
             <red>Important notice:
@@ -283,8 +270,7 @@ class TestAtacamaHTMLGenerator(unittest.TestCase):
             Check https://example.com for *more* details
             
             {{isbn|1234567890}}
-        """
-        ).strip()
+        """).strip()
 
         html = self.generate_html(text)
 

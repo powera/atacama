@@ -41,13 +41,13 @@ def get_postgres_url(url_arg: Optional[str] = None) -> str:
         url = url_arg
     else:
         # Try keys/database_url file
-        db_url_path = os.path.join(constants.KEY_DIR, 'database_url')
+        db_url_path = os.path.join(constants.KEY_DIR, "database_url")
         if os.path.exists(db_url_path):
-            with open(db_url_path, 'r') as f:
+            with open(db_url_path, "r") as f:
                 url = f.read().strip()
         else:
             # Fall back to environment variable
-            url = os.getenv('DATABASE_URL')
+            url = os.getenv("DATABASE_URL")
 
     if not url:
         raise ValueError(
@@ -56,8 +56,8 @@ def get_postgres_url(url_arg: Optional[str] = None) -> str:
         )
 
     # Handle Supabase URLs that use postgres:// instead of postgresql://
-    if url.startswith('postgres://'):
-        url = url.replace('postgres://', 'postgresql://', 1)
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
 
     return url
 
@@ -99,7 +99,7 @@ def migrate_table(source_session, dest_session, table_name: str, dry_run: bool =
     return len(rows)
 
 
-def reset_sequences(dest_session, table_name: str, id_column: str = 'id'):
+def reset_sequences(dest_session, table_name: str, id_column: str = "id"):
     """
     Reset PostgreSQL sequence to max ID value after migration.
 
@@ -119,14 +119,18 @@ def reset_sequences(dest_session, table_name: str, id_column: str = 'id'):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Migrate Atacama database from SQLite to PostgreSQL.',
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description="Migrate Atacama database from SQLite to PostgreSQL.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('--url', help='PostgreSQL connection URL')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Show what would be migrated without writing')
-    parser.add_argument('--skip-create-tables', action='store_true',
-                       help='Skip table creation (tables already exist)')
+    parser.add_argument("--url", help="PostgreSQL connection URL")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be migrated without writing"
+    )
+    parser.add_argument(
+        "--skip-create-tables",
+        action="store_true",
+        help="Skip table creation (tables already exist)",
+    )
 
     args = parser.parse_args()
 
@@ -134,11 +138,15 @@ def main():
     constants.init_production()
 
     # Get database URLs
-    sqlite_url = f'sqlite:///{constants._PROD_DB_PATH}'
+    sqlite_url = f"sqlite:///{constants._PROD_DB_PATH}"
     postgres_url = get_postgres_url(args.url)
 
     print(f"Source: {sqlite_url}")
-    print(f"Destination: {postgres_url[:50]}..." if len(postgres_url) > 50 else f"Destination: {postgres_url}")
+    print(
+        f"Destination: {postgres_url[:50]}..."
+        if len(postgres_url) > 50
+        else f"Destination: {postgres_url}"
+    )
     print()
 
     # Create engines
@@ -149,6 +157,7 @@ def main():
     if not args.skip_create_tables and not args.dry_run:
         print("Creating tables in destination database...")
         from models import Base
+
         Base.metadata.create_all(dest_engine)
         print("Tables created.")
         print()
@@ -172,15 +181,15 @@ def main():
         # 6. Email-quotes association (depends on emails and quotes)
 
         tables = [
-            'users',
-            'messages',
-            'user_tokens',
-            'emails',
-            'articles',
-            'quotes',
-            'react_widgets',
-            'widget_versions',
-            'email_quotes',
+            "users",
+            "messages",
+            "user_tokens",
+            "emails",
+            "articles",
+            "quotes",
+            "react_widgets",
+            "widget_versions",
+            "email_quotes",
         ]
 
         total_rows = 0
@@ -198,7 +207,7 @@ def main():
             # Reset sequences for tables with auto-increment IDs
             print()
             print("Resetting PostgreSQL sequences...")
-            for table in ['users', 'messages', 'user_tokens', 'widget_versions']:
+            for table in ["users", "messages", "user_tokens", "widget_versions"]:
                 try:
                     reset_sequences(dest_session, table)
                     print(f"  {table}_id_seq: reset")
@@ -223,5 +232,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

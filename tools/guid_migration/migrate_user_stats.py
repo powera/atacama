@@ -63,10 +63,12 @@ def get_user_stats_files(user_id: str) -> List[str]:
     if os.path.exists(daily_dir):
         for filename in os.listdir(daily_dir):
             # Match current/yesterday snapshots (both .json and .json.gz)
-            if (filename.endswith('_current.json') or
-                filename.endswith('_yesterday.json') or
-                filename.endswith('_current.json.gz') or
-                filename.endswith('_yesterday.json.gz')):
+            if (
+                filename.endswith("_current.json")
+                or filename.endswith("_yesterday.json")
+                or filename.endswith("_current.json.gz")
+                or filename.endswith("_yesterday.json.gz")
+            ):
                 files.append(os.path.join(daily_dir, filename))
 
     return sorted(files)
@@ -107,7 +109,9 @@ def migrate_user(user_id: str, dry_run: bool = False, max_unmapped_ratio: float 
         filename = os.path.basename(filepath)
         print(f"\nProcessing: {filename}")
 
-        stats, success = convert_stats_file(filepath, dry_run=dry_run, max_unmapped_ratio=max_unmapped_ratio)
+        stats, success = convert_stats_file(
+            filepath, dry_run=dry_run, max_unmapped_ratio=max_unmapped_ratio
+        )
 
         if not success:
             print(f"  FAILED: {filename}")
@@ -145,17 +149,22 @@ def migrate_user(user_id: str, dry_run: bool = False, max_unmapped_ratio: float 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Migrate Trakaido user stats from wordKey to GUID format'
+        description="Migrate Trakaido user stats from wordKey to GUID format"
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--user-id', type=str, help='User ID to migrate')
-    group.add_argument('--all-users', action='store_true', help='Migrate all users')
+    group.add_argument("--user-id", type=str, help="User ID to migrate")
+    group.add_argument("--all-users", action="store_true", help="Migrate all users")
 
-    parser.add_argument('--dry-run', action='store_true',
-                        help='Perform dry run without modifying files')
-    parser.add_argument('--max-unmapped', type=float, default=0.20,
-                        help='Maximum ratio of unmapped words allowed (default: 0.20 = 20%%)')
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Perform dry run without modifying files"
+    )
+    parser.add_argument(
+        "--max-unmapped",
+        type=float,
+        default=0.20,
+        help="Maximum ratio of unmapped words allowed (default: 0.20 = 20%%)",
+    )
 
     args = parser.parse_args()
 
@@ -196,5 +205,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

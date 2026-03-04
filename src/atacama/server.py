@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-""" Web server for atacama. """
+"""Web server for atacama."""
 
 import os
 from pathlib import Path

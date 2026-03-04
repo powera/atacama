@@ -32,7 +32,6 @@ from trakaido.blueprints.stats_metrics import (
 )
 from trakaido.models import Classroom, ClassroomMembership, ClassroomRole
 
-
 CLASSROOM_STATS_API_DOCS = {
     "GET /api/trakaido/classroom_stats/<language>/member/<user_id>": "Get normalized stats summary for one classroom member",
     "POST /api/trakaido/classroom_stats/<language>/members": "Get normalized stats summaries for multiple classroom members",

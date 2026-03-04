@@ -62,9 +62,7 @@ def discover_users(language: str) -> List[str]:
 
 def load_flat_file_stats(user_id: str, language: str) -> Optional[Dict[str, Any]]:
     """Load a user's stats.json file."""
-    stats_path = os.path.join(
-        get_trakaido_data_dir(), user_id, language, "stats.json"
-    )
+    stats_path = os.path.join(get_trakaido_data_dir(), user_id, language, "stats.json")
     if not os.path.isfile(stats_path):
         return None
 
@@ -80,9 +78,7 @@ def load_flat_file_stats(user_id: str, language: str) -> Optional[Dict[str, Any]
 
 def discover_snapshot_dates(user_id: str, language: str) -> List[str]:
     """Find all dates that have daily snapshot files (current type)."""
-    daily_dir = os.path.join(
-        get_trakaido_data_dir(), user_id, language, "daily"
-    )
+    daily_dir = os.path.join(get_trakaido_data_dir(), user_id, language, "daily")
     if not os.path.isdir(daily_dir):
         return []
 
@@ -99,9 +95,7 @@ def discover_snapshot_dates(user_id: str, language: str) -> List[str]:
 
 def load_snapshot(user_id: str, language: str, date: str) -> Optional[Dict[str, Any]]:
     """Load a daily snapshot file, trying gzip first then plain JSON."""
-    daily_dir = os.path.join(
-        get_trakaido_data_dir(), user_id, language, "daily"
-    )
+    daily_dir = os.path.join(get_trakaido_data_dir(), user_id, language, "daily")
 
     gz_path = os.path.join(daily_dir, f"{date}_current.json.gz")
     json_path = os.path.join(daily_dir, f"{date}_current.json")
@@ -135,9 +129,7 @@ def compute_snapshot_aggregates(
     exposed_count = 0
     total_questions = 0
     activity_totals: Dict[str, Any] = {
-        "directPractice": {
-            a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES
-        },
+        "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
         "contextualExposure": {
             a: {"correct": 0, "incorrect": 0} for a in CONTEXTUAL_EXPOSURE_TYPES
         },
@@ -168,9 +160,7 @@ def compute_snapshot_aggregates(
     return exposed_count, total_questions, activity_totals
 
 
-def migrate_user(
-    user_id: str, language: str, dry_run: bool = False, force: bool = False
-) -> bool:
+def migrate_user(user_id: str, language: str, dry_run: bool = False, force: bool = False) -> bool:
     """Migrate a single user from flat-file to SQLite.
 
     Returns True on success, False on failure or skip.
@@ -178,9 +168,7 @@ def migrate_user(
     print(f"  User: {user_id} (language: {language})")
 
     # Check for existing SQLite database
-    db_path = os.path.join(
-        get_trakaido_data_dir(), user_id, language, "stats.db"
-    )
+    db_path = os.path.join(get_trakaido_data_dir(), user_id, language, "stats.db")
     if os.path.isfile(db_path) and not force:
         print(f"    SKIPPED: SQLite database already exists at {db_path}")
         print(f"    (use --force to overwrite)")
@@ -193,10 +181,7 @@ def migrate_user(
         return False
 
     word_count = len(stats_data.get("stats", {}))
-    exposed_count = sum(
-        1 for w in stats_data.get("stats", {}).values()
-        if w.get("exposed", False)
-    )
+    exposed_count = sum(1 for w in stats_data.get("stats", {}).values() if w.get("exposed", False))
     print(f"    Words: {word_count} ({exposed_count} exposed)")
 
     # Discover snapshots
@@ -265,7 +250,9 @@ def migrate_user(
     loaded = db.get_all_stats()
     loaded_count = len(loaded.get("stats", {}))
     if loaded_count != word_count:
-        print(f"    WARNING: Verification mismatch! Expected {word_count} words, got {loaded_count}")
+        print(
+            f"    WARNING: Verification mismatch! Expected {word_count} words, got {loaded_count}"
+        )
         return False
 
     print(f"    Verified: {loaded_count} words in SQLite")
@@ -331,16 +318,16 @@ def main() -> int:
             success_count += 1
         elif result is False:
             # Could be a skip or a failure -- check if db exists
-            db_path = os.path.join(
-                get_trakaido_data_dir(), user_id, args.language, "stats.db"
-            )
+            db_path = os.path.join(get_trakaido_data_dir(), user_id, args.language, "stats.db")
             if os.path.isfile(db_path) and not args.force:
                 skip_count += 1
             else:
                 fail_count += 1
         print()
 
-    print(f"Migration complete: {success_count} succeeded, {skip_count} skipped, {fail_count} failed")
+    print(
+        f"Migration complete: {success_count} succeeded, {skip_count} skipped, {fail_count} failed"
+    )
     return 1 if fail_count > 0 else 0
 
 

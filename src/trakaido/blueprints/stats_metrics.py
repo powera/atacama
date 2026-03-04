@@ -131,7 +131,7 @@ def empty_activity_summary() -> Dict[str, Any]:
 
 
 def build_activity_summary_from_totals(
-    by_activity: Dict[str, Dict[str, Dict[str, int]]]
+    by_activity: Dict[str, Dict[str, Dict[str, int]]],
 ) -> Dict[str, Any]:
     """Build canonical activity summary from per-activity totals.
 

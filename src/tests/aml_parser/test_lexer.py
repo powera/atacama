@@ -100,16 +100,14 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_multi_quote_blocks(self):
         """Lexer should properly handle multi-quote blocks."""
-        text = dedent(
-            """
+        text = dedent("""
             Before
             <<<
             Quoted text
             More quoted
             >>>
             After
-        """
-        ).strip()
+        """).strip()
 
         self.assert_tokens(
             text,
@@ -130,13 +128,11 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_lists(self):
         """Lexer should recognize different types of list markers at line start."""
-        text = dedent(
-            """
+        text = dedent("""
             * Bullet item
             # Numbered item
             > Arrow item
-        """
-        ).strip()
+        """).strip()
 
         self.assert_tokens(
             text,
@@ -227,8 +223,7 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_complex_document(self):
         """Test a complex document with multiple features interacting."""
-        text = dedent(
-            """
+        text = dedent("""
             Welcome
             ----
             <red>Important note
@@ -237,8 +232,7 @@ class TestAtacamaLexer(unittest.TestCase):
             
             >>> More details <<<
             Visit https://example.com
-        """
-        ).strip()
+        """).strip()
 
         tokens = list(tokenize(text))
         # Verify specific important characteristics
@@ -265,16 +259,14 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_colored_multi_quote_blocks(self):
         """Lexer should handle color-prefixed MLQ blocks."""
-        text = dedent(
-            """
+        text = dedent("""
             Before
             <red> <<<
             Quoted text
             More quoted
             >>>
             After
-        """
-        ).strip()
+        """).strip()
 
         tokens = list(tokenize(text))
 
@@ -300,13 +292,11 @@ class TestAtacamaLexer(unittest.TestCase):
 
     def test_invalid_tag_soup(self):
         """Lexer should not worry about invalid tags"""
-        text = dedent(
-            """
+        text = dedent("""
             Before
             <red> <<< #] #] (((
             Quoted text
-        """
-        ).strip()
+        """).strip()
 
         tokens = list(tokenize(text))
 

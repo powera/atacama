@@ -164,7 +164,7 @@ def save_user_config(user_id: str, config: Dict[str, Any], language: str) -> boo
 
 
 def validate_config_update(
-    updates: Dict[str, Any]
+    updates: Dict[str, Any],
 ) -> tuple[bool, Optional[Dict[str, Any]], List[str]]:
     """Validate configuration update data.
 

@@ -44,12 +44,13 @@ from pathlib import Path
 
 # Add project src directory to Python path
 _project_root = Path(__file__).parent.parent.absolute()
-_src_dir = _project_root / 'src'
+_src_dir = _project_root / "src"
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
 # Initialize constants for production mode before other imports
 import constants
+
 constants.init_production()
 
 # Standard library imports (commonly useful)
@@ -133,7 +134,7 @@ def set_user(email: str, name: str = None) -> None:
         name: Optional display name (defaults to email username)
     """
     if name is None:
-        name = email.split('@')[0]
+        name = email.split("@")[0]
 
     user_dict = {"email": email, "name": name}
 
@@ -192,10 +193,13 @@ def search_messages(query: str, limit: int = 20) -> list:
     with db.session() as s:
         s.expire_on_commit = False
         search_pattern = f"%{query}%"
-        return s.query(Email).filter(
-            (Email.subject.ilike(search_pattern)) |
-            (Email.content.ilike(search_pattern))
-        ).order_by(Email.created_at.desc()).limit(limit).all()
+        return (
+            s.query(Email)
+            .filter((Email.subject.ilike(search_pattern)) | (Email.content.ilike(search_pattern)))
+            .order_by(Email.created_at.desc())
+            .limit(limit)
+            .all()
+        )
 
 
 def list_channels() -> list:

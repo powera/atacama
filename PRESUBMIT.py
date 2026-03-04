@@ -76,10 +76,7 @@ class SymbolTableVisitor(ast.NodeVisitor):
             self.ctx.defined_names.add(node.id)
         elif isinstance(node.ctx, ast.Load):
             self.ctx.used_names.add(node.id)
-            if (
-                node.id not in self.ctx.defined_names
-                and node.id not in self.ctx.comprehension_vars
-            ):
+            if node.id not in self.ctx.defined_names and node.id not in self.ctx.comprehension_vars:
                 self.ctx.undefined_names.add(node.id)
         self.generic_visit(node)
 
@@ -215,11 +212,7 @@ def get_requirements() -> Dict[str, str]:
                 if line and not line.startswith("#"):
                     # Extract package name, removing version specifiers
                     package = (
-                        line.split("==")[0]
-                        .split(">=")[0]
-                        .split("<=")[0]
-                        .split("[")[0]
-                        .strip()
+                        line.split("==")[0].split(">=")[0].split("<=")[0].split("[")[0].strip()
                     )
 
                     # Get the import name
@@ -250,9 +243,7 @@ def get_local_modules(root_dir: Union[str, Path]) -> Set[str]:
     return modules
 
 
-def get_python_files(
-    root_dir: Union[str, Path], changed_only: bool = False
-) -> List[Path]:
+def get_python_files(root_dir: Union[str, Path], changed_only: bool = False) -> List[Path]:
     """
     Find Python files in the project.
 
@@ -265,9 +256,7 @@ def get_python_files(
 
         try:
             # Get both staged and unstaged changes
-            staged = subprocess.check_output(
-                ["git", "diff", "--cached", "--name-only"]
-            ).decode()
+            staged = subprocess.check_output(["git", "diff", "--cached", "--name-only"]).decode()
             unstaged = subprocess.check_output(["git", "diff", "--name-only"]).decode()
 
             # Combine and filter for Python files
@@ -280,9 +269,7 @@ def get_python_files(
 
     python_files = []
     for root, _, files in os.walk(root_dir):
-        if any(
-            part.startswith(".") or part == "__pycache__" for part in Path(root).parts
-        ):
+        if any(part.startswith(".") or part == "__pycache__" for part in Path(root).parts):
             continue
         for file in files:
             if file.endswith(".py"):
@@ -339,23 +326,17 @@ def check_imports(file_path: Path, local_modules: Set[str]) -> List[str]:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 if isinstance(node, ast.Import):
                     for import_alias in node.names:
-                        import_names.add(
-                            import_alias.asname or import_alias.name.split(".")[0]
-                        )
+                        import_names.add(import_alias.asname or import_alias.name.split(".")[0])
                 else:  # ImportFrom
                     if node.module:  # Handle "from . import x" case
                         for import_alias in node.names:
                             if import_alias.name != "*":
-                                import_names.add(
-                                    import_alias.asname or import_alias.name
-                                )
+                                import_names.add(import_alias.asname or import_alias.name)
 
                 # Check for relative imports outside of tests
                 if isinstance(node, ast.ImportFrom) and node.level > 0:
                     if not is_init_file and not is_test_file:
-                        errors.append(
-                            f"Relative import found in non-test file: {file_path}"
-                        )
+                        errors.append(f"Relative import found in non-test file: {file_path}")
 
                 if isinstance(node, ast.ImportFrom) and node.level > 0:
                     continue
