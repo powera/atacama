@@ -311,9 +311,7 @@ WIDGET CONTEXT:
         if target_files:
             target_files_instruction = f"\nTARGET FILES TO MODIFY: {', '.join(target_files)}\nIMPORTANT: Only modify the files listed above. Do not change other files unless absolutely necessary for the improvement to work.\n"
 
-        prompt_parts.extend(
-            [
-                f"""
+        prompt_parts.extend([f"""
 {target_files_instruction}
 INSTRUCTIONS:
 1. Analyze the current widget code and understand its functionality.
@@ -333,9 +331,7 @@ Provide the improved files in the structured JSON format requested.
 - If main_code is in the target files, provide the improved main_code. If not, the original will be preserved.
 - If data_file or create_data_file is in the target files, provide the improved data_file. If not, the original will be preserved.
 - Only return content for files that were actually modified according to the target files list.
-"""
-            ]
-        )
+"""])
         return "\n".join(prompt_parts)
 
     def _extract_code_and_data_from_response(

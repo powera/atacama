@@ -30,7 +30,7 @@ def normalize_word_key(word_key: str) -> str:
     """
     normalized = word_key.lower().strip()
     # Remove parenthetical clarifications at the end
-    normalized = re.sub(r'\s*\([^)]+\)\s*$', '', normalized)
+    normalized = re.sub(r"\s*\([^)]+\)\s*$", "", normalized)
     return normalized.strip()
 
 
@@ -59,8 +59,10 @@ class ConversionStats:
         return self.unmapped_words / self.total_words
 
     def __str__(self):
-        return (f"Conversion Stats: {self.converted_words}/{self.total_words} converted, "
-                f"{self.unmapped_words} unmapped ({self.get_unmapped_ratio():.1%})")
+        return (
+            f"Conversion Stats: {self.converted_words}/{self.total_words} converted, "
+            f"{self.unmapped_words} unmapped ({self.get_unmapped_ratio():.1%})"
+        )
 
 
 def merge_word_stats(stats1: Dict[str, Any], stats2: Dict[str, Any]) -> Dict[str, Any]:
@@ -114,11 +116,16 @@ def is_guid_format(key: str) -> bool:
     Examples: N01_005, V01_017, P03_042
     """
     import re
-    return bool(re.match(r'^[A-Z]+\d+_\d+$', key))
+
+    return bool(re.match(r"^[A-Z]+\d+_\d+$", key))
 
 
-def convert_stats_dict(stats_dict: Dict[str, Any], mapping_table: Dict[str, str],
-                       conversion_stats: ConversionStats, dry_run: bool = False) -> Dict[str, Any]:
+def convert_stats_dict(
+    stats_dict: Dict[str, Any],
+    mapping_table: Dict[str, str],
+    conversion_stats: ConversionStats,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
     """
     Convert a stats dictionary from wordKey format to GUID format.
 
@@ -181,11 +188,11 @@ def read_stats_file(filepath: str) -> Dict[str, Any]:
     Returns:
         Parsed stats dictionary
     """
-    if filepath.endswith('.gz'):
-        with gzip.open(filepath, 'rt', encoding='utf-8') as f:
+    if filepath.endswith(".gz"):
+        with gzip.open(filepath, "rt", encoding="utf-8") as f:
             return json.load(f)
     else:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
 
 
@@ -197,16 +204,20 @@ def write_stats_file(filepath: str, stats_dict: Dict[str, Any]):
         filepath: Path to the output stats file
         stats_dict: Stats dictionary to write
     """
-    if filepath.endswith('.gz'):
-        with gzip.open(filepath, 'wt', encoding='utf-8') as f:
+    if filepath.endswith(".gz"):
+        with gzip.open(filepath, "wt", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=2, ensure_ascii=False)
     else:
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=2, ensure_ascii=False)
 
 
-def convert_stats_file(input_path: str, output_path: str = None,
-                       dry_run: bool = False, max_unmapped_ratio: float = 0.20) -> Tuple[ConversionStats, bool]:
+def convert_stats_file(
+    input_path: str,
+    output_path: str = None,
+    dry_run: bool = False,
+    max_unmapped_ratio: float = 0.20,
+) -> Tuple[ConversionStats, bool]:
     """
     Convert a single stats file from wordKey to GUID format.
 
@@ -239,10 +250,14 @@ def convert_stats_file(input_path: str, output_path: str = None,
     # Check unmapped ratio
     unmapped_ratio = conversion_stats.get_unmapped_ratio()
     if unmapped_ratio > max_unmapped_ratio:
-        print(f"ERROR: Too many unmapped words ({unmapped_ratio:.1%}) in {input_path}",
-              file=sys.stderr)
-        print(f"  Unmapped words: {conversion_stats.unmapped_words}/{conversion_stats.total_words}",
-              file=sys.stderr)
+        print(
+            f"ERROR: Too many unmapped words ({unmapped_ratio:.1%}) in {input_path}",
+            file=sys.stderr,
+        )
+        print(
+            f"  Unmapped words: {conversion_stats.unmapped_words}/{conversion_stats.total_words}",
+            file=sys.stderr,
+        )
         print(f"  Threshold: {max_unmapped_ratio:.1%}", file=sys.stderr)
         return conversion_stats, False
 
@@ -257,14 +272,14 @@ def convert_stats_file(input_path: str, output_path: str = None,
     return conversion_stats, True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test conversion on a sample file
     if len(sys.argv) < 2:
         print("Usage: python convert_stats.py <stats_file> [--dry-run]")
         sys.exit(1)
 
     input_file = sys.argv[1]
-    dry_run = '--dry-run' in sys.argv
+    dry_run = "--dry-run" in sys.argv
 
     print(f"Converting {input_file} (dry_run={dry_run})...")
     stats, success = convert_stats_file(input_file, dry_run=dry_run)

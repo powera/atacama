@@ -11,7 +11,6 @@ import constants
 from common.atomic_file import atomic_write_json, read_json_with_lock, recover_from_backup
 from trakaido.blueprints.shared import logger, ensure_user_data_dir
 
-
 ##############################################################################
 # Activity Stats Schema Constants
 ##############################################################################

@@ -36,13 +36,11 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_horizontal_rules(self):
         """Parser should handle horizontal rules (section breaks)."""
-        text = dedent(
-            """
+        text = dedent("""
             First part
             ----
             Second part
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
@@ -53,13 +51,11 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_more_tags(self):
         """Parser should handle --MORE-- tags."""
-        text = dedent(
-            """
+        text = dedent("""
             First part
             --MORE--
             Second part
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
@@ -70,16 +66,14 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_multi_quote_blocks(self):
         """Parser should handle multi-line quote blocks (MLQ)."""
-        text = dedent(
-            """
+        text = dedent("""
             Before quote
             <<<
             First quoted line
             Second quoted line
             >>>
             After quote
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
@@ -95,16 +89,14 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_colored_multi_quote_blocks(self):
         """Parser should handle colored multi-line quote blocks."""
-        text = dedent(
-            """
+        text = dedent("""
             Before quote
             <red> <<<
             First quoted line
             Second quoted line
             >>>
             After quote
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
@@ -120,13 +112,11 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_unclosed_mlq(self):
         """Parser should handle unclosed MLQ blocks gracefully."""
-        text = dedent(
-            """
+        text = dedent("""
             Start
             <<<
             Unclosed block
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         # Should convert unclosed MLQ to text
@@ -165,13 +155,11 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_lists(self):
         """Parser should handle different types of list markers."""
-        text = dedent(
-            """
+        text = dedent("""
             * Bullet item
             # Number one
             > Arrow item
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         list_items = [n for n in ast.children if isinstance(n, ListItemNode)]
@@ -234,8 +222,7 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_complex_document(self):
         """Basic smoke test for complex documents."""
-        text = dedent(
-            """
+        text = dedent("""
             Introduction
             ----
             <red>Warning:
@@ -252,8 +239,7 @@ class TestAtacamaParser(unittest.TestCase):
             Final section with 中文
             ----
             Conclusion
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assertGreater(len(ast.children), 1)
@@ -275,15 +261,13 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_unclosed_literal_in_color_block(self):
         """Parser should handle unclosed literal blocks within color blocks."""
-        text = dedent(
-            """
+        text = dedent("""
             He defines a << contract guaranteed by law >> to be a type of security. (<red> I would define a security as << a financial instrument structured in a regular way, publicly registered, and based in the interest in some real property.) (<orange> this definition is *intended* to exclude << derivatives >>; they are not securities)
 
             --MORE--
 
             The differences
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         self.assert_node_type(ast, NodeType.DOCUMENT)
@@ -359,13 +343,11 @@ class TestAtacamaParser(unittest.TestCase):
 
     def test_multiple_list_items(self):
         """Parser should handle multiple consecutive list items."""
-        text = dedent(
-            """
+        text = dedent("""
             * First
             * Second
             * Third
-        """
-        ).strip()
+        """).strip()
 
         ast = self.parse_text(text)
         list_items = [n for n in ast.children if isinstance(n, ListItemNode)]

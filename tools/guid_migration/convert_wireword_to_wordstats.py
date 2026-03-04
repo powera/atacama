@@ -55,19 +55,19 @@ def convert_wireword_suffix_to_wordstats(suffix: str) -> str:
     # Pattern: {person}sg_{gender}_{tense} or {person}pl_{gender}_{tense} or {person}sg_{tense} or {person}pl_{tense}
 
     # First, handle cases with gender: 3sg_m_pres -> 3s-m_pres
-    pattern_with_gender = r'^(\d)(sg|pl)_([mf])_(.+)$'
+    pattern_with_gender = r"^(\d)(sg|pl)_([mf])_(.+)$"
     match = re.match(pattern_with_gender, suffix)
     if match:
         person, number, gender, tense = match.groups()
-        short_number = 's' if number == 'sg' else 'p'
+        short_number = "s" if number == "sg" else "p"
         return f"{person}{short_number}-{gender}_{tense}"
 
     # Handle cases without gender: 1sg_pres -> 1s_pres
-    pattern_without_gender = r'^(\d)(sg|pl)_(.+)$'
+    pattern_without_gender = r"^(\d)(sg|pl)_(.+)$"
     match = re.match(pattern_without_gender, suffix)
     if match:
         person, number, tense = match.groups()
-        short_number = 's' if number == 'sg' else 'p'
+        short_number = "s" if number == "sg" else "p"
         return f"{person}{short_number}_{tense}"
 
     # If no match, return unchanged
@@ -89,7 +89,7 @@ def convert_guid_key(guid_key: str) -> str:
         The GUID key with wordstats suffix (if applicable)
     """
     # Check if this is a verb form with suffix (has more than 2 underscore-separated parts)
-    parts = guid_key.split('_')
+    parts = guid_key.split("_")
 
     if len(parts) <= 2:
         # No suffix, return as-is
@@ -97,8 +97,8 @@ def convert_guid_key(guid_key: str) -> str:
 
     # Has suffix: base_suffix format like V01_025_3sg_f_pres
     # parts[0] = V01, parts[1] = 025, parts[2:] = suffix parts
-    base = '_'.join(parts[:2])  # V01_025
-    suffix = '_'.join(parts[2:])  # 3sg_f_pres
+    base = "_".join(parts[:2])  # V01_025
+    suffix = "_".join(parts[2:])  # 3sg_f_pres
 
     converted_suffix = convert_wireword_suffix_to_wordstats(suffix)
     return f"{base}_{converted_suffix}"
@@ -123,8 +123,10 @@ class ConversionStats:
         self.unchanged_keys += 1
 
     def __str__(self):
-        return (f"Conversion Stats: {self.converted_keys}/{self.total_keys} converted, "
-                f"{self.unchanged_keys} unchanged")
+        return (
+            f"Conversion Stats: {self.converted_keys}/{self.total_keys} converted, "
+            f"{self.unchanged_keys} unchanged"
+        )
 
 
 def merge_word_stats(stats1: Dict[str, Any], stats2: Dict[str, Any]) -> Dict[str, Any]:
@@ -170,8 +172,9 @@ def merge_word_stats(stats1: Dict[str, Any], stats2: Dict[str, Any]) -> Dict[str
     return merged
 
 
-def convert_stats_dict(stats_dict: Dict[str, Any], conversion_stats: ConversionStats,
-                       dry_run: bool = False) -> Dict[str, Any]:
+def convert_stats_dict(
+    stats_dict: Dict[str, Any], conversion_stats: ConversionStats, dry_run: bool = False
+) -> Dict[str, Any]:
     """
     Convert a stats dictionary from wireword format to wordstats format.
 
@@ -221,11 +224,11 @@ def read_stats_file(filepath: str) -> Dict[str, Any]:
     Returns:
         Parsed stats dictionary
     """
-    if filepath.endswith('.gz'):
-        with gzip.open(filepath, 'rt', encoding='utf-8') as f:
+    if filepath.endswith(".gz"):
+        with gzip.open(filepath, "rt", encoding="utf-8") as f:
             return json.load(f)
     else:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
 
 
@@ -237,16 +240,17 @@ def write_stats_file(filepath: str, stats_dict: Dict[str, Any]):
         filepath: Path to the output stats file
         stats_dict: Stats dictionary to write
     """
-    if filepath.endswith('.gz'):
-        with gzip.open(filepath, 'wt', encoding='utf-8') as f:
+    if filepath.endswith(".gz"):
+        with gzip.open(filepath, "wt", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=2, ensure_ascii=False)
     else:
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(stats_dict, f, indent=2, ensure_ascii=False)
 
 
-def convert_stats_file(input_path: str, output_path: str = None,
-                       dry_run: bool = False) -> Tuple[ConversionStats, bool]:
+def convert_stats_file(
+    input_path: str, output_path: str = None, dry_run: bool = False
+) -> Tuple[ConversionStats, bool]:
     """
     Convert a single stats file from wireword to wordstats format.
 
@@ -320,10 +324,12 @@ def get_user_stats_files(user_id: str) -> List[str]:
     if os.path.exists(daily_dir):
         for filename in os.listdir(daily_dir):
             # Match current/yesterday snapshots (both .json and .json.gz)
-            if (filename.endswith('_current.json') or
-                filename.endswith('_yesterday.json') or
-                filename.endswith('_current.json.gz') or
-                filename.endswith('_yesterday.json.gz')):
+            if (
+                filename.endswith("_current.json")
+                or filename.endswith("_yesterday.json")
+                or filename.endswith("_current.json.gz")
+                or filename.endswith("_yesterday.json.gz")
+            ):
                 files.append(os.path.join(daily_dir, filename))
 
     return sorted(files)
@@ -401,15 +407,16 @@ def convert_user(user_id: str, dry_run: bool = False) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert Trakaido stats from wireword to wordstats format'
+        description="Convert Trakaido stats from wireword to wordstats format"
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--user-id', type=str, help='User ID to convert')
-    group.add_argument('--all-users', action='store_true', help='Convert all users')
+    group.add_argument("--user-id", type=str, help="User ID to convert")
+    group.add_argument("--all-users", action="store_true", help="Convert all users")
 
-    parser.add_argument('--dry-run', action='store_true',
-                        help='Perform dry run without modifying files')
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Perform dry run without modifying files"
+    )
 
     args = parser.parse_args()
 
@@ -450,5 +457,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

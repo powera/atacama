@@ -28,7 +28,6 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 import constants
 from tools.guid_migration.build_guid_mapping import get_mapping_table
 
-
 VALID_STAT_TYPES = {"multipleChoice", "listeningEasy", "listeningHard", "typing", "blitz"}
 VALID_META_TYPES = {"exposed", "lastSeen", "lastCorrectAnswer", "lastIncorrectAnswer"}
 
@@ -113,7 +112,7 @@ def is_valid_guid(guid: str, valid_guids: Set[str]) -> bool:
     if len(guid) < 5:
         return False
 
-    parts = guid.split('_')
+    parts = guid.split("_")
     if len(parts) != 2:
         return False
 
@@ -147,11 +146,11 @@ def is_valid_guid(guid: str, valid_guids: Set[str]) -> bool:
 def read_stats_file(filepath: str) -> Dict[str, Any]:
     """Read a stats file (JSON or GZIP)."""
     try:
-        if filepath.endswith('.gz'):
-            with gzip.open(filepath, 'rt', encoding='utf-8') as f:
+        if filepath.endswith(".gz"):
+            with gzip.open(filepath, "rt", encoding="utf-8") as f:
                 return json.load(f)
         else:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
         raise Exception(f"Error reading {filepath}: {e}")
@@ -225,10 +224,12 @@ def get_user_stats_files(user_id: str) -> List[str]:
     # Daily snapshot files
     if os.path.exists(daily_dir):
         for filename in os.listdir(daily_dir):
-            if (filename.endswith('_current.json') or
-                filename.endswith('_yesterday.json') or
-                filename.endswith('_current.json.gz') or
-                filename.endswith('_yesterday.json.gz')):
+            if (
+                filename.endswith("_current.json")
+                or filename.endswith("_yesterday.json")
+                or filename.endswith("_current.json.gz")
+                or filename.endswith("_yesterday.json.gz")
+            ):
                 files.append(os.path.join(daily_dir, filename))
 
     return sorted(files)
@@ -288,13 +289,11 @@ def validate_user(user_id: str) -> ValidationResult:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Validate Trakaido GUID migration'
-    )
+    parser = argparse.ArgumentParser(description="Validate Trakaido GUID migration")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--user-id', type=str, help='User ID to validate')
-    group.add_argument('--all-users', action='store_true', help='Validate all users')
+    group.add_argument("--user-id", type=str, help="User ID to validate")
+    group.add_argument("--all-users", action="store_true", help="Validate all users")
 
     args = parser.parse_args()
 
@@ -343,5 +342,5 @@ def main():
         return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

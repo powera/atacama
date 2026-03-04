@@ -23,7 +23,6 @@ from trakaido.blueprints.date_utils import (
 )
 from trakaido.blueprints.nonce_utils import cleanup_old_nonce_files
 
-
 ##############################################################################
 # Daily Snapshot Management Functions
 ##############################################################################
