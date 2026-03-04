@@ -27,7 +27,12 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     
   [domains.earlyversion]
     name = "Early Version"
-    channels = []  # All channels
+    channels = [
+      "misc", "private", "sandbox", "sports", "politics", "religion", "chess",
+      "books", "film", "music", "television", "orinoco", "linaja", "cities",
+      "usconst", "theology", "education", "weather", "restaurants", "food",
+      "wikipedia", "highphysics"
+    ]
     theme = "default"
 
   [domains.codepending]

@@ -236,12 +236,16 @@ def show_submit_form() -> ResponseReturnValue:
     channel_manager = get_channel_manager()
     domain_manager = get_domain_manager()
 
+    default_domain_name = domain_manager.domains["default"].name
     channel_domains = {}
     for channel_name in channel_manager.channels:
         domains_for_channel = []
         for domain_config in domain_manager.domains.values():
             if domain_config.channel_allowed(channel_name):
                 domains_for_channel.append(domain_config.name)
+        # Only show "Main Site" when no other domain serves this channel
+        if len(domains_for_channel) > 1 and default_domain_name in domains_for_channel:
+            domains_for_channel = [d for d in domains_for_channel if d != default_domain_name]
         channel_domains[channel_name] = domains_for_channel
 
     with db.session() as db_session:
