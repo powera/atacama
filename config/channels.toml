@@ -59,6 +59,16 @@ description = "Book discussion and reviews"
 access_level = "public"
 group = "Media"
 
+[channels.film]
+description = "Film discussion and reviews"
+access_level = "public"
+group = "Media"
+
+[channels.music]
+description = "Music discussion"
+access_level = "public"
+group = "Media"
+
 [channels.television]
 description = "TV shows and media"
 access_level = "public"
