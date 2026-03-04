@@ -12,7 +12,7 @@ See `.agents/peer-repo/` for summaries of related repositories (Trakaido app, Gr
 
 ```bash
 black .                              # Format Python code (required)
-python3 PRESUBMIT.py                 # Import checks (required)
+python3 precommit.py                 # Import checks (required)
 python3 run_tests.py                 # Run test suite
 ```
 
@@ -96,7 +96,7 @@ atacama/
 ├── requirements.txt           # Python dependencies
 ├── run_tests.py               # Test runner
 ├── run_react_compiler_tests.py
-├── PRESUBMIT.py               # Pre-commit validation
+├── precommit.py               # Pre-commit validation
 └── INSTALL.md                 # Production setup guide
 ```
 
@@ -137,7 +137,7 @@ Nonce-based auth, cross-domain cookie sharing (`*.trakaido.com`). Tracks vocabul
 
 ## Code Conventions
 
-**Imports:** stdlib → third-party → local, alphabetically sorted within each group. No relative imports outside test files. All third-party imports must be in `requirements.txt`. PRESUBMIT.py enforces this.
+**Imports:** stdlib → third-party → local, alphabetically sorted within each group. No relative imports outside test files. All third-party imports must be in `requirements.txt`. precommit.py enforces this.
 
 **Style:** PEP 8, `black`-formatted. Snake_case file names. Test files: `test_*.py`.
 
@@ -176,7 +176,7 @@ Tests use a temporary database per run; do not rely on persistent data.
 
 ## Common Pitfalls
 
-- **Relative imports** outside tests → PRESUBMIT will catch; use `from common.base import logger`
+- **Relative imports** outside tests → precommit.py will catch; use `from common.base import logger`
 - **DB sessions** → always close properly
 - **Config changes** require server restart (loaded at startup)
 - **Widget compilation** is expensive → compiled widgets are cached
