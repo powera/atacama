@@ -27,6 +27,7 @@ excluded_domains = ["localhost", "127.0.0.1", "atacama.local"]
     
   [domains.earlyversion]
     name = "Early Version"
+    domains = ["earlyversion.com"]
     channels = [
       "misc", "private", "sandbox", "sports", "politics", "religion", "chess",
       "books", "film", "music", "television", "orinoco", "linaja", "cities",
