@@ -12,7 +12,6 @@ import argparse
 import ast
 import os
 import sys
-import pkgutil
 from pathlib import Path
 from typing import List, Set, Dict, Tuple, Optional, Union
 from contextlib import contextmanager
@@ -163,23 +162,9 @@ def get_stdlib_modules() -> Set[str]:
 
     :return: Set of module names
     """
-    stdlib_modules = set()
-
-    # Get built-in module names from sys.modules
-    for module_name, module in sys.modules.items():
-        if not module_name.startswith("_"):  # Skip private modules
-            if getattr(module, "__file__", None):
-                if "site-packages" not in str(module.__file__):
-                    stdlib_modules.add(module_name.split(".")[0])
-            else:
-                stdlib_modules.add(module_name.split(".")[0])
-
-    # Also check additional modules available via pkgutil
-    for module_info in pkgutil.iter_modules():
-        if not module_info.name.startswith("_"):  # Skip private modules
-            stdlib_modules.add(module_info.name)
-
-    return stdlib_modules
+    # sys.stdlib_module_names is authoritative (Python 3.10+) and includes
+    # C extension modules like fcntl that pkgutil.iter_modules() misses.
+    return set(sys.stdlib_module_names)
 
 
 def get_requirements() -> Dict[str, str]:
