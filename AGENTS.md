@@ -11,9 +11,10 @@ See `.agents/peer-repo/` for summaries of related repositories (Trakaido app, Gr
 ## Before Submitting
 
 ```bash
-black .                              # Format Python code (required)
-python3 precommit.py                 # Import checks (required)
-python3 run_tests.py                 # Run test suite
+black .                                        # Format Python code (required)
+python3 precommit.py                           # Import checks (required)
+python3 run_tests.py --category quick          # Dep-free tests, always runnable (<1s)
+python3 run_tests.py                           # Full suite (requires pip install -r requirements.txt)
 ```
 
 ## Quick Reference

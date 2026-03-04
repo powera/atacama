@@ -1,13 +1,12 @@
 #!/usr/bin/python3
 
-import unittest
-import sys
-import os
-import tempfile
-import importlib.util
-from typing import List, Optional
-import coverage
 import argparse
+import importlib.util
+import os
+import sys
+import tempfile
+import unittest
+from typing import List, Optional
 
 
 def setup_test_environment():
@@ -52,7 +51,13 @@ def discover_test_modules() -> dict:
     Returns:
         Dict mapping category names to lists of test module paths
     """
+    # "quick" is an alias for aml_parser — dep-free tests that always run
+    CATEGORY_DIR_MAP = {
+        "quick": "aml_parser",
+    }
+
     categories = {
+        "quick": [],
         "common": [],
         "blog": [],
         "atacama": [],
@@ -67,7 +72,7 @@ def discover_test_modules() -> dict:
 
     # Scan test directories
     for category in categories:
-        category_dir = os.path.join(test_dir, category)
+        category_dir = os.path.join(test_dir, CATEGORY_DIR_MAP.get(category, category))
         if not os.path.exists(category_dir):
             continue
 
@@ -107,6 +112,8 @@ def run_test_suite(
         # Initialize coverage if requested
         cov = None
         if with_coverage:
+            import coverage  # lazy import — only needed with --coverage flag
+
             cov = coverage.Coverage()
             cov.start()
 
@@ -180,7 +187,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--category",
-        choices=["common", "blog", "atacama", "trakaido", "models", "aml_parser", "react_compiler"],
+        choices=["quick", "common", "blog", "atacama", "trakaido", "models", "aml_parser", "react_compiler"],
         action="append",
         help="Test categories to run (can specify multiple)",
     )
@@ -207,6 +214,7 @@ if __name__ == "__main__":
     parser.epilog = """
 Examples:
   %(prog)s                         # Run all tests
+  %(prog)s --category quick        # Run dep-free tests (no install needed, <10s)
   %(prog)s --category common       # Run only common tests
   %(prog)s --category blog --category atacama  # Run blog and atacama tests
   %(prog)s --pattern "*auth*"      # Run tests with 'auth' in the name
@@ -215,12 +223,13 @@ Examples:
   %(prog)s --list-tests           # List all available tests
 
 Test categories:
-  common         - Core utilities and configuration tests
-  blog           - Blog/CMS functionality tests
-  atacama        - Atacama infrastructure tests (auth, navigation, etc.)
-  trakaido       - Trakaido API tests
-  models         - Database model tests
-  aml_parser     - Markup parser tests
+  quick          - Dep-free parser tests (alias for aml_parser; always runnable)
+  common         - Core utilities and configuration tests (requires Flask)
+  blog           - Blog/CMS functionality tests (requires Flask + SQLAlchemy)
+  atacama        - Atacama infrastructure tests (requires Flask)
+  trakaido       - Trakaido API tests (requires Flask + SQLAlchemy)
+  models         - Database model tests (requires SQLAlchemy)
+  aml_parser     - Markup parser tests (no external dependencies)
   react_compiler - React Compiler tests (expensive, requires Node.js/npm)
     """ % {"prog": parser.prog}
 
