@@ -8,7 +8,7 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-from trakaido.blueprints.stats_schema import create_empty_word_stats
+from trakaido.blueprints.stats_schema import DailyStats, create_empty_word_stats
 from trakaido.blueprints.stats_sqlite import (
     SqliteStatsDB,
     SqliteJourneyStats,
@@ -24,6 +24,9 @@ from trakaido.blueprints.stats_backend import (
     BACKEND_SQLITE,
 )
 from trakaido.blueprints.date_utils import get_current_day_key
+from trakaido.blueprints.stats_snapshots import (
+    calculate_monthly_progress as calculate_monthly_progress_flatfile,
+)
 from trakaido.blueprints.userstats import increment_word_stat
 
 
@@ -256,7 +259,8 @@ class SqliteStatsDBSnapshotTests(unittest.TestCase):
 
             self.assertIsNotNone(snapshot)
             self.assertEqual(snapshot["exposed_words_count"], 3)
-            self.assertEqual(snapshot["words_known_count"], 0)
+            # Fallback semantics: direct correct >= 3 counts as known.
+            self.assertEqual(snapshot["words_known_count"], 3)
             # 3 words × (5 correct + 2 incorrect) = 21
             self.assertEqual(snapshot["total_questions_answered"], 21)
 
@@ -746,6 +750,99 @@ class BackendDispatchTests(unittest.TestCase):
             result = calculate_monthly_progress(self.test_user_id, self.test_language)
             self.assertIn("currentDay", result)
             self.assertNotIn("error", result)
+
+
+class MonthlyProgressBackendParityTests(unittest.TestCase):
+    """Regression tests ensuring monthly results match across storage backends."""
+
+    def setUp(self):
+        self.test_data_dir = tempfile.mkdtemp()
+        self.test_user_id = "test_user_monthly_parity"
+        self.test_language = "lithuanian"
+
+    def tearDown(self):
+        if os.path.exists(self.test_data_dir):
+            shutil.rmtree(self.test_data_dir)
+
+    def _build_cumulative_stats(self, cumulative_total: int, expose_word: bool = True):
+        word_stats = create_empty_word_stats()
+        word_stats["exposed"] = expose_word
+        word_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = cumulative_total
+        return {"stats": {"word1": word_stats}}
+
+    def test_monthly_progress_matches_between_flatfile_and_sqlite_with_skipped_days(self):
+        """Both backends should return the same monthly output across skipped days."""
+        with patch("constants.DATA_DIR", self.test_data_dir):
+            today = datetime.strptime(get_current_day_key(), "%Y-%m-%d")
+
+            # 30 activities spread over 4 active days out of the most recent 7 days.
+            daily_increments = {
+                (today - timedelta(days=6)).strftime("%Y-%m-%d"): 5,
+                (today - timedelta(days=4)).strftime("%Y-%m-%d"): 7,
+                (today - timedelta(days=2)).strftime("%Y-%m-%d"): 8,
+                today.strftime("%Y-%m-%d"): 10,
+            }
+
+            # Add a non-empty baseline before the 30-day window so day and aggregate deltas are well-defined.
+            baseline_day = (today - timedelta(days=30)).strftime("%Y-%m-%d")
+            baseline_stats = DailyStats(
+                self.test_user_id, baseline_day, "current", self.test_language
+            )
+            baseline_stats.stats = self._build_cumulative_stats(0, expose_word=True)
+            baseline_stats.save()
+
+            sqlite_db = SqliteStatsDB(self.test_user_id, self.test_language)
+            sqlite_db.save_all_stats(self._build_cumulative_stats(0, expose_word=True))
+            sqlite_db.save_snapshot_from_current(baseline_day)
+
+            cumulative_total = 0
+            for date_key in sorted(daily_increments.keys()):
+                cumulative_total += daily_increments[date_key]
+                cumulative_stats = self._build_cumulative_stats(cumulative_total, expose_word=True)
+
+                flatfile_stats = DailyStats(
+                    self.test_user_id, date_key, "current", self.test_language
+                )
+                flatfile_stats.stats = cumulative_stats
+                flatfile_stats.save()
+
+                sqlite_db.save_all_stats(cumulative_stats)
+                sqlite_db.save_snapshot_from_current(date_key)
+
+            flatfile_result = calculate_monthly_progress_flatfile(
+                self.test_user_id, self.test_language
+            )
+            sqlite_result = sqlite_db.calculate_monthly_progress()
+
+            self.assertNotIn("error", flatfile_result)
+            self.assertNotIn("error", sqlite_result)
+
+            self.assertEqual(flatfile_result["monthlyAggregate"], sqlite_result["monthlyAggregate"])
+            self.assertEqual(
+                flatfile_result["actualBaselineDay"], sqlite_result["actualBaselineDay"]
+            )
+
+            flat_daily = {entry["date"]: entry for entry in flatfile_result["dailyData"]}
+            sqlite_daily = {entry["date"]: entry for entry in sqlite_result["dailyData"]}
+            self.assertEqual(set(flat_daily.keys()), set(sqlite_daily.keys()))
+
+            for date_key in flat_daily:
+                self.assertEqual(flat_daily[date_key], sqlite_daily[date_key])
+
+            # Explicit regression checks on sparse activity days.
+            recent_week = [
+                (today - timedelta(days=offset)).strftime("%Y-%m-%d") for offset in range(6, -1, -1)
+            ]
+            expected_questions = {
+                date_key: daily_increments.get(date_key, 0) for date_key in recent_week
+            }
+            for date_key, expected in expected_questions.items():
+                self.assertEqual(flat_daily[date_key]["questionsAnswered"], expected)
+
+            self.assertEqual(
+                sum(flat_daily[date_key]["questionsAnswered"] for date_key in recent_week),
+                30,
+            )
 
 
 if __name__ == "__main__":
