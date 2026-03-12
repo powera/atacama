@@ -38,17 +38,24 @@ USERCONFIG_API_DOCS = {
 # Valid enum values for configuration fields
 VALID_PROFICIENCY_LEVELS = ["beginner", "intermediate", "advanced"]
 VALID_COLOR_SCHEMES = ["system", "light", "dark"]
+VALID_LEARNING_GOALS = ["live_in_country", "visit", "exercise_brain", "in_class"]
+APP_THEME_ALIASES = {"warm-academic": "warmAcademic", "art-deco": "artDeco"}
 
 # Default configuration structure
 DEFAULT_CONFIG = {
     "learning": {
         "currentLevel": 1,
         "userProficiency": "beginner",
+        "learningGoal": "exercise_brain",
         "journeyAutoAdvance": True,
         "showMotivationalBreaks": True,
     },
     "audio": {"enabled": True, "selectedVoice": "random", "downloadOnWiFiOnly": True},
-    "display": {"colorScheme": "system", "showGrammarInterstitials": True},
+    "display": {
+        "colorScheme": "system",
+        "appTheme": "standard",
+        "showGrammarInterstitials": True,
+    },
     "metadata": {"hasCompletedOnboarding": False, "lastModified": None},
 }
 
@@ -230,6 +237,7 @@ def validate_config_update(
             known_learning_fields = [
                 "currentLevel",
                 "userProficiency",
+                "learningGoal",
                 "journeyAutoAdvance",
                 "showMotivationalBreaks",
             ]
@@ -258,6 +266,20 @@ def validate_config_update(
                             prof,
                             f"Must be one of: {', '.join(VALID_PROFICIENCY_LEVELS)}",
                             {"allowedValues": VALID_PROFICIENCY_LEVELS},
+                        ),
+                        [],
+                    )
+
+            if "learningGoal" in learning:
+                goal = learning["learningGoal"]
+                if goal not in VALID_LEARNING_GOALS:
+                    return (
+                        False,
+                        _validation_error(
+                            "learning.learningGoal",
+                            goal,
+                            f"Must be one of: {', '.join(VALID_LEARNING_GOALS)}",
+                            {"allowedValues": VALID_LEARNING_GOALS},
                         ),
                         [],
                     )
@@ -337,10 +359,17 @@ def validate_config_update(
                 return False, _validation_error("display", display, "Must be an object"), []
 
             # Check for unknown fields in display section
-            known_display_fields = ["colorScheme", "showGrammarInterstitials"]
+            known_display_fields = ["colorScheme", "appTheme", "showGrammarInterstitials"]
             for field in display:
                 if field not in known_display_fields:
                     unknown_fields.append(f"display.{field}")
+
+            if "appTheme" in display:
+                # Keep appTheme forward-compatible by accepting any value.
+                # Normalize legacy aliases to canonical names.
+                theme = display["appTheme"]
+                if isinstance(theme, str) and theme in APP_THEME_ALIASES:
+                    display["appTheme"] = APP_THEME_ALIASES[theme]
 
             if "colorScheme" in display:
                 scheme = display["colorScheme"]
@@ -391,11 +420,12 @@ def _apply_updates(current_config: Dict[str, Any], updates: Dict[str, Any]) -> D
         "learning": [
             "currentLevel",
             "userProficiency",
+            "learningGoal",
             "journeyAutoAdvance",
             "showMotivationalBreaks",
         ],
         "audio": ["enabled", "selectedVoice", "downloadOnWiFiOnly"],
-        "display": ["colorScheme", "showGrammarInterstitials"],
+        "display": ["colorScheme", "appTheme", "showGrammarInterstitials"],
         "metadata": ["hasCompletedOnboarding"],  # Only writable metadata fields
     }
 
