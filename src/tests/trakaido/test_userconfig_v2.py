@@ -14,7 +14,9 @@ from models.models import User
 from atacama.server import create_app
 from trakaido.blueprints.userconfig_v2 import (
     DEFAULT_CONFIG,
+    APP_THEME_ALIASES,
     VALID_COLOR_SCHEMES,
+    VALID_LEARNING_GOALS,
     VALID_PROFICIENCY_LEVELS,
     _apply_updates,
     _deep_copy_config,
@@ -61,8 +63,10 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
         # Check default values
         self.assertEqual(config["learning"]["currentLevel"], 1)
         self.assertEqual(config["learning"]["userProficiency"], "beginner")
+        self.assertEqual(config["learning"]["learningGoal"], "exercise_brain")
         self.assertTrue(config["audio"]["enabled"])
         self.assertEqual(config["display"]["colorScheme"], "system")
+        self.assertEqual(config["display"]["appTheme"], "standard")
 
     def test_save_and_load_user_config(self):
         """Test saving and loading user configuration."""
@@ -71,11 +75,16 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
             "learning": {
                 "currentLevel": 5,
                 "userProficiency": "intermediate",
+                "learningGoal": "visit",
                 "journeyAutoAdvance": False,
                 "showMotivationalBreaks": True,
             },
             "audio": {"enabled": False, "selectedVoice": "ash", "downloadOnWiFiOnly": True},
-            "display": {"colorScheme": "dark", "showGrammarInterstitials": False},
+            "display": {
+                "colorScheme": "dark",
+                "appTheme": "warmAcademic",
+                "showGrammarInterstitials": False,
+            },
             "metadata": {"hasCompletedOnboarding": True},
         }
 
@@ -89,10 +98,12 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
         # Verify values (excluding lastModified which is auto-generated)
         self.assertEqual(loaded_config["learning"]["currentLevel"], 5)
         self.assertEqual(loaded_config["learning"]["userProficiency"], "intermediate")
+        self.assertEqual(loaded_config["learning"]["learningGoal"], "visit")
         self.assertFalse(loaded_config["learning"]["journeyAutoAdvance"])
         self.assertFalse(loaded_config["audio"]["enabled"])
         self.assertEqual(loaded_config["audio"]["selectedVoice"], "ash")
         self.assertEqual(loaded_config["display"]["colorScheme"], "dark")
+        self.assertEqual(loaded_config["display"]["appTheme"], "warmAcademic")
         self.assertFalse(loaded_config["display"]["showGrammarInterstitials"])
         self.assertTrue(loaded_config["metadata"]["hasCompletedOnboarding"])
 
@@ -127,8 +138,10 @@ class UserconfigV2FileOperationsTests(unittest.TestCase):
 
         # Check defaults are present
         self.assertEqual(merged["learning"]["userProficiency"], "beginner")
+        self.assertEqual(merged["learning"]["learningGoal"], "exercise_brain")
         self.assertEqual(merged["audio"]["selectedVoice"], "random")
         self.assertEqual(merged["display"]["colorScheme"], "system")
+        self.assertEqual(merged["display"]["appTheme"], "standard")
 
     def test_deep_copy_config(self):
         """Test deep copy creates independent copy."""
@@ -151,6 +164,7 @@ class UserconfigV2ValidationTests(unittest.TestCase):
             "learning": {
                 "currentLevel": 5,
                 "userProficiency": "intermediate",
+                "learningGoal": "visit",
                 "journeyAutoAdvance": False,
                 "showMotivationalBreaks": True,
             }
@@ -188,6 +202,14 @@ class UserconfigV2ValidationTests(unittest.TestCase):
         self.assertIsNotNone(error)
         self.assertIn("allowedValues", error["error"]["details"])
 
+    def test_validate_rejects_invalid_learning_goal(self):
+        """Test validation rejects invalid learningGoal values."""
+        updates = {"learning": {"learningGoal": "career"}}
+
+        is_valid, error, unknown = validate_config_update(updates)
+        self.assertFalse(is_valid)
+        self.assertEqual(error["error"]["details"]["allowedValues"], VALID_LEARNING_GOALS)
+
     def test_validate_valid_audio_config(self):
         """Test validation accepts valid audio configuration."""
         updates = {"audio": {"enabled": True, "selectedVoice": "ash", "downloadOnWiFiOnly": False}}
@@ -211,6 +233,23 @@ class UserconfigV2ValidationTests(unittest.TestCase):
         is_valid, error, unknown = validate_config_update(updates)
         self.assertFalse(is_valid)
         self.assertIsNotNone(error)
+
+    def test_validate_app_theme_aliases_are_normalized(self):
+        """Test validation normalizes appTheme aliases to canonical values."""
+        updates = {"display": {"appTheme": "warm-academic"}}
+
+        is_valid, error, unknown = validate_config_update(updates)
+        self.assertTrue(is_valid)
+        self.assertIsNone(error)
+        self.assertEqual(updates["display"]["appTheme"], APP_THEME_ALIASES["warm-academic"])
+
+    def test_validate_accepts_arbitrary_app_theme_for_forward_compatibility(self):
+        """Test validation accepts future appTheme values without strict enum checks."""
+        updates = {"display": {"appTheme": "futureThemeV2"}}
+
+        is_valid, error, unknown = validate_config_update(updates)
+        self.assertTrue(is_valid)
+        self.assertIsNone(error)
 
     def test_validate_valid_display_config(self):
         """Test validation accepts valid display configuration."""
@@ -290,6 +329,19 @@ class UserconfigV2UpdateTests(unittest.TestCase):
         # Unchanged fields
         self.assertEqual(result["learning"]["userProficiency"], "beginner")
         self.assertTrue(result["learning"]["journeyAutoAdvance"])
+
+    def test_apply_updates_learning_goal_and_app_theme(self):
+        """Test applying learningGoal and appTheme updates."""
+        current = _deep_copy_config(DEFAULT_CONFIG)
+        updates = {
+            "learning": {"learningGoal": "live_in_country"},
+            "display": {"appTheme": "artDeco"},
+        }
+
+        result = _apply_updates(current, updates)
+
+        self.assertEqual(result["learning"]["learningGoal"], "live_in_country")
+        self.assertEqual(result["display"]["appTheme"], "artDeco")
 
     def test_apply_updates_multiple_sections(self):
         """Test applying updates to multiple sections."""
@@ -409,6 +461,27 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         self.assertEqual(data["config"]["learning"]["currentLevel"], 5)
         # Other fields unchanged
         self.assertEqual(data["config"]["learning"]["userProficiency"], "beginner")
+
+    def test_patch_user_config_updates_learning_goal_and_app_theme(self):
+        """Test PATCH endpoint accepts and returns learningGoal and appTheme."""
+        with self.client.session_transaction() as sess:
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
+
+        updates = {
+            "learning": {"learningGoal": "in_class"},
+            "display": {"appTheme": "art-deco"},
+        }
+
+        response = self.client.patch(
+            "/api/trakaido/userconfig/", data=json.dumps(updates), content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+
+        self.assertTrue(data["success"])
+        self.assertEqual(data["config"]["learning"]["learningGoal"], "in_class")
+        self.assertEqual(data["config"]["display"]["appTheme"], APP_THEME_ALIASES["art-deco"])
 
     def test_patch_user_config_updates_multiple_fields(self):
         """Test PATCH endpoint updates multiple fields."""
