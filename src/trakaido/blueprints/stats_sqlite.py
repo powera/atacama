@@ -31,6 +31,7 @@ from trakaido.blueprints.stats_schema import (
 )
 from trakaido.blueprints.stats_metrics import (
     build_activity_summary_from_totals,
+    compute_words_known,
     empty_activity_summary,
 )
 from trakaido.blueprints.date_utils import (
@@ -79,7 +80,8 @@ class SqliteStatsDB:
         """Create database tables if they don't exist."""
         conn = self._get_connection()
         try:
-            conn.executescript("""
+            conn.executescript(
+                """
                 CREATE TABLE IF NOT EXISTS word_stats (
                     word_key TEXT PRIMARY KEY,
                     exposed INTEGER NOT NULL DEFAULT 0,
@@ -113,7 +115,8 @@ class SqliteStatsDB:
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
-            """)
+            """
+            )
 
             # Forward-compatible migration: older DBs may not have
             # words_known_count in daily_snapshots.
@@ -272,21 +275,24 @@ class SqliteStatsDB:
         cursor = conn.execute("SELECT COUNT(*) FROM word_stats WHERE exposed = 1")
         exposed_count = cursor.fetchone()[0]
 
-        cursor = conn.execute("SELECT COUNT(*) FROM word_stats WHERE marked_as_known = 1")
-        words_known_count = cursor.fetchone()[0]
+        # Keep wordsKnown semantics aligned with flatfile backend
+        # (markedAsKnown primary + legacy direct-correct fallback).
+        words_known_count = compute_words_known(self.get_all_stats())
 
         cursor = conn.execute(
             "SELECT COALESCE(SUM(correct + incorrect), 0) FROM word_activity_stats"
         )
         total_questions = cursor.fetchone()[0]
 
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT category, activity,
                    SUM(correct) as total_correct,
                    SUM(incorrect) as total_incorrect
             FROM word_activity_stats
             GROUP BY category, activity
-        """)
+        """
+        )
 
         activity_totals: Dict[str, Any] = {
             "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
@@ -358,12 +364,18 @@ class SqliteStatsDB:
             conn.close()
 
     def ensure_daily_snapshots(self) -> bool:
-        """Ensure daily snapshots exist for today and yesterday."""
+        """Ensure required daily snapshots exist without backfilling skipped days.
+
+        We always ensure today's snapshot exists. We only synthesize yesterday's
+        snapshot during first-time bootstrap (no snapshots at all), to avoid
+        inventing activity on skipped days.
+        """
         try:
             today = get_current_day_key()
             yesterday = get_yesterday_day_key()
 
-            if not self.snapshot_exists(yesterday):
+            has_snapshots = self._has_any_snapshots()
+            if not has_snapshots and not self.snapshot_exists(yesterday):
                 self.save_snapshot_from_current(yesterday)
 
             if not self.snapshot_exists(today):
@@ -373,6 +385,15 @@ class SqliteStatsDB:
         except Exception as e:
             logger.error(f"Error ensuring snapshots for user {self.user_id}: {str(e)}")
             return False
+
+    def _has_any_snapshots(self) -> bool:
+        """Check whether any daily snapshots exist for this user."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("SELECT 1 FROM daily_snapshots LIMIT 1")
+            return cursor.fetchone() is not None
+        finally:
+            conn.close()
 
     def _get_snapshot(self, date: str) -> Optional[Dict[str, Any]]:
         """Get a daily snapshot for the given date."""
@@ -743,8 +764,10 @@ class SqliteJourneyStats:
             today = get_current_day_key()
             yesterday = get_yesterday_day_key()
 
-            # Ensure yesterday's baseline exists BEFORE saving new data
-            if not self._db.snapshot_exists(yesterday):
+            # Bootstrap yesterday only for first-time setup; avoid backfilling
+            # skipped days once historical snapshots already exist.
+            has_snapshots = self._db._has_any_snapshots()
+            if not has_snapshots and not self._db.snapshot_exists(yesterday):
                 self._db.save_snapshot_from_current(yesterday)
 
             # Save the word stats

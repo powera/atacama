@@ -136,10 +136,7 @@ def find_best_baseline(
     try:
         # Try exact target day first
         target_daily_stats = DailyStats(user_id, target_day, "current", language)
-        if (
-            DailyStats.exists(user_id, target_day, "current", language)
-            and not target_daily_stats.is_empty()
-        ):
+        if DailyStats.exists(user_id, target_day, "current", language):
             return target_daily_stats
 
         # If target date doesn't exist, walk forward and find the oldest "yesterday" snapshot
@@ -315,9 +312,7 @@ def calculate_weekly_progress(user_id: str, language: str = "lithuanian") -> Dic
         # Calculate progress delta
         weekly_progress = calculate_progress_delta(current_daily_stats, week_ago_daily_stats)
 
-        actual_baseline_day = (
-            week_ago_daily_stats.date if not week_ago_daily_stats.is_empty() else None
-        )
+        actual_baseline_day = week_ago_daily_stats.date
 
         return {
             "currentDay": current_day,
@@ -370,6 +365,39 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
         end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
         current_date = start_date
 
+        def _total_questions(stats: DailyStats) -> int:
+            """Calculate total answered questions represented by a snapshot."""
+            total = 0
+            for word_stats in stats.stats["stats"].values():
+                if "directPractice" in word_stats:
+                    for activity_type in DIRECT_PRACTICE_TYPES:
+                        if activity_type in word_stats["directPractice"]:
+                            activity_stats = word_stats["directPractice"][activity_type]
+                            if isinstance(activity_stats, dict):
+                                total += activity_stats.get("correct", 0)
+                                total += activity_stats.get("incorrect", 0)
+                if "contextualExposure" in word_stats:
+                    for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
+                        if activity_type in word_stats["contextualExposure"]:
+                            activity_stats = word_stats["contextualExposure"][activity_type]
+                            if isinstance(activity_stats, dict):
+                                total += activity_stats.get("correct", 0)
+                                total += activity_stats.get("incorrect", 0)
+            return total
+
+        # Seed with the latest snapshot before the 30-day window so day-level
+        # deltas only count activity that occurred on each specific day.
+        previous_total_questions = 0
+        all_available_dates = DailyStats.get_available_dates(user_id, "current", language)
+        earlier_dates = [
+            d for d in all_available_dates if datetime.strptime(d, "%Y-%m-%d") < start_date
+        ]
+        if earlier_dates:
+            baseline_date = max(earlier_dates)
+            baseline_stats = DailyStats(user_id, baseline_date, "current", language)
+            if not baseline_stats.is_empty():
+                previous_total_questions = _total_questions(baseline_stats)
+
         while current_date <= end_date:
             date_str = current_date.strftime("%Y-%m-%d")
 
@@ -380,32 +408,11 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
             if date_str in available_dates:
                 daily_stats = DailyStats(user_id, date_str, "current", language)
                 if not daily_stats.is_empty():
-                    # Calculate questions answered on this day (sum of all correct + incorrect for all stat types)
-                    for word_key, word_stats in daily_stats.stats["stats"].items():
-                        # Count directPractice activities
-                        if "directPractice" in word_stats:
-                            for activity_type in DIRECT_PRACTICE_TYPES:
-                                if activity_type in word_stats["directPractice"]:
-                                    activity_stats = word_stats["directPractice"][activity_type]
-                                    if isinstance(activity_stats, dict):
-                                        questions_answered_on_day += activity_stats.get(
-                                            "correct", 0
-                                        )
-                                        questions_answered_on_day += activity_stats.get(
-                                            "incorrect", 0
-                                        )
-                        # Count contextualExposure activities
-                        if "contextualExposure" in word_stats:
-                            for activity_type in CONTEXTUAL_EXPOSURE_TYPES:
-                                if activity_type in word_stats["contextualExposure"]:
-                                    activity_stats = word_stats["contextualExposure"][activity_type]
-                                    if isinstance(activity_stats, dict):
-                                        questions_answered_on_day += activity_stats.get(
-                                            "correct", 0
-                                        )
-                                        questions_answered_on_day += activity_stats.get(
-                                            "incorrect", 0
-                                        )
+                    current_total_questions = _total_questions(daily_stats)
+                    questions_answered_on_day = max(
+                        0, current_total_questions - previous_total_questions
+                    )
+                    previous_total_questions = current_total_questions
 
                     # Count exposed words on this day
                     for word_key, word_stats in daily_stats.stats["stats"].items():
@@ -446,9 +453,6 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                         else:
                             # If no previous data within the period, try to find data from before the period
                             baseline_found = False
-                            all_available_dates = DailyStats.get_available_dates(
-                                user_id, "current", language
-                            )
                             earlier_dates = [
                                 d
                                 for d in all_available_dates
@@ -462,19 +466,17 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                                     user_id, baseline_date, "current", language
                                 )
 
-                                if not baseline_stats.is_empty():
-                                    baseline_found = True
-                                    # Count words that are exposed on this day but weren't in baseline
-                                    for word_key, word_stats in daily_stats.stats["stats"].items():
-                                        if word_stats.get("exposed", False):
-                                            baseline_word_stats = baseline_stats.get_word_stats(
-                                                word_key
-                                            )
-                                            if (
-                                                not baseline_word_stats
-                                                or not baseline_word_stats.get("exposed", False)
-                                            ):
-                                                newly_exposed_words_on_day += 1
+                                baseline_found = True
+                                # Count words that are exposed on this day but weren't in baseline
+                                for word_key, word_stats in daily_stats.stats["stats"].items():
+                                    if word_stats.get("exposed", False):
+                                        baseline_word_stats = baseline_stats.get_word_stats(
+                                            word_key
+                                        )
+                                        if not baseline_word_stats or not baseline_word_stats.get(
+                                            "exposed", False
+                                        ):
+                                            newly_exposed_words_on_day += 1
 
                             # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
                             if not baseline_found:
@@ -485,9 +487,6 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                         baseline_found = False
 
                         # Look for snapshots before the start date
-                        all_available_dates = DailyStats.get_available_dates(
-                            user_id, "current", language
-                        )
                         earlier_dates = [
                             d
                             for d in all_available_dates
@@ -499,18 +498,15 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
                             baseline_date = max(earlier_dates)
                             baseline_stats = DailyStats(user_id, baseline_date, "current", language)
 
-                            if not baseline_stats.is_empty():
-                                baseline_found = True
-                                # Count words that are exposed on first day but weren't in baseline
-                                for word_key, word_stats in daily_stats.stats["stats"].items():
-                                    if word_stats.get("exposed", False):
-                                        baseline_word_stats = baseline_stats.get_word_stats(
-                                            word_key
-                                        )
-                                        if not baseline_word_stats or not baseline_word_stats.get(
-                                            "exposed", False
-                                        ):
-                                            newly_exposed_words_on_day += 1
+                            baseline_found = True
+                            # Count words that are exposed on first day but weren't in baseline
+                            for word_key, word_stats in daily_stats.stats["stats"].items():
+                                if word_stats.get("exposed", False):
+                                    baseline_word_stats = baseline_stats.get_word_stats(word_key)
+                                    if not baseline_word_stats or not baseline_word_stats.get(
+                                        "exposed", False
+                                    ):
+                                        newly_exposed_words_on_day += 1
 
                         # If no valid baseline found, set newly exposed to 0 since we can't determine what's new
                         if not baseline_found:
@@ -538,9 +534,7 @@ def calculate_monthly_progress(user_id: str, language: str = "lithuanian") -> Di
 
             current_date += timedelta(days=1)
 
-        actual_baseline_day = (
-            thirty_days_ago_daily_stats.date if not thirty_days_ago_daily_stats.is_empty() else None
-        )
+        actual_baseline_day = thirty_days_ago_daily_stats.date
 
         # Format the period description
         period_description = f"Past 30 Days ({start_date_str} to {end_date_str})"
