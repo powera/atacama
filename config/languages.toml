@@ -65,5 +65,12 @@
     subdomains = ["sv"]
     character_set = "aäåbcdeéfghijklmnoöpqrstuvwxyz"
 
+  # Japanese language configuration
+  [languages.japanese]
+    name = "Japanese"
+    code = "ja"
+    subdomains = ["ja"]
+    character_set = ""
+
 [defaults]
   default_language = "lithuanian"
