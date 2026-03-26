@@ -383,8 +383,8 @@ class SqliteProgressTests(unittest.TestCase):
             self.assertEqual(progress["exposed"]["new"], 0)
             self.assertEqual(progress["exposed"]["total"], 0)
 
-    def test_daily_progress_uses_latest_prior_snapshot_when_yesterday_missing(self):
-        """Test daily progress avoids all-time deltas when yesterday snapshot is missing."""
+    def test_daily_progress_generates_yesterday_snapshot_on_first_load_today(self):
+        """Test first load today synthesizes yesterday snapshot from latest prior snapshot."""
         with patch("constants.DATA_DIR", self.test_data_dir):
             db = SqliteStatsDB(self.test_user_id, self.test_language)
 
@@ -411,7 +411,11 @@ class SqliteProgressTests(unittest.TestCase):
             ):
                 result = db.calculate_daily_progress()
 
-            self.assertEqual(result["actualBaselineDay"], "2026-03-24")
+            yesterday_snapshot = db._get_snapshot("2026-03-25")
+            self.assertIsNotNone(yesterday_snapshot)
+            self.assertEqual(yesterday_snapshot["is_synthetic_baseline"], 1)
+            self.assertEqual(yesterday_snapshot["total_questions_answered"], 10)
+            self.assertEqual(result["actualBaselineDay"], "2026-03-25")
             self.assertEqual(
                 result["progress"]["directPractice"]["multipleChoice_englishToTarget"]["correct"],
                 5,
