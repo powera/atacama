@@ -132,7 +132,6 @@ class SqliteStatsDB:
                 conn.execute(
                     "ALTER TABLE daily_snapshots ADD COLUMN is_synthetic_baseline INTEGER NOT NULL DEFAULT 0"
                 )
-
             cursor = conn.execute("SELECT value FROM schema_info WHERE key = 'version'")
             row = cursor.fetchone()
             if not row:
@@ -322,7 +321,7 @@ class SqliteStatsDB:
             "activity_totals": activity_totals,
         }
 
-    def save_snapshot_from_current(self, date: str) -> bool:
+    def save_snapshot_from_current(self, date: str, is_synthetic_baseline: bool = False) -> bool:
         """Create or update a daily snapshot from current word_stats data."""
         conn = self._get_connection()
         try:
@@ -348,7 +347,7 @@ class SqliteStatsDB:
                 INSERT OR REPLACE INTO daily_snapshots
                 (date, exposed_words_count, words_known_count, total_questions_answered,
                  newly_exposed_words, activity_totals_json, is_synthetic_baseline)
-                VALUES (?, ?, ?, ?, ?, ?, 0)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     date,
@@ -357,6 +356,7 @@ class SqliteStatsDB:
                     totals["total_questions_answered"],
                     newly_exposed,
                     json.dumps(totals["activity_totals"], separators=(",", ":")),
+                    1 if is_synthetic_baseline else 0,
                 ),
             )
 
@@ -368,54 +368,19 @@ class SqliteStatsDB:
         finally:
             conn.close()
 
-    def save_synthetic_baseline_snapshot(self, date: str, source_snapshot: Dict[str, Any]) -> bool:
-        """Save a synthetic baseline snapshot copied from an earlier real snapshot."""
-        conn = self._get_connection()
-        try:
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO daily_snapshots
-                (date, exposed_words_count, words_known_count, total_questions_answered,
-                 newly_exposed_words, activity_totals_json, is_synthetic_baseline)
-                VALUES (?, ?, ?, ?, ?, ?, 1)
-            """,
-                (
-                    date,
-                    source_snapshot["exposed_words_count"],
-                    source_snapshot["words_known_count"],
-                    source_snapshot["total_questions_answered"],
-                    0,
-                    source_snapshot["activity_totals_json"],
-                ),
-            )
-            conn.commit()
-            return True
-        except Exception as e:
-            logger.error(
-                f"Error saving synthetic baseline snapshot for user {self.user_id} date {date}: {str(e)}"
-            )
-            return False
-        finally:
-            conn.close()
-
     def ensure_daily_snapshots(self) -> bool:
         """Ensure required daily snapshots exist without backfilling skipped days.
 
-        We always ensure today's snapshot exists. If this is the first request
-        on a new day and yesterday is missing, synthesize yesterday from the
-        most recent real snapshot so daily deltas stay bounded to "since latest
-        known totals" instead of all-time.
+        We always ensure today's snapshot exists. If yesterday is missing on
+        the first request/save of the day, capture yesterday using the current
+        pre-activity totals so daily deltas represent only activity from today.
         """
         try:
             today = get_current_day_key()
             yesterday = get_yesterday_day_key()
 
             if not self.snapshot_exists(yesterday):
-                latest_prior = self._get_latest_snapshot_before(today, include_synthetic=False)
-                if latest_prior:
-                    self.save_synthetic_baseline_snapshot(yesterday, latest_prior)
-                elif not self._has_any_snapshots():
-                    self.save_snapshot_from_current(yesterday)
+                self.save_snapshot_from_current(yesterday, is_synthetic_baseline=True)
 
             if not self.snapshot_exists(today):
                 self.save_snapshot_from_current(today)
@@ -829,13 +794,9 @@ class SqliteJourneyStats:
         """Save stats and update daily snapshots."""
         try:
             today = get_current_day_key()
-            yesterday = get_yesterday_day_key()
 
-            # Bootstrap yesterday only for first-time setup; avoid backfilling
-            # skipped days once historical snapshots already exist.
-            has_snapshots = self._db._has_any_snapshots()
-            if not has_snapshots and not self._db.snapshot_exists(yesterday):
-                self._db.save_snapshot_from_current(yesterday)
+            # Capture baseline snapshots before applying today's new activity.
+            self._db.ensure_daily_snapshots()
 
             # Save the word stats
             if not self.save():
