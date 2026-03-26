@@ -127,7 +127,6 @@ class SqliteStatsDB:
                 conn.execute(
                     "ALTER TABLE daily_snapshots ADD COLUMN words_known_count INTEGER NOT NULL DEFAULT 0"
                 )
-
             cursor = conn.execute("SELECT value FROM schema_info WHERE key = 'version'")
             row = cursor.fetchone()
             if not row:
@@ -366,16 +365,15 @@ class SqliteStatsDB:
     def ensure_daily_snapshots(self) -> bool:
         """Ensure required daily snapshots exist without backfilling skipped days.
 
-        We always ensure today's snapshot exists. We only synthesize yesterday's
-        snapshot during first-time bootstrap (no snapshots at all), to avoid
-        inventing activity on skipped days.
+        We always ensure today's snapshot exists. If yesterday is missing on
+        the first request/save of the day, capture yesterday using the current
+        pre-activity totals so daily deltas represent only activity from today.
         """
         try:
             today = get_current_day_key()
             yesterday = get_yesterday_day_key()
 
-            has_snapshots = self._has_any_snapshots()
-            if not has_snapshots and not self.snapshot_exists(yesterday):
+            if not self.snapshot_exists(yesterday):
                 self.save_snapshot_from_current(yesterday)
 
             if not self.snapshot_exists(today):
@@ -547,9 +545,17 @@ class SqliteStatsDB:
             if yesterday_snapshot:
                 baseline_totals = json.loads(yesterday_snapshot["activity_totals_json"])
                 baseline_exposed = yesterday_snapshot["exposed_words_count"]
+                actual_baseline_day = yesterday_snapshot["date"]
             else:
-                baseline_totals = self._empty_activity_totals()
-                baseline_exposed = 0
+                fallback_snapshot = self._get_latest_snapshot_before(today)
+                if fallback_snapshot:
+                    baseline_totals = json.loads(fallback_snapshot["activity_totals_json"])
+                    baseline_exposed = fallback_snapshot["exposed_words_count"]
+                    actual_baseline_day = fallback_snapshot["date"]
+                else:
+                    baseline_totals = self._empty_activity_totals()
+                    baseline_exposed = 0
+                    actual_baseline_day = None
 
             progress = self._compute_progress_from_totals(
                 current_totals["activity_totals"],
@@ -561,6 +567,7 @@ class SqliteStatsDB:
             return {
                 "currentDay": today,
                 "targetBaselineDay": get_yesterday_day_key(),
+                "actualBaselineDay": actual_baseline_day,
                 "progress": progress,
             }
         except Exception as e:
@@ -762,13 +769,9 @@ class SqliteJourneyStats:
         """Save stats and update daily snapshots."""
         try:
             today = get_current_day_key()
-            yesterday = get_yesterday_day_key()
 
-            # Bootstrap yesterday only for first-time setup; avoid backfilling
-            # skipped days once historical snapshots already exist.
-            has_snapshots = self._db._has_any_snapshots()
-            if not has_snapshots and not self._db.snapshot_exists(yesterday):
-                self._db.save_snapshot_from_current(yesterday)
+            # Capture baseline snapshots before applying today's new activity.
+            self._db.ensure_daily_snapshots()
 
             # Save the word stats
             if not self.save():
