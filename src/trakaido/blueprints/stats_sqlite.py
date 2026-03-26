@@ -547,9 +547,17 @@ class SqliteStatsDB:
             if yesterday_snapshot:
                 baseline_totals = json.loads(yesterday_snapshot["activity_totals_json"])
                 baseline_exposed = yesterday_snapshot["exposed_words_count"]
+                actual_baseline_day = yesterday_snapshot["date"]
             else:
-                baseline_totals = self._empty_activity_totals()
-                baseline_exposed = 0
+                fallback_snapshot = self._get_latest_snapshot_before(today)
+                if fallback_snapshot:
+                    baseline_totals = json.loads(fallback_snapshot["activity_totals_json"])
+                    baseline_exposed = fallback_snapshot["exposed_words_count"]
+                    actual_baseline_day = fallback_snapshot["date"]
+                else:
+                    baseline_totals = self._empty_activity_totals()
+                    baseline_exposed = 0
+                    actual_baseline_day = None
 
             progress = self._compute_progress_from_totals(
                 current_totals["activity_totals"],
@@ -561,6 +569,7 @@ class SqliteStatsDB:
             return {
                 "currentDay": today,
                 "targetBaselineDay": get_yesterday_day_key(),
+                "actualBaselineDay": actual_baseline_day,
                 "progress": progress,
             }
         except Exception as e:

@@ -383,6 +383,40 @@ class SqliteProgressTests(unittest.TestCase):
             self.assertEqual(progress["exposed"]["new"], 0)
             self.assertEqual(progress["exposed"]["total"], 0)
 
+    def test_daily_progress_uses_latest_prior_snapshot_when_yesterday_missing(self):
+        """Test daily progress avoids all-time deltas when yesterday snapshot is missing."""
+        with patch("constants.DATA_DIR", self.test_data_dir):
+            db = SqliteStatsDB(self.test_user_id, self.test_language)
+
+            older_stats = create_empty_word_stats()
+            older_stats["exposed"] = True
+            older_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 10
+            self.assertTrue(db.save_all_stats({"stats": {"word1": older_stats}}))
+            self.assertTrue(db.save_snapshot_from_current("2026-03-24"))
+
+            current_stats = create_empty_word_stats()
+            current_stats["exposed"] = True
+            current_stats["directPractice"]["multipleChoice_englishToTarget"]["correct"] = 15
+            self.assertTrue(db.save_all_stats({"stats": {"word1": current_stats}}))
+
+            with (
+                patch(
+                    "trakaido.blueprints.stats_sqlite.get_current_day_key",
+                    return_value="2026-03-26",
+                ),
+                patch(
+                    "trakaido.blueprints.stats_sqlite.get_yesterday_day_key",
+                    return_value="2026-03-25",
+                ),
+            ):
+                result = db.calculate_daily_progress()
+
+            self.assertEqual(result["actualBaselineDay"], "2026-03-24")
+            self.assertEqual(
+                result["progress"]["directPractice"]["multipleChoice_englishToTarget"]["correct"],
+                5,
+            )
+
     def test_weekly_progress_structure(self):
         """Test calculate_weekly_progress returns expected structure."""
         with patch("constants.DATA_DIR", self.test_data_dir):
