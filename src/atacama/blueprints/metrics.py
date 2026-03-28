@@ -303,6 +303,10 @@ def metrics():
     # Only update content metrics for BLOG blueprint set to avoid errors in TRAKAIDO mode
     if current_app.config.get("BLUEPRINT_SET") == "BLOG":
         update_content_metrics()
+    elif current_app.config.get("BLUEPRINT_SET") == "TRAKAIDO":
+        from trakaido.blueprints.metrics import update_trakaido_metrics
+
+        update_trakaido_metrics()
 
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
@@ -361,5 +365,14 @@ def setup_request_metrics(app):
             if response.status_code >= 400:
                 status_class = "4xx" if response.status_code < 500 else "5xx"
                 http_errors_total.labels(status_class=status_class).inc()
+
+        # Track in-memory activity metrics for Trakaido users.
+        if current_app.config.get("BLUEPRINT_SET") == "TRAKAIDO":
+            user = getattr(g, "user", None)
+            if user and getattr(user, "id", None) is not None:
+                from trakaido.blueprints.metrics import record_trakaido_activity
+
+                language = getattr(g, "current_language", "lithuanian")
+                record_trakaido_activity(str(user.id), language)
 
         return response

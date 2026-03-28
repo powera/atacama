@@ -1,0 +1,29 @@
+# Prometheus variables: Trakaido API server
+
+These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET=TRAKAIDO`, and they provide system/process/HTTP/database visibility plus Trakaido-specific user-activity gauges. Host-level disk metrics are included for completeness, but in most deployments you should prefer `node_exporter` as the primary source for machine-wide disk alerts.
+
+- `atacama_cpu_usage_percent`
+- `atacama_memory_usage_percent`
+- `atacama_memory_used_bytes`
+- `atacama_memory_total_bytes`
+- `atacama_disk_usage_percent`
+- `atacama_disk_used_bytes`
+- `atacama_disk_total_bytes`
+- `atacama_network_bytes_sent_total`
+- `atacama_network_bytes_recv_total`
+- `atacama_process_cpu_percent`
+- `atacama_process_memory_bytes`
+- `atacama_process_threads`
+- `atacama_process_open_fds`
+- `atacama_uptime_seconds`
+- `atacama_database_connected`
+- `atacama_http_requests_total{method,endpoint,status}`
+- `atacama_http_request_duration_seconds{method,endpoint}`
+- `atacama_http_errors_total{status_class="4xx|5xx"}`
+- `atacama_auth_logins_total{provider,status}`
+- `atacama_auth_logouts_total`
+- `atacama_db_session_duration_seconds`
+- `atacama_db_query_errors_total`
+- `atacama_trakaido_total_users`
+- `atacama_trakaido_active_users_last_hour`
+- `atacama_trakaido_active_users_by_language{language}`

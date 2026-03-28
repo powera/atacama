@@ -155,6 +155,21 @@ class TrakaidoMetricsTests(unittest.TestCase):
         response = self.client.get("/metrics")
         self.assertIn(b"atacama_uptime_seconds", response.data)
 
+    def test_trakaido_metrics_contains_total_users(self):
+        """Test that TRAKAIDO mode includes total users metric."""
+        response = self.client.get("/metrics")
+        self.assertIn(b"atacama_trakaido_total_users", response.data)
+
+    def test_trakaido_metrics_contains_active_users_last_hour(self):
+        """Test that TRAKAIDO mode includes active users in last hour metric."""
+        response = self.client.get("/metrics")
+        self.assertIn(b"atacama_trakaido_active_users_last_hour", response.data)
+
+    def test_trakaido_metrics_contains_active_users_by_language(self):
+        """Test that TRAKAIDO mode includes active users by language metric."""
+        response = self.client.get("/metrics")
+        self.assertIn(b"atacama_trakaido_active_users_by_language", response.data)
+
 
 if __name__ == "__main__":
     unittest.main()
