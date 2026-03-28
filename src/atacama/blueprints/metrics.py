@@ -303,6 +303,10 @@ def metrics():
     # Only update content metrics for BLOG blueprint set to avoid errors in TRAKAIDO mode
     if current_app.config.get("BLUEPRINT_SET") == "BLOG":
         update_content_metrics()
+    elif current_app.config.get("BLUEPRINT_SET") == "TRAKAIDO":
+        from trakaido.blueprints.metrics import update_trakaido_metrics
+
+        update_trakaido_metrics()
 
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
