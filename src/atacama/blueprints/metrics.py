@@ -366,4 +366,13 @@ def setup_request_metrics(app):
                 status_class = "4xx" if response.status_code < 500 else "5xx"
                 http_errors_total.labels(status_class=status_class).inc()
 
+        # Track in-memory activity metrics for Trakaido users.
+        if current_app.config.get("BLUEPRINT_SET") == "TRAKAIDO":
+            user = getattr(g, "user", None)
+            if user and getattr(user, "id", None) is not None:
+                from trakaido.blueprints.metrics import record_trakaido_activity
+
+                language = getattr(g, "current_language", "lithuanian")
+                record_trakaido_activity(str(user.id), language)
+
         return response

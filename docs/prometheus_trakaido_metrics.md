@@ -1,6 +1,6 @@
 # Prometheus variables: Trakaido API server
 
-These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET=TRAKAIDO`, and they provide system/process/HTTP/database visibility plus a Trakaido-specific total-user gauge. This list is intended for monitoring configuration and includes only Atacama-defined metric names (Prometheus client default runtime metrics like `process_*` and `python_*` are available separately).
+These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET=TRAKAIDO`, and they provide system/process/HTTP/database visibility plus Trakaido-specific user-activity gauges. Host-level disk metrics are included for completeness, but in most deployments you should prefer `node_exporter` as the primary source for machine-wide disk alerts.
 
 - `atacama_cpu_usage_percent`
 - `atacama_memory_usage_percent`
@@ -25,3 +25,5 @@ These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET
 - `atacama_db_session_duration_seconds`
 - `atacama_db_query_errors_total`
 - `atacama_trakaido_total_users`
+- `atacama_trakaido_active_users_last_hour`
+- `atacama_trakaido_active_users_by_language{language}`

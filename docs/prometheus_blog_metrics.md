@@ -1,6 +1,6 @@
 # Prometheus variables: Atacama main (BLOG) server
 
-These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET=BLOG`, and they cover host health, process health, HTTP behavior, auth activity, and blog content inventory. This list is intended for monitoring configuration and includes only Atacama-defined metric names (Prometheus client default runtime metrics like `process_*` and `python_*` are available separately).
+These metrics are exported by the shared `/metrics` endpoint when `BLUEPRINT_SET=BLOG`, and they cover host health, process health, HTTP behavior, auth activity, and blog content inventory. Host-level disk metrics are included for completeness, but in most deployments you should prefer `node_exporter` as the primary source for machine-wide disk alerts.
 
 - `atacama_cpu_usage_percent`
 - `atacama_memory_usage_percent`
