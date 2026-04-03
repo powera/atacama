@@ -23,6 +23,7 @@ class TestSubmissionStatusDomainLinks(unittest.TestCase):
                     channels=["misc"],
                     theme="default",
                     domains=["earlyversion.com"],
+                    https_enabled=True,
                 ),
                 "codepending": DomainConfig(
                     name="Code Pending",
@@ -38,7 +39,7 @@ class TestSubmissionStatusDomainLinks(unittest.TestCase):
             message_id=17,
             current_domain="default",
             current_host="localhost",
-            scheme="https",
+            current_scheme="https",
         )
 
         self.assertEqual([d["domain_key"] for d in links], ["default", "earlyversion"])
@@ -60,6 +61,7 @@ class TestSubmissionStatusDomainLinks(unittest.TestCase):
                     channels=["misc"],
                     theme="default",
                     domains=["earlyversion.com"],
+                    https_enabled=True,
                 ),
             }
         )
@@ -69,11 +71,50 @@ class TestSubmissionStatusDomainLinks(unittest.TestCase):
             message_id=9,
             current_domain="earlyversion",
             current_host="",
-            scheme="https",
+            current_scheme="https",
         )
 
         self.assertIsNone(links[0]["url"])
         self.assertEqual(links[1]["url"], "https://earlyversion.com/messages/9")
+
+    @patch("blog.blueprints.admin.url_for")
+    @patch("blog.blueprints.admin.get_domain_manager")
+    def test_uses_https_only_for_domains_configured_for_it(
+        self, mock_get_domain_manager, mock_url_for
+    ):
+        """Should use HTTPS only for domains marked as HTTPS-enabled."""
+        mock_url_for.return_value = "/messages/22"
+        mock_get_domain_manager.return_value = Mock(
+            domains={
+                "default": DomainConfig(name="Main Site", channels=[], theme="default"),
+                "pow3": DomainConfig(
+                    name="Pow3",
+                    channels=["tech"],
+                    theme="pow3",
+                    domains=["blog.pow3.com"],
+                    https_enabled=True,
+                ),
+                "codepending": DomainConfig(
+                    name="Code Pending",
+                    channels=["tech"],
+                    theme="default",
+                    domains=["codepending.com"],
+                    https_enabled=False,
+                ),
+            }
+        )
+
+        links = _build_submission_domain_links(
+            channel="tech",
+            message_id=22,
+            current_domain="default",
+            current_host="localhost",
+            current_scheme="http",
+        )
+
+        self.assertEqual(links[0]["url"], "http://localhost/messages/22")
+        self.assertEqual(links[1]["url"], "https://blog.pow3.com/messages/22")
+        self.assertEqual(links[2]["url"], "http://codepending.com/messages/22")
 
 
 if __name__ == "__main__":

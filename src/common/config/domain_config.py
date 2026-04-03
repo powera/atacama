@@ -32,6 +32,7 @@ class DomainConfig:
     description: Optional[str] = None
     domains: Optional[List[str]] = None  # List of hostnames that map to this domain config
     auto_archive_enabled: bool = False  # Whether to enable auto-archiving for this domain
+    https_enabled: bool = False  # Whether this domain should be served over HTTPS
 
     @property
     def allows_all_channels(self) -> bool:
@@ -98,6 +99,7 @@ class DomainManager:
                     description=settings.get("description"),
                     domains=settings.get("domains", []),
                     auto_archive_enabled=settings.get("auto_archive_enabled", False),
+                    https_enabled=settings.get("https_enabled", False),
                 )
 
                 # Map each hostname to this domain config
