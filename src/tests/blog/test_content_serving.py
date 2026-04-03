@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 
 from atacama.server import create_app
 from models.database import db
-from models.models import User, Email, Article
+from models.models import User, Email
 
 
 class ContentServingTests(unittest.TestCase):
@@ -119,16 +119,16 @@ class ContentServingTests(unittest.TestCase):
 
         # Create messages in different channels
         self.create_test_message(user_id, channel="misc", subject="General Message")
-        self.create_test_message(user_id, channel="technology", subject="Tech Message")
+        self.create_test_message(user_id, channel="tech", subject="Tech Message")
 
         # Get general channel
-        response = self.client.get("/stream/channel/general")
+        response = self.client.get("/stream/channel/misc")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"General Message", response.data)
         self.assertNotIn(b"Tech Message", response.data)
 
         # Get technology channel
-        response = self.client.get("/stream/channel/technology")
+        response = self.client.get("/stream/channel/tech")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Tech Message", response.data)
         self.assertNotIn(b"General Message", response.data)
@@ -156,42 +156,18 @@ class ContentServingTests(unittest.TestCase):
             sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # Update preferences
-        response = self.client.post(
-            "/channels", data={"channel_general": "on", "channel_technology": "on"}
-        )
+        response = self.client.post("/channels", data={"channel_misc": "on", "channel_tech": "on"})
 
         # Should redirect back to preferences page
         self.assertIn(response.status_code, [200, 302])
 
-    def test_message_with_article(self):
-        """Test retrieving a message that has an associated article."""
+    def test_message_with_html_rendering(self):
+        """Test retrieving a message as HTML."""
         user_id = self.create_test_user()
-
-        with self.app.app_context():
-            with db.session() as db_session:
-                # Create message with article
-                message = Email(
-                    author_id=user_id,
-                    channel="misc",
-                    subject="Article Message",
-                    content="Summary",
-                    processed_content="Summary",
-                )
-                db_session.add(message)
-                db_session.flush()
-
-                article = Article(
-                    message_id=message.id, content="<green>Full article content</green>"
-                )
-                db_session.add(article)
-                db_session.commit()
-                msg_id = message.id
-
-        response = self.client.get(f"/messages/{msg_id}")
-
+        msg_id = self.create_test_message(user_id, subject="Rendered Message", content="Body")
+        response = self.client.get(f"/messages/{msg_id}", headers={"Accept": "text/html"})
         self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertIn("article", data)
+        self.assertIn(b"Rendered Message", response.data)
 
     def test_timestamp_based_filtering(self):
         """Test filtering messages by timestamp."""
@@ -199,7 +175,7 @@ class ContentServingTests(unittest.TestCase):
         self.create_test_message(user_id, subject="Test Message")
 
         # Test with date-based URL
-        response = self.client.get("/stream/channel/general/before/2099-12-31/")
+        response = self.client.get("/stream/channel/misc/before/2099-12-31/")
         self.assertEqual(response.status_code, 200)
 
     def test_invalid_channel(self):
@@ -215,7 +191,7 @@ class ContentServingTests(unittest.TestCase):
         user_id = self.create_test_user()
         self.create_test_message(user_id, channel="misc")
 
-        response = self.client.get("/stream/channel/general")
+        response = self.client.get("/stream/channel/misc")
         self.assertEqual(response.status_code, 200)
 
 
