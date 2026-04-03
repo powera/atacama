@@ -4,7 +4,7 @@
 
 import os
 from pathlib import Path
-from flask import Flask, request, g
+from flask import Flask, request, g, redirect
 from waitress import serve  # type: ignore[import-untyped]
 from typing import Dict, Any, Optional, List, Tuple
 
@@ -63,6 +63,10 @@ def before_request_handler():
     # Determine current domain based on host
     domain_key = domain_manager.get_domain_for_host(host)
     domain_config = domain_manager.get_domain_config(domain_key)
+
+    if domain_config.https_enabled and request.scheme != "https":
+        secure_url = request.url.replace("http://", "https://", 1)
+        return redirect(secure_url, code=301)
 
     # Get theme configuration
     theme_key = domain_config.theme

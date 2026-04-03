@@ -56,7 +56,7 @@ def _build_submission_domain_links(
     message_id: int,
     current_domain: str,
     current_host: str,
-    scheme: str,
+    current_scheme: str,
 ) -> List[Dict[str, Any]]:
     """
     Build display/link data for domains that serve a channel.
@@ -65,7 +65,7 @@ def _build_submission_domain_links(
     :param message_id: Message ID to link to
     :param current_domain: Current request domain key
     :param current_host: Current request host (without port)
-    :param scheme: Request scheme (http/https)
+    :param current_scheme: Current request scheme (http/https)
     :return: List of domain dictionaries for template display
     """
     domain_manager = get_domain_manager()
@@ -80,6 +80,7 @@ def _build_submission_domain_links(
         if not host and domain_key == current_domain and current_host:
             host = current_host
 
+        scheme = "https" if domain_config.https_enabled else current_scheme
         message_url = f"{scheme}://{host}{message_path}" if host else None
         serving_domains.append(
             {
@@ -465,7 +466,7 @@ def submission_status(message_id: int) -> ResponseReturnValue:
             message_id=message_id,
             current_domain=g.current_domain,
             current_host=request.host.split(":", 1)[0],
-            scheme=request.scheme,
+            current_scheme=request.scheme,
         )
 
         return render_template(
