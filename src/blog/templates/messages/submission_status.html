@@ -1,0 +1,39 @@
+{% extends "layouts/" + theme_layout + ".html" %}
+
+{% block title %}Submission Status - Atacama{% endblock %}
+
+{% block page_title %}
+<h1 class="site-title">Submission Status</h1>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="info-box">
+        <h2>Message submitted</h2>
+        <p><strong>ID:</strong> {{ message.id }}</p>
+        <p><strong>Subject:</strong> {{ message.subject }}</p>
+        <p><strong>Channel:</strong> {{ message.channel }}</p>
+        <p><strong>Created:</strong> {{ created_at }}</p>
+    </div>
+
+    <div class="info-box">
+        <h3>Available domains</h3>
+        <ul>
+            {% for domain in serving_domains %}
+            <li>
+                <strong>{{ domain.name }}</strong>
+                {% if domain.url %}
+                    — <a href="{{ domain.url }}" target="_blank" rel="noopener noreferrer">{{ domain.host }}</a>
+                {% else %}
+                    — (host not configured)
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <p>
+        <a class="button" href="/admin/submit">Write another post</a>
+    </p>
+</div>
+{% endblock %}
