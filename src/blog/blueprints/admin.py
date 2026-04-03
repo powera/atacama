@@ -1,7 +1,7 @@
 """Admin functionality for managing user access to restricted channels."""
 
 import os
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 from flask.typing import ResponseReturnValue
@@ -48,6 +48,49 @@ def is_admin() -> bool:
     if not hasattr(g, "user") or not g.user:
         return False
     return is_user_admin(g.user.email)
+
+
+def _build_submission_domain_links(
+    *,
+    channel: str,
+    message_id: int,
+    current_domain: str,
+    current_host: str,
+    scheme: str,
+) -> List[Dict[str, Any]]:
+    """
+    Build display/link data for domains that serve a channel.
+
+    :param channel: Channel name for the submitted message
+    :param message_id: Message ID to link to
+    :param current_domain: Current request domain key
+    :param current_host: Current request host (without port)
+    :param scheme: Request scheme (http/https)
+    :return: List of domain dictionaries for template display
+    """
+    domain_manager = get_domain_manager()
+    message_path = url_for("content.get_message", message_id=message_id)
+    serving_domains = []
+
+    for domain_key, domain_config in domain_manager.domains.items():
+        if not domain_config.channel_allowed(channel):
+            continue
+
+        host = domain_config.domains[0] if domain_config.domains else None
+        if not host and domain_key == current_domain and current_host:
+            host = current_host
+
+        message_url = f"{scheme}://{host}{message_path}" if host else None
+        serving_domains.append(
+            {
+                "name": domain_config.name,
+                "domain_key": domain_key,
+                "host": host,
+                "url": message_url,
+            }
+        )
+
+    return serving_domains
 
 
 @admin_bp.route("/admin/users")
@@ -391,8 +434,43 @@ def handle_submit() -> ResponseReturnValue:
                 logger.error(f"Error starting archive thread for message {message_id}: {e}")
 
         flash("Message submitted successfully!", "success")
-        return redirect(url_for("content.get_message", message_id=message_id))
+        return redirect(url_for("admin.submission_status", message_id=message_id))
 
     except Exception as e:
         logger.error(f"Error submitting message: {str(e)}")
         return handle_error("500", "Submission Error", "Failed to submit message", str(e))
+
+
+@admin_bp.route("/admin/submit/status/<int:message_id>", methods=["GET"])
+@require_admin
+def submission_status(message_id: int) -> ResponseReturnValue:
+    """
+    Show submission details and links to domains that serve the message.
+
+    :param message_id: Submitted message ID
+    :return: Rendered submission status page
+    """
+    with db.session() as db_session:
+        message = db_session.query(Email).get(message_id)
+        if not message:
+            return handle_error(
+                "404",
+                "Message Not Found",
+                "The requested message could not be found.",
+                f"Message ID: {message_id}",
+            )
+
+        serving_domains = _build_submission_domain_links(
+            channel=message.channel,
+            message_id=message_id,
+            current_domain=g.current_domain,
+            current_host=request.host.split(":", 1)[0],
+            scheme=request.scheme,
+        )
+
+        return render_template(
+            "messages/submission_status.html",
+            message=message,
+            serving_domains=serving_domains,
+            created_at=message.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        )
