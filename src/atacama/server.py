@@ -4,7 +4,7 @@
 
 import os
 from pathlib import Path
-from flask import Flask, request, g, redirect
+from flask import Flask, request, g
 from waitress import serve  # type: ignore[import-untyped]
 from typing import Dict, Any, Optional, List, Tuple
 
@@ -64,16 +64,13 @@ def before_request_handler():
     domain_key = domain_manager.get_domain_for_host(host)
     domain_config = domain_manager.get_domain_config(domain_key)
 
-    # HTTPS redirects should primarily be handled by NGINX.
-    # If we are behind a proxy (X-Forwarded-Proto present), avoid performing
-    # application-level redirects that can use an incorrect host value.
-    forwarded_proto = request.headers.get("X-Forwarded-Proto")
-    if domain_config.https_enabled and request.scheme != "https" and not forwarded_proto:
-        host_without_port = request.host.split(":", 1)[0]
-        secure_url = f"https://{host_without_port}{request.path}"
-        if request.query_string:
-            secure_url = f"{secure_url}?{request.query_string.decode('utf-8')}"
-        return redirect(secure_url, code=301)
+    # HTTPS redirects are handled by NGINX.
+    #
+    # The app usually receives plain HTTP from the reverse proxy
+    # (NGINX -> Waitress/Flask), so forcing an application-level HTTPS
+    # redirect can create an infinite redirect loop even for end users who
+    # already connected with HTTPS. ProxyFix still allows Flask to generate
+    # secure absolute URLs when X-Forwarded-Proto is set correctly.
 
     # Get theme configuration
     theme_key = domain_config.theme

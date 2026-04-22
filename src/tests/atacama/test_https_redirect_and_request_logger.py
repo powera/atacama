@@ -48,6 +48,36 @@ class HttpsRedirectTests(unittest.TestCase):
 
         self.assertIsNone(response)
 
+    def test_no_app_redirect_without_forwarded_proto(self):
+        """App should not force HTTPS redirects; NGINX is responsible for that."""
+        domain_config = DomainConfig(
+            name="Pow3",
+            channels=[],
+            theme="pow3",
+            domains=["blog.pow3.com"],
+            https_enabled=True,
+        )
+        theme_config = ThemeConfig(name="Pow3", css_files=[], layout="pow3")
+        language_config = LanguageConfig(name="English", code="en", subdomains=[])
+
+        with (
+            self.app.test_request_context(
+                "/messages/22",
+                base_url="http://blog.pow3.com",
+            ),
+            patch("atacama.server.get_domain_manager") as mock_domain_manager,
+            patch("atacama.server.get_language_manager") as mock_language_manager,
+        ):
+            mock_domain_manager.return_value.get_domain_for_host.return_value = "pow3"
+            mock_domain_manager.return_value.get_domain_config.return_value = domain_config
+            mock_domain_manager.return_value.get_theme_config.return_value = theme_config
+            mock_language_manager.return_value.get_language_from_host.return_value = "english"
+            mock_language_manager.return_value.get_language_config.return_value = language_config
+
+            response = before_request_handler()
+
+        self.assertIsNone(response)
+
 
 class RequestLoggerTests(unittest.TestCase):
     """Test RequestLogger edge cases."""
