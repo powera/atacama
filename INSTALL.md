@@ -96,7 +96,8 @@ sudo systemctl start atacama-web
 
 ## Nginx Configuration
 
-Create `/etc/nginx/sites-available/atacama` based on `src/web/nginx.conf`.
+Nginx config for production is now managed in the `trakaido-prodconfig` repo.
+Use `/etc/nginx/sites-available/atacama` from that repository instead of this repo.
 
 Enable the site:
 ```bash

@@ -65,7 +65,10 @@ def before_request_handler():
     domain_config = domain_manager.get_domain_config(domain_key)
 
     if domain_config.https_enabled and request.scheme != "https":
-        secure_url = request.url.replace("http://", "https://", 1)
+        host_without_port = request.host.split(":", 1)[0]
+        secure_url = f"https://{host_without_port}{request.path}"
+        if request.query_string:
+            secure_url = f"{secure_url}?{request.query_string.decode('utf-8')}"
         return redirect(secure_url, code=301)
 
     # Get theme configuration
