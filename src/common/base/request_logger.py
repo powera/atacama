@@ -73,7 +73,10 @@ class RequestLogger:
                 return response
 
             # Calculate request duration
-            duration = datetime.utcnow() - g.request_start_time
+            request_start_time = getattr(g, "request_start_time", None)
+            if request_start_time is None:
+                request_start_time = datetime.utcnow()
+            duration = datetime.utcnow() - request_start_time
 
             # Get user information from session
             user_info = session.get("user", {})

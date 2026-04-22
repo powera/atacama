@@ -64,7 +64,11 @@ def before_request_handler():
     domain_key = domain_manager.get_domain_for_host(host)
     domain_config = domain_manager.get_domain_config(domain_key)
 
-    if domain_config.https_enabled and request.scheme != "https":
+    # HTTPS redirects should primarily be handled by NGINX.
+    # If we are behind a proxy (X-Forwarded-Proto present), avoid performing
+    # application-level redirects that can use an incorrect host value.
+    forwarded_proto = request.headers.get("X-Forwarded-Proto")
+    if domain_config.https_enabled and request.scheme != "https" and not forwarded_proto:
         host_without_port = request.host.split(":", 1)[0]
         secure_url = f"https://{host_without_port}{request.path}"
         if request.query_string:
