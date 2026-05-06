@@ -263,12 +263,15 @@ def _get_recent_words(user_id: str, language: str, limit: int = 10) -> List[Dict
         if last_seen_value > 1_000_000_000_000:
             last_seen_value = last_seen_value / 1000.0
 
-        last_seen_day = datetime.fromtimestamp(last_seen_value, tz=timezone.utc).date().isoformat()
+        last_seen_dt = datetime.fromtimestamp(last_seen_value, tz=timezone.utc)
+        last_seen_day = last_seen_dt.date().isoformat()
+        last_seen_at = last_seen_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
         recents.append(
             {
                 "wordKey": word_key,
                 "wordLabel": _resolve_word_label(word_key, language),
                 "lastSeenDay": last_seen_day,
+                "lastSeenAt": last_seen_at,
                 "totalAnswered": total_answers,
                 "_lastSeenEpoch": last_seen_value,
             }
