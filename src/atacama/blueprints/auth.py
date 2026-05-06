@@ -55,7 +55,12 @@ def login() -> ResponseReturnValue:
         session["mobile_redirect"] = redirect_uri
         logger.info(f"Mobile OAuth flow initiated with redirect: {redirect_uri}")
 
-    template = "login_popup.html" if popup_mode else "login.html"
+    if mobile_mode:
+        template = "login_trakaido.html"
+    elif popup_mode:
+        template = "login_popup.html"
+    else:
+        template = "login.html"
 
     return render_template(template, client_id=GOOGLE_CLIENT_ID, popup_mode=popup_mode)
 

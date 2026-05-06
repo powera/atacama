@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign In — Trakaido</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --bg: #f4f6fb;
+            --card-bg: #ffffff;
+            --text: #1a2540;
+            --muted: #5b6b85;
+            --accent: #2563eb;
+            --accent-soft: rgba(37, 99, 235, 0.08);
+            --border: #e3e8f1;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(160deg, #eef3ff 0%, #f4f6fb 100%);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(20, 35, 80, 0.08);
+            padding: 40px 32px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            padding: 8px 16px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            margin: 0 0 32px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .signin-wrap {
+            display: flex;
+            justify-content: center;
+            min-height: 44px;
+        }
+
+        .footnote {
+            color: var(--muted);
+            margin-top: 28px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <div class="brand">🇱🇹 Trakaido</div>
+        <h1>Sign in to continue</h1>
+        <p class="subtitle">Use your Google account to sync your Lithuanian learning progress across devices.</p>
+
+        <div id="g_id_onload"
+             data-client_id="{{ client_id }}"
+             data-context="signin"
+             data-callback="handleCredentialResponse"
+             data-auto_select="false"
+             data-itp_support="true">
+        </div>
+
+        <div class="signin-wrap">
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-shape="pill"
+                 data-logo_alignment="left">
+            </div>
+        </div>
+
+        <p class="footnote">By signing in, you agree to sync your progress with Trakaido.</p>
+    </main>
+
+    <script>
+        function handleCredentialResponse(response) {
+            if (response && response.credential) {
+                window.location.href = '/oauth2callback?credential=' + encodeURIComponent(response.credential);
+            } else {
+                console.error('Invalid credential response');
+            }
+        }
+    </script>
+</body>
+</html>
