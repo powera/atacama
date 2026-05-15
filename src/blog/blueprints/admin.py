@@ -230,7 +230,7 @@ def rechannel_message(message_id: int) -> ResponseReturnValue:
         db_session.commit()
         flash(f"Message re-channeled from {old_channel} to {new_channel}")
 
-    return redirect(url_for("content.get_message", message_id=message_id))
+    return redirect(url_for("content.landing_page"))
 
 
 # =============================================================================

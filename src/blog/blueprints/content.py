@@ -354,10 +354,13 @@ def message_stream(
 @require_admin
 @navigable(name="Manage Posts", category="admin")
 def landing_page(older_than_id: Optional[int] = None) -> ResponseReturnValue:
-    """Admin page for reviewing and rechanneling messages."""
+    """Admin page for reviewing and rechanneling messages.
+
+    Admin handlers are not filtered by domain — all posts are shown regardless
+    of the channels the current domain serves, so admins can rechannel posts
+    from any channel.
+    """
     channel_manager = get_channel_manager()
-    domain_manager = get_domain_manager()
-    current_domain = g.current_domain
 
     per_page = 100  # Show many posts for quick review
 
@@ -381,12 +384,6 @@ def landing_page(older_than_id: Optional[int] = None) -> ResponseReturnValue:
 
             has_more = len(messages) > per_page
             messages = messages[:per_page]
-
-            # Filter messages based on domain restrictions
-            if not domain_manager.get_domain_config(current_domain).allows_all_channels:
-                domain_channels = domain_manager.get_allowed_channels(current_domain)
-                if domain_channels is not None:
-                    messages = [msg for msg in messages if msg.channel in domain_channels]
 
             for message in messages:
                 message.created_at_formatted = message.created_at.strftime("%Y-%m-%d %H:%M:%S")
