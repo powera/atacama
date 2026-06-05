@@ -11,6 +11,7 @@ from . import feeds
 from . import statistics
 from . import widgets
 from . import editor  # Three-stage blog post editor
+from . import api  # JSON submission API (POST /api/messages, GET /api/channels)
 
 # Export all blueprints for easy importing
 __all__ = ["content_bp", "quotes_bp", "feeds_bp", "statistics_bp", "widgets_bp"]
