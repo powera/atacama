@@ -15,6 +15,7 @@ from flask.typing import ResponseReturnValue
 
 from common.base.logging_config import get_logger
 from common.config.channel_config import get_channel_manager
+from common.config.domain_config import get_domain_manager
 from models import get_or_create_user, get_user_allowed_channels
 from models.database import db
 from atacama.blueprints.errors import handle_error
@@ -22,6 +23,36 @@ from atacama.decorators import require_auth
 from blog.blueprints.shared import content_bp, create_email_message, start_archive_thread
 
 logger = get_logger(__name__)
+
+
+@content_bp.route("/api/atacama-config", methods=["GET"])
+def client_config_api() -> ResponseReturnValue:
+    """
+    Self-describing config for the Atacama iOS client (unauthenticated discovery).
+
+    The iOS app fetches this when a server is added so it can label the server and
+    learn which authentication flow to use. The matching endpoint on the newslettr
+    backend returns the same shape so one client can target either backend.
+
+    :return: JSON with the site name, API base URL, auth flow, and capabilities
+    """
+    # ``g.domain_config`` is populated per request from the Host header by
+    # ``before_request_handler``; fall back to the default config if absent.
+    domain_config = getattr(g, "domain_config", None)
+    if domain_config is None:
+        domain_config = get_domain_manager().get_domain_config("default")
+
+    return jsonify(
+        {
+            "name": domain_config.name,
+            "description": domain_config.description,
+            # ``url_root`` is the absolute base (scheme + host) ending in "/";
+            # strip the trailing slash so the client can append "/api/...".
+            "api_base": request.url_root.rstrip("/"),
+            "auth": {"type": "oauth", "login_path": "/login"},
+            "capabilities": {"preview": True, "messages": True, "channels": True},
+        }
+    )
 
 
 @content_bp.route("/api/messages", methods=["POST"])
