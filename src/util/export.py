@@ -6,7 +6,7 @@ import json
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from sqlalchemy.orm import joinedload
 
@@ -15,6 +15,7 @@ import os, sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import constants
 from models.database import db
 from models.models import Email
 from common.base.logging_config import get_logger
@@ -113,10 +114,18 @@ def main() -> None:
     parser.add_argument(
         "--pretty", "-p", action="store_true", help="Format JSON output for readability"
     )
+    parser.add_argument(
+        "--postgres",
+        action="store_true",
+        help="Use PostgreSQL via keys/database_url or DATABASE_URL instead of emails.db",
+    )
 
     args = parser.parse_args()
 
     try:
+        if args.postgres:
+            constants.enable_postgres()
+        constants.init_production(service="blog")
         export_messages(args.output, args.pretty)
     except Exception as e:
         logger.error(f"Export failed: {str(e)}")
