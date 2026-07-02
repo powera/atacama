@@ -4,11 +4,14 @@ Provides token-authenticated JSON endpoints that mirror the form-based admin
 submit flow:
 
 - ``POST /api/messages`` creates a new message from JSON.
+- ``POST /api/links`` saves a shared link as a message (iOS Share Extension).
 - ``GET /api/channels`` lists the channels the authenticated user may post to.
 
-Both reuse the shared creation/archiving helpers in :mod:`blog.blueprints.shared`
+All reuse the shared creation/archiving helpers in :mod:`blog.blueprints.shared`
 so their behavior stays in sync with the admin form route.
 """
+
+from urllib.parse import urlparse
 
 from flask import g, jsonify, request, url_for
 from flask.typing import ResponseReturnValue
@@ -50,7 +53,12 @@ def client_config_api() -> ResponseReturnValue:
             # strip the trailing slash so the client can append "/api/...".
             "api_base": request.url_root.rstrip("/"),
             "auth": {"type": "oauth", "login_path": "/login"},
-            "capabilities": {"preview": True, "messages": True, "channels": True},
+            "capabilities": {
+                "preview": True,
+                "messages": True,
+                "channels": True,
+                "links": True,
+            },
         }
     )
 
@@ -132,6 +140,142 @@ def create_message_api() -> ResponseReturnValue:
     except Exception as e:
         logger.error(f"Error creating message via API: {str(e)}")
         return handle_error("500", "Submission Error", "Failed to submit message", str(e))
+
+
+def _validate_link_fields(url, title, quote, comment):
+    """
+    Apply the shared-link field limits (mirrors newslettr's ``validateAPILink``).
+
+    Only the URL is required — the share flow backfills the title and leaves
+    quote and comment optional — so a one-tap share succeeds.
+
+    :return: An error message string, or ``None`` when the fields are acceptable
+    """
+    if not url:
+        return "URL is required"
+    if len(url) > 2000:
+        return "URL must be at most 2,000 characters"
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return "Enter a valid http or https URL"
+    if len(title) > 200:
+        return "Title must be at most 200 characters"
+    if len(quote) > 2000:
+        return "Quote must be at most 2,000 characters"
+    if len(comment) > 2000:
+        return "Comment must be at most 2,000 characters"
+    return None
+
+
+@content_bp.route("/api/links", methods=["POST"])
+@require_auth
+def create_link_api() -> ResponseReturnValue:
+    """
+    Save a shared link (URL plus optional title/quote/comment) as a new message.
+
+    This backs the atacama-ios Share Extension and mirrors the newslettr
+    backend's ``POST /api/links`` contract so one client targets either backend.
+    Atacama has no separate link model, so the link becomes a regular message:
+    the comment leads, the quote renders as a ``<quote>`` block, and the URL sits
+    on its own line (auto-linked, and archived by the shared archive pipeline).
+
+    Request JSON:
+        - url: The shared link (required, http/https)
+        - title: Message subject (optional, defaults to the URL's host)
+        - topic: Channel to post to (alias ``channel``; optional, defaults to
+          the configured default)
+        - quote: Pulled excerpt (optional)
+        - comment: The sharer's note (optional)
+        - draft: Must be false/omitted — atacama has no unpublished drafts
+
+    :return: JSON describing the saved link; HTTP 201 on success
+    :raises: HTTP 400 if the request body is not JSON
+    :raises: HTTP 422 if the URL is missing/invalid, a field exceeds its limit,
+             the channel is unknown, or ``draft`` is true
+    :raises: HTTP 500 if creation fails
+    """
+    if not request.is_json:
+        return handle_error("400", "Bad Request", "Request must be JSON")
+
+    data = request.get_json(silent=True)
+    if data is None:
+        return handle_error("400", "Bad Request", "Request must be JSON")
+
+    channel_manager = get_channel_manager()
+
+    url = (data.get("url") or "").strip()
+    title = (data.get("title") or "").strip()
+    quote = (data.get("quote") or "").strip()
+    comment = (data.get("comment") or "").strip()
+    channel = (data.get("topic") or data.get("channel") or "").strip()
+
+    if not title and url:
+        title = urlparse(url).hostname or url
+
+    error = _validate_link_fields(url, title, quote, comment)
+    if error:
+        return handle_error("422", "Validation Error", error)
+
+    if data.get("draft"):
+        return handle_error(
+            "422",
+            "Validation Error",
+            "This server does not support saving drafts; turn off 'Save as draft'",
+        )
+
+    if not channel:
+        channel = channel_manager.default_channel
+    if not channel_manager.get_channel_config(channel):
+        return handle_error("422", "Validation Error", f"Unknown channel: {channel}")
+
+    # Compose the message body: comment first (the sharer's voice), then the
+    # quoted excerpt, then the bare URL so the lexer extracts and archives it.
+    paragraphs = []
+    if comment:
+        paragraphs.append(comment)
+    if quote:
+        paragraphs.append(f"<quote> {quote}")
+    paragraphs.append(url)
+    content = "\n\n".join(paragraphs)
+
+    try:
+        with db.session() as db_session:
+            db_user = get_or_create_user(db_session, {"email": g.user.email, "name": g.user.name})
+
+            message, extracted_urls = create_email_message(
+                db_session,
+                author=db_user,
+                subject=title,
+                content=content,
+                channel=channel,
+            )
+
+            db_session.commit()
+            message_id = message.id
+
+        start_archive_thread(message_id, extracted_urls, channel)
+
+        channel_config = channel_manager.get_channel_config(channel)
+        return (
+            jsonify(
+                {
+                    "id": message_id,
+                    "url": url,
+                    "domain": urlparse(url).hostname,
+                    "title": title,
+                    "topic": {"id": channel, "name": channel_config.get_display_name()},
+                    "is_draft": False,
+                    "message_url": url_for(
+                        "content.get_message", message_id=message_id, _external=True
+                    ),
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating link via API: {str(e)}")
+        return handle_error("500", "Submission Error", "Failed to save link", str(e))
 
 
 @content_bp.route("/api/channels", methods=["GET"])
