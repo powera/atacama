@@ -325,10 +325,14 @@ def save_quotes(quotes: List[Dict], message: Email, db_session: Session) -> None
             if not is_valid:
                 raise QuoteValidationError(error)
 
-            # Check for existing identical quote
-            existing_quote = (
-                db_session.query(Quote).filter(Quote.text == quote_data["text"]).first()
-            )
+            # Check for existing identical quote. Suppress autoflush: this runs
+            # mid-render from generate_html, while the owning Email is pending
+            # in the session with its NOT NULL processed_content still unset,
+            # and a query-invoked flush would fail on that constraint.
+            with db_session.no_autoflush:
+                existing_quote = (
+                    db_session.query(Quote).filter(Quote.text == quote_data["text"]).first()
+                )
 
             if existing_quote:
                 message.quotes.append(existing_quote)
