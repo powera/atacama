@@ -127,7 +127,11 @@ class EditorAssistant:
         self.command_schema = create_editor_command_schema()
 
     def ai_append(
-        self, user_input: str, current_content: str, target_version: str = "both", model: str = None
+        self,
+        user_input: str,
+        current_content: str,
+        target_version: str = "both",
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         AI generates new content based on user input, we concatenate it.
@@ -197,7 +201,11 @@ class EditorAssistant:
             }
 
     def ai_command(
-        self, user_input: str, current_content: str, target_version: str = "both", model: str = None
+        self,
+        user_input: str,
+        current_content: str,
+        target_version: str = "both",
+        model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         AI executes a command that may modify/delete/restructure content.

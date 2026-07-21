@@ -405,11 +405,11 @@ def _aggregate_classroom_period_stats(
         "monthly": calculate_monthly_progress,
     }[period]
 
-    by_activity_totals = {
+    by_activity_totals: Dict[str, Any] = {
         "directPractice": {},
         "contextualExposure": {},
     }
-    aggregate = {
+    aggregate: Dict[str, Any] = {
         "membersCount": len(members),
         "wordsKnown": 0,
         "wordsExposed": 0,
@@ -500,6 +500,7 @@ def get_classroom_members_html(classroom_id: int) -> ResponseReturnValue:
     auth_error, classroom = _require_classroom_manager(int(g.user.id), classroom_id)
     if auth_error:
         return auth_error
+    assert classroom is not None
 
     members = _get_classroom_member_rows(classroom_id)
     language = getattr(g, "current_language", "lithuanian")
@@ -537,6 +538,7 @@ def get_classroom_stats_html(classroom_id: int, language: str, period: str) -> R
     auth_error, classroom = _require_classroom_manager(int(g.user.id), classroom_id)
     if auth_error:
         return auth_error
+    assert classroom is not None
 
     members = _get_classroom_member_rows(classroom_id)
     stats_payload = _aggregate_classroom_period_stats(members, language, period)
@@ -568,6 +570,7 @@ def get_classroom_member_stats_html(
     auth_error, classroom = _require_classroom_manager(int(g.user.id), classroom_id)
     if auth_error:
         return auth_error
+    assert classroom is not None
 
     members = _get_classroom_member_rows(classroom_id)
     member = next((m for m in members if int(m["userId"]) == user_id), None)

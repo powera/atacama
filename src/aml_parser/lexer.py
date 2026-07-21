@@ -391,7 +391,7 @@ class AtacamaLexer:
             return True
 
         # Chinese text
-        if "\u4e00" <= self.current_char <= "\u9fff":
+        if self.current_char is not None and "\u4e00" <= self.current_char <= "\u9fff":
             return True
 
         # Title and wikilink brackets
@@ -401,7 +401,7 @@ class AtacamaLexer:
             return True
 
         # Parentheses (for inline color blocks)
-        if self.current_char in "()":
+        if self.current_char is not None and self.current_char in "()":
             return True
 
         # List markers at start of line

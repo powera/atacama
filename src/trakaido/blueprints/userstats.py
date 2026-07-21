@@ -2,7 +2,7 @@
 
 # Standard library imports
 from datetime import datetime
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, Union
 
 # Third-party imports
 from flask import g, jsonify, request
@@ -28,6 +28,10 @@ from trakaido.blueprints.stats_backend import (
     calculate_monthly_progress,
 )
 from trakaido.blueprints.stats_metrics import compute_member_summary
+
+if TYPE_CHECKING:
+    from trakaido.blueprints.stats_schema import JourneyStats
+    from trakaido.blueprints.stats_sqlite import SqliteJourneyStats
 
 ##############################################################################
 
@@ -88,7 +92,7 @@ def parse_stat_type(stat_type: str) -> tuple[str, str, bool]:
 
 
 def increment_word_stat(
-    journey_stats: "JourneyStats",
+    journey_stats: Union["JourneyStats", "SqliteJourneyStats"],
     word_key: str,
     category: str,
     activity: str,

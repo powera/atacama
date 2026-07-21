@@ -16,7 +16,7 @@ except ImportError:
         "Install with: pip install prometheus_client"
     )
 
-    class Gauge:
+    class Gauge:  # type: ignore[no-redef]
         """No-op Gauge stub when prometheus_client is unavailable."""
 
         def __init__(self, *args, **kwargs):

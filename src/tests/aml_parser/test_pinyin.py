@@ -17,11 +17,11 @@ try:
 except ImportError:
     # Dependencies (jieba, pypinyin) not installed - skip tests
     PINYIN_AVAILABLE = False
-    ChineseAnnotation = None
-    PinyinFormatter = None
-    ToneSandhi = None
-    PinyinProcessor = None
-    annotate_chinese = None
+    ChineseAnnotation = None  # type: ignore[misc,assignment]
+    PinyinFormatter = None  # type: ignore[misc,assignment]
+    ToneSandhi = None  # type: ignore[misc,assignment]
+    PinyinProcessor = None  # type: ignore[misc,assignment]
+    annotate_chinese = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(PINYIN_AVAILABLE, "Pinyin module dependencies not available")

@@ -256,6 +256,8 @@ def create_link_api() -> ResponseReturnValue:
         start_archive_thread(message_id, extracted_urls, channel)
 
         channel_config = channel_manager.get_channel_config(channel)
+        if channel_config is None:
+            return handle_error("422", "Validation Error", f"Unknown channel: {channel}")
         return (
             jsonify(
                 {
