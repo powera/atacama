@@ -134,7 +134,7 @@ def create_app(testing: bool = False, blueprint_set: str = "BLOG") -> Flask:
     # Configure session cookies for Trakaido to work across subdomains
     # This allows login credentials to be shared across lt.trakaido.com, zh.trakaido.com, etc.
     # Login can be done from trakaido.com or auth.trakaido.com
-    if blueprint_set == "TRAKAIDO":
+    if blueprint_set == "TRAKAIDO" and not testing:
         # Use environment variable if set, otherwise default to .trakaido.com for production
         cookie_domain = os.getenv("SESSION_COOKIE_DOMAIN")
 

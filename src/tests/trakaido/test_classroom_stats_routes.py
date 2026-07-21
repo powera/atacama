@@ -76,7 +76,9 @@ class ClassroomStatsRoutesTests(unittest.TestCase):
         return {"Authorization": f"Bearer {token}"}
 
     def _set_admin_session(self):
-        with self.client.session_transaction() as sess:
+        # Scope the session cookie to the same host the admin requests use
+        # (_admin_post/_admin_get target trakaido.com).
+        with self.client.session_transaction(base_url="https://trakaido.com") as sess:
             sess["user"] = {
                 "email": "admin@example.com",
                 "name": "Admin",

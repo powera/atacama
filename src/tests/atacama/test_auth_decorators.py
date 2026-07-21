@@ -48,8 +48,8 @@ class AuthDecoratorsTests(unittest.TestCase):
         mock_user = User(id=1, email="test@example.com", name="Test User")
 
         # Mock the database session and get_or_create_user function
-        with patch("web.decorators.auth.db.session") as mock_db_session, patch(
-            "web.decorators.auth.get_or_create_user", return_value=mock_user
+        with patch("atacama.decorators.auth.db.session") as mock_db_session, patch(
+            "atacama.decorators.auth.get_or_create_user", return_value=mock_user
         ) as mock_get_user:
 
             # Create a mock session context manager
@@ -90,8 +90,8 @@ class AuthDecoratorsTests(unittest.TestCase):
         mock_user = User(id=1, email="test@example.com", name="Test User")
 
         # Mock the database session and get_or_create_user function
-        with patch("web.decorators.auth.db.session") as mock_db_session, patch(
-            "web.decorators.auth.get_or_create_user", return_value=mock_user
+        with patch("atacama.decorators.auth.db.session") as mock_db_session, patch(
+            "atacama.decorators.auth.get_or_create_user", return_value=mock_user
         ):
 
             # Create a mock session context manager
@@ -113,23 +113,27 @@ class AuthDecoratorsTests(unittest.TestCase):
             self.assertEqual(response.data.decode("utf-8"), "Protected Content")
 
     def test_require_auth_with_unauthenticated_user(self):
-        """Test require_auth decorator with an unauthenticated user."""
-        # Mock the render_template function
-        with patch("web.decorators.auth.render_template") as mock_render:
-            mock_render.return_value = "Login Page"
+        """Test require_auth redirects an unauthenticated web user to the login page."""
+        from flask import Blueprint
 
-            # Create a test client
-            client = self.app.test_client()
+        # Register a stub auth.login endpoint so url_for("auth.login") resolves.
+        auth_bp = Blueprint("auth", __name__)
 
-            # Access the protected route without a user in session
-            response = client.get("/protected")
+        @auth_bp.route("/login")
+        def login():
+            return "Login Page"
 
-            # Verify that render_template was called with login.html
-            mock_render.assert_called_once()
-            self.assertEqual(mock_render.call_args[0][0], "login.html")
+        self.app.register_blueprint(auth_bp)
 
-            # Verify that the response contains the login page
-            self.assertEqual(response.data.decode("utf-8"), "Login Page")
+        # Create a test client
+        client = self.app.test_client()
+
+        # Access the protected route without a user in session
+        response = client.get("/protected")
+
+        # Unauthenticated web (non-API) requests are redirected to the login page.
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response.headers["Location"])
 
     def test_optional_auth_with_authenticated_user(self):
         """Test optional_auth decorator with an authenticated user."""
@@ -137,8 +141,8 @@ class AuthDecoratorsTests(unittest.TestCase):
         mock_user = User(id=1, email="test@example.com", name="Test User")
 
         # Mock the database session and get_or_create_user function
-        with patch("web.decorators.auth.db.session") as mock_db_session, patch(
-            "web.decorators.auth.get_or_create_user", return_value=mock_user
+        with patch("atacama.decorators.auth.db.session") as mock_db_session, patch(
+            "atacama.decorators.auth.get_or_create_user", return_value=mock_user
         ):
 
             # Create a mock session context manager
@@ -224,9 +228,9 @@ class AuthDecoratorsTests(unittest.TestCase):
         mock_user = User(id=1, email="admin@example.com", name="Admin User")
 
         # Mock the database session, get_or_create_user, and user_config_manager
-        with patch("web.decorators.auth.db.session") as mock_db_session, patch(
-            "web.decorators.auth.get_or_create_user", return_value=mock_user
-        ), patch("web.decorators.auth.get_user_config_manager") as mock_config_manager:
+        with patch("atacama.decorators.auth.db.session") as mock_db_session, patch(
+            "atacama.decorators.auth.get_or_create_user", return_value=mock_user
+        ), patch("atacama.decorators.auth.get_user_config_manager") as mock_config_manager:
 
             # Set up the mock user config manager to return True for is_admin
             mock_manager = MagicMock()
@@ -260,10 +264,10 @@ class AuthDecoratorsTests(unittest.TestCase):
         mock_user = User(id=1, email="user@example.com", name="Regular User")
 
         # Mock the database session, get_or_create_user, and user_config_manager
-        with patch("web.decorators.auth.db.session") as mock_db_session, patch(
-            "web.decorators.auth.get_or_create_user", return_value=mock_user
-        ), patch("web.decorators.auth.get_user_config_manager") as mock_config_manager, patch(
-            "web.decorators.auth.render_template"
+        with patch("atacama.decorators.auth.db.session") as mock_db_session, patch(
+            "atacama.decorators.auth.get_or_create_user", return_value=mock_user
+        ), patch("atacama.decorators.auth.get_user_config_manager") as mock_config_manager, patch(
+            "atacama.decorators.auth.render_template"
         ) as mock_render:
 
             # Set up the mock user config manager to return False for is_admin

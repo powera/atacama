@@ -578,9 +578,11 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         # Should parse without error
         datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
-    def test_get_user_config_with_language_parameter(self):
-        """Test GET endpoint accepts language parameter."""
-        with self.client.session_transaction() as sess:
+    def test_get_user_config_with_language_from_subdomain(self):
+        """Test GET endpoint resolves language from the request subdomain."""
+        # zh.trakaido.com maps to the "chinese" language via get_language_from_host.
+        base_url = "http://zh.trakaido.com"
+        with self.client.session_transaction(base_url=base_url) as sess:
             sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         # Save config for specific language
@@ -588,23 +590,26 @@ class UserconfigV2APIEndpointsTests(unittest.TestCase):
         config["learning"]["currentLevel"] = 12
         save_user_config(str(self.user_id), config, "chinese")
 
-        response = self.client.get("/api/trakaido/userconfig/?language=chinese")
+        response = self.client.get("/api/trakaido/userconfig/", base_url=base_url)
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
 
         self.assertEqual(data["learning"]["currentLevel"], 12)
 
-    def test_patch_user_config_with_language_parameter(self):
-        """Test PATCH endpoint accepts language parameter."""
-        with self.client.session_transaction() as sess:
+    def test_patch_user_config_with_language_from_subdomain(self):
+        """Test PATCH endpoint resolves language from the request subdomain."""
+        # fr.trakaido.com maps to the "french" language via get_language_from_host.
+        base_url = "http://fr.trakaido.com"
+        with self.client.session_transaction(base_url=base_url) as sess:
             sess["user"] = {"email": "test@example.com", "name": "Test User"}
 
         updates = {"learning": {"currentLevel": 8}}
 
         response = self.client.patch(
-            "/api/trakaido/userconfig/?language=french",
+            "/api/trakaido/userconfig/",
             data=json.dumps(updates),
             content_type="application/json",
+            base_url=base_url,
         )
 
         self.assertEqual(response.status_code, 200)

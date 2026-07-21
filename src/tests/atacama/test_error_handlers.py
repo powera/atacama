@@ -21,6 +21,9 @@ class ErrorHandlerTests(unittest.TestCase):
                 "TESTING": True,
                 "SERVER_NAME": "test.local",
                 "DEBUG": False,  # Test production error behavior
+                # Let the registered error handlers run instead of re-raising
+                # (TESTING/DEBUG would otherwise propagate exceptions).
+                "PROPAGATE_EXCEPTIONS": False,
             }
         )
         self.client = self.app.test_client()
@@ -62,7 +65,8 @@ class ErrorHandlerTests(unittest.TestCase):
             self.assertEqual(response.status_code, 403)
             self.assertIn(b"403", response.data)
             self.assertIn(b"Forbidden", response.data)
-            self.assertIn(b"don't have permission", response.data)
+            # The apostrophe is HTML-escaped in the rendered template.
+            self.assertIn(b"permission to access this resource", response.data)
 
     def test_500_error_html(self):
         """Test 500 Internal Server Error handling."""

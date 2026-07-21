@@ -126,27 +126,29 @@ class AuthenticationDecoratorTests(unittest.TestCase):
 
     def test_optional_auth_allows_unauthenticated(self):
         """Test that @optional_auth allows both authenticated and unauthenticated access."""
-        with self.app.app_context():
 
-            @self.app.route("/optional")
-            @optional_auth
-            def optional_route():
-                if g.user:
-                    return f"Hello {g.user.email}"
-                return "Hello anonymous"
+        @self.app.route("/optional")
+        @optional_auth
+        def optional_route():
+            if g.user:
+                return f"Hello {g.user.email}"
+            return "Hello anonymous"
 
-            # Test without authentication
-            response = self.client.get("/optional")
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Hello anonymous", response.data)
+        # Each request below runs in its own request/app context so that g.user
+        # populated by one request does not leak into the next.
 
-            # Test with authentication
-            with self.client.session_transaction() as sess:
-                sess["user"] = {"email": "test@example.com", "name": "Test User"}
+        # Test without authentication
+        response = self.client.get("/optional")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Hello anonymous", response.data)
 
-            response = self.client.get("/optional")
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Hello test@example.com", response.data)
+        # Test with authentication
+        with self.client.session_transaction() as sess:
+            sess["user"] = {"email": "test@example.com", "name": "Test User"}
+
+        response = self.client.get("/optional")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Hello test@example.com", response.data)
 
     def test_require_auth_api_returns_json(self):
         """Test that @require_auth returns JSON for API requests."""
@@ -263,6 +265,14 @@ class AuthenticationRouteTests(unittest.TestCase):
 
     def test_api_logout_revokes_token(self):
         """Test that API logout revokes the token."""
+
+        # Register the probe route before any request is handled; Flask forbids
+        # adding routes once the app has served its first request.
+        @self.app.route("/test-after-logout")
+        @require_auth
+        def test_after_logout():
+            return "Should not work"
+
         # Create user and token
         with self.app.app_context():
             with db.session() as db_session:
@@ -285,19 +295,12 @@ class AuthenticationRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Verify token is revoked by trying to use it again
-        with self.app.app_context():
+        response = self.client.get(
+            "/test-after-logout", headers={"Authorization": "Bearer logout-token-123"}
+        )
 
-            @self.app.route("/test-after-logout")
-            @require_auth
-            def test_after_logout():
-                return "Should not work"
-
-            response = self.client.get(
-                "/test-after-logout", headers={"Authorization": "Bearer logout-token-123"}
-            )
-
-            # Token should no longer work
-            self.assertIn(response.status_code, [302, 401])
+        # Token should no longer work
+        self.assertIn(response.status_code, [302, 401])
 
     def test_mobile_oauth_flow(self):
         """Test mobile OAuth flow parameters."""

@@ -20,14 +20,11 @@ class TestLanguageConfig(unittest.TestCase):
 
     def test_language_config_initialization(self):
         """Test basic initialization of LanguageConfig."""
-        lang = LanguageConfig(
-            name="Lithuanian", code="lt", subdomains=["lt"], audio_dir_name="lithuanian"
-        )
+        lang = LanguageConfig(name="Lithuanian", code="lt", subdomains=["lt"])
 
         self.assertEqual(lang.name, "Lithuanian")
         self.assertEqual(lang.code, "lt")
         self.assertEqual(lang.subdomains, ["lt"])
-        self.assertEqual(lang.audio_dir_name, "lithuanian")
         self.assertEqual(lang.character_set, "")  # Default value
 
     def test_language_config_with_character_set(self):
@@ -36,7 +33,6 @@ class TestLanguageConfig(unittest.TestCase):
             name="Lithuanian",
             code="lt",
             subdomains=["lt"],
-            audio_dir_name="lithuanian",
             character_set="aąbcčdeęėfghiįyjklmnoprsštuųūvzž",
         )
 
@@ -44,9 +40,7 @@ class TestLanguageConfig(unittest.TestCase):
 
     def test_language_config_multiple_subdomains(self):
         """Test initialization with multiple subdomains."""
-        lang = LanguageConfig(
-            name="Chinese", code="zh", subdomains=["zh", "cn"], audio_dir_name="chinese"
-        )
+        lang = LanguageConfig(name="Chinese", code="zh", subdomains=["zh", "cn"])
 
         self.assertEqual(lang.subdomains, ["zh", "cn"])
 
@@ -67,21 +61,18 @@ class LanguageManagerTestBase(unittest.TestCase):
                     "name": "Lithuanian",
                     "code": "lt",
                     "subdomains": ["lt"],
-                    "audio_dir_name": "lithuanian",
                     "character_set": "aąbcčdeęėfghiįyjklmnoprsštuųūvzž",
                 },
                 "chinese": {
                     "name": "Chinese",
                     "code": "zh",
                     "subdomains": ["zh", "cn"],
-                    "audio_dir_name": "chinese",
                     "character_set": "",
                 },
                 "french": {
                     "name": "French",
                     "code": "fr",
                     "subdomains": ["fr"],
-                    "audio_dir_name": "french",
                     "character_set": "aàâäbcçdeéèêëfghiîïjklmnoôöpqrstuùûüvwxyz",
                 },
             },
@@ -220,7 +211,6 @@ class TestLanguageManager(LanguageManagerTestBase):
                     "name": "Chinese",
                     "code": "zh",
                     "subdomains": ["zh"],
-                    "audio_dir_name": "chinese",
                 }
             },
             "defaults": {"default_language": "lithuanian"},  # Not in languages list
@@ -245,13 +235,11 @@ class TestLanguageManager(LanguageManagerTestBase):
                     "name": "Language 1",
                     "code": "l1",
                     "subdomains": ["duplicate"],
-                    "audio_dir_name": "lang1",
                 },
                 "language2": {
                     "name": "Language 2",
                     "code": "l2",
                     "subdomains": ["duplicate"],  # Duplicate subdomain
-                    "audio_dir_name": "lang2",
                 },
             },
             "defaults": {"default_language": "language1"},
