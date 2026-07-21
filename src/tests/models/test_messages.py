@@ -71,9 +71,11 @@ class TestMessages(unittest.TestCase):
         mock_session.return_value.__enter__.return_value.query.return_value.get.return_value = None
         self.assertFalse(check_admin_approval(999, "restricted"))
 
-    @patch("models.messages.get_channel_manager")
-    def test_check_channel_access(self, mock_get_manager):
+    @patch("models.users.get_channel_manager")
+    @patch("models.users.check_admin_approval")
+    def test_check_channel_access(self, mock_admin_approval, mock_get_manager):
         """Test checking channel access permissions."""
+        mock_admin_approval.return_value = False
         mock_manager = MagicMock()
         mock_manager.get_channel_config.return_value = ChannelConfig(
             name="test", description="Test Channel", access_level=AccessLevel.PRIVATE
@@ -91,7 +93,7 @@ class TestMessages(unittest.TestCase):
         mock_manager.get_channel_config.return_value = None
         self.assertFalse(check_channel_access("invalid", self.user))
 
-    @patch("models.messages.get_channel_manager")
+    @patch("models.users.get_channel_manager")
     def test_get_user_allowed_channels(self, mock_get_manager):
         """Test getting list of allowed channels."""
         mock_manager = MagicMock()
@@ -99,7 +101,7 @@ class TestMessages(unittest.TestCase):
         mock_get_manager.return_value = mock_manager
 
         # Mock check_channel_access to respect user preferences
-        with patch("models.messages.check_channel_access") as mock_check_access:
+        with patch("models.users.check_channel_access") as mock_check_access:
 
             def check_access_side_effect(channel, user, ignore_preferences=False):
                 if ignore_preferences:
@@ -164,9 +166,11 @@ class TestMessages(unittest.TestCase):
             self.assertEqual(len(chain), 3)
             self.assertEqual([m.id for m in chain], [2, 1, 3])
 
+    @patch("models.messages.check_channel_access")
     @patch("models.messages.get_channel_manager")
-    def test_get_filtered_messages(self, mock_get_manager):
+    def test_get_filtered_messages(self, mock_get_manager, mock_check_access):
         """Test retrieving filtered message list."""
+        mock_check_access.return_value = True
         mock_session = MagicMock()
         mock_query = MagicMock()
         mock_session.query.return_value.options.return_value = mock_query

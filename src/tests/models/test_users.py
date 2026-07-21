@@ -42,6 +42,10 @@ class TestUsers(unittest.TestCase):
         # Create a mock session
         self.mock_session = MagicMock()
         self.mock_session.query.return_value.filter_by.return_value.first.return_value = self.user
+        # get_or_create_user chains .options() before .filter_by()
+        self.mock_session.query.return_value.options.return_value.filter_by.return_value.first.return_value = (
+            self.user
+        )
 
     def test_is_user_admin(self):
         """Test checking if a user is an admin."""
@@ -71,7 +75,9 @@ class TestUsers(unittest.TestCase):
     def test_get_or_create_user_new(self):
         """Test creating a new user."""
         # Set up mock to return None (user doesn't exist)
-        self.mock_session.query.return_value.filter_by.return_value.first.return_value = None
+        self.mock_session.query.return_value.options.return_value.filter_by.return_value.first.return_value = (
+            None
+        )
 
         request_user = {"email": "new@example.com", "name": "New User"}
 
@@ -86,19 +92,17 @@ class TestUsers(unittest.TestCase):
 
     def test_get_user_by_id(self):
         """Test retrieving a user by ID."""
-        with patch("sqlalchemy.orm.Session.execute") as mock_execute:
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = self.user
-            mock_execute.return_value = mock_result
+        mock_result = self.mock_session.execute.return_value
+        mock_result.scalar_one_or_none.return_value = self.user
 
-            # Test with existing user
-            result = get_user_by_id(self.mock_session, 1)
-            self.assertEqual(result, self.user)
+        # Test with existing user
+        result = get_user_by_id(self.mock_session, 1)
+        self.assertEqual(result, self.user)
 
-            # Test with non-existent user
-            mock_result.scalar_one_or_none.return_value = None
-            result = get_user_by_id(self.mock_session, 999)
-            self.assertIsNone(result)
+        # Test with non-existent user
+        mock_result.scalar_one_or_none.return_value = None
+        result = get_user_by_id(self.mock_session, 999)
+        self.assertIsNone(result)
 
     def test_get_user_email_domain(self):
         """Test extracting domain from user email."""
@@ -295,15 +299,13 @@ class TestUsers(unittest.TestCase):
 
     def test_get_all_users(self):
         """Test getting all users."""
-        with patch("sqlalchemy.orm.Session.execute") as mock_execute:
-            mock_result = MagicMock()
-            mock_result.scalars.return_value.all.return_value = [self.user]
-            mock_execute.return_value = mock_result
+        mock_result = self.mock_session.execute.return_value
+        mock_result.scalars.return_value.all.return_value = [self.user]
 
-            # Test getting all users
-            users = get_all_users(self.mock_session)
-            self.assertEqual(len(users), 1)
-            self.assertEqual(users[0], self.user)
+        # Test getting all users
+        users = get_all_users(self.mock_session)
+        self.assertEqual(len(users), 1)
+        self.assertEqual(users[0], self.user)
 
 
 if __name__ == "__main__":

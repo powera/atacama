@@ -45,26 +45,29 @@ class TestArchiveService(unittest.TestCase):
         self.assertFalse(self.service.should_archive_url(None))
 
     @patch("constants.is_development_mode")
-    @patch("requests.Session.get")
-    def test_submit_url_to_archive_success(self, mock_get, mock_dev_mode):
+    @patch("requests.Session.post")
+    def test_submit_url_to_archive_success(self, mock_post, mock_dev_mode):
         """Test successful URL submission to archive.org."""
         mock_dev_mode.return_value = False  # Production mode
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_get.return_value = mock_response
+        # Success requires evidence the page was archived (redirect/body to web.archive.org)
+        mock_response.url = "https://web.archive.org/web/20240101000000/https://example.org/page"
+        mock_response.text = ""
+        mock_post.return_value = mock_response
 
         result = self.service.submit_url_to_archive("https://example.org/page")
         self.assertTrue(result)
-        mock_get.assert_called_once()
+        mock_post.assert_called_once()
 
     @patch("constants.is_development_mode")
-    @patch("requests.Session.get")
-    def test_submit_url_to_archive_failure(self, mock_get, mock_dev_mode):
+    @patch("requests.Session.post")
+    def test_submit_url_to_archive_failure(self, mock_post, mock_dev_mode):
         """Test failed URL submission to archive.org."""
         mock_dev_mode.return_value = False  # Production mode
         mock_response = Mock()
         mock_response.status_code = 500
-        mock_get.return_value = mock_response
+        mock_post.return_value = mock_response
 
         result = self.service.submit_url_to_archive("https://example.org/page")
         self.assertFalse(result)

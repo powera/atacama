@@ -172,12 +172,17 @@ def method_not_allowed(e: Exception) -> ResponseReturnValue:
 @errors_bp.app_errorhandler(500)
 def internal_server_error(e: Exception) -> ResponseReturnValue:
     """Handle 500 Internal Server errors."""
-    logger.error(f"Internal server error: {str(e)}", exc_info=True)
+    # When Flask converts an unhandled exception into a 500, the triggering
+    # exception is attached as ``original_exception``; surface its message for
+    # the (debug-only) technical details rather than the generic wrapper text.
+    original = getattr(e, "original_exception", None)
+    details = str(original) if original is not None else str(e)
+    logger.error(f"Internal server error: {details}", exc_info=True)
     return handle_error(
         "500",
         "Internal Server Error",
         "An unexpected error occurred. Our team has been notified and is working to resolve the issue.",
-        str(e),
+        details,
     )
 
 
