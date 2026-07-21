@@ -1,2 +1,10 @@
 [tool.black]
 line-length = 100
+
+[tool.mypy]
+# Source imports are rooted at src/ (e.g. `from common.base import logger`).
+mypy_path = "src"
+explicit_package_bases = true
+namespace_packages = true
+# Many third-party deps ship no type stubs (jieba, flask_compress, pypinyin, ...).
+ignore_missing_imports = true

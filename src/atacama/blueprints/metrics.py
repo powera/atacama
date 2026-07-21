@@ -60,17 +60,17 @@ except ImportError:
         def observe(self, value):
             pass
 
-    class Gauge(_NoOpMetric):
+    class Gauge(_NoOpMetric):  # type: ignore[no-redef]
         """No-op Gauge stub."""
 
         pass
 
-    class Counter(_NoOpMetric):
+    class Counter(_NoOpMetric):  # type: ignore[no-redef]
         """No-op Counter stub."""
 
         pass
 
-    class Histogram(_NoOpMetric):
+    class Histogram(_NoOpMetric):  # type: ignore[no-redef]
         """No-op Histogram stub."""
 
         pass

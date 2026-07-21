@@ -15,11 +15,15 @@ If the file is absent or doesn't specify a valid backend, SQLite storage is used
 # Standard library imports
 import json
 import os
-from typing import Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Union
 
 # Local application imports
 import constants
 from trakaido.blueprints.shared import logger
+
+if TYPE_CHECKING:
+    from trakaido.blueprints.stats_schema import JourneyStats
+    from trakaido.blueprints.stats_sqlite import SqliteJourneyStats
 
 # Storage backend constants
 BACKEND_FLATFILE = "flatfile"

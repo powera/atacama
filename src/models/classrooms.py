@@ -1,11 +1,14 @@
 """Data-access helpers for Trakaido classroom models."""
 
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import constants
 from sqlalchemy import func, select
 
 from models.database import db
+
+if TYPE_CHECKING:
+    from trakaido.models import Classroom, ClassroomMembership
 
 
 def _is_trakaido_enabled() -> bool:

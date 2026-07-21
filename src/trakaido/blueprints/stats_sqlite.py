@@ -80,8 +80,7 @@ class SqliteStatsDB:
         """Create database tables if they don't exist."""
         conn = self._get_connection()
         try:
-            conn.executescript(
-                """
+            conn.executescript("""
                 CREATE TABLE IF NOT EXISTS word_stats (
                     word_key TEXT PRIMARY KEY,
                     exposed INTEGER NOT NULL DEFAULT 0,
@@ -115,8 +114,7 @@ class SqliteStatsDB:
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
-            """
-            )
+            """)
 
             # Forward-compatible migration: older DBs may not have
             # words_known_count in daily_snapshots.
@@ -283,15 +281,13 @@ class SqliteStatsDB:
         )
         total_questions = cursor.fetchone()[0]
 
-        cursor = conn.execute(
-            """
+        cursor = conn.execute("""
             SELECT category, activity,
                    SUM(correct) as total_correct,
                    SUM(incorrect) as total_incorrect
             FROM word_activity_stats
             GROUP BY category, activity
-        """
-        )
+        """)
 
         activity_totals: Dict[str, Any] = {
             "directPractice": {a: {"correct": 0, "incorrect": 0} for a in DIRECT_PRACTICE_TYPES},
